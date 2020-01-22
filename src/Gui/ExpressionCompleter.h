@@ -53,10 +53,7 @@ public:
     ExpressionCompleter(const App::DocumentObject * currentDocObj,
             QObject *parent = nullptr, bool noProperty = false);
 
-    void getPrefixRange(int &start, int &end) const {
-        start = prefixStart;
-        end = prefixEnd;
-    }
+    void getPrefixRange(QString &prefix, int &start, int &end, int &offset) const;
 
     void updatePrefixEnd(int end) {
         prefixEnd = end;
@@ -67,8 +64,13 @@ public:
     void setNoProperty(bool enabled=true);
     void setRequireLeadingEqualSign(bool enabled);
 
+    bool isInsideString() const {return insideString;}
+
 public Q_SLOTS:
     void slotUpdate(const QString &prefix, int pos);
+
+protected:
+    bool eventFilter(QObject *o, QEvent *e);
 
 private:
     void init();
@@ -77,11 +79,14 @@ private:
 
     int prefixStart = 0;
     int prefixEnd = 0;
-    bool requireLeadingEqualSign = false;
+    bool closeString = false;
+    bool insideString = false;
+    QString currentPrefix;
+    QString savedPrefix;
 
     App::DocumentObjectT currentObj;
-    bool noProperty;
-
+    bool noProperty = false;
+    bool requireLeadingEqualSign = false;
 };
 
 class GuiExport ExpressionLineEdit : public QLineEdit {
@@ -97,9 +102,8 @@ Q_SIGNALS:
     void textChanged2(QString text, int pos);
 public Q_SLOTS:
     void slotTextChanged(const QString & text);
-    void slotCompleteText(const QString & completionPrefix);
+    void slotCompleteText(QString completionPrefix);
 protected:
-    void keyPressEvent(QKeyEvent * event);
     void contextMenuEvent(QContextMenuEvent * event);
 private:
     ExpressionCompleter * completer;
@@ -117,14 +121,14 @@ public:
     bool completerActive() const;
     void hideCompleter();
     void setExactMatch(bool enabled=true);
-protected:
-    void keyPressEvent(QKeyEvent * event);
-    void contextMenuEvent(QContextMenuEvent * event);
 Q_SIGNALS:
     void textChanged2(QString text, int pos);
 public Q_SLOTS:
     void slotTextChanged();
-    void slotCompleteText(const QString & completionPrefix);
+    void slotCompleteText(QString completionPrefix);
+protected:
+    void keyPressEvent(QKeyEvent * event);
+    void contextMenuEvent(QContextMenuEvent * event);
 private:
     ExpressionCompleter * completer;
     bool block;
