@@ -73,6 +73,7 @@
 #include <App/OriginFeature.h>
 #include <App/Application.h>
 #include <App/Document.h>
+#include <App/MappedElement.h>
 
 using namespace Part;
 using namespace Attacher;
@@ -926,8 +927,10 @@ Base::Placement AttachEngine::calculateAttachedPlacement(
         auto related = Part::Feature::getRelatedElements(obj,shadow.c_str(),true,false);
         if(related.size()) {
             auto &res = subChanges[i];
-            res.first = Data::ComplexGeoData::elementMapPrefix() + related.front().first;
-            res.second = std::move(related.front().second);
+            res.first = Data::ComplexGeoData::elementMapPrefix();
+            related.front().name.toString(res.first);
+            res.second.clear();
+            related.front().index.toString(res.second);
         } else {
             std::string name = Data::ComplexGeoData::oldElementName(shadow.c_str());
             if (name.size()) {
