@@ -4289,19 +4289,19 @@ void PropertyXLinkSubList::setValues(
 
     atomic_change guard(*this);
 
-    for(auto it=_Links.begin(),itNext=it;it!=_Links.end();it=itNext) {
-        ++itNext;
-        auto iter = values.find(it->getValue());
+    for (unsigned i=0; i<_Links.size(); ) {
+        auto iter = values.find(_Links[i].getValue());
         if(iter == values.end()) {
-            _Links.erase(it);
+            _Links.erase(_Links.begin() + i);
             continue;
         }
-        it->setSubValues(std::move(iter->second));
+        _Links[i].setSubValues(std::move(iter->second));
         values.erase(iter);
+        ++i;
     }
 
     for(auto &v : values) {
-        _Links.emplace_back(testFlag(LinkAllowPartial),this);
+        _Links.push_back(new PropertyXLinkSub(testFlag(LinkAllowPartial),this));
         _Links.back().setValue(v.first,std::move(v.second));
     }
     guard.tryInvoke();
@@ -4333,7 +4333,7 @@ void PropertyXLinkSubList::addValue(App::DocumentObject *obj,
         }
     }
     atomic_change guard(*this);
-    _Links.emplace_back(testFlag(LinkAllowPartial),this);
+    _Links.push_back(new PropertyXLinkSub(testFlag(LinkAllowPartial),this));
     _Links.back().setValue(obj,std::move(subs));
     guard.tryInvoke();
 }
@@ -4350,7 +4350,7 @@ void PropertyXLinkSubList::setValues(const std::vector<DocumentObject*> &values)
     atomic_change guard(*this);
     _Links.clear();
     for(auto obj : values) {
-        _Links.emplace_back(testFlag(LinkAllowPartial),this);
+        _Links.push_back(new PropertyXLinkSub(testFlag(LinkAllowPartial),this));
         _Links.back().setValue(obj);
     }
     guard.tryInvoke();
@@ -4369,16 +4369,13 @@ void PropertyXLinkSubList::set1Value(int idx,
             return;
         }
         atomic_change guard(*this);
-        _Links.emplace_back(testFlag(LinkAllowPartial),this);
+        _Links.push_back(new PropertyXLinkSub(testFlag(LinkAllowPartial),this));
         _Links.back().setValue(value);
         guard.tryInvoke();
         return;
     }
 
-    auto it = _Links.begin();
-    for(;idx;--idx)
-        ++it;
-    it->setValue(value,SubList);
+    _Links[idx].setValue(value, SubList);
 }
 
 const string PropertyXLinkSubList::getPyReprString() const
@@ -4417,12 +4414,12 @@ int PropertyXLinkSubList::removeValue(App::DocumentObject *lValue)
 {
     atomic_change guard(*this,false);
     int ret = 0;
-    for(auto it=_Links.begin();it!=_Links.end();) {
-        if(it->getValue() != lValue)
-            ++it;
+    for (unsigned i=0; i<_Links.size(); ) {
+        if(_Links[i].getValue() != lValue)
+            ++i;
         else {
             guard.aboutToChange();
-            it = _Links.erase(it);
+            _Links.erase(_Links.begin()+i);
             ++ret;
         }
     }
@@ -4548,7 +4545,7 @@ void PropertyXLinkSubList::Restore(Base::XMLReader &reader)
     atomic_change guard(*this,false);
     _Links.clear();
     for(int i=0;i<count;++i) {
-        _Links.emplace_back(false,this);
+        _Links.push_back(new PropertyXLinkSub(false,this));
         _Links.back().Restore(reader);
     }
     reader.readEndElement("XLinkSubList");
@@ -4568,13 +4565,13 @@ Property *PropertyXLinkSubList::CopyOnImportExternal(
         return 0;
     std::unique_ptr<PropertyXLinkSubList> p(new PropertyXLinkSubList);
     for(auto iter=_Links.begin();iter!=it;++iter) {
-        p->_Links.emplace_back();
+        p->_Links.push_back(new PropertyXLinkSub);
         iter->copyTo(p->_Links.back());
     }
-    p->_Links.emplace_back();
+    p->_Links.push_back(new PropertyXLinkSub);
     static_cast<PropertyXLinkSub&>(*copy).copyTo(p->_Links.back());
     for(++it;it!=_Links.end();++it) {
-        p->_Links.emplace_back();
+        p->_Links.push_back(new PropertyXLinkSub);
         copy.reset(it->CopyOnImportExternal(nameMap));
         if(copy)
             static_cast<PropertyXLinkSub&>(*copy).copyTo(p->_Links.back());
@@ -4597,13 +4594,13 @@ Property *PropertyXLinkSubList::CopyOnLabelChange(App::DocumentObject *obj,
         return 0;
     std::unique_ptr<PropertyXLinkSubList> p(new PropertyXLinkSubList);
     for(auto iter=_Links.begin();iter!=it;++iter) {
-        p->_Links.emplace_back();
+        p->_Links.push_back(new PropertyXLinkSub);
         iter->copyTo(p->_Links.back());
     }
-    p->_Links.emplace_back();
+    p->_Links.push_back(new PropertyXLinkSub);
     static_cast<PropertyXLinkSub&>(*copy).copyTo(p->_Links.back());
     for(++it;it!=_Links.end();++it) {
-        p->_Links.emplace_back();
+        p->_Links.push_back(new PropertyXLinkSub);
         copy.reset(it->CopyOnLabelChange(obj,ref,newLabel));
         if(copy)
             static_cast<PropertyXLinkSub&>(*copy).copyTo(p->_Links.back());
@@ -4642,11 +4639,11 @@ Property *PropertyXLinkSubList::CopyOnLinkReplace(const App::DocumentObject *par
                     copied->_SubList.push_back(sub);
             }
         } else {
-            p->_Links.emplace_back();
+            p->_Links.push_back(new PropertyXLinkSub);
             iter->copyTo(p->_Links.back());
         }
     }
-    p->_Links.emplace_back();
+    p->_Links.push_back(new PropertyXLinkSub);
     copied->copyTo(p->_Links.back());
     copied = &p->_Links.back();
     for(++it;it!=_Links.end();++it) {
@@ -4660,7 +4657,7 @@ Property *PropertyXLinkSubList::CopyOnLinkReplace(const App::DocumentObject *par
             }
             continue;
         }
-        p->_Links.emplace_back();
+        p->_Links.push_back(new PropertyXLinkSub);
         copy.reset(it->CopyOnLinkReplace(parent,oldObj,newObj));
         if(copy)
             static_cast<PropertyXLinkSub&>(*copy).copyTo(p->_Links.back());
@@ -4674,7 +4671,7 @@ Property *PropertyXLinkSubList::Copy(void) const
 {
     PropertyXLinkSubList *p = new PropertyXLinkSubList();
     for(auto &l : _Links) {
-        p->_Links.emplace_back(testFlag(LinkAllowPartial),p);
+        p->_Links.push_back(new PropertyXLinkSub(testFlag(LinkAllowPartial),p));
         l.copyTo(p->_Links.back());
     }
     return p;
@@ -4688,7 +4685,7 @@ void PropertyXLinkSubList::Paste(const Property &from)
     aboutToSetValue();
     _Links.clear();
     for(auto &l : static_cast<const PropertyXLinkSubList&>(from)._Links) {
-        _Links.emplace_back(testFlag(LinkAllowPartial),this);
+        _Links.push_back(new PropertyXLinkSub(testFlag(LinkAllowPartial),this));
         _Links.back().Paste(l);
     }
     hasSetValue();
@@ -4798,14 +4795,16 @@ bool PropertyXLinkSubList::adjustLink(const std::set<App::DocumentObject*> &inLi
         if(count) {
             // XLink allows detached state, i.e. with closed external document. So
             // we need to preserve empty link
-            for(auto it=_Links.begin(),itNext=it;it!=_Links.end();it=itNext) {
-                ++itNext;
+            for (unsigned i=0; i<_Links.size(); ++i) {
+                auto it = _Links.begin()+i;
                 if(!it->getValue())
-                    tmp.splice(tmp.end(),_Links,it);
+                    tmp.transfer(tmp.end(),it,_Links);
+                else
+                    ++i;
             }
         }
         setValues(std::move(values));
-        _Links.splice(_Links.end(),tmp);
+        _Links.transfer(_Links.end(),tmp.begin(),tmp.end(), tmp);
     }
     return touched;
 }
@@ -4846,7 +4845,7 @@ bool PropertyXLinkSubList::upgrade(Base::XMLReader &reader, const char *typeName
         return true;
     }
     _Links.clear();
-    _Links.emplace_back(testFlag(LinkAllowPartial),this);
+    _Links.push_back(new PropertyXLinkSub(testFlag(LinkAllowPartial),this));
     if(!_Links.back().upgrade(reader,typeName)) {
         _Links.clear();
         return false;
