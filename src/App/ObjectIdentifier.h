@@ -65,7 +65,6 @@ AppExport std::string quote(const std::string &input, bool toPython=false);
     _t(_t &&other) { *this = std::move(other); }\
     _t &operator=(_t &&other)
 
-
 class AppExport ObjectIdentifier {
 
 public:
@@ -179,7 +178,7 @@ public:
                 int begin=INT_MAX, int end=INT_MAX, int step=1);
 
         static Component SimpleComponent(const char * _component);
-        static Component SimpleComponent(const String &_component); 
+        static Component SimpleComponent(const String &_component);
         static Component SimpleComponent(String &&_component);
 
         static Component LabelComponent(const char * _component);
