@@ -1294,14 +1294,10 @@ void ProfileBased::handleChangedPropertyName(
 
 bool ProfileBased::isElementGenerated(const TopoShape &shape, const Data::MappedName &name) const
 {
-    // auto profile = Profile.getValue();
-    // if (!profile)
-    //     return FeatureAddSub::isElementGenerated(shape, name);
-    // long profileTag = profile->getID();
     bool res = false;
     shape.traceElement(name,
         [&] (const Data::MappedName &, size_t, long tag2) {
-            if (std::abs(tag2) == this->getID() || tag2 == profileTag) {
+            if (std::abs(tag2) == this->getID()) {
                 res = true;
                 return true;
             }

@@ -8404,6 +8404,7 @@ App::DocumentObject *SketchObject::getSubObject(
     const char *mapped = Data::ComplexGeoData::isMappedElement(subname);
     if(!subname || !subname[0] || !pyObj)
         return Part2DObject::getSubObject(subname,pyObj,pmat,transform,depth);
+    std::string _sub;
     if(!mapped) {
         const char *dot = strchr(subname,'.');
         if(dot) {
@@ -8425,8 +8426,8 @@ App::DocumentObject *SketchObject::getSubObject(
             if (!std::isalnum((int)*pos))
                 break;
         }
-        sub = std::string(subname, pos-subname);
-        subname = sub.c_str();
+        _sub = std::string(subname, pos-subname);
+        subname = _sub.c_str();
     }
     Data::IndexedName indexedName = checkSubName(subname);
     int index = indexedName.getIndex();
