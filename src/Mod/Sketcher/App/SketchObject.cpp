@@ -8758,7 +8758,9 @@ std::string SketchObject::convertSubName(const Data::IndexedName & indexedName, 
     if(geoId == Sketcher::GeoEnum::HAxis ||
        geoId == Sketcher::GeoEnum::VAxis ||
        geoId == Sketcher::GeoEnum::RtPnt) {
-        ss << Data::ComplexGeoData::elementMapPrefix() << indexedName;
+        if (postfix)
+            ss << Data::ComplexGeoData::elementMapPrefix();
+        ss << indexedName;
         if(postfix)
            ss  << '.' << indexedName;
         return ss.str();
@@ -8770,7 +8772,9 @@ std::string SketchObject::convertSubName(const Data::IndexedName & indexedName, 
         indexedName.toString(res);
         return res;
     }
-    ss << Data::ComplexGeoData::elementMapPrefix() << (geoId>=0?'g':'e') << geo->Id;
+    if (postfix)
+        ss << Data::ComplexGeoData::elementMapPrefix();
+    ss << (geoId>=0?'g':'e') << geo->Id;
     if(posId!=none)
         ss << 'v' << posId;
     if(postfix) {
