@@ -42,13 +42,14 @@ public:
     virtual ~ViewProviderAddSub();
     
     virtual void attach(App::DocumentObject*);
+    virtual void reattach(App::DocumentObject *);
+    virtual void beforeDelete();
     virtual void updateData(const App::Property*);
     virtual void onChanged(const App::Property *p);
     virtual bool setEdit(int ModNum);
     virtual void unsetEdit(int ModNum);
     bool isPreviewMode() const;
     virtual void finishRestoring();
-    virtual void beforeDelete();
     
     void setPreviewDisplayMode(bool);
 
@@ -57,7 +58,7 @@ protected:
     virtual void setAddSubColor(const App::Color &color, float t);
     virtual void updateAddSubShapeIndicator();
     virtual PartGui::ViewProviderPart * getAddSubView();
-    
+
 protected:
     Gui::CoinPtr<SoSeparator>   previewGroup;
 

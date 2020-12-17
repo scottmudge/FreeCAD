@@ -217,6 +217,7 @@ public:
 
     void attach(App::DocumentObject *pcObj) override;
     void reattach(App::DocumentObject *pcObj) override;
+    void beforeDelete() override;
 
     static App::DocumentObject *linkedObjectByNode(SoNode *);
 

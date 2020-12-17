@@ -88,7 +88,8 @@ ViewProviderDocumentObject::ViewProviderDocumentObject()
     static const char *SelectionStyleEnum[] = {"Shape","BoundBox",0};
     SelectionStyle.setEnums(SelectionStyleEnum);
 
-    static const char *ShadowStyleEnum[] = {"Cast shadow and shadowed","Cast shadow", "Shadowed", "No shadowing", 0};
+    static const char *ShadowStyleEnum[] = {
+        "Cast shadow and shadowed","Cast shadow", "Shadowed", "No shadowing", 0};
     ShadowStyle.setEnums(ShadowStyleEnum);
     ADD_PROPERTY_TYPE(ShadowStyle,((long)0), dogroup, App::Prop_None,
             "Cast shadow and shadowed: Cast shadow and receive shadows.\n"
@@ -96,7 +97,8 @@ ViewProviderDocumentObject::ViewProviderDocumentObject()
             "Shadowed: Only receive shadow, but not cast any shadow.\n"
             "No shadowing: Neither cast nor receive any shadow.");
 
-    ADD_PROPERTY_TYPE(Selectable, (true), sgroup, App::Prop_None, "Set if the object is selectable in the 3d view");
+    ADD_PROPERTY_TYPE(Selectable, (true), sgroup, App::Prop_None, 
+            "Set if the object is selectable in the 3d view");
     Selectable.setValue(ViewParams::instance()->getEnableSelection());
 
     static const char* OnTopEnum[]= {"Disabled","Enabled","Object","Element",NULL};
@@ -366,6 +368,7 @@ void ViewProviderDocumentObject::attach(App::DocumentObject *pcObj)
 }
 
 void ViewProviderDocumentObject::reattach(App::DocumentObject *pcObj) {
+    setStatus(Detach, false);
     callExtension(&ViewProviderExtension::extensionReattach,pcObj);
     updateChildren();
 }
