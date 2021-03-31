@@ -1003,10 +1003,8 @@ public:
             return;
         auto type = object.getTypeId();
         if (!type.isDerivedFrom(Part::Feature::getClassTypeId())
-                || type.isDerivedFrom(PartDesign::Feature::getClassTypeId())
                 || type.isDerivedFrom(PartDesign::Body::getClassTypeId())
-                || type.isDerivedFrom(PartDesign::ShapeBinder::getClassTypeId())
-                || type.isDerivedFrom(Part::SubShapeBinder::getClassTypeId())
+                || PartDesign::Body::isAllowed(type)
                 || object.hasExtension(App::LinkBaseExtension::getExtensionClassTypeId()))
             return;
 
