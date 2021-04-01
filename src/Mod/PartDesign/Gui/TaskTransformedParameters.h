@@ -176,6 +176,7 @@ protected Q_SLOTS:
     /// Connect the subTask OK button to the MultiTransform task
     virtual void onSubTaskButtonOK() {}
     void onChangedSubTransform(bool);
+    void onChangedParallelTransform(bool);
     void onChangedNewSolid(bool);
     void originalSelectionChanged();
     void onChangedOffset(const QVariant &, bool, bool);
@@ -241,6 +242,7 @@ protected:
     /// Lock updateUI(), applying changes to the underlying feature and calling recomputeFeature()
     QCheckBox *checkBoxSubTransform = nullptr;
     QCheckBox *checkBoxNewSolid = nullptr;
+    QCheckBox *checkBoxParallel = nullptr;
 
     QLabel *labelMessage = nullptr;
     boost::signals2::scoped_connection connMessage;
