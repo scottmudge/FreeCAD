@@ -248,9 +248,6 @@ void TaskMultiTransformParameters::onTransformAddMirrored()
     }
 
     finishAdd(newFeatName);
-    // show the new view when no error
-    if (!Feat->isError())
-        TransformedView->getObject()->Visibility.setValue(true);
 }
 
 void TaskMultiTransformParameters::onTransformAddLinearPattern()
@@ -288,9 +285,6 @@ void TaskMultiTransformParameters::onTransformAddLinearPattern()
     FCMD_OBJ_CMD(Feat, "Occurrences = 2");
 
     finishAdd(newFeatName);
-    // show the new view when no error
-    if (!Feat->isError())
-        TransformedView->getObject()->Visibility.setValue(true);
 }
 
 void TaskMultiTransformParameters::onTransformAddPolarPattern()
@@ -320,9 +314,6 @@ void TaskMultiTransformParameters::onTransformAddPolarPattern()
     FCMD_OBJ_CMD(Feat, "Occurrences = 2");
 
     finishAdd(newFeatName);
-    // show the new view when no error
-    if (!Feat->isError())
-        TransformedView->getObject()->Visibility.setValue(true);
 }
 
 void TaskMultiTransformParameters::onTransformAddScaled()
@@ -345,9 +336,6 @@ void TaskMultiTransformParameters::onTransformAddScaled()
     FCMD_OBJ_CMD(Feat, "Occurrences = 2");
 
     finishAdd(newFeatName);
-    // show the new view when no error
-    if (!Feat->isError())
-        TransformedView->getObject()->Visibility.setValue(true);
 }
 
 void TaskMultiTransformParameters::finishAdd(std::string &newFeatName)
@@ -392,8 +380,6 @@ void TaskMultiTransformParameters::finishAdd(std::string &newFeatName)
         ui->listTransformFeatures->setCurrentRow(row + 1, QItemSelectionModel::ClearAndSelect);
     }
     pcMultiTransform->Transformations.setValues(transformFeatures);
-
-    showObject();
 
     recomputeFeature();
 

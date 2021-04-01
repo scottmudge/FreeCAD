@@ -199,11 +199,6 @@ protected:
     /// Recompute either this feature or the parent feature (MultiTransform mode)
     void recomputeFeature();
 
-    void hideObject();
-    void showObject();
-    void hideBase();
-    void showBase();
-
     void kickUpdateViewTimer() const;
 
     void addReferenceSelectionGate(bool edge, bool face, bool planar=true, bool whole=false, bool circle=false);
@@ -244,8 +239,8 @@ protected:
     bool insideMultiTransform;
     /// Lock updateUI(), applying changes to the underlying feature and calling recomputeFeature()
     QCheckBox *checkBoxSubTransform = nullptr;
-    QCheckBox *checkBoxNewSolid = nullptr;
     QCheckBox *checkBoxParallel = nullptr;
+    QCheckBox *checkBoxNewSolid = nullptr;
 
     QSplitter *splitter = nullptr;
     int defaultMinimumHeight = 300;

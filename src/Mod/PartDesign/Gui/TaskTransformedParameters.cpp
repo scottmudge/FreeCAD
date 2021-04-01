@@ -273,6 +273,8 @@ void TaskTransformedParameters::setupUI() {
     layout->insertWidget(0,checkBoxSubTransform);
     layout->insertWidget(0,checkBoxNewSolid);
 
+    PartDesignGui::addTaskCheckBox(proxy);
+
     splitter = new QSplitter(Qt::Vertical, this);
     splitter->addWidget(labelMessage);
     splitter->addWidget(linkEditor);
@@ -522,53 +524,12 @@ App::DocumentObject* TaskTransformedParameters::getSketchObject() const {
     return getTopTransformedObject()->getSketchObject();
 }
 
-void TaskTransformedParameters::hideObject()
-{
-    try {
-        FCMD_OBJ_HIDE(getTopTransformedObject(true));
-    }
-    catch (const Base::Exception& e) {
-        e.ReportException();
-    }
-}
-
-void TaskTransformedParameters::showObject()
-{
-    try {
-        FCMD_OBJ_SHOW(getTopTransformedObject(true));
-    }
-    catch (const Base::Exception& e) {
-        e.ReportException();
-    }
-}
-
-void TaskTransformedParameters::hideBase()
-{
-    try {
-        FCMD_OBJ_HIDE(getBaseObject());
-    }
-    catch (const Base::Exception& e) {
-        e.ReportException();
-    }
-}
-
-void TaskTransformedParameters::showBase()
-{
-    try {
-        FCMD_OBJ_SHOW(getBaseObject());
-    }
-    catch (const Base::Exception& e) {
-        e.ReportException();
-    }
-}
-
 void TaskTransformedParameters::exitSelectionMode()
 {
     try {
         selectionMode = none;
         Gui::Selection().rmvSelectionGate();
         Gui::Selection().clearSelection();
-        showObject();
     } catch(Base::Exception &e) {
         e.ReportException();
     }
