@@ -249,6 +249,7 @@ void TaskTransformedParameters::setupUI() {
     splitter->addWidget(labelMessage);
     splitter->addWidget(linkEditor);
     splitter->addWidget(proxy);
+    proxy->setMinimumHeight(300);
 
     this->groupLayout()->addWidget(splitter);
 
