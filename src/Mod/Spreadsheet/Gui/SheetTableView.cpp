@@ -705,10 +705,14 @@ bool SheetTableView::event(QEvent *event)
             QModelIndex c = currentIndex();
 
             if (kevent->modifiers() == 0) {
-                if (currentEditIndex != c)
-                    edit(c);
-                else
-                    setCurrentIndex(model()->index(qMin(c.row() + 1, model()->rowCount() - 1), c.column()));
+                if (currentEditIndex != c) {
+                    auto cell = sheet->getCell(CellAddress(c.row(), c.column()));
+                    if (!cell || !cell->isPersistentEditMode()) {
+                        edit(c);
+                        return true;
+                    }
+                }
+                setCurrentIndex(model()->index(qMin(c.row() + 1, model()->rowCount() - 1), c.column()));
                 return true;
             }
             else if (kevent->modifiers() == Qt::ShiftModifier) {
