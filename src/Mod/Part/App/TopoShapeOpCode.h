@@ -70,5 +70,7 @@
 #define TOPOP_PRISM     "PSM"
 #define TOPOP_DRAFT     "DFT"
 #define TOPOP_HALF_SPACE "HSP"
+#define TOPOP_BSPLANE_FACE "BSF"
+#define TOPOP_SPLIT "SPT"
 
 #endif
