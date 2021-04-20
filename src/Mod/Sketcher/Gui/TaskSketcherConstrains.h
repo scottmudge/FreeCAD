@@ -121,6 +121,7 @@ private:
 public Q_SLOTS:
     void on_comboBoxFilter_currentIndexChanged(int);
     void on_listWidgetConstraints_itemSelectionChanged(void);
+    void on_listWidgetConstraints_itemEntered(QListWidgetItem *item);
     void on_listWidgetConstraints_itemActivated(QListWidgetItem *item);
     void on_listWidgetConstraints_itemChanged(QListWidgetItem * item);
     void on_listWidgetConstraints_updateDrivingStatus(QListWidgetItem *item, bool status);
@@ -135,6 +136,7 @@ public Q_SLOTS:
 
 protected:
     void changeEvent(QEvent *e);
+    void leaveEvent(QEvent *e);
     ViewProviderSketch *sketchView;
     typedef boost::signals2::connection Connection;
     Connection connectionConstraintsChanged;
