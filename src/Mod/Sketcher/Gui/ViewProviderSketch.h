@@ -34,6 +34,7 @@
 #include <Gui/Selection.h>
 #include <Gui/GLPainter.h>
 #include <App/Part.h>
+#include <App/DocumentObserver.h>
 #include <boost_signals2.hpp>
 #include <QCoreApplication>
 #include <Gui/Document.h>
@@ -147,6 +148,8 @@ public:
     void activateHandler(DrawSketchHandler *newHandler);
     /// removes the active handler
     void purgeHandler(void);
+    /// obtain the current active handler
+    DrawSketchHandler *currentHandler() const;
     /// set the pick style of the sketch coordinate axes
     void setAxisPickStyle(bool on);
     //@}
@@ -168,9 +171,9 @@ public:
         STATUS_SKETCH_UseRubberBand /**< enum value when making a rubber band selection *//**< enum value a DrawSketchHandler is in control. */
     };
     /// is called by GuiCommands to set the drawing mode
-    void setSketchMode(SketchMode mode) {Mode = mode;}
+    void setSketchMode(SketchMode mode);
     /// get the sketch mode
-    SketchMode getSketchMode(void) const {return Mode;}
+    SketchMode getSketchMode(void) const {return _Mode;}
     //@}
 
     /** @name helper functions */
@@ -187,7 +190,8 @@ public:
     /// helper to detect preselection
     bool detectPreselection(const SoPickedPoint *Point,
                             const Gui::View3DInventorViewer *viewer,
-                            const SbVec2s &cursorPos);
+                            const SbVec2s &cursorPos,
+                            bool preselect=true);
 
     /// Helper for detectPreselection(), for constraints only.
     std::set<int> detectPreselectionConstr(const SoPickedPoint *Point,
@@ -278,9 +282,14 @@ public:
     boost::signals2::signal<void (QString msg)> signalSolved;
     /// signals if the elements list has changed
     boost::signals2::signal<void ()> signalElementsChanged;
+    void selectElement(const char *element, bool preselect=false) const;
+
+    virtual bool getElementPicked(const SoPickedPoint *pp, std::string &subname) const;
 
     /** Observer for parameter group. */
     void OnChange(Base::Subject<const char*> &rCaller, const char * sReason) override;
+
+    const App::SubObjectT &getEditingContext() const;
 
 protected:
     Base::Placement getEditingPlacement() const;
@@ -309,10 +318,12 @@ protected:
 
     void slotUndoDocument(const Gui::Document&);
     void slotRedoDocument(const Gui::Document&);
+    void slotSolverUpdate();
 
 protected:
     boost::signals2::connection connectUndoDocument;
     boost::signals2::connection connectRedoDocument;
+    boost::signals2::connection connectSolverUpdate;
 
     /// set icon & font sizes
     void initItemsSizes();
@@ -426,7 +437,7 @@ protected:
     void clearSelectPoints(void);
 
     // modes while sketching
-    SketchMode Mode;
+    SketchMode _Mode;
 
     // colors
     static SbColor VertexColor;
@@ -434,6 +445,9 @@ protected:
     static SbColor CreateCurveColor;
     static SbColor CurveDraftColor;
     static SbColor CurveExternalColor;
+    static SbColor CurveFrozenColor;
+    static SbColor CurveDetachedColor;
+    static SbColor CurveMissingColor;
     static SbColor CrossColorV;
     static SbColor CrossColorH;
     static SbColor FullyConstrainedColor;
@@ -486,6 +500,7 @@ protected:
     std::string editDocName;
     std::string editObjName;
     std::string editSubName;
+    App::SubObjectT editObjT;
 
     // Virtual space variables
     bool isShownVirtualSpace; // indicates whether the present virtual space view is the Real Space or the Virtual Space (virtual space 1 or 2)
