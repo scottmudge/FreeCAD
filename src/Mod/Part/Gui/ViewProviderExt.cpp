@@ -1337,6 +1337,7 @@ App::Color ViewProviderPartExt::getElementColor(App::Color color,
 {
     bool colorFound = false;
     std::vector<std::string> history;
+    std::vector<std::string> prevHistory;
     std::string original;
     long tag = shape.getElementHistory(mapped.c_str(),&original,&history);
     while(1) {
@@ -1360,7 +1361,8 @@ App::Color ViewProviderPartExt::getElementColor(App::Color color,
             // history until we find one.
             doc = obj->getDocument();
             mapped = original;
-            tag = shape.getElementHistory(mapped.c_str(),&original,&history);
+            prevHistory.clear();
+            tag = shape.getElementHistory(mapped.c_str(),&original,&prevHistory);
             continue;
         }
 
@@ -1376,7 +1378,6 @@ App::Color ViewProviderPartExt::getElementColor(App::Color color,
         if(prop->getSize()==0)
             return color;
 
-        history.clear();
         mapped = original;
         // Normally, TopoShape::getElementHistory() returns the mapped element
         // name of the previous step (in 'original'), and tag is the ID of the
@@ -1393,7 +1394,9 @@ App::Color ViewProviderPartExt::getElementColor(App::Color color,
         // model step. The 'original' returned by getElementHistory() here may
         // or may not contain a valid element name for the previous step. We can
         // only decide after another loop hits here.
-        tag = shape.getElementHistory(mapped.c_str(),&original,&history);
+        std::swap(history, prevHistory);
+        prevHistory.clear();
+        tag = shape.getElementHistory(mapped.c_str(),&original,&prevHistory);
         auto element = shape.getElementName(history.empty()?mapped.c_str():history.back().c_str(),
                                             Data::ComplexGeoData::MapToIndexedForced);
         auto idx = Part::TopoShape::shapeTypeAndIndex(element);
