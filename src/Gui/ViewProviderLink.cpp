@@ -634,10 +634,9 @@ public:
                 return false;
             appendPath(path,pcSwitches[type]);
         }
-        if(*subname == 0) return true;
 
         auto pcSwitch = pcSwitches[type];
-        if(!pcChildGroup || !pcSwitch || Data::ComplexGeoData::isElementName(subname))
+        if(*subname == 0 || !pcChildGroup || !pcSwitch || Data::ComplexGeoData::isElementName(subname))
             return pcLinked->getDetailPath(subname,path,false,det);
 
         if(path){
@@ -2611,7 +2610,9 @@ bool ViewProviderLink::getDetailPath(
         appendPath(pPath,pcRoot);
         appendPath(pPath,pcModeSwitch);
     }
-    if(childVpLink && Data::ComplexGeoData::isElementName(subname)) {
+    if(childVpLink
+            && (Data::ComplexGeoData::isElementName(subname)
+                || !subname || !subname[0])) {
         if(childVpLink->getDetail(false,LinkView::SnapshotTransform,subname,det,pPath))
             return true;
         pPath->truncate(len);
