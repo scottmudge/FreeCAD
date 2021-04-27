@@ -1973,7 +1973,6 @@ void Document::exportObjects(const std::vector<App::DocumentObject*>& obj, std::
 #define FC_ELEMENT_OBJECT_DEPS "ObjectDeps"
 #define FC_ATTR_DEP_COUNT "Count"
 #define FC_ATTR_DEP_OBJ_NAME "Name"
-#define FC_ATTR_DEP_COUNT "Count"
 #define FC_ATTR_DEP_ALLOW_PARTIAL "AllowPartial"
 #define FC_ELEMENT_OBJECT_DEP "Dep"
 
@@ -2934,7 +2933,7 @@ bool Document::isAnyRestoring() {
 
 // Open the document
 void Document::restore (const char *filename,
-        bool delaySignal, const std::set<std::string> &objNames)
+        bool delaySignal, const std::vector<std::string> &objNames)
 {
     if(!filename)
         filename = FileName.getValue();
@@ -2970,7 +2969,7 @@ void Document::restore (const char *filename,
 }
 
 void Document::restore(Base::XMLReader &reader,
-        bool delaySignal, const std::set<std::string> &objNames)
+        bool delaySignal, const std::vector<std::string> &objNames)
 {
     if (!reader.isValid())
         throw Base::FileException("Error reading project file", FileName.getValue());
