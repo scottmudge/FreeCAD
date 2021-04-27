@@ -353,9 +353,7 @@ Feature::getElementFromSource(App::DocumentObject *obj,
     // obtain both the old and new style element name
     GeoFeature::resolveElement(src,srcSub,element,false);
 
-    if (element.first.empty())
-        element.first = element.second;
-    else {
+    if (!element.first.empty()) {
         // Strip prefix and indexed based name at the tail of the new style element name
         auto mappedName = Data::ComplexGeoData::newElementName(element.first.c_str());
         auto mapped = Data::ComplexGeoData::isMappedElement(mappedName.c_str());
@@ -370,13 +368,27 @@ Feature::getElementFromSource(App::DocumentObject *obj,
     // a compound operation), then take a shortcut and assume the element index
     // remains the same. But we still need to trace the shape history to
     // confirm.
-    if (shape.countSubShapes(type) == srcShape.countSubShapes(type)) {
+    if (element.first.size() && shape.countSubShapes(type) == srcShape.countSubShapes(type)) {
         tagChanges = 0;
         checkingSubname = element.second.c_str();
         auto mappedName = shape.getElementName(checkingSubname, Data::ComplexGeoData::MapToNamed);
         shape.traceElement(mappedName, checkHistory);
         if (res.size())
             return res;
+    }
+
+    // Try geometry search first
+    auto subShape = srcShape.getSubShape(element.second.c_str());
+    std::vector<std::string> names;
+    shape.searchSubShape(subShape, &names);
+    if (names.size()) {
+        for (auto &name : names) {
+            auto mappedName = shape.getElementName(name.c_str(), Data::ComplexGeoData::MapToNamed);
+            res.emplace_back(std::move(mappedName),  std::move(name));
+            if (single)
+                break;
+        }
+        return res;
     }
 
     // No shortcut, need to search every element of the same type. This may
