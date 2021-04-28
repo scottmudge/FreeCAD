@@ -9345,6 +9345,12 @@ std::string SketchObject::shapeTypeFromGeoId(int geoId, PointPos posId) const {
         return "H_Axis";
     }else if(geoId == GeoEnum::VAxis)
         return "V_Axis";
+
+    if (posId == none) {
+        auto geo = getGeometry(geoId);
+        if (geo && geo->isDerivedFrom(Part::GeomPoint::getClassTypeId()))
+            posId = start;
+    }
     if(posId != none) {
         int idx = getVertexIndexGeoPos(geoId, posId);
         if(idx < 0)

@@ -151,9 +151,6 @@ public:
         if(iconMap.empty()) {
             none = QIcon(Gui::BitmapFactory().pixmap("Sketcher_Element_SelectionTypeInvalid"));
 
-            iconMap[std::make_pair(Part::GeomPoint::getClassTypeId(),0)] =
-                "Sketcher_Element_Point_StartingPoint";
-
             iconMap[std::make_pair(Part::GeomPoint::getClassTypeId(),1)] =
                 "Sketcher_Element_Point_StartingPoint";
 
@@ -242,7 +239,7 @@ public:
             bool hidden = false;
             auto it = iconMap.find(std::make_pair(GeometryType,element));
             if(it == iconMap.end()) {
-                if(!element)
+                if(!element && GeometryType != Part::GeomPoint::getClassTypeId())
                     icon = none;
                 else
                     hidden = true;
@@ -443,7 +440,7 @@ TaskSketcherElements::TaskSketcherElements(ViewProviderSketch *sketchView)
 
     ui->autoSwitchBox->setChecked(hGrp->GetBool("Auto-switch to edge", true));
 
-    ui->comboBoxElementFilter->setEnabled(!isautoSwitchBoxChecked);
+    ui->comboBoxElementFilter->setEnabled(true);
     ui->comboBoxModeFilter->setEnabled(true);
 
     slotElementsChanged();
@@ -642,15 +639,26 @@ void TaskSketcherElements::on_elementsWidget_itemSelectionChanged(void)
         std::stringstream ss;
         int vertex;
 
-        if (ite->isLineSelected) {
-            if(ite->ElementNbr>=0)
+        if (ite->isLineSelected
+                || (isautoSwitchBoxChecked 
+                    && (ite->isStartingPointSelected
+                        || ite->isMidPointSelected
+                        || ite->isEndPointSelected)))
+        {
+            if (ite->GeometryType == Part::GeomPoint::getClassTypeId()) {
+                vertex= ite->StartingVertex;
+                if (vertex!=-1) {
+                    ss << "Vertex" << vertex + 1;
+                    sketchView->selectElement(ss.str().c_str());
+                }
+            } 
+            else if(ite->ElementNbr>=0)
                 ss << "Edge" << ite->ElementNbr + 1;
             else
                 ss << "ExternalEdge" << -ite->ElementNbr - 2;
             sketchView->selectElement(ss.str().c_str());
         }
-
-        if (ite->isStartingPointSelected) {
+        else if (ite->isStartingPointSelected) {
             ss.str(std::string());
             vertex= ite->StartingVertex;
             if (vertex!=-1) {
@@ -658,8 +666,7 @@ void TaskSketcherElements::on_elementsWidget_itemSelectionChanged(void)
                 sketchView->selectElement(ss.str().c_str());
             }
         }
-
-        if (ite->isEndPointSelected) {
+        else if (ite->isEndPointSelected) {
             ss.str(std::string());
             vertex= ite->EndVertex;
             if (vertex!=-1) {
@@ -667,8 +674,7 @@ void TaskSketcherElements::on_elementsWidget_itemSelectionChanged(void)
                 sketchView->selectElement(ss.str().c_str());
             }
         }
-
-        if (ite->isMidPointSelected) {
+        else if (ite->isMidPointSelected) {
             ss.str(std::string());
             vertex= ite->MidVertex;
             if (vertex!=-1) {
@@ -707,18 +713,6 @@ void TaskSketcherElements::on_elementsWidget_itemEntered(QTreeWidgetItem *item)
     std::stringstream ss;
 
 
-    // Edge Auto-Switch functionality
-    if (isautoSwitchBoxChecked && tempitemindex!=focusItemIndex){
-        ui->elementsWidget->blockSignals(true);
-        if (it->GeometryType==Part::GeomPoint::getClassTypeId()) {
-            ui->comboBoxElementFilter->setCurrentIndex(1);
-        }
-        else {
-            ui->comboBoxElementFilter->setCurrentIndex(0);
-        }
-        ui->elementsWidget->blockSignals(false);
-    }
-
     int element=ui->comboBoxElementFilter->currentIndex();
 
     focusItemIndex=tempitemindex;
@@ -733,7 +727,7 @@ void TaskSketcherElements::on_elementsWidget_itemEntered(QTreeWidgetItem *item)
                 ss << "Edge" << it->ElementNbr + 1;
             else
                 ss << "ExternalEdge" << -it->ElementNbr - 2;
-            Gui::Selection().setPreselect(doc_name.c_str(), obj_name.c_str(), ss.str().c_str());
+            sketchView->selectElement(ss.str().c_str(), true);
         }
         break;
     case 1:
@@ -742,7 +736,7 @@ void TaskSketcherElements::on_elementsWidget_itemEntered(QTreeWidgetItem *item)
         vertex= sketchView->getSketchObject()->getVertexIndexGeoPos(it->ElementNbr,static_cast<Sketcher::PointPos>(element));
         if (vertex!=-1) {
             ss << "Vertex" << vertex + 1;
-            Gui::Selection().setPreselect(doc_name.c_str(), obj_name.c_str(), ss.str().c_str());
+            sketchView->selectElement(ss.str().c_str(), true);
         }
         break;
     }
@@ -848,8 +842,6 @@ void TaskSketcherElements::on_elementsWidget_filterShortcutPressed()
 void TaskSketcherElements::on_autoSwitchBox_stateChanged(int state)
 {
       isautoSwitchBoxChecked=(state==Qt::Checked);
-      ui->comboBoxElementFilter->setCurrentIndex(0);
-      ui->comboBoxElementFilter->setEnabled(!isautoSwitchBoxChecked);
 }
 
 void TaskSketcherElements::on_elementsWidget_currentFilterChanged ( int index )
