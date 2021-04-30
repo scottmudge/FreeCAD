@@ -34,6 +34,7 @@
 # include <cstring>
 #ifdef __GNUC__
 # include <cstdint>
+#endif
 # include <climits>
 #endif
 #include <iomanip>
