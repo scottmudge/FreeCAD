@@ -31,8 +31,11 @@
 # include <cstdlib>
 # include <string>
 # include <cstdio>
-# include <cstring>
 # include <climits>
+# include <cstring>
+#ifdef __GNUC__
+# include <cstdint>
+#endif
 #endif
 #include <iomanip>
 #include "Stream.h"
