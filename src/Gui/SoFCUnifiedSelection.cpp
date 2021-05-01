@@ -1195,8 +1195,8 @@ void SoSelectionElementAction::initClass()
     SO_ACTION_ADD_METHOD(SoPointSet,callDoAction);
 }
 
-SoSelectionElementAction::SoSelectionElementAction (Type t, bool secondary)
-    : _type(t), _det(0), _secondary(secondary)
+SoSelectionElementAction::SoSelectionElementAction (Type t, bool secondary, bool noTouch)
+    : _type(t), _det(0), _secondary(secondary), _noTouch(noTouch)
 {
     SO_ACTION_CONSTRUCTOR(SoSelectionElementAction);
 }
@@ -2936,18 +2936,20 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
         ctx->selectionColor = selaction->getColor();
         ctx->selectionIndex.clear();
         ctx->selectionIndex.emplace(-1,0);
-        node->touch();
+        if (!selaction->noTouch())
+            node->touch();
         break;
     } case SoSelectionElementAction::None:
         if(selaction->isSecondary()) {
-            if(removeActionContext(action,node))
+            if(removeActionContext(action,node) && !selaction->noTouch())
                 node->touch();
         }else {
             auto ctx = getActionContext(action,node,selContext,false);
             if(ctx) {
                 ctx->selectionIndex.clear();
                 ctx->colors.clear();
-                node->touch();
+                if (!selaction->noTouch())
+                    node->touch();
             }
         }
         break;
@@ -2960,7 +2962,8 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
                     ctx->colors.clear();
                     if(ctx->isSelectAll())
                         removeActionContext(action,node);
-                    node->touch();
+                    if (!selaction->noTouch())
+                        node->touch();
                 }
                 return true;
             }
@@ -2971,7 +2974,7 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
                     selCounter.checkAction(selaction,ctx);
                     ctx->selectAll();
                 }
-                if(ctx->setColors(selaction->getColors(),element))
+                if(ctx->setColors(selaction->getColors(),element) && !selaction->noTouch())
                     node->touch();
             }
         }
@@ -3002,7 +3005,7 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
                         }
                     }
                 }
-                if(touched)
+                if(touched && !selaction->noTouch())
                     node->touch();
                 return true;
             }
@@ -3035,11 +3038,11 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
                     ctx->selectionColor = selaction->getColor();
                     if(ctx->isSelectAll())
                         ctx->selectionIndex.clear();
-                    if(ctx->addIndex(index))
+                    if(ctx->addIndex(index) && !selaction->noTouch())
                         node->touch();
                 }else{
                     auto ctx = getActionContext(action,node,selContext,false);
-                    if(ctx && ctx->removeIndex(index))
+                    if(ctx && ctx->removeIndex(index) && !selaction->noTouch())
                         node->touch();
                 }
                 return true;
@@ -3054,7 +3057,8 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
             // context inhibites drawing here.
             auto ctx = getActionContext<SoFCSelectionContextEx>(action,node);
             selCounter.checkAction(selaction,ctx);
-            node->touch();
+            if (!selaction->noTouch())
+                node->touch();
         }
         break;
 
