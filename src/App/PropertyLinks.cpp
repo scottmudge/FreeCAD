@@ -370,7 +370,13 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
                         << " auto change element reference " << ret->getFullName() << " "
                         << (shadow.first.size()?shadow.first:shadow.second) << " -> "
                         << (elementName.first.size()?elementName.first:elementName.second));
-            } else if (missing && reverse && shadow.first.size()) {
+            }
+            // Note: the following code proves to be too risky. There is no way
+            // (so far) to ensure the recompute do not change the geometry. If
+            // the geometry does remain the same, the above geometry search
+            // should be able to find the new reference any way!
+#if 0
+            else if (missing && reverse && shadow.first.size()) {
                 // reverse means we are trying to either generate the element
                 // name for the first time, or upgrade to a new map version. In
                 // case of upgrading, we still consult the original mapped name
@@ -394,6 +400,7 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
                     }
                 }
             }
+#endif
         }
     }
 
@@ -418,8 +425,11 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
             sub = shadow.second;
         return true;
     }
-    if (missing)
+    if (missing) {
+        if (sub != shadow.first)
+            sub = shadow.second;
         return true;
+    }
     auto pos2 = shadow.first.rfind('.');
     if(pos2 == std::string::npos)
         return true;
