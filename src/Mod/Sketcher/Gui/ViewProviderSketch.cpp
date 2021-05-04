@@ -2934,6 +2934,15 @@ void ViewProviderSketch::updateColor(void)
     assert(edit);
     //Base::Console().Log("Draw preseletion\n");
 
+
+    SbVec3f pnt, dir;
+    edit->viewer->getNearPlane(pnt, dir);
+    auto pla = getEditingPlacement();
+    Base::Vector3d norm(0, 0, 1);
+    pla.multVec(norm, norm);
+    norm.Normalize();
+    float zdir = norm.Dot(Base::Vector3d(dir[0], dir[1], dir[2])) < 0.0f ? -1.0 : 1.0;
+
     int PtNum = edit->PointsMaterials->diffuseColor.getNum();
     SbColor *pcolor = edit->PointsMaterials->diffuseColor.startEditing();
     int CurvNum = edit->CurvesMaterials->diffuseColor.getNum();
@@ -2950,8 +2959,8 @@ void ViewProviderSketch::updateColor(void)
     int topid = hGrpp->GetInt("TopRenderGeometryId",1);
     int midid = hGrpp->GetInt("MidRenderGeometryId",2);
 
-    float zNormPoint = (topid==1?zHighPoints:(midid==1 && topid!=2)?zHighPoints:zLowPoints);
-    float zConstrPoint = (topid==2?zHighPoints:(midid==2 && topid!=1)?zHighPoints:zLowPoints);
+    float zNormPoint = zdir * (topid==1?zHighPoints:(midid==1 && topid!=2)?zHighPoints:zLowPoints);
+    float zConstrPoint = zdir * (topid==2?zHighPoints:(midid==2 && topid!=1)?zHighPoints:zLowPoints);
 
     float x,y,z;
 
@@ -3077,9 +3086,9 @@ void ViewProviderSketch::updateColor(void)
   //int intGeoCount = getSketchObject()->getHighestCurveIndex() + 1;
   //int extGeoCount = getSketchObject()->getExternalGeometryCount();
 
-    float zNormLine = (topid==1?zHighLines:midid==1?zMidLines:zLowLines);
-    float zConstrLine = (topid==2?zHighLines:midid==2?zMidLines:zLowLines);
-    float zExtLine = (topid==3?zHighLines:midid==3?zMidLines:zLowLines);
+    float zNormLine = zdir * (topid==1?zHighLines:midid==1?zMidLines:zLowLines);
+    float zConstrLine = zdir * (topid==2?zHighLines:midid==2?zMidLines:zLowLines);
+    float zExtLine = zdir * (topid==3?zHighLines:midid==3?zMidLines:zLowLines);
 
     int j=0; // vertexindex
     int vcount = 0;
@@ -3112,7 +3121,7 @@ void ViewProviderSketch::updateColor(void)
                     edit->PreSelectedCurveSet->materialIndex.getNum(), i);
             for (int k=j; k<j+vcount; k++) {
                 verts[k].getValue(x,y,z);
-                verts[k] = SbVec3f(x,y,zHighLine);
+                verts[k] = SbVec3f(x,y,zdir*zHighLine);
                 *indices++ = k;
             }
             *indices = -1;
@@ -3126,7 +3135,7 @@ void ViewProviderSketch::updateColor(void)
                     edit->SelectedCurveSet->materialIndex.getNum(), i);
             for (int k=j; k<j+vcount; k++) {
                 verts[k].getValue(x,y,z);
-                verts[k] = SbVec3f(x,y,zHighLine);
+                verts[k] = SbVec3f(x,y,zdir*zHighLine);
                 *indices++ = k;
             }
             *indices = -1;
@@ -3231,7 +3240,7 @@ void ViewProviderSketch::updateColor(void)
         if (PtId < PtNum) {
             pcolor[PtId] = SelectColor;
             pverts[PtId].getValue(x,y,z);
-            pverts[PtId].setValue(x,y,zHighlight);
+            pverts[PtId].setValue(x,y,zdir*zHighlight);
         }
     }
 
@@ -3281,7 +3290,7 @@ void ViewProviderSketch::updateColor(void)
                                 if (++edit->SelPointMap[index+1] == 1) {
                                     float x,y,z;
                                     pverts[PtId].getValue(x,y,z);
-                                    pverts[PtId].setValue(x,y,zHighlight);
+                                    pverts[PtId].setValue(x,y,zdir*zHighlight);
                                 }
                             }
                         }
@@ -3331,7 +3340,7 @@ void ViewProviderSketch::updateColor(void)
                                 if (++edit->SelPointMap[index+1] == 1) {
                                     float x,y,z;
                                     pverts[PtId].getValue(x,y,z);
-                                    pverts[PtId].setValue(x,y,zHighlight);
+                                    pverts[PtId].setValue(x,y,zdir*zHighlight);
                                 }
                             }
                         }
@@ -3375,9 +3384,9 @@ void ViewProviderSketch::updateColor(void)
     if (edit->PreselectCross == 0) {
         pcolor[0] = pcolor[0] == SelectColor ? PreselectSelectedColor : PreselectColor;
         edit->PreSelectedPointSet->coordIndex.setValue(0);
-        pverts[0][2] = zHighlight;
+        pverts[0][2] = zdir*zHighlight;
     } else
-        pverts[0][2] = zRootPoint;
+        pverts[0][2] = zdir*zRootPoint;
     if (edit->PreselectPoint != -1) {
         int PtId = edit->PreselectPoint + 1;
         if (PtId && PtId <= (int)edit->VertexIdToPointId.size())
