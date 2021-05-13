@@ -196,7 +196,7 @@
 
 #define TOPOP_VERSION 15
 
-FC_LOG_LEVEL_INIT("TopoShape",true,true);
+FC_LOG_LEVEL_INIT("TopoShape",true,2);
 
 using namespace Part;
 
@@ -2635,12 +2635,6 @@ TopoShape &TopoShape::makEShape(const char *maker,
     } else
         FC_THROWM(Base::CADKernelError,"Unknown maker");
 
-# if OCC_VERSION_HEX >= 0x060900
-    mk->SetRunParallel(true);
-# endif
-#if OCC_VERSION_HEX >= 0x070000
-    mk->SetNonDestructive(Standard_True);
-#endif
     TopTools_ListOfShape shapeArguments,shapeTools;
 
     int i=-1;
@@ -2657,6 +2651,12 @@ TopoShape &TopoShape::makEShape(const char *maker,
         } else
             shapeTools.Append(shape.getShape());
     }
+
+# if OCC_VERSION_HEX >= 0x060900
+    if (shapeArguments.Size() + shapeTools.Size() > 2)
+        mk->SetRunParallel(true);
+# endif
+
     mk->SetArguments(shapeArguments);
     mk->SetTools(shapeTools);
     if (tol > 0.0) {
