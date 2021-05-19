@@ -245,14 +245,6 @@ void TaskTransformedParameters::setupUI() {
     });
     linkEditor->setMinimumHeight(150);
 
-    auto splitter = new QSplitter(Qt::Vertical, this);
-    splitter->addWidget(labelMessage);
-    splitter->addWidget(linkEditor);
-    splitter->addWidget(proxy);
-    proxy->setMinimumHeight(300);
-
-    this->groupLayout()->addWidget(splitter);
-
     checkBoxSubTransform = new QCheckBox(this);
     checkBoxSubTransform->setText(tr("Transform sub-feature"));
     checkBoxSubTransform->setToolTip(tr("Check this option to transform individual sub-features,\n"
@@ -280,6 +272,14 @@ void TaskTransformedParameters::setupUI() {
     layout->insertWidget(0,checkBoxParallel);
     layout->insertWidget(0,checkBoxSubTransform);
     layout->insertWidget(0,checkBoxNewSolid);
+
+    splitter = new QSplitter(Qt::Vertical, this);
+    splitter->addWidget(labelMessage);
+    splitter->addWidget(linkEditor);
+    splitter->addWidget(proxy);
+    proxy->setMinimumHeight(defaultMinimumHeight);
+
+    this->groupLayout()->addWidget(splitter);
 
     auto editDoc = Gui::Application::Instance->editDocument();
     if(editDoc) {
