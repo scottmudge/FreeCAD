@@ -1230,9 +1230,27 @@ SubShapeBinder::import(const App::SubObjectT &feature,
             return binder;
     }
 
+    struct Cleaner {
+        App::DocumentObjectT objT;
+        Cleaner(App::DocumentObject *obj)
+            :objT(obj)
+        {}
+        ~Cleaner()
+        {
+            auto doc = objT.getDocument();
+            if (doc)
+                doc->removeObject(objT.getObjectName().c_str());
+        }
+        void release()
+        {
+            objT = App::DocumentObjectT();
+        }
+    };
+
     auto binder = static_cast<Part::SubShapeBinder*>(
             doc->addObject(compatible ?
                 "PartDesign::SubShapeBinder" : "Part::SubShapeBinder", "Import"));
+    Cleaner guard(binder);
     binder->Visibility.setValue(false);
     if (group)
         group->addObject(binder);
@@ -1244,9 +1262,12 @@ SubShapeBinder::import(const App::SubObjectT &feature,
     if (element.size()) {
         doc->recomputeFeature(binder);
         auto res = Part::Feature::getElementFromSource(binder, "", sobj, element.c_str(), true);
-        if (res.size())
+        if (res.size()) {
+            guard.release();
             return App::SubObjectT(binder, res.front().second.c_str());
+        }
         FC_THROWM(Base::RuntimeError, "Failed to deduce bound geometry");
     }
+    guard.release();
     return binder;
 }
