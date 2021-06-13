@@ -144,6 +144,7 @@ private:
 
     QPointer<QWidget> activeEditor;
     QPersistentModelIndex editingIndex;
+    int editingDecimals;
     int removingRows = 0;
     bool _hideHeader = false;
 
