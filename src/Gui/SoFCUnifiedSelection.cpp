@@ -707,11 +707,19 @@ bool SoFCUnifiedSelection::setHighlight(const PickedInfo &info) {
     if(!info.pp) {
         return setHighlight(0,0,0,0,0.0,0.0,0.0);
     }
-    const auto &pt = info.pp->getPoint();
-    const SoDetail *det = info.pp->getDetail();
+    // It is possible for the following call of setHighlight() calling
+    // Gui::setPreseleciton() and trigger other calls to
+    // SoFCUnifiedSelection::getPickedList() and hence invalidatte any
+    // non-copied picked points. So make sure to copy it here.
+    std::unique_ptr<SoPickedPoint> ppCopy;
+    if (!info.ppCopy)
+        ppCopy.reset(info.pp->copy());
+    auto pp = ppCopy ? ppCopy.get() : info.pp;
+    const auto &pt = pp->getPoint();
+    const SoDetail *det = pp->getDetail();
     if(det && !Data::ComplexGeoData::hasElementName(info.subname.c_str()))
         det = nullptr;
-    return setHighlight(static_cast<SoFullPath*>(info.pp->getPath()),
+    return setHighlight(static_cast<SoFullPath*>(pp->getPath()),
             det, info.vpd, info.subname.c_str(), pt[0],pt[1],pt[2]);
 }
 
