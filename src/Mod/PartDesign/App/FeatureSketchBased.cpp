@@ -108,6 +108,8 @@ ProfileBased::ProfileBased()
     ADD_PROPERTY_TYPE(InnerFit, (0.0), "SketchBased", App::Prop_None, "Shrink or expand the profile inner holes for fitting");
     ADD_PROPERTY_TYPE(InnerFitJoin,(long(0)),"SketchBased",App::Prop_None,"Fit join type of inner holes");
     InnerFitJoin.setEnums(Part::Offset::JoinEnums);
+
+    ADD_PROPERTY_TYPE(_ProfileBasedVersion,(0),"Part Design",(App::PropertyType)(App::Prop_Hidden), 0);
 }
 
 short ProfileBased::mustExecute() const
@@ -123,6 +125,7 @@ short ProfileBased::mustExecute() const
 void ProfileBased::setupObject()
 {
     AllowMultiFace.setValue(true);
+    _ProfileBasedVersion.setValue(1);
 }
 
 void ProfileBased::positionByPrevious(void)
@@ -193,7 +196,7 @@ Part::Feature* ProfileBased::getVerifiedObject(bool silent) const {
     return static_cast<Part::Feature*>(result);
 }
 
-TopoShape ProfileBased::getVerifiedFace(bool silent) const {
+TopoShape ProfileBased::getVerifiedFace(bool silent, bool dofit) const {
     auto obj = Profile.getValue();
     if(!obj || !obj->getNameInDocument()) {
         if(silent)
@@ -246,8 +249,8 @@ TopoShape ProfileBased::getVerifiedFace(bool silent) const {
             throw Base::CADKernelError("Cannot make face from profile");
         }
 
-        if (std::abs(Fit.getValue()) > Precision::Confusion()
-                || std::abs(InnerFit.getValue()) > Precision::Confusion()) {
+        if (dofit && (std::abs(Fit.getValue()) > Precision::Confusion()
+                      || std::abs(InnerFit.getValue()) > Precision::Confusion())) {
 
             shape = shape.makEOffsetFace(Fit.getValue(),
                                          InnerFit.getValue(),
@@ -1252,7 +1255,7 @@ void ProfileBased::getAxis(const App::DocumentObject *pcReferenceAxis, const std
     throw Base::TypeError("Rotation axis reference is invalid");
 }
 
-Base::Vector3d ProfileBased::getProfileNormal(const TopoShape &profileShape) const {
+Base::Vector3d ProfileBased::getProfileNormal() const {
 
     Base::Vector3d SketchVector(0,0,1);
     auto obj = getVerifiedObject(true);
@@ -1267,9 +1270,9 @@ Base::Vector3d ProfileBased::getProfileNormal(const TopoShape &profileShape) con
         return SketchVector;
     }
 
-    TopoShape shape = profileShape;
-    if (shape.isNull())
-        shape = getVerifiedFace(true);
+    // For newer verson, do not do fitting, as it may flip the face normal for
+    // some reason.
+    TopoShape shape = getVerifiedFace(true, _ProfileBasedVersion.getValue() <= 0);
 
     gp_Pln pln;
     if (shape.findPlane(pln)) {
