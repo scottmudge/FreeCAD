@@ -1216,8 +1216,10 @@ SubShapeBinder::import(const App::SubObjectT &feature,
             continue;
         if (binder->Support.getSize() != 1)
             continue;
-        const auto &subs = binder->Support.getSubListValues().front().getSubValues(false);
+        auto &binderSupport = binder->Support.getSubListValues().front();
+        const auto &subs = binderSupport.getSubValues(false);
         if (subs.size() > 1
+                || binderSupport.getValue() != resolved.getObject()
                 || (resolvedSub.size() && subs.empty())
                 || (!subs.empty() && resolvedSub != subs[0]))
             continue;
