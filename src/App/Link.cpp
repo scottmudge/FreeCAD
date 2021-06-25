@@ -1204,12 +1204,20 @@ void LinkBaseExtension::update(App::DocumentObject *parent, const Property *prop
             getElementListProperty()->setValues(std::vector<App::DocumentObject*>());
 
             if(getPlacementListProperty()) {
-                getPlacementListProperty()->setStatus(Property::User3,getScaleListProperty()!=0);
+                getPlacementListProperty()->setStatus(Property::User3,true);
                 getPlacementListProperty()->setValue(placements);
                 getPlacementListProperty()->setStatus(Property::User3,false);
             }
-            if(getScaleListProperty())
+            if(getScaleListProperty()) {
+                getScaleListProperty()->setStatus(Property::User3,true);
                 getScaleListProperty()->setValue(scales);
+                getScaleListProperty()->setStatus(Property::User3,false);
+            }
+
+            if (getScaleListProperty())
+                getScaleListProperty()->touch();
+            else if (getPlacementListProperty())
+                getPlacementListProperty()->touch();
 
             for(auto obj : objs) {
                 if(obj && obj->getNameInDocument())
