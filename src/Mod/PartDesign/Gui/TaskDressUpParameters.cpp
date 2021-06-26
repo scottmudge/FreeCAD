@@ -31,6 +31,7 @@
 # include <QAction>
 # include <QKeyEvent>
 # include <QPushButton>
+# include <QCheckBox>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -125,7 +126,7 @@ void TaskDressUpParameters::setupTransaction() {
         transactionID = tid;
 }
 
-void TaskDressUpParameters::setup(QLabel *label, QListWidget *widget, QPushButton *_btnAdd, bool touched)
+void TaskDressUpParameters::setup(QLabel *label, QListWidget *widget, QCheckBox *_btnAdd, bool touched)
 {
     if(!DressUpView)
         return;
@@ -144,7 +145,6 @@ void TaskDressUpParameters::setup(QLabel *label, QListWidget *widget, QPushButto
 
     btnAdd = _btnAdd;
     connect(btnAdd, SIGNAL(toggled(bool)), this, SLOT(onButtonRefAdd(bool)));
-    btnAdd->setCheckable(true);
 
     listWidget = widget;
     listWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
