@@ -83,6 +83,7 @@
 #include <Inventor/elements/SoCullElement.h>
 #include <Inventor/caches/SoBoundingBoxCache.h>
 #include <Inventor/misc/SoGLDriverDatabase.h>
+#include <Inventor/misc/SoChildList.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -93,6 +94,9 @@
 #include <Gui/SoFCUnifiedSelection.h>
 #include <Gui/SoFCSelectionAction.h>
 #include <Gui/SoFCInteractiveElement.h>
+#include <Gui/Inventor/SoFCVertexCache.h>
+#include <Gui/Inventor/SoFCShapeInfo.h>
+#include <Gui/Inventor/SoFCRenderCacheManager.h>
 #include <Gui/ViewParams.h>
 
 FC_LOG_LEVEL_INIT("SoBrepFaceSet",true,true);
@@ -130,156 +134,17 @@ bool SoBrepFaceSet::makeDistinctColor(uint32_t &res, uint32_t color, uint32_t ot
 
 #define PRIVATE(p) ((p)->pimpl)
 
-class SoBrepFaceSet::VBO {
+class SoBrepFaceSet::Private {
 public:
-
-    struct TextureInfo {
-        int unit;
-        int dim;
-        int stripe;
-        int count;
-        const float *coords;
-    };
-
-// #define FC_VBO_FLOAT_NORMAL
-// #define FC_VBO_FORCE_COLOR
-
-#pragma pack(push, 4)
-    struct VertexAttr{ 
-        GLfloat x,y,z;
-#ifdef FC_VBO_FLOAT_NORMAL
-        GLfloat nx, ny, nz;
-        static int normalType() {return GL_FLOAT;}
-#else
-        GLbyte nx, ny, nz, nn; // extra item for padding
-        static int normalType() {return GL_BYTE;}
-#endif
-        static int texCoordType() { return GL_FLOAT; }
-
-        VertexAttr * fill(const SbVec3f &coord, const SbVec3f &normal,
-                  int mbind, const SbColor &color, const float &t)
-        {
-            coord.getValue(x,y,z);
-#ifdef FC_VBO_FLOAT_NORMAL
-            normal.getValue(nx,ny,nz);
-#else
-            nx = static_cast<GLbyte>(std::round(normal[0]*127.0f));
-            ny = static_cast<GLbyte>(std::round(normal[1]*127.0f));
-            nz = static_cast<GLbyte>(std::round(normal[2]*127.0f));
-#endif
-#ifndef FC_VBO_FORCE_COLOR
-            if (!mbind)
-                return this+1;
-#else
-            (void)mbind;
-#endif
-            GLbyte *rgba = reinterpret_cast<GLbyte*>(this+1);
-            uint32_t RGBA = color.getPackedValue(t);
-            *rgba++ = (GLbyte)(( RGBA & 0xFF000000 ) >> 24);
-            *rgba++ = (GLbyte)(( RGBA & 0xFF0000 ) >> 16);
-            *rgba++ = (GLbyte)(( RGBA & 0xFF00 ) >> 8);
-            *rgba++ = (GLbyte)( RGBA & 0xFF );
-            return reinterpret_cast<VertexAttr*>(rgba);
-        }
-
-        VertexAttr *fill(const SbVec3f &coord, const SbVec3f &normal,
-                        int mbind, const SbColor &color, const float &t,
-                        const SoMultiTextureCoordinateElement *mtelem,
-                        const std::vector<TextureInfo> &texinfo,
-                        int tindex)
-        {
-            auto ptr = reinterpret_cast<char*>(fill(coord, normal, mbind, color, t));
-            for (auto &tex : texinfo) {
-                SbVec4f vec;
-                const float *v;
-                if (tex.coords && tindex < tex.count)
-                    v = tex.coords + tex.dim*tindex;
-                else {
-                    vec = mtelem->get(tex.unit, coord, normal);
-                    v = &vec[0];
-                }
-                for (int i=0;i<tex.dim;++i)
-                    ((float*)ptr)[i] = v[i];
-                ptr += tex.stripe;
-            }
-            return (VertexAttr*)ptr;
-        }
-    };
-#pragma pack(pop)
-
-    struct Buffer {
-        uint32_t myvbo = GL_INVALID_VALUE;
-        GLsizei vertex_array_size = 0;
-        std::vector<TextureInfo> tex;
-        int basestripe = 0;
-        int texstripe = 0;
-        bool updateVbo = true;
-        bool vboLoaded = false;
-
-        bool hasColor() const {
-            return basestripe == sizeof(VertexAttr)+4;
-        }
-
-        int stripe() const {
-            return basestripe + texstripe;
-        }
-    };
-
-    static SbBool vboAvailable;
-    std::map<uint32_t, Buffer> vbomap;
-
-    VBO()
+    SoBrepFaceSet *master;
+    bool noVbo = false;
+    Private(SoBrepFaceSet *master)
+        :master(master)
     {
-        SoContextHandler::addContextDestructionCallback(context_destruction_cb, this);
     }
 
-    ~VBO()
-    {
-        SoContextHandler::removeContextDestructionCallback(context_destruction_cb, this);
-
-        // schedule delete for all allocated GL resources
-        std::map<uint32_t, Buffer>::iterator it;
-        for (it = vbomap.begin(); it != vbomap.end(); ++it) {
-            if (it->second.myvbo == GL_INVALID_VALUE) continue;
-            void * ptr0 = (void*) ((uintptr_t) it->second.myvbo);
-            SoGLCacheContextElement::scheduleDeleteCallback(it->first, VBO::vbo_delete, ptr0);
-        }
-    }
-
-    static uint32_t getContext(uint32_t ctx)
-    {
-#if defined(HAVE_QT5_OPENGL)
-        int sharedContext = -1;
-        if (sharedContext < 0)
-            sharedContext = qApp->testAttribute(Qt::AA_ShareOpenGLContexts) ? 1 : 0;
-        return sharedContext ? 0 : ctx;
-#else
-        return ctx;
-#endif
-    }
-
-    bool isVboAvailable(SoGLRenderAction *action) const {
-        SoState *state = action->getState();
-
-        if(!vboAvailable || !Gui::SoGLVBOActivatedElement::get(state))
-            return false;
-
-        uint32_t flags = SoOverrideElement::getFlags(state);
-        if(flags & (SoOverrideElement::NORMAL_VECTOR|SoOverrideElement::NORMAL_BINDING))
-            return false;
-
-        if(flags & (SoOverrideElement::COLOR_INDEX|
-                    SoOverrideElement::DIFFUSE_COLOR|
-                    SoOverrideElement::MATERIAL_BINDING|
-                    SoOverrideElement::TRANSPARENCY))
-        {
-            auto it = vbomap.find(getContext(action->getCacheContext()));
-            if(it == vbomap.end())
-                return false;
-            auto &info = it->second;
-            return info.vboLoaded && !info.updateVbo;
-        }
-        return true;
+    bool isVboAvailable(SoGLRenderAction *) {
+        return !noVbo;
     }
 
     bool render(SoGLRenderAction * action,
@@ -289,7 +154,6 @@ public:
                 const int32_t *vertexindices,
                 int num_vertexindices,
                 const int32_t *partindices,
-                const int32_t *indexoffsets,
                 int num_partindices,
                 const SbVec3f *normals,
                 const int32_t *normindices,
@@ -299,33 +163,7 @@ public:
                 const int nbind,
                 const int mbind,
                 SbBool texture);
-
-    static void context_destruction_cb(uint32_t context, void * userdata)
-    {
-        VBO * self = static_cast<VBO*>(userdata);
-
-        std::map<uint32_t, Buffer>::iterator it = self->vbomap.find(context);
-        if (it != self->vbomap.end()) {
-#ifdef FC_OS_WIN32
-            const cc_glglue * glue = cc_glglue_instance((int) context);
-            PFNGLDELETEBUFFERSARBPROC glDeleteBuffersARB = (PFNGLDELETEBUFFERSARBPROC)cc_glglue_getprocaddress(glue, "glDeleteBuffersARB");
-#endif
-            auto &buffer = it->second;
-            if (buffer.myvbo != GL_INVALID_VALUE)
-                glDeleteBuffersARB(1, &buffer.myvbo);
-            self->vbomap.erase(it);
-        }
-    }
-
-    static void vbo_delete(void * closure, uint32_t contextid)
-    {
-        const cc_glglue * glue = cc_glglue_instance((int) contextid);
-        GLuint id = (GLuint) ((uintptr_t) closure);
-        cc_glglue_glDeleteBuffers(glue, 1, &id);
-    }
 };
-
-SbBool SoBrepFaceSet::VBO::vboAvailable = false;
 
 void SoBrepFaceSet::initClass()
 {
@@ -340,44 +178,38 @@ SoBrepFaceSet::SoBrepFaceSet()
     SO_NODE_ADD_FIELD(highlightColor, (0,0,0));
     highlightIndices.setNum(0);
     SO_NODE_ADD_FIELD(elementSelectable, (TRUE));
-    SO_NODE_ADD_FIELD(shapeInfo, (0));
-    shapeInfo.setNum(0);
+    SO_NODE_ADD_FIELD(shapeInstance, (0));
 
     selContext = std::make_shared<SelContext>();
     selContext2 = std::make_shared<SelContext>();
     packedColor = 0;
 
-    pimpl.reset(new VBO);
-
-    partIndexSensor.attach(&partIndex);
-    partIndexSensor.setData(this);
-    partIndexSensor.setFunction([](void *data, SoSensor*){
-        reinterpret_cast<SoBrepFaceSet*>(data)->onPartIndexChange();
-    });
+    pimpl.reset(new Private(this));
 }
 
 SoBrepFaceSet::~SoBrepFaceSet()
 {
+    delete children;
 }
 
 void SoBrepFaceSet::onPartIndexChange() {
     partBBoxes.clear();
-    indexOffset.clear();
+    partIdxOffset.clear();
     partIndexMap.clear();
 }
 
 void SoBrepFaceSet::buildPartIndexCache() {
-    if(partIndex.getNum()+1 == (int)indexOffset.size())
+    if(partIndex.getNum()+1 == (int)partIdxOffset.size())
         return;
 
-    indexOffset.resize(partIndex.getNum()+1);
+    partIdxOffset.resize(partIndex.getNum()+1);
     const int32_t *piptr = partIndex.getValues(0);
     int32_t c = 0;
     for(int i=0,count=partIndex.getNum();i<count;++i) {
-        indexOffset[i] = c;
+        partIdxOffset[i] = c;
         c += piptr[i];
     }
-    indexOffset[partIndex.getNum()] = c;
+    partIdxOffset[partIndex.getNum()] = c;
     partIndexMap.clear();
     if(partIndex.getNum() > 200) {
         c = 0;
@@ -388,11 +220,77 @@ void SoBrepFaceSet::buildPartIndexCache() {
     }
 }
 
+SoChildList *SoBrepFaceSet::getChildren() const
+{
+    if (!shapeInstance.getValue())
+        return nullptr;
+    if (!children)
+        children = new SoChildList(const_cast<SoBrepFaceSet*>(this));
+    if (children->getLength() == 0)
+        children->append(shapeInstance.getValue());
+    else if (children->get(0) != shapeInstance.getValue())
+        children->set(0, shapeInstance.getValue());
+    return children;
+}
+
+void SoBrepFaceSet::callback(SoCallbackAction * action)
+{
+    if (shapeInstance.getValue())
+        doChildAction(action);
+    else
+        inherited::callback(action);
+}
+
+void SoBrepFaceSet::getPrimitiveCount(SoGetPrimitiveCountAction * action)
+{
+    if (shapeInstance.getValue())
+        doChildAction(action);
+    else
+        inherited::getPrimitiveCount(action);
+}
+
+void SoBrepFaceSet::notify(SoNotList * nl)
+{
+    if (auto field = nl->getLastField()) {
+        if (field == &this->partIndex)
+            onPartIndexChange();
+        else if (field == &this->shapeInstance)
+            getChildren();
+    }
+
+    // SoIndexedFaceSet::notify() is defined as private (which is probably by
+    // mistake).  We skipped calling its notify() here because we are not using
+    // its convex cache or vertex array indexer. See its source code for details.
+    //
+    // inherited::notify(nl);
+    SoIndexedShape::notify(nl);
+}
+
+void SoBrepFaceSet::doChildAction(SoAction *action)
+{
+    auto state = action->getState();
+    state->push();
+    SoFCShapeProxyElement::set(state, this, SoFCShapeProxyElement::FaceSet);
+    auto children = this->getChildren();
+    int numindices;
+    const int * indices;
+    if (action->getPathCode(numindices, indices) == SoAction::IN_PATH)
+        children->traverseInPath(action, numindices, indices);
+    else
+        children->traverse(action);
+    state->pop();
+}
+
 void SoBrepFaceSet::doAction(SoAction* action)
 {
     if (Gui::SoFCSelectionRoot::handleSelectionAction(
                 action, this, SoFCDetail::Face, selContext, selCounter))
         return;
+
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
 
     if (action->getTypeId() == Gui::SoVRMLAction::getClassTypeId()) {
         // update the materialIndex field to match with the number of triangles if needed
@@ -424,19 +322,6 @@ void SoBrepFaceSet::doAction(SoAction* action)
         }
         return;
     }
-    // The recommended way to set 'updateVbo' is to reimplement the method 'notify'
-    // but the base class made this method private so that we can't override it.
-    // So, the alternative way is to write a custom SoAction class.
-    else if (action->getTypeId() == Gui::SoUpdateVBOAction::getClassTypeId()) {
-        for(auto &v : PRIVATE(this)->vbomap) {
-            v.second.updateVbo = true;
-            v.second.vboLoaded = false;
-            v.second.vertex_array_size = 0;
-        }
-        onPartIndexChange();
-        touch();
-        return;
-    }
 
     inherited::doAction(action);
 }
@@ -449,37 +334,34 @@ void SoBrepFaceSet::setSiblings(std::vector<SoNode*> &&s) {
 
 bool SoBrepFaceSet::isHighlightAll(const SelContextPtr &ctx)
 {
-    return !highlightIndices.getNum() && (ctx && ctx->isHighlightAll());
+    return !proxy->highlightIndices.getNum() && (ctx && ctx->isHighlightAll());
 }
 
 bool SoBrepFaceSet::isSelectAll(const SelContextPtr &ctx)
 {
     return !(Gui::ViewParams::highlightIndicesOnFullSelect()
-                && highlightIndices.getNum())
+                && proxy->highlightIndices.getNum())
             && (ctx && ctx->isSelectAll());
 }
 
 void SoBrepFaceSet::GLRender(SoGLRenderAction *action)
 {
-    glRender(action, false);
+    if (shapeInstance.getValue())
+        doChildAction(action);
+    else
+        glRender(action, false);
 }
 
 void SoBrepFaceSet::GLRenderInPath(SoGLRenderAction *action)
 {
-    glRender(action, action->isRenderingDelayedPaths());
+    if (shapeInstance.getValue())
+        doAction(action);
+    else
+        glRender(action, action->isRenderingDelayedPaths());
 }
 
 void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
 {
-    //SoBase::staticDataLock();
-    static bool init = false;
-    if (!init) {
-        std::string ext = (const char*)(glGetString(GL_EXTENSIONS));
-        PRIVATE(this)->vboAvailable = (ext.find("GL_ARB_vertex_buffer_object") != std::string::npos);
-        init = true;
-    }
-    //SoBase::staticDataUnlock();
-
     if (this->coordIndex.getNum() < 3)
         return;
 
@@ -522,9 +404,11 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
         selCounter.checkCache(state);
     }
 
+    setupProxy(state);
+
     SelContextPtr ctx2;
     std::vector<SelContextPtr> ctxs;
-    SelContextPtr ctx = Gui::SoFCSelectionRoot::getRenderContext(this,selContext,ctx2);
+    SelContextPtr ctx = Gui::SoFCSelectionRoot::getRenderContext(proxy,selContext,ctx2);
     if(ctx2 && ctx2->selectionIndex.empty())
         return;
 
@@ -535,7 +419,7 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
     if(ctx && !ctx->isSelected() && !ctx->isHighlighted())
         ctx.reset();
 
-    if((!ctx2||ctx2->isSelectAll()) && isHighlightAll(ctx)) {
+    if((!ctx2||ctx2->isSelectAll()) && proxy->isHighlightAll(ctx)) {
         // Highlight (preselect) all is done in View3DInventerViewer with a
         // dedicated GroupOnTopPreSel. We shall only render edge and point.
         // But if we have partial rendering (ctx2), then edges and points are
@@ -560,7 +444,7 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
                         && !Gui::SoFCUnifiedSelection::getShowSelectionBoundingBox())))
     {
         // Check the sibling selection state
-        for(auto node : siblings) {
+        for(auto node : proxy->siblings) {
             auto sctx = Gui::SoFCSelectionRoot::getRenderContext<Gui::SoFCSelectionContext>(node);
             if(sctx) {
                 if(sctx->isSelected()) {
@@ -637,11 +521,11 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
                         action->getCurPath(), true);
             else
                 action->addDelayedPath(action->getCurPath()->copy());
-            if (isHighlightAll(ctx) || isSelectAll(ctx))
+            if (proxy->isHighlightAll(ctx) || isSelectAll(ctx))
                 return;
         }
 
-        if(isHighlightAll(ctx)) {
+        if(proxy->isHighlightAll(ctx)) {
             if(ctx2 && !ctx2->isSelectAll()) {
                 ctx2->selectionColor = ctx->highlightColor;
                 renderSelection(action,ctx2); 
@@ -655,7 +539,7 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
         if(inpath)
             renderHighlight(action,ctx);
         if(ctx && ctx->isSelected()) {
-            if(isSelectAll(ctx)) {
+            if(proxy->isSelectAll(ctx)) {
                 if(ctx2 && !ctx2->isSelectAll()) {
                     ctx2->selectionColor = ctx->selectionColor;
                     renderSelection(action,ctx2); 
@@ -688,7 +572,7 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
     if(Gui::ViewParams::getShowSelectionOnTop()
             && !Gui::SoFCUnifiedSelection::getShowSelectionBoundingBox()
             && (!ctx2 || ctx2->isSelectAll())
-            && (!ctx || (!isHighlightAll(ctx) && (!isSelectAll(ctx)||!ctx->hasSelectionColor())))
+            && (!ctx || (!proxy->isHighlightAll(ctx) && (!proxy->isSelectAll(ctx)||!ctx->hasSelectionColor())))
             && action->isRenderingDelayedPaths()
             && !inpath)
     {
@@ -754,6 +638,16 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
         renderSelection(action,ctx,false); 
         state->pop();
     }
+}
+
+void SoBrepFaceSet::setupProxy(SoState *state)
+{
+    auto _proxy = SoFCShapeProxyElement::get(state);
+    if (!_proxy || !_proxy->isOfType(SoBrepFaceSet::getClassTypeId()))
+        proxy = this;
+    else
+        proxy = static_cast<SoBrepFaceSet*>(_proxy);
+    idxOffset = SoFCShapeIndexElement::get(state);
 }
 
 static inline bool isOpaque(int id, const float *trans, int numtrans, 
@@ -830,7 +724,7 @@ void SoBrepFaceSet::renderShape(SoGLRenderAction *action,
                 int numparts = partIndex.getNum();
                 if(ctx2 && !ctx2->isSelectAll() && ctx2->isSelected()) {
                     for(auto &v : ctx2->selectionIndex) {
-                        int id = v.first;
+                        int id = v.first - idxOffset;
                         if(id<0 || id>=numparts || !isOpaque(id,trans,numtrans,matIndex,packedColors))
                             continue;
                         RenderIndices.push_back(id);
@@ -889,7 +783,7 @@ void SoBrepFaceSet::renderShape(SoGLRenderAction *action,
     } else  if (ctx2 && !ctx2->isSelectAll() && ctx2->isSelected()) {
         RenderIndices.clear();
         for(auto &v : ctx2->selectionIndex) {
-            int id = v.first;
+            int id = v.first - idxOffset;
             if(id>=0 && id<partIndex.getNum())
                 RenderIndices.push_back(id);
         }
@@ -909,7 +803,6 @@ int SoBrepFaceSet::overrideMaterialBinding(
     matIndex.clear();
 
     auto state = action->getState();
-
     overrideTransparency = 0.0f;
 
     unsigned int shapestyleflags = SoShapeStyleElement::get(state)->getFlags();
@@ -1072,17 +965,17 @@ int SoBrepFaceSet::overrideMaterialBinding(
         if(ctx) {
             if(ctx->isHighlightAll()
                     && Gui::ViewParams::highlightIndicesOnFullSelect()
-                    && highlightIndices.getNum()
-                    && this->highlightColor.getValue().getPackedValue(1.0f))
+                    && proxy->highlightIndices.getNum()
+                    && proxy->highlightColor.getValue().getPackedValue(1.0f))
             {
-                highlightColor = this->highlightColor.getValue().getPackedValue(selectionTransparency);
+                highlightColor = proxy->highlightColor.getValue().getPackedValue(selectionTransparency);
             } else
                 highlightColor = ctx->highlightColor.getPackedValue(selectionTransparency);
 
             if(ctx->hasSelectionColor()) {
                 if(ctx->isSelectAll()
                         && Gui::ViewParams::highlightIndicesOnFullSelect()
-                        && highlightIndices.getNum()
+                        && proxy->highlightIndices.getNum()
                         && this->highlightColor.getValue().getPackedValue(1.0f))
                 {
                     selectionColor = this->highlightColor.getValue().getPackedValue(selectionTransparency);
@@ -1096,7 +989,7 @@ int SoBrepFaceSet::overrideMaterialBinding(
         if(isHighlightAll(ctx)) {
             singleColor = 1;
             diffuseColor = highlightColor;
-        }else if(isSelectAll(ctx) && selectionColor) {
+        }else if(proxy->isSelectAll(ctx) && selectionColor) {
             diffuseColor = selectionColor;
             singleColor = ctx->isHighlighted()?-1:1;
         } else if(ctx2 && ctx2->isSingleColor(diffuseColor,hasTransparency)) {
@@ -1132,7 +1025,7 @@ int SoBrepFaceSet::overrideMaterialBinding(
                 packedColors.push_back(diffuseColor);
                 auto cidx = packedColors.size()-1;
                 for(auto &v : ctx2->selectionIndex) {
-                    int idx = v.first;
+                    int idx = v.first - idxOffset;
                     if(idx>=0 && idx<partIndex.getNum()) {
                         if(!singleColor && ctx2->applyColor(idx,packedColors,hasTransparency)) {
                             matIndex[idx] = packedColors.size()-1;
@@ -1153,7 +1046,7 @@ int SoBrepFaceSet::overrideMaterialBinding(
             }else{
                 assert(diffuse_size >= partIndex.getNum());
                 for(auto &v : ctx2->selectionIndex) {
-                    int idx = v.first;
+                    int idx = v.first - idxOffset;
                     if(idx>=0 && idx<partIndex.getNum()) {
                         if(!ctx2->applyColor(idx,packedColors,hasTransparency)) {
                             auto t = std::max(idx<trans_size?trans[idx]:trans0, overrideTransparency);
@@ -1203,10 +1096,10 @@ int SoBrepFaceSet::overrideMaterialBinding(
             auto cidx = packedColors.size()-1;
             if(ctx->selectionIndex.begin()->first >= 0) {
                 for(auto &v : ctx->selectionIndex)
-                    setColor(v.first, cidx);
+                    setColor(v.first - idxOffset, cidx);
             } else if (Gui::ViewParams::highlightIndicesOnFullSelect()) {
-                for(int i=0, count=highlightIndices.getNum(); i<count; ++i)
-                    setColor(highlightIndices[i], cidx);
+                for(int i=0, count=proxy->highlightIndices.getNum(); i<count; ++i)
+                    setColor(proxy->highlightIndices[i] - idxOffset, cidx);
             }
         }
         if(ctx && ctx->isHighlighted()) {
@@ -1214,10 +1107,10 @@ int SoBrepFaceSet::overrideMaterialBinding(
             auto cidx = packedColors.size()-1;
             if(*ctx->highlightIndex.begin() >= 0) {
                 for(int idx : ctx->highlightIndex)
-                    setColor(idx, cidx);
+                    setColor(idx - idxOffset, cidx);
             } else {
-                for(int i=0, count=highlightIndices.getNum(); i<count; ++i)
-                    setColor(highlightIndices[i], cidx);
+                for(int i=0, count=proxy->highlightIndices.getNum(); i<count; ++i)
+                    setColor(proxy->highlightIndices[i] - idxOffset, cidx);
             }
         }
 
@@ -1240,13 +1133,19 @@ void SoBrepFaceSet::GLRenderBelowPath(SoGLRenderAction * action)
 
 void SoBrepFaceSet::getBoundingBox(SoGetBoundingBoxAction * action) {
 
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
+
     if (this->coordIndex.getNum() < 3)
         return;
 
     auto state = action->getState();
+    setupProxy(state);
     selCounter.checkCache(state,true);
 
-    SelContextPtr ctx2 = Gui::SoFCSelectionRoot::getSecondaryActionContext<SelContext>(action,this);
+    SelContextPtr ctx2 = Gui::SoFCSelectionRoot::getSecondaryActionContext<SelContext>(action,proxy);
     if(!ctx2 || ctx2->isSelectAll()) {
         inherited::getBoundingBox(action);
         return;
@@ -1255,11 +1154,13 @@ void SoBrepFaceSet::getBoundingBox(SoGetBoundingBoxAction * action) {
     if(ctx2->selectionIndex.empty())
         return;
 
+    idxOffset = SoFCShapeIndexElement::get(state);
+
     buildPartBBoxes(state);
 
     int numparts = this->partIndex.getNum();
     for(auto &v : ctx2->selectionIndex) {
-        int id = v.first;
+        int id = v.first - idxOffset;
         if (id<0 || id >= numparts)
             break;
         if(!partBBoxes[id].isEmpty())
@@ -1299,7 +1200,7 @@ void SoBrepFaceSet::buildPartBBoxes(SoState *state) {
         auto &bbox = partBBoxes[id];
 
         int length = (int)pindices[id]*4;
-        int start = (int)indexOffset[id]*4;
+        int start = (int)partIdxOffset[id]*4;
 
         if(start+length > numindices)
             continue;
@@ -1328,7 +1229,7 @@ void SoBrepFaceSet::sortParts(SoState *state, SelContextPtr ctx, SelContextPtr c
     SortedParts.reserve(partBBoxes.size());
     if(ctx2 && ctx2->isSelected() && !ctx2->isSelectAll()) {
         for(auto &v : ctx2->selectionIndex) {
-            int id = v.first;
+            int id = v.first - idxOffset;
             if(id<0 || id>=partIndex.getNum())
                 continue;
             if(!isTranslucent(id,trans,numtrans,matIndex,packedColors))
@@ -1337,10 +1238,10 @@ void SoBrepFaceSet::sortParts(SoState *state, SelContextPtr ctx, SelContextPtr c
             SoModelMatrixElement::get(state).multVecMatrix(partBBoxes[id].getCenter(), center);
             float dist = -SoViewVolumeElement::get(state).getPlane(0.0f).getDistance(center);
             if(ctx) {
-                if (ctx->highlightIndex.count(id)) {
+                if (ctx->highlightIndex.count(id + idxOffset)) {
                     SortedParts.emplace_back(id, dist, 2);
                     continue;
-                } else if (ctx->selectionIndex.count(id)) {
+                } else if (ctx->selectionIndex.count(id + idxOffset)) {
                     SortedParts.emplace_back(id, dist, 1);
                     continue;
                 }
@@ -1357,10 +1258,10 @@ void SoBrepFaceSet::sortParts(SoState *state, SelContextPtr ctx, SelContextPtr c
             SoModelMatrixElement::get(state).multVecMatrix(bbox.getCenter(), center);
             float dist = -SoViewVolumeElement::get(state).getPlane(0.0f).getDistance(center);
             if(ctx) {
-                if (ctx->highlightIndex.count(id)) {
+                if (ctx->highlightIndex.count(id + idxOffset)) {
                     SortedParts.emplace_back(id, dist, 2);
                     continue;
-                } else if (ctx->selectionIndex.count(id)) {
+                } else if (ctx->selectionIndex.count(id + idxOffset)) {
                     SortedParts.emplace_back(id, dist, 1);
                     continue;
                 }
@@ -1694,11 +1595,11 @@ void SoBrepFaceSet::renderHighlight(SoGLRenderAction *action, SelContextPtr ctx)
 
     RenderIndices.clear();
     if(ctx->isHighlightAll()) {
-        if(highlightIndices.getNum()) {
-            if(highlightColor.getValue().getPackedValue(1.0f))
-                color = highlightColor.getValue();
-            for(int i=0, num=highlightIndices.getNum(); i<num; ++i) {
-                int id = highlightIndices[i];
+        if(proxy->highlightIndices.getNum()) {
+            if(proxy->highlightColor.getValue().getPackedValue(1.0f))
+                color = proxy->highlightColor.getValue();
+            for(int i=0, num=proxy->highlightIndices.getNum(); i<num; ++i) {
+                int id = proxy->highlightIndices[i] - idxOffset;
                 if (id<0 || id>=partIndex.getNum())
                     continue;
                 RenderIndices.push_back(id);
@@ -1708,6 +1609,7 @@ void SoBrepFaceSet::renderHighlight(SoGLRenderAction *action, SelContextPtr ctx)
         }
     } else {
         for(auto id : ctx->highlightIndex) {
+            id -= idxOffset;
             if (id<0 || id>=partIndex.getNum())
                 continue;
             RenderIndices.push_back(id);
@@ -1736,7 +1638,7 @@ void SoBrepFaceSet::renderSelection(SoGLRenderAction *action,
     RenderIndices.clear();
     if(!ctx->isSelectAll()) {
         for(auto &v : ctx->selectionIndex) {
-            int id = v.first;
+            int id = v.first + idxOffset;
             if (id<0 || id>=partIndex.getNum())
                 continue;
             RenderIndices.push_back(id);
@@ -1744,13 +1646,13 @@ void SoBrepFaceSet::renderSelection(SoGLRenderAction *action,
         if(RenderIndices.empty())
             return;
     } else if (ctx->hasSelectionColor()) {
-        if(highlightIndices.getNum()
+        if(proxy->highlightIndices.getNum()
                 && Gui::ViewParams::highlightIndicesOnFullSelect())
         {
             if(highlightColor.getValue().getPackedValue(1.0f))
                 color = highlightColor.getValue();
-            for(int i=0, num=highlightIndices.getNum(); i<num; ++i) {
-                int id = highlightIndices[i];
+            for(int i=0, num=proxy->highlightIndices.getNum(); i<num; ++i) {
+                int id = proxy->highlightIndices[i] - idxOffset;
                 if (id<0 || id>=partIndex.getNum())
                     continue;
                 RenderIndices.push_back(id);
@@ -1854,14 +1756,13 @@ void SoBrepFaceSet::_renderSelection(SoGLRenderAction *action, SbColor color, in
     }
 }
 
-bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
+bool SoBrepFaceSet::Private::render(SoGLRenderAction * action,
                                 bool color_override,
                                 const std::vector<int32_t> &render_indices,
                                 const SoCoordinateElement *coords,
                                 const int32_t *vertexindices,
                                 int num_indices,
                                 const int32_t *partindices,
-                                const int32_t *indexoffsets,
                                 int num_partindices,
                                 const SbVec3f *normals,
                                 const int32_t *normalindices,
@@ -1875,35 +1776,28 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
     const int32_t *mindices = matindices;
 
     SoState * state = action->getState();
-    const cc_glglue * glue = cc_glglue_instance(action->getCacheContext());
 
-    uint32_t contextId = getContext(action->getCacheContext());
-    auto res = this->vbomap.insert(std::make_pair(contextId,VBO::Buffer()));
-    VBO::Buffer &buf = res.first->second;
-
-    if (buf.vertex_array_size < 0) {
-        // Non triangles, not supported at this time
+    bool isnew = false;
+    auto vcache = SoFCRenderCacheManager::getVertexCache(
+            state, this->master, isnew, !color_override);
+    if (!vcache)
         return false;
-    }
+    if (isnew) {
+        int tindices[3] = {-1, -1, -1};
+        SoPrimitiveVertex vertex[3];
+        for (int i=0; i<3; ++i)
+            vertex[i].setMaterialIndex(-1);
 
-#ifdef FC_OS_WIN32
-    static PFNGLBINDBUFFERARBPROC glBindBufferARB;
-    static PFNGLMAPBUFFERARBPROC glMapBufferARB;
-    static PFNGLGENBUFFERSPROC glGenBuffersARB;
-    static PFNGLDELETEBUFFERSARBPROC glDeleteBuffersARB;
-    static PFNGLBUFFERDATAARBPROC glBufferDataARB;
-    if (!glBindBufferARB) {
-        glBindBufferARB = (PFNGLBINDBUFFERARBPROC) cc_glglue_getprocaddress(glue, "glBindBufferARB");
-        glMapBufferARB = (PFNGLMAPBUFFERARBPROC) cc_glglue_getprocaddress(glue, "glMapBufferARB");
-        glGenBuffersARB = (PFNGLGENBUFFERSPROC)cc_glglue_getprocaddress(glue, "glGenBuffersARB");
-        glDeleteBuffersARB = (PFNGLDELETEBUFFERSARBPROC)cc_glglue_getprocaddress(glue, "glDeleteBuffersARB");
-        glBufferDataARB = (PFNGLBUFFERDATAARBPROC)cc_glglue_getprocaddress(glue, "glBufferDataARB");
-    }
-#endif
-
-    if (!buf.vboLoaded || buf.updateVbo) {
-        if (color_override)
-            return false;
+        auto setVertex = [](SoPrimitiveVertex &v,
+                            const SbVec3f &coord,
+                            const SbVec3f &normal,
+                            const SbColor &color,
+                            const float &t)
+        {
+            v.setPoint(coord);
+            v.setNormal(normal);
+            v.setPackedColor(color.getPackedValue(t));
+        };
 
         auto vertexlist = static_cast<const SoGLCoordinateElement*>(coords);
 
@@ -1923,7 +1817,6 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
         const SbVec3f *currnormal = &dummynormal;
         if (normals) currnormal = normals;
 
-        int texidx = 0;
         int matnr = 0;
         int trinr = 0;
 
@@ -1932,70 +1825,6 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
         SbVec3f *mynormal1 = (SbVec3f *)currnormal;
         SbVec3f *mynormal2 = (SbVec3f *)currnormal;
         SbVec3f *mynormal3 = (SbVec3f *)currnormal;
-
-        // We must manage buffer size increase let's clear everything and re-init to test the
-        // clearing process
-        if (buf.myvbo != GL_INVALID_VALUE) {
-            glDeleteBuffersARB(1, &buf.myvbo);
-            buf.myvbo = GL_INVALID_VALUE;
-        }
-
-        buf.tex.clear();
-        buf.texstripe = 0;
-        const SoMultiTextureCoordinateElement * mtelem = NULL;
-        if (texture) {
-            int lastenabled = -1;
-            const SbBool * enabledunits = NULL;
-            enabledunits = SoMultiTextureEnabledElement::getEnabledUnits(state, lastenabled);
-            if (enabledunits)
-                mtelem = SoMultiTextureCoordinateElement::getInstance(state);
-            if (!SoGLDriverDatabase::isSupported(glue, SO_GL_MULTITEXTURE)) {
-                static int hasWarned = 0;
-                if (lastenabled>0) {
-                    if (!hasWarned) {
-                        SoDebugError::postWarning("VBO::render",
-                                "Multitexturing is not supported on this hardware, "
-                                "but more than one textureunit is in use.");
-                        hasWarned = 1;
-                    }
-                    lastenabled = 0;
-                }
-            }
-            for (int i = 0; i <= lastenabled; i++) {
-                if (!enabledunits[i]) continue;
-                buf.tex.emplace_back();
-                auto &tex = buf.tex.back();
-                tex.dim = mtelem->getDimension(i);
-                tex.stripe = tex.dim*sizeof(float);
-                buf.texstripe += tex.stripe;
-                tex.count = mtelem->getNum(i);
-                tex.unit = i;
-                tex.coords = nullptr;
-                if (tex.count) {
-                    switch (tex.dim) {
-                    case 2: tex.coords = (const float*)mtelem->getArrayPtr2(i); break;
-                    case 3: tex.coords = (const float*)mtelem->getArrayPtr3(i); break;
-                    case 4: tex.coords = (const float*)mtelem->getArrayPtr4(i); break;
-                    }
-                }
-            }
-        }
-
-        FC_COIN_THREAD_LOCAL std::vector<unsigned char> vertex_array;
-
-        buf.basestripe = sizeof(VertexAttr);
-        // In case material binding is not overall, we include color into the
-        // VBO, hence plus 4 below. Must do this before calling buf.stripe()
-#ifndef FC_VBO_FORCE_COLOR
-        if (mbind != OVERALL)
-#endif
-            buf.basestripe += 4;
-
-        vertex_array.resize(buf.stripe() * num_indices);
-
-        VertexAttr *vertex_attr = (VertexAttr*)(&vertex_array[0]);
-
-        buf.vertex_array_size = 0;
 
         if(mbind == PER_PART_INDEXED || mbind == PER_VERTEX_INDEXED || mbind == PER_FACE_INDEXED) {
             mycolor1 = mycolor2 = mycolor3 = SoLazyElement::getDiffuse(state,matindices[0]);
@@ -2031,9 +1860,10 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
             v4 = viptr < viendptr ? *viptr++ : -1;
             if (v4 != -1) {
                 // not triangle, bail
-                buf.vertex_array_size = -1;
+                this->noVbo = true;
                 SoDebugError::postWarning("SoBrepFaceSet::VBO::render",
                         "Non-triangle elements are not supported. Fallback to CPU rendering.");
+                SoFCRenderCacheManager::removeVertexCache(this->master, vcache);
                 return false;
             }
 
@@ -2129,27 +1959,16 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
             if (nbind == PER_VERTEX_INDEXED)
                 normalindices++;
 
-            if (buf.tex.empty()) {
-                vertex_attr = vertex_attr->fill(cur_coords3d[v1], *mynormal1, mbind, mycolor1, t1);
-                vertex_attr = vertex_attr->fill(cur_coords3d[v2], *mynormal2, mbind, mycolor2, t2);
-                vertex_attr = vertex_attr->fill(cur_coords3d[v3], *mynormal3, mbind, mycolor3, t3);
-            } else {
-                int tindex;
-                tindex = texindices ? *texindices++ : texidx++;
-                vertex_attr = vertex_attr->fill(cur_coords3d[v1], *mynormal1, mbind, mycolor1, t1,
-                                                mtelem, buf.tex, tindex);
-
-                tindex = texindices ? *texindices++ : texidx++;
-                vertex_attr = vertex_attr->fill(cur_coords3d[v2], *mynormal2, mbind, mycolor2, t2,
-                                                mtelem, buf.tex, tindex);
-
-                tindex = texindices ? *texindices++ : texidx++;
-                vertex_attr = vertex_attr->fill(cur_coords3d[v3], *mynormal3, mbind, mycolor3, t3,
-                                                mtelem, buf.tex, tindex);
-                if (texindices)
-                    texindices++;
+            setVertex(vertex[0], cur_coords3d[v1], *mynormal1, mycolor1, t1);
+            setVertex(vertex[1], cur_coords3d[v2], *mynormal2, mycolor2, t2);
+            setVertex(vertex[2], cur_coords3d[v3], *mynormal3, mycolor3, t3);
+            if (texindices) {
+                tindices[0] = *texindices++;
+                tindices[1] = *texindices++;
+                tindices[2] = *texindices++;
+                texindices++;
             }
-            buf.vertex_array_size += 3;
+            vcache->addTriangle(vertex, vertex+1, vertex+2, nullptr, tindices);
 
             /* ============================================================ */
             trinr++;
@@ -2166,127 +1985,43 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
                 trinr = 0;
             }
         }
-        if (num_partindices && buf.vertex_array_size != indexoffsets[num_partindices]*3) {
-            SoDebugError::postWarning("SoBrepFaceSet::VBO::render", "vertex index count mismatch.");
-            buf.vertex_array_size = -1;
-            return false;
-        }
-
-        glGenBuffersARB(1, &buf.myvbo);
-        glBindBufferARB(GL_ARRAY_BUFFER_ARB, buf.myvbo);
-        glBufferDataARB(GL_ARRAY_BUFFER_ARB,
-                        buf.vertex_array_size * buf.stripe(),
-                        &vertex_array[0],
-                        GL_DYNAMIC_DRAW_ARB);
-
-        buf.updateVbo = true; // set to true here avoid calling glBindBuffer below
-        buf.vboLoaded = true;
+        vcache->close(state);
     }
 
-    // This is the VBO rendering code
-
-    if (!buf.updateVbo) {
-        if (mbind != OVERALL && !color_override && !buf.hasColor()) {
-            SoDebugError::postWarning("VBO::render", "material binding out of sync");
-            buf.updateVbo = true;
-            return false;
-        }
-        glBindBufferARB(GL_ARRAY_BUFFER_ARB, buf.myvbo);
-    }
-
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_NORMAL_ARRAY);
-
-    glVertexPointer(3,GL_FLOAT,buf.stripe(),0);
-    glNormalPointer(VertexAttr::normalType(),buf.stripe(),(GLvoid *)(3*sizeof(GLfloat)));
-
-    if (!color_override) {
-        if (buf.hasColor() && mbind != OVERALL) {
-            glEnableClientState(GL_COLOR_ARRAY);
-            glColorPointer(4,GL_UNSIGNED_BYTE,buf.stripe(),(GLvoid*)(sizeof(VertexAttr)));
-        }
-    }
-    if (texture) {
-        size_t offset = buf.basestripe;
-        for (auto &tex : buf.tex) {
-            cc_glglue_glClientActiveTexture(glue, GL_TEXTURE0 + tex.unit);
-            cc_glglue_glTexCoordPointer(glue,
-                                        tex.dim,
-                                        VertexAttr::texCoordType(),
-                                        buf.stripe(),
-                                        (GLvoid *)offset);
-            offset += tex.stripe;
-            cc_glglue_glEnableClientState(glue, GL_TEXTURE_COORD_ARRAY);
-        }
-    }
+    int arrays = SoFCVertexCache::ALL;
+    if (!texture)
+        arrays &= ~SoFCVertexCache::TEXCOORD;
+    if (color_override)
+        arrays &= ~SoFCVertexCache::COLOR;
 
     if((!color_override || mbind == OVERALL) && render_indices.empty()) {
-        // no color override, no out of order rendering, just render with vbo buffer
-
-        // glDrawElements(GL_TRIANGLES, this->indice_array, GL_UNSIGNED_INT, (void *)0);
-        glDrawArrays(GL_TRIANGLES, 0, buf.vertex_array_size);
-
+        vcache->renderTriangles(state, arrays);
     } else if(!color_override || mbind == OVERALL) {
         // no color override, but out of order rendering
-        if (render_indices.size() > 1 && cc_glglue_has_multidraw_vertex_arrays(glue)) {
-            FC_COIN_THREAD_LOCAL std::vector<GLint> array_offsets;
-            FC_COIN_THREAD_LOCAL std::vector<GLsizei> array_counts;
-            array_offsets.clear();
-            array_counts.clear();
-            for (int id : render_indices) {
-                array_counts.push_back(partindices[id]*3);
-                array_offsets.push_back(indexoffsets[id]*3);
-            }
-            cc_glglue_glMultiDrawArrays(glue, GL_TRIANGLES,
-                    &array_offsets[0], &array_counts[0], (GLsizei)array_counts.size());
-        } else {
-            for (int id : render_indices) {
-                uint32_t count = (uint32_t)partindices[id]*3;
-                intptr_t offset = (intptr_t)indexoffsets[id]*3;
-                // glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void *)offset*4);
-                glDrawArrays(GL_TRIANGLES, offset, count);
-            }
-        }
-    } else if(render_indices.empty()) {
-        // color override only
-        for(int id=0;id<num_partindices;++id) {
-            if (mbind == PER_PART)
-                materials->send(id, true);
-            else if (mbind == PER_PART_INDEXED)
-                materials->send(mindices[id], true);
-            uint32_t count = (uint32_t)partindices[id]*3;
-            intptr_t offset = (intptr_t)indexoffsets[id]*3;
-            // glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void *)offset*4);
-            glDrawArrays(GL_TRIANGLES, offset, count);
-        }
-
+        vcache->renderTriangles(state, render_indices, arrays);
     } else {
-        // color override and out of order rendering
-        for(int id : render_indices) {
-            if (mbind == PER_PART)
-                materials->send(id, true);
-            else if (mbind == PER_PART_INDEXED)
-                materials->send(mindices[id], true);
-            uint32_t count = (uint32_t)partindices[id]*3;
-            intptr_t offset = (intptr_t)indexoffsets[id]*3;
-            // glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void *)offset*4);
-            glDrawArrays(GL_TRIANGLES, offset, count);
+        vcache->beginDraw(state, arrays, GL_TRIANGLES);
+        if(render_indices.empty()) {
+            // color override only
+            for(int id=0;id<num_partindices;++id) {
+                if (mbind == PER_PART)
+                    materials->send(id, true);
+                else if (mbind == PER_PART_INDEXED)
+                    materials->send(mindices[id], true);
+                vcache->renderTriangles(state, arrays, id);
+            }
+        } else {
+            // color override and out of order rendering
+            for(int id : render_indices) {
+                if (mbind == PER_PART)
+                    materials->send(id, true);
+                else if (mbind == PER_PART_INDEXED)
+                    materials->send(mindices[id], true);
+                vcache->renderTriangles(state, arrays, id);
+            }
         }
+        vcache->endDraw(state, arrays);
     }
-
-    if (texture && buf.tex.size()) {
-        for (auto &tex : buf.tex) {
-            cc_glglue_glClientActiveTexture(glue, GL_TEXTURE0 + tex.unit);
-            cc_glglue_glDisableClientState(glue, GL_TEXTURE_COORD_ARRAY);
-        }
-        cc_glglue_glClientActiveTexture(glue, GL_TEXTURE0);
-    }
-
-    glDisableClientState(GL_COLOR_ARRAY);
-    glDisableClientState(GL_NORMAL_ARRAY);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-    buf.updateVbo = false;
     return true;
 }
 
@@ -2354,7 +2089,7 @@ void SoBrepFaceSet::renderShape(SoGLRenderAction * action) {
                                                  SoOverrideElement::TRANSPARENCY)) ? true : false;
 
         didvbo = PRIVATE(this)->render(action, color_override, RenderIndices, coords,
-                cindices, numindices, pindices, &indexOffset[0], numparts,
+                cindices, numindices, pindices, numparts,
                 normals, nindices, &mb, mindices, tindices, nbind, mbind, doTextures);
 
     }
@@ -2417,15 +2152,15 @@ void SoBrepFaceSet::renderFaces(const SoCoordinateElement *coords,
     int matnr = 0;
     int texidx = 0;
 
-    assert(partIndex.getNum()+1 == (int)indexOffset.size());
+    assert(partIndex.getNum()+1 == (int)partIdxOffset.size());
 
-    int start = (int)indexOffset[start_partindex]*4;
+    int start = (int)partIdxOffset[start_partindex]*4;
     int length;
-    if (indexOffset.size() == 2 && indexOffset[0] == 0 && indexOffset[1] < 0)
+    if (partIdxOffset.size() == 2 && partIdxOffset[0] == 0 && partIdxOffset[1] < 0)
         length = num_indices;
     else
-        length = (int)(indexOffset[start_partindex+num_partindices]
-                        - indexOffset[start_partindex])*4;
+        length = (int)(partIdxOffset[start_partindex+num_partindices]
+                        - partIdxOffset[start_partindex])*4;
 
     // normals
     if (nbind == PER_VERTEX_INDEXED)
@@ -2640,8 +2375,11 @@ SoDetail * SoBrepFaceSet::createTriangleDetail(SoRayPickAction * action,
                                                SoPickedPoint * pp)
 {
     SoDetail* detail = inherited::createTriangleDetail(action, v1, v2, v3, pp);
-    SoFaceDetail* face_detail = static_cast<SoFaceDetail*>(detail);
-    face_detail->setPartIndex(getPartFromFace(face_detail->getFaceIndex()));
+    if (detail) {
+        SoFaceDetail* face_detail = static_cast<SoFaceDetail*>(detail);
+        face_detail->setPartIndex(getPartFromFace(face_detail->getFaceIndex())
+                + SoFCShapeIndexElement::get(action->getState()));
+    }
     return detail;
 }
 
@@ -2717,7 +2455,15 @@ SoBrepFaceSet::findNormalBinding(SoState * const state) const
 
 void SoBrepFaceSet::rayPick(SoRayPickAction *action) {
 
-    SelContextPtr ctx2 = Gui::SoFCSelectionRoot::getSecondaryActionContext<SelContext>(action,this);
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
+
+    SoState *state = action->getState();
+    setupProxy(state);
+
+    SelContextPtr ctx2 = Gui::SoFCSelectionRoot::getSecondaryActionContext<SelContext>(action,proxy);
     if(ctx2 && !ctx2->isSelected())
         return;
 
@@ -2725,8 +2471,6 @@ void SoBrepFaceSet::rayPick(SoRayPickAction *action) {
         return;
 
     computeObjectSpaceRay(action);
-
-    SoState *state = action->getState();
 
     if (getBoundingBoxCache() && getBoundingBoxCache()->isValid(state)) {
         SbBox3f box = getBoundingBoxCache()->getProjectedBox();
@@ -2740,13 +2484,13 @@ void SoBrepFaceSet::rayPick(SoRayPickAction *action) {
 
     auto pick = [&](int id) {
         this->generatePrimitivesRange(action,id,
-                this->indexOffset[id], this->indexOffset[id]*4, this->indexOffset[id+1]*4);
+                this->partIdxOffset[id], this->partIdxOffset[id]*4, this->partIdxOffset[id+1]*4);
     };
 
     int threshold = Gui::ViewParams::getSelectionPickThreshold();
     int numparts = partIndex.getNum();
 
-    if(threshold && numparts && indexOffset[numparts-1]/numparts > threshold) {
+    if(threshold && numparts && partIdxOffset[numparts-1]/numparts > threshold) {
         // If face per part exceeds the threshold, then force computes bbox per
         // part. The computed bboxes will be cached until partIndex changes
         buildPartBBoxes(state);
@@ -2766,7 +2510,7 @@ void SoBrepFaceSet::rayPick(SoRayPickAction *action) {
 
     if(ctx2 && !ctx2->isSelectAll()) {
         for(auto &v : ctx2->selectionIndex) {
-            int id = v.first;
+            int id = v.first - idxOffset;
             if(id<0 || id>=numparts)
                 continue;
             auto &box = partBBoxes[id];

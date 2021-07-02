@@ -64,6 +64,7 @@
 #include "SoFCRenderCache.h"
 #include "SoFCRenderer.h"
 #include "SoFCRenderCacheManager.h"
+#include "SoFCShapeInfo.h"
 
 using namespace Gui;
 
@@ -261,8 +262,7 @@ public:
 
     ~NodeSensor() { detach(); }
 
-    void attach(SoFCRenderCacheManagerP * master, const SoNode *node) {
-      (void)master;
+    void attach(const SoNode *node) {
       if (this->node == node) return;
       assert(!this->node);
       this->node = const_cast<SoNode *>(node);
@@ -391,6 +391,8 @@ void SoFCRenderCacheManagerP::initAction()
   this->action = new SoCallbackAction;
   this->action->addPreCallback(SoFCSelectionRoot::getClassTypeId(), &preSeparator, this);
   this->action->addPostCallback(SoFCSelectionRoot::getClassTypeId(), &postSeparator, this);
+  this->action->addPreCallback(SoFCShapeInfo::getClassTypeId(), &preSeparator, this);
+  this->action->addPostCallback(SoFCShapeInfo::getClassTypeId(), &postSeparator, this);
   this->action->addPreCallback(SoAnnotation::getClassTypeId(), &preAnnotation, this);
   this->action->addPostCallback(SoAnnotation::getClassTypeId(), &postAnnotation, this);
   this->action->addPreCallback(SoFCPathAnnotation::getClassTypeId(), &prePathAnnotation, this);
@@ -902,7 +904,7 @@ SoFCRenderCacheManagerP::preSeparator(void *userdata,
   if (action->getCurPathCode() == SoAction::BELOW_PATH
       || action->getCurPathCode() == SoAction::NO_PATH) {
     sensor = &self->cachetable[node];
-    sensor->attach(self, node);
+    sensor->attach(node);
     for (auto it=sensor->caches.begin(); it!=sensor->caches.end();) {
       auto & cache = *it;
       if (cache->getNodeId() != node->getNodeId()) {
@@ -922,17 +924,22 @@ SoFCRenderCacheManagerP::preSeparator(void *userdata,
   state->push();
 
   int selectstyle = Material::Full;
-  auto selroot = static_cast<const SoFCSelectionRoot*>(node);
-  switch(selroot->selectionStyle.getValue()) {
-  case SoFCSelectionRoot::Box:
-    selectstyle = Material::Box;
-    break;
-  case SoFCSelectionRoot::Unpickable:
-    if (action->getCurPathCode() != SoAction::IN_PATH)
-      selectstyle = Material::Unpickable;
-    break;
-  default:
-    break;
+  const SoFCSelectionRoot *selroot;
+  if (node->isOfType(SoFCSelectionRoot::getClassTypeId())) {
+    selroot = static_cast<const SoFCSelectionRoot*>(node);
+    switch(selroot->selectionStyle.getValue()) {
+    case SoFCSelectionRoot::Box:
+      selectstyle = Material::Box;
+      break;
+    case SoFCSelectionRoot::Unpickable:
+      if (action->getCurPathCode() != SoAction::IN_PATH)
+        selectstyle = Material::Unpickable;
+      break;
+    default:
+      break;
+    }
+  } else {
+    selroot = nullptr;
   }
 
   RenderCachePtr cache(new SoFCRenderCache(state, const_cast<SoNode*>(node)));
@@ -1208,8 +1215,11 @@ SoFCRenderCacheManagerP::preShape(void *userdata,
   SoState * state = action->getState();
   SoFCRenderCache *currentcache = self->stack.back();
 
+  if (SoFCVertexCache::getShapeInstance(node))
+      return SoCallbackAction::CONTINUE;
+
   VCacheSensor & sensor = self->vcachetable[node];
-  sensor.attach(self, node);
+  sensor.attach(node);
   CoinPtr<SoFCVertexCache> prev;
   for (auto it=sensor.caches.begin(); it!=sensor.caches.end();) {
     auto & cache = *it;
@@ -1232,6 +1242,44 @@ SoFCRenderCacheManagerP::preShape(void *userdata,
   currentcache->beginChildCaching(state, self->vcache);
   self->vcache->open(state);
   return SoCallbackAction::CONTINUE;
+}
+
+SoFCVertexCache *
+SoFCRenderCacheManager::getVertexCache(SoState * state, SoNode * node, bool &isnew, bool create)
+{
+  auto & sensor = SoFCRenderCacheManagerP::vcachetable[node];
+  sensor.attach(node);
+  CoinPtr<SoFCVertexCache> prev;
+  isnew = true;
+  for (auto it=sensor.caches.begin(); it!=sensor.caches.end();) {
+    auto & cache = *it;
+    if (!prev) prev = cache;
+    if (cache->getNodeId() != node->getNodeId()) {
+      it = sensor.caches.erase(it);
+      continue;
+    }
+    if (cache->isValid(state)) {
+      isnew = false;
+      return cache;
+    }
+    ++it;
+  }
+  if (!create)
+    return nullptr;
+  SoFCVertexCache * vcache= new SoFCVertexCache(state, const_cast<SoNode*>(node), prev);
+  sensor.caches.emplace_back(vcache);
+  return vcache;
+}
+
+void
+SoFCRenderCacheManager::removeVertexCache(SoNode * node, SoFCVertexCache * vcache)
+{
+  auto it = SoFCRenderCacheManagerP::vcachetable.find(node);
+  if (it == SoFCRenderCacheManagerP::vcachetable.end())
+    return;
+  auto iter = std::find(it->second.caches.begin(), it->second.caches.end(), vcache);
+  if (iter != it->second.caches.end())
+    it->second.caches.erase(iter);
 }
 
 SoCallbackAction::Response

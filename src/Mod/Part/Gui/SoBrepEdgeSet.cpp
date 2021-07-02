@@ -65,11 +65,13 @@
 #include <Inventor/actions/SoRayPickAction.h>
 #include <Inventor/elements/SoCullElement.h>
 #include <Inventor/caches/SoBoundingBoxCache.h>
+#include <Inventor/misc/SoChildList.h>
 
 #include "SoBrepEdgeSet.h"
 #include "SoBrepFaceSet.h"
 #include <Gui/SoFCUnifiedSelection.h>
 #include <Gui/SoFCSelectionAction.h>
+#include <Gui/Inventor/SoFCShapeInfo.h>
 #include <Gui/ViewParams.h>
 
 using namespace Gui;
@@ -94,27 +96,93 @@ SoBrepEdgeSet::SoBrepEdgeSet()
     seamIndices.setNum(0);
     SO_NODE_ADD_FIELD(elementSelectable, (TRUE));
     SO_NODE_ADD_FIELD(onTopPattern, (TRUE));
+    SO_NODE_ADD_FIELD(shapeInstance, (0));
+}
+
+SoChildList *SoBrepEdgeSet::getChildren() const
+{
+    if (!shapeInstance.getValue())
+        return nullptr;
+    if (!children)
+        children = new SoChildList(const_cast<SoBrepEdgeSet*>(this));
+    if (children->getLength() == 0)
+        children->append(shapeInstance.getValue());
+    else if (children->get(0) != shapeInstance.getValue())
+        children->set(0, shapeInstance.getValue());
+    return children;
 }
 
 void SoBrepEdgeSet::notify(SoNotList * list)
 {
-    SoField *f = list->getLastField();
-    if (f == &this->coordIndex) {
-        const int32_t* cindices = this->coordIndex.getValues(0);
-        int numcindices = this->coordIndex.getNum();
-        this->segments.clear();
-        for(int i=0;i<numcindices;i++) {
-            if(cindices[i] < 0)
-                this->segments.push_back(i+1);
+    if (auto f = list->getLastField()) {
+        if (f == &this->coordIndex) {
+            const int32_t* cindices = this->coordIndex.getValues(0);
+            int numcindices = this->coordIndex.getNum();
+            this->segments.clear();
+            for(int i=0;i<numcindices;i++) {
+                if(cindices[i] < 0)
+                    this->segments.push_back(i+1);
+            }
         }
+        else if (f == &this->shapeInstance)
+            getChildren();
     }
     SoIndexedLineSet::notify(list);
+}
+
+void SoBrepEdgeSet::doChildAction(SoAction *action)
+{
+    auto state = action->getState();
+    state->push();
+    SoFCShapeProxyElement::set(state, this, SoFCShapeProxyElement::LineSet);
+    auto children = this->getChildren();
+    int numindices;
+    const int * indices;
+    if (action->getPathCode(numindices, indices) == SoAction::IN_PATH)
+        children->traverseInPath(action, numindices, indices);
+    else
+        children->traverse(action);
+    state->pop();
+}
+
+void SoBrepEdgeSet::setupProxy(SoState *state)
+{
+    auto _proxy = SoFCShapeProxyElement::get(state);
+    if (!_proxy || !_proxy->isOfType(SoBrepEdgeSet::getClassTypeId()))
+        proxy = this;
+    else
+        proxy = static_cast<SoBrepEdgeSet*>(_proxy);
+    idxOffset = SoFCShapeIndexElement::get(state);
+}
+
+void SoBrepEdgeSet::rayPick(SoRayPickAction * action)
+{
+    if (shapeInstance.getValue())
+        doChildAction(action);
+    else
+        inherited::rayPick(action);
+}
+
+void SoBrepEdgeSet::callback(SoCallbackAction * action)
+{
+    if (shapeInstance.getValue())
+        doChildAction(action);
+    else
+        inherited::callback(action);
+}
+
+void SoBrepEdgeSet::getPrimitiveCount(SoGetPrimitiveCountAction * action)
+{
+    if (shapeInstance.getValue())
+        doChildAction(action);
+    else
+        inherited::getPrimitiveCount(action);
 }
 
 bool SoBrepEdgeSet::isSelected(SelContextPtr ctx) {
     if(ctx) 
         return ctx->isSelected();
-    for(auto node : siblings) {
+    for(auto node : proxy->siblings) {
         auto sctx = Gui::SoFCSelectionRoot::getRenderContext<Gui::SoFCSelectionContext>(node);
         if(sctx && sctx->isSelected())
             return true;
@@ -130,17 +198,26 @@ void SoBrepEdgeSet::setSiblings(std::vector<SoNode*> &&s) {
 
 void SoBrepEdgeSet::GLRender(SoGLRenderAction *action)
 {
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
     glRender(action, false);
 }
 
 void SoBrepEdgeSet::GLRenderInPath(SoGLRenderAction *action)
 {
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
     glRender(action, true);
 }
 
 void SoBrepEdgeSet::glRender(SoGLRenderAction *action, bool inpath)
 {
     auto state = action->getState();
+    setupProxy(state);
 
     bool delayrendering = action->isRenderingDelayedPaths();
     if (!inpath && !delayrendering) {
@@ -165,7 +242,7 @@ void SoBrepEdgeSet::glRender(SoGLRenderAction *action, bool inpath)
 
 
     SelContextPtr ctx2;
-    SelContextPtr ctx = Gui::SoFCSelectionRoot::getRenderContext<SelContext>(this,selContext,ctx2);
+    SelContextPtr ctx = Gui::SoFCSelectionRoot::getRenderContext<SelContext>(proxy,selContext,ctx2);
     if(ctx2 && !ctx2->isSelected())
         return;
 
@@ -191,7 +268,7 @@ void SoBrepEdgeSet::glRender(SoGLRenderAction *action, bool inpath)
         inpath = false;
 
     if(ctx && ctx->isHighlightAll()
-           && (!highlightIndices.getNum()
+           && (!proxy->highlightIndices.getNum()
                || (ctx2 && !ctx2->isSelectAll())))
     {
         if(ctx2 && !ctx2->isSelectAll()) {
@@ -208,7 +285,7 @@ void SoBrepEdgeSet::glRender(SoGLRenderAction *action, bool inpath)
        && Gui::ViewParams::getShowSelectionOnTop()
        && (!ctx || !ctx->isSelectAll()
                 || !Gui::ViewParams::highlightIndicesOnFullSelect()
-                || highlightIndices.getNum())
+                || proxy->highlightIndices.getNum())
        && !Gui::SoFCUnifiedSelection::getShowSelectionBoundingBox()) 
     {
         // If we are rendering on top, we shall perform a two pass rendering.
@@ -264,7 +341,7 @@ void SoBrepEdgeSet::glRender(SoGLRenderAction *action, bool inpath)
 
         if(ctx && ctx->isSelected()) {
             if(!(Gui::ViewParams::highlightIndicesOnFullSelect()
-                        && highlightIndices.getNum())
+                        && proxy->highlightIndices.getNum())
                     && ctx->isSelectAll()
                     && ctx->hasSelectionColor())
             {
@@ -338,10 +415,19 @@ void SoBrepEdgeSet::GLRenderBelowPath(SoGLRenderAction * action)
 
 void SoBrepEdgeSet::getBoundingBox(SoGetBoundingBoxAction * action) {
 
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
+
+    if (this->coordIndex.getNum() < 2)
+        return;
+
     auto state = action->getState();
+    setupProxy(state);
     selCounter.checkCache(state,true);
 
-    SelContextPtr ctx2 = Gui::SoFCSelectionRoot::getSecondaryActionContext<SelContext>(action,this);
+    SelContextPtr ctx2 = Gui::SoFCSelectionRoot::getSecondaryActionContext<SelContext>(action,proxy);
     if(!ctx2 || ctx2->isSelectAll()) {
         inherited::getBoundingBox(action);
         return;
@@ -360,7 +446,7 @@ void SoBrepEdgeSet::getBoundingBox(SoGetBoundingBoxAction * action) {
     SbBox3f bbox;
 
     for(auto &v : ctx2->selectionIndex) {
-        int idx = v.first;
+        int idx = v.first - idxOffset;
         if(idx < 0 || idx >= (int)segments.size())
             break;
         int offset = idx==0 ? 0 : segments[idx-1];
@@ -431,7 +517,7 @@ void SoBrepEdgeSet::renderHighlight(SoGLRenderAction *action, SelContextPtr ctx)
 
     RenderIndices.clear();
     if(ctx->isHighlightAll()) {
-        if(highlightIndices.getNum()) {
+        if(proxy->highlightIndices.getNum()) {
             if(highlightColor.getValue().getPackedValue(1.0f)) {
                 color = highlightColor.getValue();
                 checkColor = false;
@@ -467,7 +553,7 @@ void SoBrepEdgeSet::renderSelection(SoGLRenderAction *action, SelContextPtr ctx,
         for(auto &v : ctx->selectionIndex)
             RenderIndices.push_back(v.first);
     } else if(Gui::ViewParams::highlightIndicesOnFullSelect()
-                && highlightIndices.getNum())
+                && proxy->highlightIndices.getNum())
     {
         if(highlightColor.getValue().getPackedValue(1.0f)) {
             checkColor = false;
@@ -525,6 +611,7 @@ void SoBrepEdgeSet::_renderSelection(SoGLRenderAction *action,
         renderLines(static_cast<const SoGLCoordinateElement*>(coords), cindices, numcindices);
     else {
         for(int idx : RenderIndices) {
+            idx += idxOffset;
             if (idx < 0 || idx >= (int)segments.size() || segments[idx] > numcindices)
                 break;
 
@@ -542,6 +629,10 @@ void SoBrepEdgeSet::doAction(SoAction* action)
                 action, this, SoFCDetail::Edge, selContext, selCounter))
         return;
 
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
     inherited::doAction(action);
 }
 
@@ -551,9 +642,13 @@ SoDetail * SoBrepEdgeSet::createLineSegmentDetail(SoRayPickAction * action,
                                                   SoPickedPoint * pp)
 {
     SoDetail* detail = inherited::createLineSegmentDetail(action, v1, v2, pp);
-    SoLineDetail* line_detail = static_cast<SoLineDetail*>(detail);
-    int index = line_detail->getLineIndex();
-    line_detail->setPartIndex(index);
+    if (detail) {
+        SoLineDetail* line_detail = static_cast<SoLineDetail*>(detail);
+        int index = line_detail->getLineIndex() + 
+                + SoFCShapeIndexElement::get(action->getState());
+        line_detail->setLineIndex(index);
+        line_detail->setPartIndex(index);
+    }
     return detail;
 }
 

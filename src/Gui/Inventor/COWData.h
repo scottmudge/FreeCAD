@@ -42,6 +42,10 @@ public:
       return getNum() == 0;
   }
 
+  explicit operator bool() const {
+    return !empty();
+  }
+
   void clear() {
     if (!this->data) return;
     if (this->data.use_count() == 1) this->data->clear();

@@ -63,6 +63,7 @@
 #include "SoFCDetail.h"
 #include "SoFCDiffuseElement.h"
 #include "SoFCDisplayModeElement.h"
+#include "SoFCShapeInfo.h"
 
 #include <Gui/ViewProviderLink.h>
 
@@ -82,12 +83,19 @@ struct CacheEntry {
   SbMatrix matrix;
   bool resetmatrix;
   bool identity;
+  CoinPtr<SoNode> proxy;
+  int idxstart;
+  int idxend;
 
   CacheEntry(const SbMatrix & m,
              bool iden, bool reset,
              SoFCRenderCache * c,
-             SoFCVertexCache *vc)
+             SoFCVertexCache *vc,
+             SoNode *proxy = nullptr,
+             int istart = 0,
+             int iend = 0)
     :cache(c), vcache(vc), resetmatrix(reset), identity(iden)
+    ,proxy(proxy), idxstart(istart), idxend(iend)
   {
     if (!identity) this->matrix = m;
   }
@@ -260,6 +268,7 @@ SoFCRenderCache::Material::init(SoState * state)
   this->polygonoffsetfactor = 0.f;
   this->linepattern = 0xffff;
   this->type = 0;
+  this->indexer = 0;
   this->materialbinding = 0;
   this->pervertexcolor = false;
   this->transptexture = false;
@@ -845,6 +854,10 @@ SoFCRenderCacheP::addChildCache(SoState * state,
   SbMatrix matrix = elem->getModelMatrix();
   bool identity = (matrix == matrixidentity);
 
+  auto proxy = SoFCShapeProxyElement::get(state);
+  int idxoffset = SoFCShapeIndexElement::peek(state);
+  int idxcount = SoFCShapeCountElement::peek(state);
+
   if (opencache) {
     if (!identity) {
       // reset to identity matrix to decouple model transformation from child cache
@@ -864,7 +877,10 @@ SoFCRenderCacheP::addChildCache(SoState * state,
                             identity,
                             this->resetmatrix,
                             cache,
-                            vcache);
+                            vcache,
+                            proxy,
+                            idxoffset,
+                            idxoffset + idxcount);
   captureMaterial(state);
   Material & m = this->caches.back().material;
   m = this->material;
@@ -1099,22 +1115,34 @@ SoFCRenderCache::getVertexCaches(int depth)
 
   auto checkContext = [](Material &material,
                          const SoFCSelectionContextExPtr &ctx,
+                         int idxstart,
+                         int idxend,
                          VertexCachePtr &vcache)
   {
     // Check for secondary selection context for color override and partial rendering
     // return 0 if should skip this entry, 1 if procceed with same material, -1
     // if material is changed.
+    static FC_COIN_THREAD_LOCAL std::vector<int> indices;
+    indices.clear();
     if (!ctx)
       return 1;
-    if (ctx->selectionIndex.empty())
-      return 0;
-    if (ctx->selectionIndex.begin()->first < 0 && ctx->colors.empty())
-      return 1;
+    if (ctx->isSelectAll()) {
+      if (ctx->colors.empty())
+        return 1;
+    } else {
+      for (auto &v : ctx->selectionIndex) {
+        int idx = v.first;
+        if (idx >= idxstart && (idx < idxend || idxend < 0))
+          indices.push_back(idx - idxstart);
+      }
+      if (indices.empty())
+        return 1;
+    }
     switch(material.type) {
       case Material::Triangle: {
-        if (ctx->selectionIndex.begin()->first >= 0) {
+        if (!ctx->isSelectAll()) {
           vcache = new SoFCVertexCache(*vcache);
-          vcache->addTriangles(ctx->selectionIndex);
+          vcache->addTriangles(indices);
         } else {
           if (ctx->colors.empty())
             return 1;
@@ -1138,7 +1166,7 @@ SoFCRenderCache::getVertexCaches(int depth)
         }
         selcolors.clear();
         for (auto &v : ctx->colors) {
-          if (v.first < 0)
+          if (v.first < idxstart || v.first >= idxstart)
             continue;
           auto color = v.second;
           color.a = 1.0 - color.a;
@@ -1156,17 +1184,17 @@ SoFCRenderCache::getVertexCaches(int depth)
         break;
       }
       case Material::Line: {
-        if (ctx->selectionIndex.begin()->first < 0)
+        if (ctx->isSelectAll())
           return 1;
         vcache = new SoFCVertexCache(*vcache);
-        vcache->addLines(ctx->selectionIndex);
+        vcache->addLines(indices);
         break;
       }
       case Material::Point: {
-        if (ctx->selectionIndex.begin()->first < 0)
+        if (ctx->isSelectAll())
           return 1;
         vcache = new SoFCVertexCache(*vcache);
-        vcache->addPoints(ctx->selectionIndex);
+        vcache->addPoints(indices);
         break;
       }
       default:
@@ -1184,10 +1212,10 @@ SoFCRenderCache::getVertexCaches(int depth)
       }
 
       SoFCSelectionContextExPtr ctx;
-      if (PRIVATE(this)->selnode && entry.vcache->getNode()) {
+      if (PRIVATE(this)->selnode && entry.proxy) {
         SoFCSelectionRoot::setActionStack(&selaction, selfkey.get());
         selaction.setRetrivedContext();
-        selaction.apply(entry.vcache->getNode());
+        selaction.apply(entry.proxy);
         ctx = selaction.getRetrievedContext();
       }
 
@@ -1198,50 +1226,62 @@ SoFCRenderCache::getVertexCaches(int depth)
       if (entry.vcache->getNumTriangleIndices()) {
         Material material = entry.material;
         material.type = Material::Triangle;
-        if (!checkContext(material, ctx, vcache))
+        if (!checkContext(material, ctx, entry.idxstart, entry.idxend, vcache))
           continue;
         if (depth == 0) {
           PRIVATE(this)->finalizeMaterial(material);
           if (!entry.vcache->getNormalArray())
             material.lightmodel = SoLazyElement::BASE_COLOR;
         }
+        material.indexer = reinterpret_cast<intptr_t>(vcache.get());
         vcachemap[material].emplace_back(vcache,
                                          entry.matrix,
                                          entry.identity,
                                          entry.resetmatrix,
-                                         selfkey);
+                                         selfkey,
+                                         entry.proxy,
+                                         entry.idxstart,
+                                         entry.idxend);
       }
       if (entry.vcache->getNumLineIndices()) {
         Material material = entry.material;
         material.type = Material::Line;
-        if (!checkContext(material, ctx, vcache))
+        if (!checkContext(material, ctx, entry.idxstart, entry.idxend, vcache))
           continue;
         if (depth == 0) {
           PRIVATE(this)->finalizeMaterial(material);
           if (!entry.vcache->getNormalArray())
             material.lightmodel = SoLazyElement::BASE_COLOR;
         }
+        material.indexer = reinterpret_cast<intptr_t>(vcache.get());
         vcachemap[material].emplace_back(vcache,
                                          entry.matrix,
                                          entry.identity,
                                          entry.resetmatrix,
-                                         selfkey);
+                                         selfkey,
+                                         entry.proxy,
+                                         entry.idxstart,
+                                         entry.idxend);
       }
       if (entry.vcache->getNumPointIndices()) {
         Material material = entry.material;
         material.type = Material::Point;
-        if (!checkContext(material, ctx, vcache))
+        if (!checkContext(material, ctx, entry.idxstart, entry.idxend, vcache))
           continue;
         if (depth == 0) {
           PRIVATE(this)->finalizeMaterial(material);
           if (!entry.vcache->getNormalArray())
             material.lightmodel = SoLazyElement::BASE_COLOR;
         }
+        material.indexer = reinterpret_cast<intptr_t>(vcache.get());
         vcachemap[material].emplace_back(vcache,
                                          entry.matrix,
                                          entry.identity,
                                          entry.resetmatrix,
-                                         selfkey);
+                                         selfkey,
+                                         entry.proxy,
+                                         entry.idxstart,
+                                         entry.idxend);
       }
       continue;
     }
@@ -1272,14 +1312,14 @@ SoFCRenderCache::getVertexCaches(int depth)
 
         auto vcache = childentry.cache;
         SoFCSelectionContextExPtr ctx;
-        if (PRIVATE(this)->selnode && vcache->getNode()) {
+        if (PRIVATE(this)->selnode && childentry.proxy) {
           SoFCSelectionRoot::setActionStack(&selaction, key.get());
           selaction.setRetrivedContext();
-          selaction.apply(vcache->getNode());
+          selaction.apply(childentry.proxy);
           ctx = selaction.getRetrievedContext();
         }
 
-        int res = checkContext(material, ctx, vcache);
+        int res = checkContext(material, ctx, childentry.idxstart, childentry.idxend, vcache);
         if (!res)
           continue;
 
@@ -1297,19 +1337,28 @@ SoFCRenderCache::getVertexCaches(int depth)
                                   childentry.matrix,
                                   childentry.identity,
                                   childentry.resetmatrix,
-                                  key);
+                                  key,
+                                  childentry.proxy,
+                                  childentry.idxstart,
+                                  childentry.idxend);
         else if (childentry.identity)
           ventries->emplace_back(vcache,
                                   entry.matrix,
                                   entry.identity,
                                   false,
-                                  key);
+                                  key,
+                                  childentry.proxy,
+                                  childentry.idxstart,
+                                  childentry.idxend);
         else {
           ventries->emplace_back(vcache,
                                   entry.matrix,
                                   false,
                                   false,
-                                  key);
+                                  key,
+                                  childentry.proxy,
+                                  childentry.idxstart,
+                                  childentry.idxend);
           ventries->back().matrix.multLeft(childentry.matrix);
         }
       }
@@ -1378,6 +1427,9 @@ SoFCRenderCache::buildHighlightCache(std::map<int, VertexCachePtr> &sharedcache,
   const SoLineDetail * ld = nullptr;
   const SoFaceDetail * fd = nullptr;
   const SoFCDetail * d = nullptr;
+  std::vector<int> faceindices;
+  std::vector<int> edgeindices;
+  std::vector<int> vertexindices;
   if (detail) {
     if (detail->isOfType(SoPointDetail::getClassTypeId()))
       pd = static_cast<const SoPointDetail*>(detail);
@@ -1385,8 +1437,15 @@ SoFCRenderCache::buildHighlightCache(std::map<int, VertexCachePtr> &sharedcache,
       ld = static_cast<const SoLineDetail*>(detail);
     else if (detail->isOfType(SoFaceDetail::getClassTypeId()))
       fd = static_cast<const SoFaceDetail*>(detail);
-    else if (detail->isOfType(SoFCDetail::getClassTypeId()))
+    else if (detail->isOfType(SoFCDetail::getClassTypeId())) {
       d = static_cast<const SoFCDetail*>(detail);
+      for (int idx : d->getIndices(SoFCDetail::Face))
+        faceindices.push_back(idx);
+      for (int idx : d->getIndices(SoFCDetail::Edge))
+        edgeindices.push_back(idx);
+      for (int idx : d->getIndices(SoFCDetail::Vertex))
+        vertexindices.push_back(idx);
+    }
 
     // Some shape nodes (e.g. SoBrepFaceSet), support partial highlight on
     // whole object selection. 'checkindices' is used to indicate if we shall
@@ -1400,7 +1459,33 @@ SoFCRenderCache::buildHighlightCache(std::map<int, VertexCachePtr> &sharedcache,
   Material bboxmaterial;
   SbBox3f bbox;
   const VertexCacheEntry *detailentry = nullptr;
+  std::vector<int> indices;
+
   for (auto & child : getVertexCaches()) {
+    int selidx = -1;
+    std::vector<int> *pindices = nullptr;
+    if (detail) {
+      switch(child.first.type) {
+      case Material::Point:
+        if (pd) 
+          selidx = pd->getCoordinateIndex();
+        else if (d)
+          pindices = &vertexindices;
+        break;
+      case Material::Line:
+        if (ld)
+          selidx = ld->getLineIndex();
+        else if (d)
+          pindices = &edgeindices;
+        break;
+      default:
+        if (fd)
+          selidx = fd->getPartIndex();
+        else if (d)
+          pindices = &faceindices;
+      }
+    }
+
     if (!wholeontop && detail) {
       // We are doing partial highlight, 'wholeontop' indicates that we shall
       // bring the whole object to top with the original color. So if not
@@ -1413,19 +1498,12 @@ SoFCRenderCache::buildHighlightCache(std::map<int, VertexCachePtr> &sharedcache,
         continue;
       }
 
-      switch(child.first.type) {
-      case Material::Point:
-        if (!pd && (!d || d->getIndices(SoFCDetail::Vertex).empty()))
-          continue;
-        break;
-      case Material::Line:
-        if (!ld && (!d || d->getIndices(SoFCDetail::Edge).empty()))
-          continue;
-        break;
-      default:
-        if (!fd && (!d || d->getIndices(SoFCDetail::Face).empty()))
+      if (pindices) {
+        if (pindices->empty())
           continue;
       }
+      else if (selidx < 0)
+        continue;
     }
 
     for (auto & ventry : child.second) {
@@ -1434,6 +1512,22 @@ SoFCRenderCache::buildHighlightCache(std::map<int, VertexCachePtr> &sharedcache,
 
       if (!wholeontop && detail && !elementselectable)
           continue;
+
+      indices.clear();
+
+      int partidx = -1;
+      if (selidx >= 0) {
+        if (selidx < ventry.idxstart || (ventry.idxend >= 0 && selidx >= ventry.idxend))
+          continue;
+        partidx = selidx - ventry.idxstart;
+      } else if (pindices) {
+        for (int idx : *pindices) {
+          if (idx >= ventry.idxstart && (idx < ventry.idxend || ventry.idxend < 0))
+            indices.push_back(idx);
+        }
+        if (indices.empty())
+          continue;
+      }
 
       Material material = child.first;
       material.order = order;
@@ -1465,23 +1559,23 @@ SoFCRenderCache::buildHighlightCache(std::map<int, VertexCachePtr> &sharedcache,
         const SbMatrix *matrix = ventry.identity ? nullptr : &ventry.matrix;
         switch(material.type) {
         case Material::Point:
-          if (pd && pd->getCoordinateIndex() >= 0) {
+          if (partidx >= 0) {
             detailentry = &ventry;
-            ventry.cache->getPointsBoundingBox(nullptr, bbox, pd->getCoordinateIndex());
+            ventry.cache->getPointsBoundingBox(nullptr, bbox, partidx);
           } else if (!detail)
             ventry.cache->getPointsBoundingBox(matrix, bbox);
           break;
         case Material::Line:
-          if (ld && ld->getLineIndex() >= 0) {
+          if (partidx >= 0) {
             detailentry = &ventry;
-            ventry.cache->getLinesBoundingBox(nullptr, bbox, ld->getLineIndex());
+            ventry.cache->getLinesBoundingBox(nullptr, bbox, partidx);
           } else if (!detail)
             ventry.cache->getLinesBoundingBox(matrix, bbox);
           break;
         case Material::Triangle:
-          if (fd && fd->getPartIndex() >= 0) {
+          if (partidx >= 0) {
             detailentry = &ventry;
-            ventry.cache->getTrianglesBoundingBox(nullptr, bbox, fd->getPartIndex());
+            ventry.cache->getTrianglesBoundingBox(nullptr, bbox, partidx);
           } else if (!detail)
             ventry.cache->getTrianglesBoundingBox(matrix, bbox);
           break;
@@ -1506,21 +1600,20 @@ SoFCRenderCache::buildHighlightCache(std::map<int, VertexCachePtr> &sharedcache,
             res[m].push_back(ventry);
           }
         }
-        else if (pd) {
-          if (pd->getCoordinateIndex() >= 0)
-            newentry.partidx = pd->getCoordinateIndex();
+        else if (partidx >= 0) {
+          newentry.partidx = partidx;
         }
-        else if (d) {
-          const auto & indices = d->getIndices(SoFCDetail::Vertex);
-          if (indices.size() == 1 && *indices.begin() >= 0) {
-            newentry.partidx = *indices.begin();
-          } else if (indices.size() > 1) {
-            newentry.cache = new SoFCVertexCache(*newentry.cache);
-            newentry.cache->addPoints(indices);
-          }
+        else if (indices.size() == 1) {
+          newentry.partidx = *indices.begin();
+        } else if (indices.size() > 1) {
+          newentry.cache = new SoFCVertexCache(*newentry.cache);
+          newentry.cache->addPoints(indices);
         }
         else if (checkindices) {
-          auto cache = newentry.cache->highlightIndices(&newentry.partidx);
+          auto cache = newentry.cache->highlightIndices(&newentry.partidx,
+                                                        newentry.proxy,
+                                                        newentry.idxstart,
+                                                        newentry.idxend);
           if (newentry.partidx >= 0 || cache != newentry.cache) {
             newentry.cache = cache;
             if (wholeontop) {
@@ -1548,25 +1641,23 @@ SoFCRenderCache::buildHighlightCache(std::map<int, VertexCachePtr> &sharedcache,
             res[m].push_back(ventry);
           }
         }
-        else if (ld) {
-          if (ld->getLineIndex() >= 0) {
-            // Because of possible line strip, we do not use partidx for
-            // partial rendering
-            //
-            // newentry.partidx = ld->getLineIndex();
-            newentry.cache = new SoFCVertexCache(*newentry.cache);
-            newentry.cache->addLines(std::vector<int>(1, ld->getLineIndex()));
-          }
+        else if (partidx >= 0) {
+          // Because of possible line strip, we do not use partidx for
+          // partial rendering
+          //
+          // newentry.partidx = ld->getLineIndex();
+          newentry.cache = new SoFCVertexCache(*newentry.cache);
+          newentry.cache->addLines(std::vector<int>(1, partidx));
         }
-        else if (d) {
-          const auto & indices = d->getIndices(SoFCDetail::Edge);
-          if (indices.size() && *indices.begin()>=0) {
-            newentry.cache = new SoFCVertexCache(*newentry.cache);
-            newentry.cache->addLines(indices);
-          }
+        else if (indices.size()) {
+          newentry.cache = new SoFCVertexCache(*newentry.cache);
+          newentry.cache->addLines(indices);
         }
         else if (checkindices) {
-          auto cache = newentry.cache->highlightIndices(&newentry.partidx);
+          auto cache = newentry.cache->highlightIndices(&newentry.partidx,
+                                                        newentry.proxy,
+                                                        newentry.idxstart,
+                                                        newentry.idxend);
           if (newentry.partidx >= 0 || cache != newentry.cache) {
             newentry.cache = cache;
             if (wholeontop) {
@@ -1605,21 +1696,19 @@ SoFCRenderCache::buildHighlightCache(std::map<int, VertexCachePtr> &sharedcache,
             res[m].push_back(ventry);
           }
         }
-        else if (fd) {
-          if (fd->getPartIndex() >= 0)
-            newentry.partidx = fd->getPartIndex();
-        }
-        else if (d) {
-          const auto & indices = d->getIndices(SoFCDetail::Face);
-          if (indices.size() == 1 && *indices.begin() >= 0)
-            newentry.partidx = *indices.begin();
-          else if (indices.size() > 1) {
-            newentry.cache = new SoFCVertexCache(*newentry.cache);
-            newentry.cache->addTriangles(indices);
-          }
+        else if (partidx >= 0)
+          newentry.partidx = partidx;
+        else if (indices.size() == 1)
+          newentry.partidx = *indices.begin() - newentry.idxstart;
+        else if (indices.size() > 1) {
+          newentry.cache = new SoFCVertexCache(*newentry.cache);
+          newentry.cache->addTriangles(indices);
         }
         else if (checkindices) {
-          auto cache = newentry.cache->highlightIndices(&newentry.partidx);
+          auto cache = newentry.cache->highlightIndices(&newentry.partidx,
+                                                        newentry.proxy,
+                                                        newentry.idxstart,
+                                                        newentry.idxend);
           if (newentry.partidx >= 0 || cache != newentry.cache) {
             newentry.cache = cache;
             if (wholeontop) {

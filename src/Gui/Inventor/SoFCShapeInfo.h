@@ -23,48 +23,116 @@
 #ifndef FC_SOFCSHAPEINFO_H
 #define FC_SOFCSHAPEINFO_H
 
-#include <Inventor/nodes/SoSubNode.h>
-#include <Inventor/fields/SoSFEnum.h>
+#include <Inventor/nodes/SoSeparator.h>
+#include <Inventor/elements/SoInt32Element.h>
 #include <Inventor/fields/SoSFInt32.h>
-#include <Inventor/fields/SoSFMatrix.h>
-#include <Inventor/fields/SoSFNode.h>
-#include <Inventor/elements/SoShapeHintsElement.h>
+#include "../SoFCSelectionContext.h"
 
-class GuiExport SoFCShapeInfo : public SoNode {
-  typedef SoNode inherited;
-  SO_NODE_HEADER(SoNode);
+class SoShape;
+class SoRayPickAction;
+class SoGetBoundingBoxAction;
+class SoGetPrimitiveCountAction;
+class SoGLRenderAction;
+class SoCallbackAction;
+class SoHandleEventAction;
+class SoGetMatrixAction;
+
+class GuiExport SoFCShapeInfo : public SoSeparator {
+  typedef SoSeparator inherited;
+  SO_NODE_HEADER(SoFCShapeInfo);
 
 public:
-  SoSFInt32 partCount;
-  SoSFEnum shapeType;
-
-  enum ShapeType {
-    UNKNOWN_SHAPE_TYPE = SoShapeHintsElement::UNKNOWN_SHAPE_TYPE,
-    SOLID = SoShapeHintsElement::SOLID
-  };
+  SoSFInt32 index;
+  SoSFInt32 count;
 
   static void initClass(void);
   SoFCShapeInfo(void);
 
+  virtual void doAction(SoAction * action);
+  virtual void GLRenderInPath(SoGLRenderAction * action);
+  virtual void GLRenderBelowPath(SoGLRenderAction * action);
+  virtual void callback(SoCallbackAction * action);
+  virtual void getBoundingBox(SoGetBoundingBoxAction * action);
+  virtual void handleEvent(SoHandleEventAction * action);
+  virtual void rayPick(SoRayPickAction * action);
+  virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
+  virtual void getMatrix(SoGetMatrixAction * action);
+
 protected:
+  template<class ActionT, class FuncT>
+  inline void _doAction(ActionT *action, FuncT func);
+
   virtual ~SoFCShapeInfo();
 };
 
-class GuiExport SoFCShapeInstance : public SoNode {
-  typedef SoNode inherited;
-  SO_NODE_HEADER(SoNode);
+class GuiExport SoFCShapeIndexElement : public SoElement {
+  typedef SoElement inherited;
+
+  SO_ELEMENT_HEADER(SoFCShapeIndexElement);
 
 public:
-  SoSFInt32 partIndex;
-  SoSFMatrix transform;
-  SoSFNode shapeInfo;
-
   static void initClass(void);
-  SoFCShapeInstance(void);
+
+  static int32_t get(SoState *); 
+  static int32_t peek(SoState *); 
+  static void set(SoState *, SoNode *node, int32_t);
+
+  virtual void init(SoState *state);
+  virtual SbBool matches(const SoElement * element) const;
+  virtual SoElement *copyMatchInfo(void) const;
+  virtual void push(SoState * state);
 
 protected:
-  virtual ~SoFCShapeInstance();
+  virtual ~SoFCShapeIndexElement();
+
+private:
+  SoNode * node;
+  int32_t index;
 };
 
+class GuiExport SoFCShapeCountElement : public SoInt32Element {
+  typedef SoInt32Element inherited;
+
+  SO_ELEMENT_HEADER(SoFCShapeCountElement);
+
+public:
+  static void initClass(void);
+  virtual void init(SoState *state);
+  static int32_t get(SoState *); 
+  static int32_t peek(SoState *); 
+  static void set(SoState *, int32_t);
+
+protected:
+  virtual ~SoFCShapeCountElement();
+};
+
+class GuiExport SoFCShapeProxyElement : public SoElement {
+  typedef SoElement inherited;
+
+  SO_ELEMENT_HEADER(SoFCShapeProxyElement);
+
+public:
+  static void initClass(void);
+
+  enum ShapeType {
+    FaceSet,
+    LineSet,
+    PointSet,
+  };
+
+  static void set(SoState *state, SoNode *node, ShapeType type);
+  static SoNode *get(SoState *state, ShapeType *type = nullptr);
+
+  virtual void init(SoState *state);
+  virtual SbBool matches(const SoElement * element) const;
+  virtual SoElement *copyMatchInfo(void) const;
+
+protected:
+  virtual ~SoFCShapeProxyElement();
+
+private:
+  SoNode *node;
+  ShapeType type;
+};
 #endif // FC_SOFCSHAPEINFO_H
 // vim: noai:ts=2:sw=2

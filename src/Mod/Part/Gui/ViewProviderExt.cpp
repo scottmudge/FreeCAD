@@ -94,9 +94,12 @@
 # include <Inventor/nodes/SoSphere.h>
 # include <Inventor/nodes/SoScale.h>
 # include <Inventor/nodes/SoLightModel.h>
+# include <Inventor/sensors/SoFieldSensor.h>
 # include <QAction>
 # include <QMenu>
 #endif
+
+#include <Inventor/nodes/SoMatrixTransform.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/iostreams/device/array.hpp>
@@ -137,17 +140,32 @@
 
 #include "ViewProviderPartExtPy.h"
 
-FC_LOG_LEVEL_INIT("Part", true, true)
+FC_LOG_LEVEL_INIT("Part", true, true, true)
 
 using namespace PartGui;
 namespace bio = boost::iostreams;
 
+struct PartGui::ViewProviderPartExt::Private
+{
+    Part::TopoShape cachedShape;
+    std::vector<SoMaterial*> faceMaterials;
+    std::vector<SoMaterial*> edgeMaterials;
+    std::vector<SoMaterial*> vertexMaterials;
+    SbFCUniqueId faceMaterialId = 0;
+    SbFCUniqueId edgeMaterialId = 0;
+    SbFCUniqueId vertexMaterialId = 0;
+    SoFieldSensor faceSensor;
+    SoFieldSensor faceTranspSensor;
+    SoFieldSensor edgeSensor;
+    SoFieldSensor vertexSensor;
+};
+
 PROPERTY_SOURCE(PartGui::ViewProviderPartExt, Gui::ViewProviderGeometryObject)
 
 
-void ViewProviderPartExt::getNormals(const TopoDS_Face&  theFace,
-                                     const Handle(Poly_Triangulation)& aPolyTri,
-                                     TColgp_Array1OfDir& theNormals)
+static void getNormals(const TopoDS_Face&  theFace,
+                        const Handle(Poly_Triangulation)& aPolyTri,
+                        TColgp_Array1OfDir& theNormals)
 {
     const TColgp_Array1OfPnt& aNodes = aPolyTri->Nodes();
 
@@ -262,6 +280,7 @@ const char* ViewProviderPartExt::LightingEnums[]= {"One side","Two side",NULL};
 const char* ViewProviderPartExt::DrawStyleEnums[]= {"Solid","Dashed","Dotted","Dashdot",NULL};
 
 ViewProviderPartExt::ViewProviderPartExt() 
+    :pimpl(new Private)
 {
     static bool _inited;
     if (!_inited) {
@@ -279,8 +298,6 @@ ViewProviderPartExt::ViewProviderPartExt()
     r = ((lcol >> 24) & 0xff) / 255.0; g = ((lcol >> 16) & 0xff) / 255.0; b = ((lcol >> 8) & 0xff) / 255.0;
     int lwidth = Gui::ViewParams::instance()->getDefaultShapeLineWidth();
     int psize = Gui::ViewParams::instance()->getDefaultShapePointSize();
-
-    NormalsFromUV = PartParams::NormalsFromUVNodes();
 
     long twoside = PartParams::TwoSideRendering() ? 1 : 0;
 
@@ -329,78 +346,59 @@ ViewProviderPartExt::ViewProviderPartExt()
     ADD_PROPERTY(ForceMapColors,(false));
 
     coords = new SoFCCoordinate3();
-    static_cast<SoFCCoordinate3*>(coords)->vp = this;
-    coords->ref();
-    pcoords = new SoCoordinate3();
-    pcoords->ref();
+    static_cast<SoFCCoordinate3*>(coords.get())->vp = this;
     faceset = new SoBrepFaceSet();
-    faceset->ref();
     norm = new SoNormal;
-    norm->ref();
     normb = new SoNormalBinding;
     normb->value = SoNormalBinding::PER_VERTEX_INDEXED;
-    normb->ref();
     lineset = new SoBrepEdgeSet();
-    lineset->ref();
     nodeset = new SoBrepPointSet();
-    nodeset->ref();
 
-    faceset->setSiblings({lineset,nodeset});
-    lineset->setSiblings({faceset,nodeset});
-    nodeset->setSiblings({faceset,lineset});
+    faceset->setSiblings({lineset.get(),nodeset.get()});
+    lineset->setSiblings({faceset.get(),nodeset.get()});
+    nodeset->setSiblings({faceset.get(),lineset.get()});
 
     pcFaceBind = new SoMaterialBinding();
-    pcFaceBind->ref();
-
     pcLineBind = new SoMaterialBinding();
-    pcLineBind->ref();
     pcLineMaterial = new SoMaterial;
-    pcLineMaterial->ref();
-    LineMaterial.touch();
 
     pcPointBind = new SoMaterialBinding();
-    pcPointBind->ref();
     pcPointMaterial = new SoMaterial;
-    pcPointMaterial->ref();
-    PointMaterial.touch();
 
     pcLineStyle = new SoDrawStyle();
-    pcLineStyle->ref();
     pcLineStyle->style = SoDrawStyle::LINES;
     pcLineStyle->lineWidth = LineWidth.getValue();
 
     pcPointStyle = new SoDrawStyle();
-    pcPointStyle->ref();
     pcPointStyle->style = SoDrawStyle::POINTS;
     pcPointStyle->pointSize = PointSize.getValue();
 
     pShapeHints = new SoShapeHints;
     pShapeHints->shapeType = SoShapeHints::UNKNOWN_SHAPE_TYPE;
-    pShapeHints->ref();
     Lighting.touch();
     DrawStyle.touch();
+
+    pimpl->faceSensor.attach(&pcShapeMaterial->diffuseColor);
+    pimpl->faceTranspSensor.attach(&pcShapeMaterial->transparency);
+    pimpl->edgeSensor.attach(&pcLineMaterial->diffuseColor);
+    pimpl->vertexSensor.attach(&pcPointMaterial->diffuseColor);
+
+    pimpl->faceSensor.setData(this);
+    pimpl->faceSensor.setFunction(&ViewProviderPartExt::updateMaterial);
+    pimpl->faceTranspSensor.setData(this);
+    pimpl->faceTranspSensor.setFunction(&ViewProviderPartExt::updateMaterial);
+    pimpl->edgeSensor.setData(this);
+    pimpl->edgeSensor.setFunction(&ViewProviderPartExt::updateMaterial);
+    pimpl->vertexSensor.setData(this);
+    pimpl->vertexSensor.setFunction(&ViewProviderPartExt::updateMaterial);
 
     sPixmap = "Part_3D_object";
 }
 
 ViewProviderPartExt::~ViewProviderPartExt()
 {
-    pcFaceBind->unref();
-    pcLineBind->unref();
-    pcPointBind->unref();
-    pcLineMaterial->unref();
-    pcPointMaterial->unref();
-    pcLineStyle->unref();
-    pcPointStyle->unref();
-    pShapeHints->unref();
-    static_cast<SoFCCoordinate3*>(coords)->vp = nullptr;
-    coords->unref();
-    pcoords->unref();
-    faceset->unref();
-    norm->unref();
-    normb->unref();
-    lineset->unref();
-    nodeset->unref();
+    static_cast<SoFCCoordinate3*>(coords.get())->vp = nullptr;
+    delete pimpl;
 }
 
 void ViewProviderPartExt::onChanged(const App::Property* prop)
@@ -542,13 +540,18 @@ void ViewProviderPartExt::onChanged(const App::Property* prop)
             float trans = Transparency.getValue()/100.0f;
             if (pcFaceBind->value.getValue() == SoMaterialBinding::PER_PART) {
                 int cnt = pcShapeMaterial->diffuseColor.getNum();
+                bool touched = cnt != pcShapeMaterial->transparency.getNum();
                 pcShapeMaterial->transparency.setNum(cnt);
                 float *t = pcShapeMaterial->transparency.startEditing();
-                for (int i=0; i<cnt; i++)
+                for (int i=0; i<cnt; i++) {
+                    touched = touched || t[i] != trans;
                     t[i] = trans;
-                pcShapeMaterial->transparency.finishEditing();
+                }
+                if (touched)
+                    pcShapeMaterial->transparency.finishEditing();
             }
-            else {
+            else if (pcShapeMaterial->transparency.getNum() != 1
+                    || pcShapeMaterial->transparency[0] != trans) {
                 pcShapeMaterial->transparency = trans;
             }
 
@@ -560,9 +563,6 @@ void ViewProviderPartExt::onChanged(const App::Property* prop)
             if(!prop->testStatus(App::Property::User3)) {
                 if(MapTransparency.getValue() || MappedColors.getSize()) {
                     updateColors();
-                } else{
-                    Gui::SoUpdateVBOAction action;
-                    action.apply(this->faceset);
                 }
             }
         }
@@ -661,7 +661,7 @@ void ViewProviderPartExt::attach(App::DocumentObject *pcFeat)
     auto pnormb = new SoNormalBinding;
     pnormb->value = SoNormalBinding::OVERALL;
     pcPointsRoot->addChild(pnormb);
-    pcPointsRoot->addChild(pcoords);
+    // pcPointsRoot->addChild(pcoords);
     pcPointsRoot->addChild(pcPointBind);
     pcPointsRoot->addChild(pcPointMaterial);
     pcPointsRoot->addChild(pcPointStyle);
@@ -890,91 +890,54 @@ std::vector<Base::Vector3d> ViewProviderPartExt::getSelectionShape(const char* /
 
 void ViewProviderPartExt::setHighlightedFaces(const std::vector<App::Color>& colors)
 {
-    Gui::SoUpdateVBOAction action;
-    action.apply(this->faceset);
-
     int size = static_cast<int>(colors.size());
-    if (size > 1) {
-        int numfaces = this->faceset->partIndex.getNum();
+    int numfaces = pimpl->cachedShape.countSubShapes(TopAbs_FACE);
+    if (size > 1 && numfaces) {
         if(size > numfaces)
             size = numfaces;
         pcFaceBind->value = SoMaterialBinding::PER_PART;
+        bool touched = pcShapeMaterial->diffuseColor.getNum() != numfaces
+                || pcShapeMaterial->transparency.getNum() != numfaces;
         pcShapeMaterial->diffuseColor.setNum(numfaces);
         pcShapeMaterial->transparency.setNum(numfaces);
         SbColor* ca = pcShapeMaterial->diffuseColor.startEditing();
         float *t = pcShapeMaterial->transparency.startEditing();
         int i=0;
         for (; i < size; i++) {
+            touched = touched || ca[i][0] != colors[i].r
+                              || ca[i][1] != colors[i].g
+                              || ca[i][2] != colors[i].b
+                              || t[i] != colors[i].a;
             ca[i].setValue(colors[i].r, colors[i].g, colors[i].b);
             t[i] = colors[i].a;
         }
         const auto &color = ShapeColor.getValue();
         float trans = ShapeMaterial.getValue().transparency;
         for (; i < numfaces; i++) { 
+            touched = touched || ca[i][0] != colors[i].r
+                              || ca[i][1] != colors[i].g
+                              || ca[i][2] != colors[i].b
+                              || t[i] != colors[i].a;
             ca[i].setValue(color.r, color.g, color.b);
             t[i] = trans;
         }
-        pcShapeMaterial->diffuseColor.finishEditing();
-        pcShapeMaterial->transparency.finishEditing();
+        if (touched) {
+            pcShapeMaterial->diffuseColor.finishEditing();
+            pcShapeMaterial->transparency.finishEditing();
+        }
         return;
     }
 
     const auto &color = colors.size()==1?colors[0]:ShapeColor.getValue();
     pcFaceBind->value = SoMaterialBinding::OVERALL;
-    pcShapeMaterial->diffuseColor.setValue(color.r, color.g, color.b);
+    SbColor c(color.r, color.g, color.b);
+    if (pcShapeMaterial->diffuseColor.getNum() != 1
+            || pcShapeMaterial->diffuseColor[0] != c)
+        pcShapeMaterial->diffuseColor = c;
     //pcShapeMaterial->transparency = colors[0].a; do not get transparency from DiffuseColor in this case
-    pcShapeMaterial->transparency.setValue(ShapeMaterial.getValue().transparency);
-}
-
-void ViewProviderPartExt::setHighlightedFaces(const std::vector<App::Material>& colors)
-{
-    int size = static_cast<int>(colors.size());
-    if (size > 1) {
-        int numfaces = this->faceset->partIndex.getNum();
-        if(size > numfaces)
-            size = numfaces;
-
-        pcFaceBind->value = SoMaterialBinding::PER_PART;
-
-        pcShapeMaterial->diffuseColor.setNum(numfaces);
-        pcShapeMaterial->ambientColor.setNum(numfaces);
-        pcShapeMaterial->specularColor.setNum(numfaces);
-        pcShapeMaterial->emissiveColor.setNum(numfaces);
-
-        SbColor* dc = pcShapeMaterial->diffuseColor.startEditing();
-        SbColor* ac = pcShapeMaterial->ambientColor.startEditing();
-        SbColor* sc = pcShapeMaterial->specularColor.startEditing();
-        SbColor* ec = pcShapeMaterial->emissiveColor.startEditing();
-
-        int i=0;
-        for (; i < size; i++) {
-            dc[i].setValue(colors[i].diffuseColor.r, colors[i].diffuseColor.g, colors[i].diffuseColor.b);
-            ac[i].setValue(colors[i].ambientColor.r, colors[i].ambientColor.g, colors[i].ambientColor.b);
-            sc[i].setValue(colors[i].specularColor.r, colors[i].specularColor.g, colors[i].specularColor.b);
-            ec[i].setValue(colors[i].emissiveColor.r, colors[i].emissiveColor.g, colors[i].emissiveColor.b);
-        }
-
-        const auto &material = ShapeMaterial.getValue();
-        for (; i < numfaces; ++i) {
-            dc[i].setValue(material.diffuseColor.r, material.diffuseColor.g, material.diffuseColor.b);
-            ac[i].setValue(material.ambientColor.r, material.ambientColor.g, material.ambientColor.b);
-            sc[i].setValue(material.specularColor.r, material.specularColor.g, material.specularColor.b);
-            ec[i].setValue(material.emissiveColor.r, material.emissiveColor.g, material.emissiveColor.b);
-        }
-
-        pcShapeMaterial->diffuseColor.finishEditing();
-        pcShapeMaterial->ambientColor.finishEditing();
-        pcShapeMaterial->specularColor.finishEditing();
-        pcShapeMaterial->emissiveColor.finishEditing();
-        return;
-    }
-
-    const auto &material = colors.size()==1?colors[0]:ShapeMaterial.getValue();
-    pcFaceBind->value = SoMaterialBinding::OVERALL;
-    pcShapeMaterial->diffuseColor.setValue(material.diffuseColor.r, material.diffuseColor.g, material.diffuseColor.b);
-    pcShapeMaterial->ambientColor.setValue(material.ambientColor.r, material.ambientColor.g, material.ambientColor.b);
-    pcShapeMaterial->specularColor.setValue(material.specularColor.r, material.specularColor.g, material.specularColor.b);
-    pcShapeMaterial->emissiveColor.setValue(material.emissiveColor.r, material.emissiveColor.g, material.emissiveColor.b);
+    if (pcShapeMaterial->transparency.getNum() != 1
+            || pcShapeMaterial->transparency[0] != ShapeMaterial.getValue().transparency)
+        pcShapeMaterial->transparency = ShapeMaterial.getValue().transparency;
 }
 
 static inline App::PropertyLinkSub *getColoredElements(const App::DocumentObject *obj) {
@@ -1151,16 +1114,11 @@ void ViewProviderPartExt::unsetHighlightedFaces()
 void ViewProviderPartExt::setHighlightedEdges(const std::vector<App::Color>& colors)
 {
     int size = static_cast<int>(colors.size());
-    if (size > 1) {
+    int linecount = pimpl->cachedShape.countSubShapes(TopAbs_EDGE);
+    if (size > 1 && linecount) {
         // Although indexed lineset is used the material binding must be PER_FACE!
         pcLineBind->value = SoMaterialBinding::PER_FACE;
-        const int32_t* cindices = this->lineset->coordIndex.getValues(0);
-        int numindices = this->lineset->coordIndex.getNum();
-        int linecount = 0;
-        for (int i = 0; i < numindices; ++i) {
-            if (cindices[i] < 0)
-                ++linecount;
-        }
+        bool touched = pcLineMaterial->diffuseColor.getNum() != linecount;
         pcLineMaterial->diffuseColor.setNum(linecount);
         SbColor* ca = pcLineMaterial->diffuseColor.startEditing();
 
@@ -1168,20 +1126,32 @@ void ViewProviderPartExt::setHighlightedEdges(const std::vector<App::Color>& col
             size = linecount;
 
         int i=0;
-        for (; i < size; ++i) 
+        for (; i < size; ++i) {
+            touched = touched || ca[i][0] != colors[i].r
+                              || ca[i][1] != colors[i].g
+                              || ca[i][2] != colors[i].b;
             ca[i].setValue(colors[i].r, colors[i].g, colors[i].b);
+        }
 
         const auto &color = LineColor.getValue();
-        for (; i < linecount; ++i)
+        for (; i < linecount; ++i) {
+            touched = touched || ca[i][0] != colors[i].r
+                              || ca[i][1] != colors[i].g
+                              || ca[i][2] != colors[i].b;
             ca[i].setValue(color.r, color.g, color.b);
+        }
 
-        pcLineMaterial->diffuseColor.finishEditing();
+        if (touched)
+            pcLineMaterial->diffuseColor.finishEditing();
         return;
     }
 
     const auto &color = colors.size()==1?colors[0]:LineColor.getValue();
     pcLineBind->value = SoMaterialBinding::OVERALL;
-    pcLineMaterial->diffuseColor.setValue(color.r, color.g, color.b);
+    SbColor c(color.r, color.g, color.b);
+    if (pcLineMaterial->diffuseColor.getNum() != 1
+            || pcLineMaterial->diffuseColor[0] != c)
+        pcLineMaterial->diffuseColor = c;
 }
 
 void ViewProviderPartExt::unsetHighlightedEdges()
@@ -1192,25 +1162,37 @@ void ViewProviderPartExt::unsetHighlightedEdges()
 void ViewProviderPartExt::setHighlightedPoints(const std::vector<App::Color>& colors)
 {
     int size = static_cast<int>(colors.size());
-    if (size > 1) {
-        int numpoints = pcoords->point.getNum();
-        if(size > numpoints)
-            size = numpoints;
+    int numpoints = pimpl->cachedShape.countSubShapes(TopAbs_VERTEX);
+    if (size > 1 && numpoints) {
         pcPointBind->value = SoMaterialBinding::PER_VERTEX;
+        bool touched = pcPointMaterial->diffuseColor.getNum() != numpoints;
         pcPointMaterial->diffuseColor.setNum(numpoints);
         SbColor* ca = pcPointMaterial->diffuseColor.startEditing();
         int i=0;
-        for (; i < size; ++i)
+        for (; i < size; ++i) {
+            touched = touched || ca[i][0] != colors[i].r
+                              || ca[i][1] != colors[i].g
+                              || ca[i][2] != colors[i].b;
             ca[i].setValue(colors[i].r, colors[i].g, colors[i].b);
+        }
         const auto &color = PointColor.getValue();
-        for (; i < numpoints; ++i)
+        for (; i < numpoints; ++i) {
+            touched = touched || ca[i][0] != colors[i].r
+                              || ca[i][1] != colors[i].g
+                              || ca[i][2] != colors[i].b;
             ca[i].setValue(color.r, color.g, color.b);
-        pcPointMaterial->diffuseColor.finishEditing();
+        }
+        if (touched)
+            pcPointMaterial->diffuseColor.finishEditing();
+        return;
     }
 
     const auto &color = size==1?colors[0]:PointColor.getValue();
     pcPointBind->value = SoMaterialBinding::OVERALL;
-    pcPointMaterial->diffuseColor.setValue(color.r, color.g, color.b);
+    SbColor c(color.r, color.g, color.b);
+    if (pcPointMaterial->diffuseColor.getNum() != 1
+            || pcPointMaterial->diffuseColor[0] != c)
+        pcPointMaterial->diffuseColor = c;
 }
 
 void ViewProviderPartExt::unsetHighlightedPoints()
@@ -1633,7 +1615,7 @@ void ViewProviderPartExt::updateData(const App::Property* prop)
             || strstr(propName,"Touched")!=0)
     {
         TopoDS_Shape cShape = getShape().getShape();
-        if(cachedShape.getShape().IsPartner(cShape)) {
+        if(pimpl->cachedShape.getShape().IsPartner(cShape)) {
             updateColors();
             Gui::ViewProviderGeometryObject::updateData(prop);
             return;
@@ -1709,37 +1691,6 @@ void ViewProviderPartExt::unsetEdit(int ModNum)
     }
 }
 
-namespace {
-struct ShapeInfo {
-    Gui::CoinPtr<SoFCShapeInfo> node;
-    int refcount = 0;
-};
-
-static std::unordered_map<void*, ShapeInfo> _ShapeTable;
-
-static void registerShape(Part::TopoShape &shape, const Part::TopoShape &newshape)
-{
-    for (auto &s : newshape.getSubTopoShapes(TopAbs_SOLID)) {
-        int count = s.countSubShapes(TopAbs_FACE);
-        if (!count)
-            continue;
-        auto &info = _ShapeTable[s.getShape().TShape().get()];
-        ++info.refcount;
-        if (!info.node) {
-            info.node = new SoFCShapeInfo;
-            info.node->partCount = count;
-            info.node->shapeType.setValue(SoFCShapeInfo::SOLID);
-        }
-    }
-    for (auto &s : shape.getSubShapes(TopAbs_SOLID)) {
-        auto it = _ShapeTable.find(s.TShape().get());
-        if (it != _ShapeTable.end() && --it->second.refcount <= 0)
-            _ShapeTable.erase(it);
-    }
-    shape = newshape;
-}
-}
-
 void ViewProviderPartExt::updateVisual()
 {
     if (!getObject()
@@ -1750,68 +1701,37 @@ void ViewProviderPartExt::updateVisual()
         return;
     }
 
-    Gui::SoUpdateVBOAction action;
-    action.apply(this->faceset);
+    Part::TopoShape prevshape = pimpl->cachedShape;
 
-    // Clear selection
-    Gui::SoSelectionElementAction saction(Gui::SoSelectionElementAction::None);
-    saction.apply(this->faceset);
-    saction.apply(this->lineset);
-    saction.apply(this->nodeset);
-
-    // Clear highlighting
-    Gui::SoHighlightElementAction haction;
-    haction.apply(this->faceset);
-    haction.apply(this->lineset);
-    haction.apply(this->nodeset);
-
-    Part::TopoShape toposhape = getShape();
     // We must reset the location here because the transformation data
     // are set in the placement property
-    TopLoc_Location aLoc;
-    toposhape.setShape(toposhape.getShape().Located(aLoc), false);
+    pimpl->cachedShape = this->getShape().located();
+
+    // make sure the color is correct first, as we'll do material build up
+    // at the same time of updating geometry visual
+    setHighlightedFaces(DiffuseColor.getValues());
+    setHighlightedEdges(LineColorArray.getValues());
+    setHighlightedPoints(PointColorArray.getValue());
+
+    _updateVisual(prevshape, TopAbs_FACE);
+    _updateVisual(prevshape, TopAbs_EDGE);
+    _updateVisual(prevshape, TopAbs_VERTEX);
+    VisualTouched = false;
+}
+
+namespace {
+
+void buildVisual(const Part::TopoShape &toposhape,
+                 SoCoordinate3 *coords,
+                 SoCoordinate3 *pcoords,
+                 SoNormal *norm,
+                 SoBrepFaceSet *faceset,
+                 SoBrepEdgeSet *lineset)
+{
+    assert(!toposhape.isNull());
     lineset ->seamIndices.setNum(0);
-    registerShape(cachedShape, toposhape);
-    if (cachedShape.isNull()) {
-        coords  ->point      .setNum(0);
-        pcoords ->point      .setNum(0);
-        norm    ->vector     .setNum(0);
-        faceset ->coordIndex .setNum(0);
-        faceset ->partIndex  .setNum(0);
-        faceset ->shapeInfo  .setNum(0);
-        lineset ->coordIndex .setNum(0);
-        nodeset ->startIndex .setValue(0);
-        VisualTouched = false;
-        return;
-    }
 
-    faceset->shapeInfo.enableNotify(FALSE);
-    faceset->shapeInfo.setNum(cachedShape.countSubShapes(TopAbs_SOLID));
-    int i = -1;
-    for (auto &s : cachedShape.getSubTopoShapes(TopAbs_SOLID)) {
-        int count = s.countSubShapes(TopAbs_FACE);
-        if (!count)
-            continue;
-        ++i;
-        auto node = faceset->shapeInfo.getNode(i);
-        SoFCShapeInstance *instance = nullptr;
-        if (node && node->isOfType(SoFCShapeInstance::getClassTypeId()))
-            instance = static_cast<SoFCShapeInstance*>(node);
-        else
-            instance = new SoFCShapeInstance;
-        int idx = cachedShape.findShape(s.getSubShape(TopAbs_FACE, 1));
-        assert(idx > 0);
-        instance->partIndex = idx;
-        instance->transform = convert(s.getTransform());
-        auto &info = _ShapeTable[s.getShape().TShape().get()];
-        assert(info.node);
-        instance->shapeInfo = info.node;
-        if (instance != node)
-            faceset->shapeInfo.replaceNode(i, instance);
-    }
-    faceset->shapeInfo.enableNotify(TRUE);
-
-    TopoDS_Shape cShape = cachedShape.getShape();
+    TopoDS_Shape cShape = toposhape.getShape();
 
     // copy edge sub shape to work around OCC trangulation bug (in
     // case the edge is part of a face of some other shape in a
@@ -1833,16 +1753,13 @@ void ViewProviderPartExt::updateVisual()
         bounds.SetGap(0.0);
         Standard_Real xMin, yMin, zMin, xMax, yMax, zMax;
         bounds.Get(xMin, yMin, zMin, xMax, yMax, zMax);
-        Standard_Real deflection = ((xMax-xMin)+(yMax-yMin)+(zMax-zMin))/300.0 *
-            std::max(PartParams::OverrideTessellation() ? PartParams::MeshDeviation() : Deviation.getValue(),
-                     PartParams::MinimumDeviation());
+        Standard_Real deflection =
+            ((xMax-xMin)+(yMax-yMin)+(zMax-zMin))/300.0 * PartParams::MeshDeviation();
 
         // create or use the mesh on the data structure
 #if OCC_VERSION_HEX >= 0x060600
         Standard_Real AngDeflectionRads = 
-            std::max((PartParams::OverrideTessellation() ?
-                        PartParams::MeshAngularDeflection() : AngularDeflection.getValue()),
-                      PartParams::MinimumAngularDeflection()) / 180.0 * M_PI;
+            PartParams::MeshAngularDeflection() / 180.0 * M_PI;
         BRepMesh_IncrementalMesh(cShape,deflection,Standard_False,
                 AngDeflectionRads,Standard_True);
 #else
@@ -1852,6 +1769,7 @@ void ViewProviderPartExt::updateVisual()
         // count triangles and nodes in the mesh
         TopTools_IndexedMapOfShape faceMap;
         TopExp::MapShapes(cShape, TopAbs_FACE, faceMap);
+        TopLoc_Location aLoc;
         for (int i=1; i <= faceMap.Extent(); i++) {
             TopoDS_Face face = TopoDS::Face(faceMap(i));
             Handle (Poly_Triangulation) mesh = BRep_Tool::Triangulation(face, aLoc);
@@ -1951,7 +1869,7 @@ void ViewProviderPartExt::updateVisual()
             const Poly_Array1OfTriangle& Triangles = mesh->Triangles();
             const TColgp_Array1OfPnt& Nodes = mesh->Nodes();
             TColgp_Array1OfDir Normals (Nodes.Lower(), Nodes.Upper());
-            if (NormalsFromUV)
+            if (PartParams::NormalsFromUVNodes())
                 getNormals(actFace, mesh, Normals);
 
             std::vector<std::pair<gp_Vec,int> > centers;
@@ -1999,7 +1917,7 @@ void ViewProviderPartExt::updateVisual()
 
                 // get the 3 normals of this triangle
                 gp_Vec NV1, NV2, NV3;
-                if (NormalsFromUV) {
+                if (PartParams::NormalsFromUVNodes()) {
                     NV1.SetXYZ(Normals(N1).XYZ());
                     NV2.SetXYZ(Normals(N2).XYZ());
                     NV3.SetXYZ(Normals(N3).XYZ());
@@ -2019,7 +1937,7 @@ void ViewProviderPartExt::updateVisual()
                     V1.Transform(myTransf);
                     V2.Transform(myTransf);
                     V3.Transform(myTransf);
-                    if (NormalsFromUV) {
+                    if (PartParams::NormalsFromUVNodes()) {
                         NV1.Transform(myTransf);
                         NV2.Transform(myTransf);
                         NV3.Transform(myTransf);
@@ -2168,20 +2086,464 @@ void ViewProviderPartExt::updateVisual()
             lineset->seamIndices.setValues(0, seamEdges.size(), &seamEdges[0]);
     }
     catch (...) {
-        FC_ERR("Cannot compute Inventor representation for the shape of " << pcObject->getFullName());
+        FC_ERR("Cannot compute Inventor representation for the shape");
     }
 
     // printing some information
-    FC_TRACE(getFullName() << " update time: " << Base::TimeInfo::diffTimeF(start_time,Base::TimeInfo()));
+    FC_TRACE(" update time: " << Base::TimeInfo::diffTimeF(start_time,Base::TimeInfo()));
     FC_TRACE("Shape tria info: Faces:" << numFaces << " Edges:" << numEdges 
              << " Points:" << numPoints << " Nodes:" << numNodes
              << " Triangles:" << numTriangles << " IdxVec:" << numLines);
-    VisualTouched = false;
+}
 
-    // The material has to be checked again (#0001736)
-    setHighlightedFaces(DiffuseColor.getValues());
-    setHighlightedEdges(LineColorArray.getValues());
-    setHighlightedPoints(PointColorArray.getValue());
+
+struct MaterialInfo {
+    Gui::CoinPtr<SoMaterial> material;
+    int refcount = 0;
+};
+
+typedef std::map<std::vector<uint32_t>, MaterialInfo> MaterialMap;
+std::pair<std::vector<uint32_t>, MaterialInfo> MaterialValue;
+MaterialMap _MaterialMap;
+
+std::map<SoMaterial *, MaterialMap::iterator> _MaterialTable;
+int MaterialFreeCount = 0;
+
+SoMaterialBinding * getMaterialBindingNode(SoMaterialBinding::Binding type) {
+    static std::vector<Gui::CoinPtr<SoMaterialBinding> > bindings;
+    if (type >= bindings.size())
+        bindings.resize(type+1);
+    auto &res = bindings[type];
+    if (!res) {
+        res = new SoMaterialBinding;
+        res->value = type;
+    }
+    return res;
+}
+
+SoMaterial* registerMaterial(SoMaterial * material, int offset, int count)
+{
+    int diffuseCount = material->diffuseColor.getNum();
+    if (diffuseCount <= 1 || offset < 0 || count <= 0 || offset+count > diffuseCount)
+        return nullptr;
+    const SbColor *diffuse = material->diffuseColor.getValues(offset);
+    int transpcount = material->transparency.getNum();
+    const float * transp;
+    float tmp = 0.0;
+    if (transpcount <= 0) {
+        transp = &tmp;
+        transpcount = 1;
+    } else if (transpcount < offset+count)
+        return nullptr;
+    else {
+        transpcount = count;
+        transp = material->transparency.getValues(offset);
+    }
+    // Populate the color segment, and try to detect uniform colors
+    bool uniformTransp = true;
+    auto &key = MaterialValue.first;
+    key.clear();
+    key.push_back(diffuse[0].getPackedValue(transp[0]));
+    for (int i=1; i<count; ++i) {
+        float t = transpcount > i ? transp[i] : transp[0];
+        uint32_t color = diffuse[i].getPackedValue(t);
+        if (key.size() == 1 && color == key.front())
+            continue;
+        key.resize(i, key.front());
+        key.push_back(color);
+        uniformTransp = uniformTransp && t == transp[0];
+    }
+    
+    auto res = _MaterialMap.insert(MaterialValue);
+    auto &info = res.first->second;
+    ++info.refcount;
+    if (info.material) {
+        if (info.refcount == 1)
+            --MaterialFreeCount;
+        return info.material;
+    }
+
+    info.material = new SoMaterial;
+    info.material->diffuseColor.setNum(key.size());
+    SbColor *colors = info.material->diffuseColor.startEditing();
+    float *t = nullptr;
+    if (uniformTransp) {
+        float tmp;
+        colors[0].setPackedValue(key.front(), tmp);
+        info.material->transparency.setValue(tmp);
+    } else {
+        info.material->transparency.setNum(key.size());
+        t = info.material->transparency.startEditing();
+    }
+    for (uint32_t color : key) {
+        float _t;
+        colors->setPackedValue(color, _t);
+        if (t)
+            *t++ = _t;
+        ++colors;
+    }
+    info.material->ambientColor.setIgnored(true);
+    info.material->specularColor.setIgnored(true);
+    info.material->emissiveColor.setIgnored(true);
+    info.material->shininess.setIgnored(true);
+    info.refcount = 1;
+    _MaterialTable[info.material] = res.first;
+    return info.material;
+}
+
+struct ShapeInfo {
+    int elementCount = 0;
+    Gui::CoinPtr<SoGroup> node;
+    std::map<std::vector<SoMaterial*> , Gui::CoinPtr<SoGroup> > mnodes;
+    int refcount = 0;
+};
+
+struct ShapeKey {
+    void * handle;
+    TopAbs_ShapeEnum type;
+    ShapeKey(const Part::TopoShape &shape, TopAbs_ShapeEnum type)
+        :handle(shape.getShape().TShape().get())
+        ,type(type)
+    {}
+
+    bool operator==(const ShapeKey &other) const {
+        return handle == other.handle && type == other.type;
+    }
+};
+
+// copied from boost::hash_combine, because boost changes hearder location in
+// different version.
+template <class T>
+inline void hash_combine(std::size_t& seed, const T& v)
+{
+    std::hash<T> hasher;
+    seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+}
+
+struct ShapeKeyHash {
+    inline size_t operator()(const ShapeKey &key) const {
+        unsigned long seed = 0;
+        hash_combine(seed, key.handle);
+        hash_combine(seed, key.type);
+        return seed;
+    }
+};
+
+std::unordered_map<ShapeKey, ShapeInfo, ShapeKeyHash> _ShapeTable;
+
+struct ShapeTmpInfo {
+    Part::TopoShape shape;
+    SoGroup *node;
+    int idx;
+    int count;
+
+    ShapeTmpInfo(const Part::TopoShape &s, SoGroup *n, int i, int c)
+        :shape(s), node(n), idx(i), count(c)
+    {}
+};
+
+SoGroup *
+registerShape(const Part::TopoShape &shape,
+              TopAbs_ShapeEnum type,
+              SoMaterial * material,
+              std::vector<SoMaterial *> & materials,
+              int idxoffset = 0,
+              bool incref = true)
+{
+    if (shape.isNull() || !shape.countSubShapes(type))
+        return nullptr;
+    bool compound = false;
+    switch (shape.shapeType()) {
+    case TopAbs_COMPOUND:
+    case TopAbs_COMPSOLID:
+        if (shape.countSubShapes(TopAbs_SHAPE) == 1)
+            return registerShape(shape.getSubTopoShape(TopAbs_SHAPE, 1),
+                                 type,
+                                 material,
+                                 materials,
+                                 idxoffset);
+        compound = true;
+        break;
+    default:
+        break;
+    }
+
+    auto &info = _ShapeTable[ShapeKey(shape,type)];
+    if (incref)
+        ++info.refcount;
+    if (info.node && !material)
+        return info.node;
+
+    std::vector<SoMaterial*> mats;
+    std::vector<SoMaterial*> compoundMats;
+
+    if (compound) {
+        Part::TopoShape copy(shape);
+        copy.setShape(copy.getShape().Located(TopLoc_Location()), false);
+        std::vector<ShapeTmpInfo> tmpInfo;
+        int offset = idxoffset;
+        compoundMats.clear();
+        for (auto &s : copy.getSubTopoShapes()) {
+            int count = s.countSubShapes(type);
+            mats.clear();
+            auto node = registerShape(s, type, material, mats, offset, info.refcount==1);
+            offset += count;
+            if (!node)
+                continue;
+            compoundMats.insert(compoundMats.end(), mats.begin(), mats.end());
+            int idx = copy.findShape(s.getSubShape(type, 1));
+            assert(idx > 0);
+            tmpInfo.emplace_back(s, node, idx, count);
+        }
+
+        auto &node = info.mnodes[compoundMats];
+        if (!node) {
+            auto group = new SoGroup;
+            for (auto &tmp : tmpInfo) {
+                auto instance = new SoFCShapeInfo;
+                instance->index = tmp.idx - 1;
+                instance->count = tmp.count;
+                if (!tmp.shape.getShape().Location().IsIdentity()) {
+                    auto transform = new SoMatrixTransform;
+                    transform->matrix = Gui::ViewProvider::convert(tmp.shape.getTransform());
+                    instance->addChild(transform);
+                }
+                for (int i=0, c=tmp.node->getNumChildren(); i<c; ++i)
+                    instance->addChild(tmp.node->getChild(i));
+                group->addChild(instance);
+            }
+            node = group;
+            info.elementCount = offset - idxoffset;
+            if (compoundMats.empty())
+                info.node = node;
+        }
+        materials.insert(materials.end(), compoundMats.begin(), compoundMats.end());
+        return node;
+    }
+
+    if (!info.node) {
+        Gui::CoinPtr<SoCoordinate3> coords = new SoCoordinate3;
+        Gui::CoinPtr<SoCoordinate3> pcoords = new SoCoordinate3;
+        Gui::CoinPtr<SoBrepFaceSet> faceset = new SoBrepFaceSet;
+        Gui::CoinPtr<SoNormal> norm = new SoNormal;
+        Gui::CoinPtr<SoBrepEdgeSet> lineset = new SoBrepEdgeSet;
+        Gui::CoinPtr<SoBrepPointSet> nodeset = new SoBrepPointSet;
+
+        buildVisual(shape, coords, pcoords, norm, faceset, lineset);
+
+        int faceCount = shape.countSubShapes(TopAbs_FACE);
+        int edgeCount = shape.countSubShapes(TopAbs_EDGE);
+        int vertexCount = shape.countSubShapes(TopAbs_VERTEX);
+        if (faceCount) {
+            SoGroup *group = new SoGroup;
+            group->addChild(coords);
+            group->addChild(norm);
+            if (shape.shapeType() == TopAbs_SOLID) {
+                auto hint = new SoShapeHints;
+                hint->shapeType = SoShapeHints::SOLID;
+                group->addChild(hint);
+            }
+            group->addChild(faceset);
+            if (type == TopAbs_FACE) {
+                info.node = group;
+                info.elementCount = faceCount;
+            } else {
+                auto &ainfo = _ShapeTable[ShapeKey(shape,TopAbs_FACE)];
+                assert(ainfo.refcount == 0);
+                ++ainfo.refcount;
+                ainfo.node = group;
+                ainfo.elementCount = faceCount;
+            }
+        }
+        if (edgeCount) {
+            SoGroup *group = new SoGroup;
+            group->addChild(coords);
+            group->addChild(lineset);
+            if (type == TopAbs_EDGE) {
+                info.node = group;
+                info.elementCount = edgeCount;
+            } else {
+                auto &ainfo = _ShapeTable[ShapeKey(shape,TopAbs_EDGE)];
+                assert(ainfo.refcount == 0);
+                ++ainfo.refcount;
+                ainfo.node = group;
+                ainfo.elementCount = edgeCount;
+            }
+        }
+        if (vertexCount) {
+            SoGroup *group = new SoGroup;
+            group->addChild(pcoords);
+            group->addChild(nodeset);
+            if (type == TopAbs_VERTEX) {
+                info.node = group;
+                info.elementCount = vertexCount;
+            } else {
+                auto &ainfo = _ShapeTable[ShapeKey(shape,TopAbs_VERTEX)];
+                assert(ainfo.refcount == 0);
+                ++ainfo.refcount;
+                ainfo.node = group;
+                ainfo.elementCount = edgeCount;
+            }
+        }
+    }
+    if (!material)
+        return info.node;
+
+    auto mat = registerMaterial(material, idxoffset, shape.countSubShapes(type));
+    if (!mat)
+        return info.node;
+    mats.clear();
+    mats.push_back(mat);
+    auto &mnode = info.mnodes[mats];
+    if (!mnode) {
+        mnode = new SoGroup;
+        SoMaterialBinding::Binding bind;
+        if (mat->diffuseColor.getNum() == 1)
+            bind = SoMaterialBinding::OVERALL;
+        else {
+            switch(type) {
+            case TopAbs_FACE:
+                bind = SoMaterialBinding::PER_PART;
+                break;
+            case TopAbs_EDGE:
+                bind = SoMaterialBinding::PER_FACE;
+                break;
+            default:
+                bind = SoMaterialBinding::PER_VERTEX;
+                break;
+            }
+        }
+        mnode->addChild(getMaterialBindingNode(bind));
+        mnode->addChild(mat);
+        for (int i=0, c=info.node->getNumChildren(); i<c; ++i)
+            mnode->addChild(info.node->getChild(i));
+    }
+    materials.push_back(mat);
+    return mnode;
+}
+
+void unregisterShape(const Part::TopoShape &shape, TopAbs_ShapeEnum type)
+{
+    auto it = _ShapeTable.find(ShapeKey(shape, type));
+    if (it != _ShapeTable.end() && --it->second.refcount <= 0) {
+        switch(shape.shapeType()) {
+        case TopAbs_COMPOUND:
+        case TopAbs_COMPSOLID:
+            for (auto &s : shape.getSubTopoShapes(type))
+                unregisterShape(s, type);
+            break;
+        default:
+            break;
+        }
+        _ShapeTable.erase(it);
+    }
+}
+
+void unregisterMaterial(const std::vector<SoMaterial *> &materials)
+{
+    for (auto material : materials) {
+        auto it = _MaterialTable.find(material);
+        if (it == _MaterialTable.end())
+            continue;
+        auto &info = it->second->second;
+        if (--info.refcount == 0) {
+            ++MaterialFreeCount;
+            continue;
+        }
+    }
+
+    if (MaterialFreeCount < 100)
+        return;
+
+    FC_LOG("free up view provider materials");
+    std::vector<SoMaterial*> mats;
+    mats.reserve(MaterialFreeCount);
+    for (auto it = _MaterialTable.begin(); it != _MaterialTable.end(); ) {
+        auto &info = it->second->second;
+        if (info.refcount) {
+            ++it;
+            continue;
+        }
+        mats.push_back(info.material);
+        --MaterialFreeCount;
+        _MaterialMap.erase(it->second);
+        it = _MaterialTable.erase(it);
+    }
+    assert(MaterialFreeCount == 0);
+
+    std::sort(mats.begin(), mats.end());
+    int count = 0;
+    for (auto &v : _ShapeTable) {
+        auto &mnodes = v.second.mnodes;
+        for (auto it = mnodes.begin(); it != mnodes.end(); ) {
+            bool found = false;
+            for (auto m : it->first) {
+                if ((found = std::binary_search(mats.begin(), mats.end(), m)))
+                    break;
+            }
+            if (found) {
+                it = mnodes.erase(it);
+                ++count;
+            } else
+                ++it;
+        }
+    }
+    FC_LOG("Cleared " << count << " shape material usage");
+}
+
+} // unamed namespace
+
+void ViewProviderPartExt::_updateVisual(const Part::TopoShape &prevshape, TopAbs_ShapeEnum type)
+{
+    std::vector<SoMaterial*> mats;
+    switch(type) {
+    case TopAbs_FACE:
+        faceset->shapeInstance = registerShape(pimpl->cachedShape, TopAbs_FACE, pcShapeMaterial, mats);
+        unregisterShape(prevshape, TopAbs_FACE);
+        unregisterMaterial(pimpl->faceMaterials);
+        pimpl->faceMaterials = mats;
+        pimpl->faceMaterialId = pcShapeMaterial->getNodeId();
+        break;
+    case TopAbs_EDGE:
+        lineset->shapeInstance = registerShape(pimpl->cachedShape, TopAbs_EDGE, pcLineMaterial, mats);
+        unregisterShape(prevshape, TopAbs_EDGE);
+        unregisterMaterial(pimpl->edgeMaterials);
+        pimpl->edgeMaterials = mats;
+        pimpl->edgeMaterialId = pcLineMaterial->getNodeId();
+        break;
+    case TopAbs_VERTEX:
+        nodeset->shapeInstance = registerShape(pimpl->cachedShape, TopAbs_VERTEX, pcPointMaterial, mats);
+        unregisterShape(prevshape, TopAbs_VERTEX);
+        unregisterMaterial(pimpl->vertexMaterials);
+        pimpl->vertexMaterials = mats;
+        pimpl->vertexMaterialId = pcPointMaterial->getNodeId();
+        break;
+    default:
+        break;
+    }
+}
+
+void ViewProviderPartExt::updateMaterial(void *data, SoSensor *)
+{
+    auto self = static_cast<ViewProviderPartExt*>(data);
+    bool updateFace = self->pcShapeMaterial->getNodeId() != self->pimpl->faceMaterialId;
+    bool updateEdge = self->pcLineMaterial->getNodeId() != self->pimpl->edgeMaterialId;
+    bool updateVertex = self->pcPointMaterial->getNodeId() != self->pimpl->vertexMaterialId;
+    if (!updateFace && !updateEdge && !updateVertex)
+        return;
+    if(self->VisualTouched
+            || !self->isUpdateForced()
+            || !self->Visibility.getValue())
+    {
+        self->VisualTouched = true;
+        return;
+    }
+    if (updateFace)
+        self->_updateVisual(self->pimpl->cachedShape, TopAbs_FACE);
+    if (updateEdge)
+        self->_updateVisual(self->pimpl->cachedShape, TopAbs_EDGE);
+    if (updateVertex)
+        self->_updateVisual(self->pimpl->cachedShape, TopAbs_VERTEX);
 }
 
 void ViewProviderPartExt::forceUpdate(bool enable) {

@@ -156,7 +156,9 @@ void Gui::SoFCDB::init()
     SoFCSpotLight                   ::initClass();
     SoMouseWheelEvent               ::initClass();
     SoFCShapeInfo                   ::initClass();
-    SoFCShapeInstance               ::initClass();
+    SoFCShapeIndexElement           ::initClass();
+    SoFCShapeCountElement           ::initClass();
+    SoFCShapeProxyElement           ::initClass();
     SoFCRenderCache                 ::initClass();
     SoFCVertexCache                 ::initClass();
 

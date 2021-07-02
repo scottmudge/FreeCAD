@@ -63,7 +63,7 @@
 #include <Inventor/sensors/SoNodeSensor.h>
 #include <Inventor/nodes/SoNode.h>
 #include <Inventor/fields/SoMFInt32.h>
-#include <Inventor/fields/SoMFNode.h>
+#include <Inventor/fields/SoSFNode.h>
 #include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/lists/SbList.h>
@@ -79,7 +79,6 @@
 #include "SoFCDiffuseElement.h"
 #include "SoFCVBO.h"
 #include "SoFCVertexArrayIndexer.h"
-#include "SoFCShapeInfo.h"
 #include "COWData.h"
 
 using namespace Gui;
@@ -99,7 +98,7 @@ static SbName * SeamIndicesField;
 static SbName * HighlightIndicesField;
 static SbName * ElementSelectableField;
 static SbName * OnTopPatternField;
-static SbName * ShapeInfoField;
+static SbName * ShapeInstanceField;
 
 class SoFCVertexCacheP {
 public:
@@ -120,7 +119,7 @@ public:
     HighlightIndicesField = new SbName("highlightIndices");
     ElementSelectableField = new SbName("elementSelectable");
     OnTopPatternField = new SbName("onTopPattern");
-    ShapeInfoField = new SbName("shapeInfo");
+    ShapeInstanceField = new SbName("shapeInstance");
   }
 
   static void cleanup()
@@ -135,8 +134,8 @@ public:
     ElementSelectableField = nullptr;
     delete OnTopPatternField;
     OnTopPatternField = nullptr;
-    delete ShapeInfoField;
-    ShapeInfoField = nullptr;
+    delete ShapeInstanceField;
+    ShapeInstanceField = nullptr;
   }
 
   struct Vertex {
@@ -147,6 +146,7 @@ public:
     SbVec2f bumpcoord;
     uint32_t color;
     int texcoordidx;
+    mutable std::size_t _hash = 0;
 
     bool operator==(const Vertex & v) const {
       return
@@ -169,22 +169,23 @@ public:
     }
 
     unsigned long operator()(const Vertex &v) const {
-      unsigned long seed = 0;
-      hash_combine(seed, v.color);
-      hash_combine(seed, v.vertex[0]);
-      hash_combine(seed, v.vertex[1]);
-      hash_combine(seed, v.vertex[2]);
-      hash_combine(seed, v.normal[0]);
-      hash_combine(seed, v.normal[1]);
-      hash_combine(seed, v.normal[2]);
-      hash_combine(seed, v.texcoord0[0]);
-      hash_combine(seed, v.texcoord0[1]);
-      hash_combine(seed, v.texcoord0[2]);
-      hash_combine(seed, v.texcoord0[3]);
-      hash_combine(seed, v.bumpcoord[0]);
-      hash_combine(seed, v.bumpcoord[1]);
-      hash_combine(seed, v.texcoordidx);
-      return seed;
+      if (!v._hash) {
+        hash_combine(v._hash, v.color);
+        hash_combine(v._hash, v.vertex[0]);
+        hash_combine(v._hash, v.vertex[1]);
+        hash_combine(v._hash, v.vertex[2]);
+        hash_combine(v._hash, v.normal[0]);
+        hash_combine(v._hash, v.normal[1]);
+        hash_combine(v._hash, v.normal[2]);
+        hash_combine(v._hash, v.texcoord0[0]);
+        hash_combine(v._hash, v.texcoord0[1]);
+        hash_combine(v._hash, v.texcoord0[2]);
+        hash_combine(v._hash, v.texcoord0[3]);
+        hash_combine(v._hash, v.bumpcoord[0]);
+        hash_combine(v._hash, v.bumpcoord[1]);
+        hash_combine(v._hash, v.texcoordidx);
+      }
+      return v._hash;
     }
   };
 
@@ -261,7 +262,7 @@ public:
 
     this->prevattached = true;
 
-    auto prevcache = this->prevcache;
+    auto prevcache = this->prevcache.get();
     assert(PRIVATE(prevcache)->triangleindexer);
 
     auto indexer = PRIVATE(prevcache)->triangleindexer;
@@ -273,21 +274,6 @@ public:
 
     int typesize = this->triangleindexer->useShorts() ? 2 : 4;
     const int * parts = this->triangleindexer->getPartOffsets();
-
-    // Check if we need to adjust solid indices in case of partial rendering
-    if (this->solidpartindices.size()) {
-      int idx = 0;
-      for (auto i : this->solidpartindices) {
-        if (find(faces, i)) {
-          int prev = i == 0 ? 0 : parts[i-1];
-          this->solidpartarray.compareAndSet(idx, prev * typesize);
-          this->solidpartcounts.compareAndSet(idx, parts[i] - prev);
-          ++idx;
-        }
-      }
-      this->solidpartarray.resize(idx);
-      this->solidpartcounts.resize(idx);
-    }
 
     // Check if we need to adjust opaque indices in case of partial rendering
     if (this->transppartindices.size()) {
@@ -315,7 +301,7 @@ public:
 
     this->prevattached = true;
 
-    auto prevcache = this->prevcache;
+    auto prevcache = this->prevcache.get();
     assert(PRIVATE(prevcache)->lineindexer);
 
     auto indexer = PRIVATE(prevcache)->lineindexer;
@@ -330,7 +316,7 @@ public:
 
     this->prevattached = true;
 
-    auto prevcache = this->prevcache;
+    auto prevcache = this->prevcache.get();
     assert(PRIVATE(prevcache)->pointindexer);
 
     auto indexer = PRIVATE(prevcache)->pointindexer;
@@ -343,6 +329,7 @@ public:
   void addVertex(const Vertex & v);
   void initColor(int n);
 
+  void open(SoState *);
   void close(SoState *);
   void checkTransparency();
 
@@ -350,6 +337,12 @@ public:
               SoFCVertexArrayIndexer *indexer,
               int arrays,
               int part,
+              int unit);
+
+  void render(SoState *state,
+              SoFCVertexArrayIndexer * indexer,
+              const std::vector<int> &partindices,
+              int arrays,
               int unit);
 
   void render(SoState * state,
@@ -400,7 +393,9 @@ public:
   CoinPtr<SoFCVertexCache> prevcache;
   bool prevattached;
 
+  int idxoffset = 0;
   SoNode *node = nullptr;
+  SoNode *proxy = nullptr;
   SbFCUniqueId nodeid;
   SbFCUniqueId diffuseid;
   SbFCUniqueId transpid;
@@ -413,15 +408,18 @@ public:
   CoinPtr<ByteArray> prevcolorarray;
   std::vector<CoinPtr<Vec4Array> > multitexarray;
 
-  TempStorage* tmp;
+  TempStorage* tmp = nullptr;
 
   int numtranspparts;
 
   bool hastransp;
-  bool hassolid = false;
   int colorpervertex;
   uint32_t firstcolor;
 
+  int drawstate = 0;
+
+  const SbBool * texenabled = nullptr;
+  int lasttexenabled;
   int lastenabled;
   SbPlane prevsortplane;
 
@@ -446,10 +444,6 @@ public:
   COWVector<std::vector<intptr_t> > opaquepartarray;
   COWVector<std::vector<int32_t> > opaquepartcounts;
 
-  COWVector<std::vector<int> > solidpartindices;
-  COWVector<std::vector<intptr_t> > solidpartarray;
-  COWVector<std::vector<int32_t> > solidpartcounts;
-
   COWVector<std::vector<SbVec3f> > partcenters;
   COWVector<std::vector<int32_t> > nonflatparts;
   COWVector<std::vector<int32_t> > seamindices;
@@ -459,44 +453,8 @@ public:
   SoFCVertexArrayIndexer * noseamindexer;
   SoFCVertexArrayIndexer * pointindexer;
 
-  class CacheSensor : public SoDataSensor
-  {
-  public:
-    CacheSensor()
-      : node(NULL)
-    {}
-
-    ~CacheSensor() { detach(); }
-
-    void attach(const SoNode *node) {
-      if (this->node == node) return;
-      assert(!this->node);
-      this->node = const_cast<SoNode *>(node);
-      this->node->addAuditor(this, SoNotRec::SENSOR);
-    }
-
-    void detach() {
-      if (!this->node) return;
-      this->node->removeAuditor(this, SoNotRec::SENSOR);
-      this->node = NULL;
-    }
-
-    virtual void dyingReference(void) {
-      auto * node = static_cast<SoFCShapeInfo*>(this->node);
-      this->detach();
-      SoFCVertexCacheP::cachetable.erase(node);
-    }
-
-    SoNode * node;
-    std::vector<VertexCachePtr> caches;
-  };
-
-  static FC_COIN_THREAD_LOCAL std::unordered_map<const SoFCShapeInfo *, CacheSensor> cachetable;
-
   bool elementselectable;
   bool ontoppattern;
-
-  COWVector<std::vector<int> > highlightindices;
 
   SbBox3f boundbox;
 };
@@ -507,16 +465,17 @@ SoFCVertexCache::SoFCVertexCache(SoState * state, SoNode * node, SoFCVertexCache
   : SoCache(state),
     pimpl(new SoFCVertexCacheP(this, prev, node->getNodeId()))
 {
+  auto tmp = PRIVATE(this)->tmp;
   PRIVATE(this)->node = node;
-  PRIVATE(this)->tmp->state = state;
+  tmp->state = state;
   PRIVATE(this)->elementselectable = false;
   PRIVATE(this)->ontoppattern = false;
 
   const SoField * field = node->getField(*PartIndexField);
   if (field && field->isOfType(SoMFInt32::getClassTypeId())) {
     const SoMFInt32 * indices = static_cast<const SoMFInt32*>(field);
-    PRIVATE(this)->tmp->partindices = indices->getValues(0);
-    PRIVATE(this)->tmp->partcount = indices->getNum();
+    tmp->partindices = indices->getValues(0);
+    tmp->partcount = indices->getNum();
   }
 
   field = node->getField(*SeamIndicesField);
@@ -528,15 +487,6 @@ SoFCVertexCache::SoFCVertexCache(SoState * state, SoNode * node, SoFCVertexCache
       memcpy(seamindices, indices->getValues(0), indices->getNum()*4);
       std::sort(seamindices, seamindices + indices->getNum());
     }
-  }
-
-  field = node->getField(*HighlightIndicesField);
-  if (field && field->isOfType(SoMFInt32::getClassTypeId())) {
-    const SoMFInt32 * indices = static_cast<const SoMFInt32*>(field);
-    const int32_t * values = indices->getValues(0);
-    PRIVATE(this)->highlightindices.reserve(indices->getNum());
-    for (int i = 0, c = indices->getNum(); i < c; ++i)
-      PRIVATE(this)->highlightindices.push_back(values[i]);
   }
 
   field = node->getField(*ElementSelectableField);
@@ -570,7 +520,6 @@ SoFCVertexCache::SoFCVertexCache(SoFCVertexCache & prev)
   PRIVATE(this)->hastransp = PRIVATE(pprev)->hastransp;
   PRIVATE(this)->firstcolor = PRIVATE(pprev)->firstcolor;
   PRIVATE(this)->colorpervertex = PRIVATE(pprev)->colorpervertex;
-  PRIVATE(this)->hassolid = PRIVATE(pprev)->hassolid;
 
   PRIVATE(this)->partcenters = PRIVATE(pprev)->partcenters;
   PRIVATE(this)->nonflatparts = PRIVATE(pprev)->nonflatparts;
@@ -579,13 +528,7 @@ SoFCVertexCache::SoFCVertexCache(SoFCVertexCache & prev)
   PRIVATE(this)->opaquepartarray = PRIVATE(pprev)->opaquepartarray;
   PRIVATE(this)->opaquepartcounts = PRIVATE(pprev)->opaquepartcounts;
 
-  PRIVATE(this)->solidpartindices = PRIVATE(pprev)->solidpartindices;
-  PRIVATE(this)->solidpartarray = PRIVATE(pprev)->solidpartarray;
-  PRIVATE(this)->solidpartcounts = PRIVATE(pprev)->solidpartcounts;
-
   PRIVATE(this)->seamindices = PRIVATE(pprev)->seamindices;
-
-  PRIVATE(this)->highlightindices = PRIVATE(pprev)->highlightindices;
 
   PRIVATE(this)->elementselectable = PRIVATE(pprev)->elementselectable;
   PRIVATE(this)->ontoppattern = PRIVATE(pprev)->ontoppattern;
@@ -883,58 +826,6 @@ SoFCVertexCacheP::close(SoState * state)
       this->partcenters.push_back(bbox.getCenter());
       prev = parts[i];
     }
-
-    auto field = this->node ? this->node->getField(*ShapeInfoField) : nullptr;
-    if (field && field->isOfType(SoMFNode::getClassTypeId())) {
-      auto nodes = static_cast<SoMFNode*>(field);
-
-      int typesize = this->triangleindexer->useShorts() ? 2 : 4;
-      const int * parts = this->triangleindexer->getPartOffsets();
-
-      int solidpartcount = 0;
-      for (int i=0, c=nodes->getNum(); i<c; ++i) {
-        if (!nodes->getNode(i)
-            || !nodes->getNode(i)->isOfType(SoFCShapeInstance::getClassTypeId()))
-          continue;
-        auto instance = static_cast<SoFCShapeInstance*>(nodes->getNode(i));
-        if (!instance->shapeInfo.getValue()
-            || !instance->shapeInfo.getValue()->isOfType(SoFCShapeInfo::getClassTypeId()))
-          continue;
-        auto info = static_cast<SoFCShapeInfo*>(instance->shapeInfo.getValue());
-        if (info->shapeType.getValue() == SoFCShapeInfo::SOLID)
-          solidpartcount += info->partCount.getValue();
-      }
-      if (solidpartcount >= numparts)
-        this->hassolid = true;
-      else if (solidpartcount) {
-        this->hassolid = true;
-        for (int i=0, c=nodes->getNum(); i<c; ++i) {
-          if (!nodes->getNode(i)
-              || nodes->getNode(i)->isOfType(SoFCShapeInstance::getClassTypeId()))
-            continue;
-          auto instance = static_cast<SoFCShapeInstance*>(nodes->getNode(i));
-          if (!instance->shapeInfo.getValue()
-              || !instance->shapeInfo.getValue()->isOfType(SoFCShapeInfo::getClassTypeId()))
-            continue;
-          auto info = static_cast<SoFCShapeInfo*>(instance->shapeInfo.getValue());
-          if (info->shapeType.getValue() != SoFCShapeInfo::SOLID)
-            continue;
-          int partidx = instance->partIndex.getValue();
-          int count = info->partCount.getValue();
-          if (count <= 0 || partidx + count > numparts)
-            continue;
-          if (info->shapeType.getValue() == SoFCShapeInfo::SOLID) {
-            for (int j=0; j<count; ++j) {
-              int prev = j+partidx == 0 ? 0 : parts[j+partidx-1];
-              this->solidpartindices.push_back(j+partidx);
-              this->solidpartarray.push_back(prev * typesize);
-              this->solidpartcounts.push_back(parts[j] - prev);
-            }
-          }
-          partidx += count;
-        }
-      }
-    }
   }
 
   this->checkTransparency();
@@ -1053,6 +944,69 @@ SoFCVertexCacheP::render(SoState *state,
 }
 
 void
+SoFCVertexCache::beginDraw(SoState *state, int arrays, int target)
+{
+  if (PRIVATE(this)->drawstate)
+    return;
+
+  PRIVATE(this)->lasttexenabled = -1;
+  PRIVATE(this)->texenabled = nullptr;
+  const SbBool normal = (arrays & NORMAL) != 0;
+  const SbBool texture = (arrays & TEXCOORD) != 0;
+  const SbBool color = this->colorPerVertex() && ((arrays & COLOR) != 0);
+  if (texture) {
+    PRIVATE(this)->texenabled =
+      SoMultiTextureEnabledElement::getEnabledUnits(state, PRIVATE(this)->lasttexenabled);
+    if (PRIVATE(this)->lasttexenabled > PRIVATE(this)->lastenabled)
+      PRIVATE(this)->lasttexenabled = PRIVATE(this)->lastenabled;
+  }
+
+  const uint32_t contextid = SoGLCacheContextElement::get(state);
+  const cc_glglue * glue = cc_glglue_instance(static_cast<int>(contextid));
+  int vnum = PRIVATE(this)->vertexarray->getLength();
+
+  if (SoFCVBO::shouldCreateVBO(state, contextid, vnum)) {
+    PRIVATE(this)->enableVBOs(state, glue, contextid, color, normal, texture,
+        PRIVATE(this)->texenabled, PRIVATE(this)->lasttexenabled);
+    PRIVATE(this)->drawstate = 1;
+  } else if (SoFCVBO::shouldRenderAsVertexArrays(state, contextid, vnum)) {
+    PRIVATE(this)->enableArrays(glue, color, normal, texture,
+        PRIVATE(this)->texenabled, PRIVATE(this)->lasttexenabled);
+    PRIVATE(this)->drawstate = 2;
+  } else {
+    // fall back to immediate mode rendering
+    PRIVATE(this)->drawstate = 3;
+    glBegin(target);
+  }
+  return;
+}
+
+void
+SoFCVertexCache::endDraw(SoState *state, int arrays)
+{
+  if (!PRIVATE(this)->drawstate)
+    return;
+
+  const SbBool normal = (arrays & NORMAL) != 0;
+  const SbBool texture = (arrays & TEXCOORD) != 0;
+  const SbBool color = this->colorPerVertex() && ((arrays & COLOR) != 0);
+
+  const uint32_t contextid = SoGLCacheContextElement::get(state);
+  const cc_glglue * glue = cc_glglue_instance(static_cast<int>(contextid));
+
+  if (PRIVATE(this)->drawstate == 1)
+    PRIVATE(this)->disableVBOs(
+        glue, color, normal, texture, PRIVATE(this)->texenabled, PRIVATE(this)->lasttexenabled);
+  else if (PRIVATE(this)->drawstate == 2)
+    PRIVATE(this)->disableArrays(
+        glue, color, normal, texture, PRIVATE(this)->texenabled, PRIVATE(this)->lasttexenabled);
+  else
+    glEnd();
+
+  PRIVATE(this)->drawstate = 0;
+}
+
+void
 SoFCVertexCacheP::render(SoState * state,
                          SoFCVertexArrayIndexer *indexer,
                          const int arrays,
@@ -1062,28 +1016,41 @@ SoFCVertexCacheP::render(SoState * state,
 {
   if (!indexer || !indexer->getNumIndices()) return;
   if (!this->vertexarray || !this->vertexarray->getLength()) return;
-  int lastenabled = -1;
 
-  const SbBool * enabled = NULL;
   const SbBool normal = (arrays & NORMAL) != 0;
   const SbBool texture = (arrays & TEXCOORD) != 0;
   const SbBool color = PUBLIC(this)->colorPerVertex() && ((arrays & COLOR) != 0);
-  if (texture) {
-    enabled = SoMultiTextureEnabledElement::getEnabledUnits(state, lastenabled);
-    if (lastenabled > this->lastenabled)
-      lastenabled = this->lastenabled;
-  }
-
   const uint32_t contextid = SoGLCacheContextElement::get(state);
   const cc_glglue * glue = cc_glglue_instance(static_cast<int>(contextid));
 
   int vnum = this->vertexarray->getLength();
-  if (SoFCVBO::shouldCreateVBO(state, contextid, vnum)) {
-    this->enableVBOs(state, glue, contextid, color, normal, texture, enabled, lastenabled);
+
+  bool resetdrawstate = this->drawstate == 0;
+  if (resetdrawstate) {
+    this->texenabled = nullptr;
+    this->lasttexenabled = -1;
+    if (texture) {
+      this->texenabled = SoMultiTextureEnabledElement::getEnabledUnits(state, this->lasttexenabled);
+      if (this->lasttexenabled > this->lastenabled)
+        this->lasttexenabled = this->lastenabled;
+    }
+    if (SoFCVBO::shouldCreateVBO(state, contextid, vnum)) {
+      enableVBOs(state, glue, contextid, color, normal, texture,
+          this->texenabled, this->lasttexenabled);
+      this->drawstate = 1;
+    } else if (SoFCVBO::shouldRenderAsVertexArrays(state, contextid, vnum)) {
+      enableArrays(glue, color, normal, texture, this->texenabled, this->lasttexenabled);
+      this->drawstate = 2;
+    } else {
+      // fall back to immediate mode rendering
+      this->drawstate = 3;
+      glBegin(indexer->getTarget());
+    }
+  }
+
+  if (this->drawstate == 1) {
     indexer->render(state, glue, TRUE, contextid, offsets, counts, drawcount);
-    this->disableVBOs(glue, color, normal, texture, enabled, lastenabled);
-  } else if (SoFCVBO::shouldRenderAsVertexArrays(state, contextid, vnum)) {
-    this->enableArrays(glue, color, normal, texture, enabled, lastenabled);
+  } else if (this->drawstate == 2) {
     if (!drawcount)
       indexer->render(state, glue, FALSE, contextid);
     else {
@@ -1095,16 +1062,13 @@ SoFCVertexCacheP::render(SoState * state,
         indexer->render(state, glue, FALSE, contextid, &offset, &count, 1);
       }
     }
-    this->disableArrays(glue, color, normal, texture, enabled, lastenabled);
   }
   else {
-    // fall back to immediate mode rendering
-    glBegin(indexer->getTarget());
     if (!drawcount) {
       this->renderImmediate(glue,
                             indexer->getIndices(),
                             indexer->getNumIndices(),
-                            color, normal, texture, enabled, lastenabled);
+                            color, normal, texture, this->texenabled, this->lasttexenabled);
     }
     else {
       int typeshift = indexer->useShorts() ? 1 : 2;
@@ -1113,10 +1077,19 @@ SoFCVertexCacheP::render(SoState * state,
         intptr_t offset = offsets[i] >> typeshift;
         this->renderImmediate(glue,
                               indexer->getIndices() + offset, count,
-                              color, normal, texture, enabled, lastenabled);
+                              color, normal, texture, this->texenabled, this->lasttexenabled);
       }
     }
-    glEnd();
+  }
+
+  if (resetdrawstate) {
+    if (this->drawstate == 1)
+      this->disableVBOs(glue, color, normal, texture, this->texenabled, this->lasttexenabled);
+    else if (this->drawstate == 2)
+      this->disableArrays(glue, color, normal, texture, this->texenabled, this->lasttexenabled);
+    else
+      glEnd();
+    this->drawstate = 0;
   }
 }
 
@@ -1163,17 +1136,79 @@ SoFCVertexCache::renderTriangles(SoState * state, const int arrays, int part, co
 }
 
 void
-SoFCVertexCache::renderSolids(SoState * state)
+SoFCVertexCache::renderTriangles(SoState * state,
+                                 const std::vector<int> &partindices,
+                                 const int arrays)
 {
-  int drawcount = (int)PRIVATE(this)->solidpartarray.size();
-  const intptr_t * offsets = NULL;
-  const int32_t * counts = NULL;
-  int arrays = NON_SORTED_ARRAY;
-  if (drawcount) {
-    offsets = &PRIVATE(this)->solidpartarray[0];
-    counts = &PRIVATE(this)->solidpartcounts[0];
+  PRIVATE(this)->render(state,
+                        PRIVATE(this)->triangleindexer,
+                        partindices,
+                        arrays,
+                        3);
+}
+
+void
+SoFCVertexCache::renderLines(SoState * state,
+                             const std::vector<int> &partindices,
+                             const int arrays)
+{
+  PRIVATE(this)->render(state,
+                        PRIVATE(this)->lineindexer,
+                        partindices,
+                        arrays,
+                        2);
+}
+
+void
+SoFCVertexCache::renderPoints(SoState * state,
+                              const std::vector<int> &partindices,
+                              const int arrays)
+{
+  PRIVATE(this)->render(state,
+                        PRIVATE(this)->pointindexer,
+                        partindices,
+                        arrays,
+                        2);
+}
+
+void
+SoFCVertexCacheP::render(SoState *state,
+                         SoFCVertexArrayIndexer * indexer,
+                         const std::vector<int> &partindices,
+                         int arrays,
+                         int unit)
+{
+  if (partindices.empty()) {
+    render(state, indexer, arrays);
+    return;
   }
-  PRIVATE(this)->render(state, PRIVATE(this)->triangleindexer, arrays, offsets, counts, drawcount);
+  if (partindices.size() == 1) {
+    render(state, indexer, arrays, partindices[0], unit);
+    return;
+  }
+
+  if (!indexer)
+    return;
+  int numparts = indexer->getNumParts();
+  if (!numparts)
+    return;
+
+  static FC_COIN_THREAD_LOCAL std::vector<intptr_t> offsets;
+  static FC_COIN_THREAD_LOCAL std::vector<int32_t> counts;
+
+  offsets.clear();
+  counts.clear();
+
+  const int * parts = indexer->getPartOffsets();
+  for (int part : partindices) {
+    if (part < 0 || part >= numparts)
+      continue;
+    int prev = part ? parts[part-1] : 0;
+    offsets.push_back(prev * (indexer->useShorts() ? 2 : 4));
+    counts.push_back(parts[part] - prev);
+  }
+
+  render(state, indexer, arrays, &offsets[0], &counts[0], (int)offsets.size());
 }
 
 void
@@ -1266,7 +1301,8 @@ void
 SoFCVertexCache::addTriangle(const SoPrimitiveVertex * v0,
                              const SoPrimitiveVertex * v1,
                              const SoPrimitiveVertex * v2,
-                             const int * pointdetailidx)
+                             const int * pointdetailidx,
+                             const int * texindices)
 {
   PRIVATE(this)->prepare();
 
@@ -1290,9 +1326,10 @@ SoFCVertexCache::addTriangle(const SoPrimitiveVertex * v0,
     }
     else {
       int midx = vp[i]->getMaterialIndex();
-      if (PRIVATE(this)->tmp->packedptr) {
+      if (midx < 0)
+        v.color = vp[i]->getPackedColor();
+      else if (PRIVATE(this)->tmp->packedptr)
         v.color = PRIVATE(this)->tmp->packedptr[SbClamp(midx, 0, PRIVATE(this)->tmp->numdiffuse-1)];
-      }
       else {
         SbColor tmpc = PRIVATE(this)->tmp->diffuseptr[SbClamp(midx,0,PRIVATE(this)->tmp->numdiffuse-1)];
         float tmpt = PRIVATE(this)->tmp->transpptr[SbClamp(midx,0,PRIVATE(this)->tmp->numtransp-1)];
@@ -1304,16 +1341,20 @@ SoFCVertexCache::addTriangle(const SoPrimitiveVertex * v0,
 
     const SoDetail * d = vp[i]->getDetail();
 
-    if (d && d->isOfType(SoFaceDetail::getClassTypeId()) && pointdetailidx) {
+    if (texindices)
+      v.texcoordidx = texindices[i];
+    else if (d && d->isOfType(SoFaceDetail::getClassTypeId()) && pointdetailidx) {
       fd = static_cast<const SoFaceDetail *>(d);
       assert(pointdetailidx[i] < fd->getNumPoints());
       const SoPointDetail * pd = static_cast<const SoPointDetail *>(
         fd->getPoint(pointdetailidx[i])
        );
-
-      int tidx  = v.texcoordidx = pd->getTextureCoordIndex();
+      v.texcoordidx = pd->getTextureCoordIndex();
+    }
+    if (v.texcoordidx >= 0) {
       if (PRIVATE(this)->tmp->numbumpcoords) {
-        v.bumpcoord = PRIVATE(this)->tmp->bumpcoords[SbClamp(tidx, 0, PRIVATE(this)->tmp->numbumpcoords-1)];
+        v.bumpcoord = PRIVATE(this)->tmp->bumpcoords[SbClamp(
+            v.texcoordidx, 0, PRIVATE(this)->tmp->numbumpcoords-1)];
       }
     }
 
@@ -1532,25 +1573,50 @@ SoFCVertexCache::addPoint(const SoPrimitiveVertex * v0)
   PRIVATE(this)->pointindexer->addPoint(res.first->second);
 }
 
-SoFCVertexCache *
-SoFCVertexCache::highlightIndices(int * pindex)
+SoNode *
+SoFCVertexCache::getShapeInstance(const SoNode *node)
 {
-  switch(PRIVATE(this)->highlightindices.size()) {
+  if (!node)
+    return nullptr;
+  auto field = node->getField(*ShapeInstanceField);
+  if (field && field->isOfType(SoSFNode::getClassTypeId()))
+    return static_cast<const SoSFNode*>(field)->getValue();
+  return nullptr;
+}
+
+SoFCVertexCache *
+SoFCVertexCache::highlightIndices(int * pindex, SoNode * node, int idxstart, int idxend)
+{
+  if (!node)
+    return this;
+  auto field = node->getField(*HighlightIndicesField);
+  if (!field || !field->isOfType(SoMFInt32::getClassTypeId()))
+    return this;
+  auto &indicesfield = *static_cast<const SoMFInt32*>(field);
+  static FC_COIN_THREAD_LOCAL std::vector<int32_t> indices;
+  indices.clear();
+  for (int i=0, c=indicesfield.getNum(); i<c; ++i) {
+    int idx = indicesfield[i];
+    if (idx >= idxstart && (idx < idxend || idxend < 0))
+      indices.push_back(idx - idxstart);
+  }
+
+  switch(indices.size()) {
   case 0:
     return this;
   case 1:
     if (pindex)
-      *pindex = PRIVATE(this)->highlightindices[0];
+      *pindex = indices[0];
     return this;
   }
 
   auto cache = new SoFCVertexCache(*this);
   if (PRIVATE(this)->triangleindexer)
-    cache->addTriangles(PRIVATE(this)->highlightindices.getData());
+    cache->addTriangles(indices);
   else if (PRIVATE(this)->lineindexer)
-    cache->addLines(PRIVATE(this)->highlightindices.getData());
+    cache->addLines(indices);
   else if (PRIVATE(this)->pointindexer)
-    cache->addPoints(PRIVATE(this)->highlightindices.getData());
+    cache->addPoints(indices);
   return cache;
 }
 
@@ -1614,12 +1680,6 @@ SbBool
 SoFCVertexCache::colorPerVertex(void) const
 {
   return PRIVATE(this)->colorpervertex > 0;
-}
-
-SbBool
-SoFCVertexCache::hasSolid() const
-{
-  return PRIVATE(this)->hassolid;
 }
 
 const SbVec4f *

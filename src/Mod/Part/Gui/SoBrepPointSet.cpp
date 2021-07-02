@@ -65,11 +65,13 @@
 #include <Inventor/elements/SoCullElement.h>
 #include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
 #include <Inventor/caches/SoBoundingBoxCache.h>
+#include <Inventor/misc/SoChildList.h>
 
 #include "SoBrepPointSet.h"
 #include "SoBrepFaceSet.h"
 #include <Gui/SoFCUnifiedSelection.h>
 #include <Gui/SoFCSelectionAction.h>
+#include <Gui/Inventor/SoFCShapeInfo.h>
 #include <Gui/ViewParams.h>
 
 using namespace Gui;
@@ -91,12 +93,84 @@ SoBrepPointSet::SoBrepPointSet()
     SO_NODE_ADD_FIELD(highlightColor, (0,0,0));
     highlightIndices.setNum(0);
     SO_NODE_ADD_FIELD(elementSelectable, (TRUE));
+    SO_NODE_ADD_FIELD(shapeInstance, (0));
+}
+
+SoChildList *SoBrepPointSet::getChildren() const
+{
+    if (!shapeInstance.getValue())
+        return nullptr;
+    if (!children)
+        children = new SoChildList(const_cast<SoBrepPointSet*>(this));
+    if (children->getLength() == 0)
+        children->append(shapeInstance.getValue());
+    else if (children->get(0) != shapeInstance.getValue())
+        children->set(0, shapeInstance.getValue());
+    return children;
+}
+
+void SoBrepPointSet::doChildAction(SoAction *action)
+{
+    auto state = action->getState();
+    state->push();
+    SoFCShapeProxyElement::set(state, this, SoFCShapeProxyElement::PointSet);
+    auto children = this->getChildren();
+    int numindices;
+    const int * indices;
+    if (action->getPathCode(numindices, indices) == SoAction::IN_PATH)
+        children->traverseInPath(action, numindices, indices);
+    else
+        children->traverse(action);
+    state->pop();
+}
+
+void SoBrepPointSet::setupProxy(SoState *state)
+{
+    auto _proxy = SoFCShapeProxyElement::get(state);
+    if (!_proxy || !_proxy->isOfType(SoBrepPointSet::getClassTypeId()))
+        proxy = this;
+    else
+        proxy = static_cast<SoBrepPointSet*>(_proxy);
+    idxOffset = SoFCShapeIndexElement::get(state);
+}
+
+void SoBrepPointSet::rayPick(SoRayPickAction * action)
+{
+    if (shapeInstance.getValue())
+        doChildAction(action);
+    else
+        inherited::rayPick(action);
+}
+
+void SoBrepPointSet::callback(SoCallbackAction * action)
+{
+    if (shapeInstance.getValue())
+        doChildAction(action);
+    else
+        inherited::callback(action);
+}
+
+void SoBrepPointSet::getPrimitiveCount(SoGetPrimitiveCountAction * action)
+{
+    if (shapeInstance.getValue())
+        doChildAction(action);
+    else
+        inherited::getPrimitiveCount(action);
+}
+
+void SoBrepPointSet::notify(SoNotList * nl)
+{
+    if (auto field = nl->getLastField()) {
+        if (field == &this->shapeInstance)
+            getChildren();
+    }
+    inherited::notify(nl);
 }
 
 bool SoBrepPointSet::isSelected(SelContextPtr ctx) {
     if(ctx) 
         return ctx->isSelected();
-    for(auto node : siblings) {
+    for(auto node : proxy->siblings) {
         auto sctx = Gui::SoFCSelectionRoot::getRenderContext<Gui::SoFCSelectionContext>(node);
         if(sctx && sctx->isSelected())
             return true;
@@ -112,17 +186,26 @@ void SoBrepPointSet::setSiblings(std::vector<SoNode*> &&s) {
 
 void SoBrepPointSet::GLRender(SoGLRenderAction *action)
 {
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
     glRender(action, false);
 }
 
 void SoBrepPointSet::GLRenderInPath(SoGLRenderAction *action)
 {
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
     glRender(action, true);
 }
 
 void SoBrepPointSet::glRender(SoGLRenderAction *action, bool inpath)
 {
     auto state = action->getState();
+    setupProxy(state);
 
     const SoCoordinateElement* coords = SoCoordinateElement::getInstance(state);
     int num = coords->getNum() - this->startIndex.getValue();
@@ -154,7 +237,7 @@ void SoBrepPointSet::glRender(SoGLRenderAction *action, bool inpath)
     }
 
     SelContextPtr ctx2;
-    SelContextPtr ctx = Gui::SoFCSelectionRoot::getRenderContext<SelContext>(this,selContext,ctx2);
+    SelContextPtr ctx = Gui::SoFCSelectionRoot::getRenderContext<SelContext>(proxy,selContext,ctx2);
     if(ctx2 && ctx2->selectionIndex.empty())
         return;
 
@@ -180,7 +263,7 @@ void SoBrepPointSet::glRender(SoGLRenderAction *action, bool inpath)
         inpath = false;
 
     if(ctx && ctx->isHighlightAll()
-           && (!highlightIndices.getNum()
+           && (!proxy->highlightIndices.getNum()
                || (ctx2 && !ctx2->isSelectAll())))
     {
         if(ctx2) {
@@ -206,7 +289,7 @@ void SoBrepPointSet::glRender(SoGLRenderAction *action, bool inpath)
 
     if(ctx && ctx->selectionIndex.size()) {
         if(!(Gui::ViewParams::highlightIndicesOnFullSelect()
-                    && highlightIndices.getNum())
+                    && proxy->highlightIndices.getNum())
                 && ctx->isSelectAll()
                 && ctx->hasSelectionColor())
         {
@@ -265,11 +348,18 @@ void SoBrepPointSet::GLRenderBelowPath(SoGLRenderAction * action)
     inherited::GLRenderBelowPath(action);
 }
 
-void SoBrepPointSet::getBoundingBox(SoGetBoundingBoxAction * action) {
+void SoBrepPointSet::getBoundingBox(SoGetBoundingBoxAction * action)
+{
+    if (shapeInstance.getValue()) {
+        doChildAction(action);
+        return;
+    }
+
     auto state = action->getState();
+    setupProxy(state);
     selCounter.checkCache(state, true);
 
-    SelContextPtr ctx2 = Gui::SoFCSelectionRoot::getSecondaryActionContext<SelContext>(action,this);
+    SelContextPtr ctx2 = Gui::SoFCSelectionRoot::getSecondaryActionContext<SelContext>(action,proxy);
     if(!ctx2 || ctx2->isSelectAll()) {
         inherited::getBoundingBox(action);
         return;
@@ -285,7 +375,7 @@ void SoBrepPointSet::getBoundingBox(SoGetBoundingBoxAction * action) {
 
     SbBox3f bbox;
     for(auto &v : ctx2->selectionIndex) {
-        int idx = v.first;
+        int idx = v.first + idxOffset;
         if(idx >= startIndex && idx < numverts)
             bbox.extendBy(coords3d[idx]);
     }
@@ -335,13 +425,13 @@ void SoBrepPointSet::renderHighlight(SoGLRenderAction *action, SelContextPtr ctx
     SbColor color = ctx->highlightColor;
 
     if(ctx->isHighlightAll()) {
-        if(highlightIndices.getNum()) {
+        if(proxy->highlightIndices.getNum()) {
             if(highlightColor.getValue().getPackedValue(1.0f)) {
                 checkColor = false;
                 color = highlightColor.getValue();
             }
-            auto indices = highlightIndices.getValues(0);
-            RenderIndices.insert(RenderIndices.end(), indices, indices + highlightIndices.getNum());
+            auto indices = proxy->highlightIndices.getValues(0);
+            RenderIndices.insert(RenderIndices.end(), indices, indices + proxy->highlightIndices.getNum());
         }
     } else
         RenderIndices.insert(RenderIndices.end(), ctx->highlightIndex.begin(), ctx->highlightIndex.end());
@@ -372,14 +462,14 @@ void SoBrepPointSet::renderSelection(SoGLRenderAction *action, SelContextPtr ctx
         for(auto &v : ctx->selectionIndex)
             RenderIndices.push_back(v.first);
     } else if(Gui::ViewParams::highlightIndicesOnFullSelect()
-                && highlightIndices.getNum())
+                && proxy->highlightIndices.getNum())
     {
         if(highlightColor.getValue().getPackedValue(1.0f)) {
             checkColor = false;
             color = highlightColor.getValue();
         }
-        auto indices = highlightIndices.getValues(0);
-        RenderIndices.insert(RenderIndices.end(), indices, indices + highlightIndices.getNum());
+        auto indices = proxy->highlightIndices.getValues(0);
+        RenderIndices.insert(RenderIndices.end(), indices, indices + proxy->highlightIndices.getNum());
     }
     _renderSelection(action, checkColor, color, push);
 }
@@ -422,6 +512,7 @@ void SoBrepPointSet::_renderSelection(SoGLRenderAction *action,
                 glVertex3fv((const GLfloat*) (coords3d + idx));
         } else {
             for(int idx : RenderIndices) {
+                idx += idxOffset;
                 if(idx >= startIndex && idx < coords->getNum())
                     glVertex3fv((const GLfloat*) (coords3d + idx));
             }
@@ -439,3 +530,19 @@ void SoBrepPointSet::doAction(SoAction* action)
 
     inherited::doAction(action);
 }
+
+SoDetail *
+SoBrepPointSet::createPointDetail(SoRayPickAction * action,
+                                  const SoPrimitiveVertex * v,
+                                  SoPickedPoint * pp)
+{
+    SoDetail* detail = inherited::createPointDetail(action, v, pp);
+    if (detail) {
+        SoPointDetail* point_detail = static_cast<SoPointDetail*>(detail);
+        int index = point_detail->getCoordinateIndex() + 
+            + SoFCShapeIndexElement::get(action->getState());
+        point_detail->setCoordinateIndex(index);
+    }
+    return detail;
+}
+

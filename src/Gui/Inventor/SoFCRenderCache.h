@@ -250,6 +250,7 @@ public:
     bool twoside;
     bool outline;
     bool resetclip;
+    intptr_t indexer;
 
     TextureMatrixMap texturematrices;
     TextureMap textures;
@@ -278,6 +279,8 @@ public:
       if (autozoom > other.autozoom) return false;
       if (type < other.type) return true;
       if (type > other.type) return false;
+      // if (indexer < other.indexer) return true;
+      // if (indexer > other.indexer) return false;
       if (depthtest < other.depthtest) return true;
       if (depthtest > other.depthtest) return false;
       if (depthclamp < other.depthclamp) return true;
@@ -364,12 +367,18 @@ public:
                      const SbMatrix &m,
                      bool iden,
                      bool reset,
-                     CacheKeyPtr k)
+                     CacheKeyPtr k,
+                     SoNode *proxy = nullptr,
+                     int istart = 0,
+                     int iend = 0)
       : key(k)
       , cache(c)
       , partidx(-1)
       , identity(iden)
       , resetmatrix(reset)
+      , proxy(proxy)
+      , idxstart(istart)
+      , idxend(iend)
     {
       if (!iden) matrix = m;
     }
@@ -380,6 +389,9 @@ public:
     SbMatrix matrix;
     bool identity;
     bool resetmatrix;
+    Gui::CoinPtr<SoNode> proxy;
+    int idxstart;
+    int idxend;
   };
 
   typedef std::map<Material, std::vector<VertexCacheEntry> > VertexCacheMap;

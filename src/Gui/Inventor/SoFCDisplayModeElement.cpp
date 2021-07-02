@@ -124,7 +124,7 @@ SoFCDisplayModeElement::setColors(SoState * const state,
   }
 }
 
-  const SbName &
+const SbName &
 SoFCDisplayModeElement::get(SoState * const state)
 {
   auto element = static_cast<const SoFCDisplayModeElement*>(

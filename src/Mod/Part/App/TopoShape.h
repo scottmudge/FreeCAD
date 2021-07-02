@@ -495,6 +495,16 @@ public:
         return ret;
     }
 
+    void resetLocation() {
+        setShape(getShape().Located(TopLoc_Location()), false);
+    }
+
+    TopoShape located(const TopLoc_Location &loc = TopLoc_Location()) const {
+        TopoShape ret(*this);
+        ret.setShape(getShape().Located(loc), false);
+        return ret;
+    }
+
     TopoShape &makEGTransform(const TopoShape &shape, const Base::Matrix4D &mat, 
             const char *op=0, bool copy=false);
     TopoShape makEGTransform(const Base::Matrix4D &mat, const char *op=0, bool copy=false) const {

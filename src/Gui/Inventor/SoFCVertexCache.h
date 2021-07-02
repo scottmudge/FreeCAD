@@ -32,6 +32,7 @@
 #include <Inventor/SbVec2f.h>
 
 #include "../InventorBase.h"
+#include "COWData.h"
 
 class SoFCVertexCacheP;
 class SoPrimitiveVertex;
@@ -57,6 +58,7 @@ public:
     FULL_SORTED_ARRAY = 0x10,
     NON_SORTED_ARRAY = 0x20,
     ALL = (NORMAL|TEXCOORD|COLOR),
+    NO_COLOR = (NORMAL|TEXCOORD),
     ALL_SORTED = (NORMAL|TEXCOORD|COLOR|SORTED_ARRAY),
     NON_SORTED = (NORMAL|TEXCOORD|NON_SORTED_ARRAY),
   };
@@ -69,11 +71,25 @@ public:
   void open(SoState * state);
   void close(SoState * state);
 
-  void renderTriangles(SoState * state, const int arrays = ALL, int part = -1, const SbPlane *plane = nullptr);
+  void beginDraw(SoState *state, int arrays, int target);
+  void endDraw(SoState *state, int arrays);
+
+  void renderTriangles(SoState * state,
+                       const int arrays = ALL,
+                       int part = -1,
+                       const SbPlane *plane = nullptr);
   void renderLines(SoState * state, const int arrays = ALL, int part = -1, bool noseam = false);
   void renderPoints(SoState * state, const int array = ALL, int part = -1);
 
-  void renderSolids(SoState * state);
+  void renderTriangles(SoState * state,
+                       const std::vector<int> & parts,
+                       const int arrays = ALL);
+  void renderLines(SoState * state,
+                   const std::vector<int> & parts,
+                   const int arrays = ALL);
+  void renderPoints(SoState * state,
+                    const std::vector<int> & parts,
+                    const int arrays = ALL);
 
   void addTriangles(const std::map<int, int> & faces);
   void addTriangles(const std::set<int> & faces);
@@ -85,12 +101,13 @@ public:
   void addPoints(const std::set<int> & points);
   void addPoints(const std::vector<int> & points = {});
 
-  SoFCVertexCache * highlightIndices(int * indices = nullptr);
+  SoFCVertexCache * highlightIndices(int * pindex, SoNode * node, int idxstart, int idxend);
 
   void addTriangle(const SoPrimitiveVertex * v0,
                    const SoPrimitiveVertex * v1,
                    const SoPrimitiveVertex * v2,
-                   const int * pointdetailidx = NULL);
+                   const int * pointdetailidx = nullptr,
+                   const int * texindices = nullptr);
   void addLine(const SoPrimitiveVertex * v0,
                const SoPrimitiveVertex * v1);
   void addPoint(const SoPrimitiveVertex * v);
@@ -111,7 +128,8 @@ public:
   SbBool colorPerVertex(void) const;
   SbBool hasTransparency(void) const;
   SbBool hasOpaqueParts(void) const;
-  SbBool hasSolid(void) const;
+
+  static SoNode *getShapeInstance(const SoNode *);
 
   uint32_t getFaceColor(int part) const;
   uint32_t getLineColor(int part) const;

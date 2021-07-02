@@ -205,6 +205,9 @@ public:
 
   void renderOutline(SoGLRenderAction *action, DrawEntry &draw_entry, bool highlight);
 
+  void beginDraw(SoState * state, DrawEntry &draw_entry, int array);
+  void endDraw(SoState * state);
+
   void pauseShadowRender(SoState *state, bool paused);
   void renderLines(SoState *state, int array, DrawEntry &draw_entry);
   void renderPoints(SoState *state, int array, DrawEntry &draw_entry);
@@ -250,6 +253,7 @@ public:
   bool updateselection;
 
   std::map<CacheKeyPtr, std::vector<std::size_t>, CacheKeyCompare> cachetable;
+  std::set<SoFCVertexCache*> vcaches;
 
   VertexCacheMap highlightcaches;
   CacheKeySet highlightkeys;
@@ -282,6 +286,10 @@ public:
   bool transpshadowmapping = false;
 
   HatchTexture *hatchtexture = nullptr;
+
+  CoinPtr<SoFCVertexCache> lastcache;
+  int lastarray;
+  int lasttarget;
 };
 
 static std::map<const void *, HatchTexture> _HatchTextures;
@@ -827,7 +835,9 @@ SoFCRenderer::setScene(const RenderCachePtr &cache)
   PRIVATE(this)->scene = cache;
   PRIVATE(this)->scenebbox = SbBox3f();
 
-  for (const auto & v : cache->getVertexCaches()) {
+  PRIVATE(this)->vcaches.clear();
+  const auto &caches = cache->getVertexCaches();
+  for (const auto & v : caches) {
     auto & material = v.first;
     auto & ventries = v.second;
     if (ventries.empty()) continue;
@@ -844,6 +854,7 @@ SoFCRenderer::setScene(const RenderCachePtr &cache)
       --idx;
       PRIVATE(this)->scenebbox.extendBy(PRIVATE(this)->drawentries.back().bbox);
       PRIVATE(this)->cachetable[ventry.key].push_back(idx);
+      PRIVATE(this)->vcaches.insert(ventry.cache);
 
       if (material.isOnTop() && material.type == Material::Triangle)
         PRIVATE(this)->trianglesontop.emplace_back(idx);
@@ -868,6 +879,9 @@ SoFCRenderer::setScene(const RenderCachePtr &cache)
       }
     }
   }
+  FC_MSG("update scene " << caches.size() << " materials, "
+      << PRIVATE(this)->vcaches.size() << " vcaches, "
+      << PRIVATE(this)->drawentries.size() << " entries");
   PRIVATE(this)->applyKeys(PRIVATE(this)->highlightkeys);
   PRIVATE(this)->selectionkeys.clear();
   PRIVATE(this)->updateselection = true;
@@ -1231,15 +1245,13 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
     glStencilFunc (GL_ALWAYS, 1, -1);
     glStencilOp (GL_KEEP, GL_REPLACE, GL_REPLACE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    draw_entry.ventry->cache->renderTriangles(state,
-                                              SoFCVertexCache::NON_SORTED_ARRAY,
-                                              partidx);
+    int arrays = SoFCVertexCache::NON_SORTED_ARRAY;
+    beginDraw(state, draw_entry, arrays);
+    draw_entry.ventry->cache->renderTriangles(state, arrays, partidx);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glStencilFunc(GL_NOTEQUAL, 1, -1);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    draw_entry.ventry->cache->renderTriangles(state,
-                                              SoFCVertexCache::NON_SORTED_ARRAY,
-                                              partidx);
+    draw_entry.ventry->cache->renderTriangles(state, arrays, partidx);
   }
   if (pushed) {
     glPopAttrib();
@@ -1269,8 +1281,7 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
   if (this->depthwriteonly
       || curpass >= numclip
       || draw_entry.ventry->partidx >= 0
-      || (draw_entry.material->shapetype != SoShapeHintsElement::SOLID
-            && !draw_entry.ventry->cache->hasSolid())
+      || draw_entry.material->shapetype != SoShapeHintsElement::SOLID
       || (!ViewParams::getSectionFill() && !concave))
     return curpass == 0;
 
@@ -1329,7 +1340,10 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
   glDisable(GL_LIGHTING);
   glStencilOp (GL_KEEP, GL_KEEP, GL_INVERT);
   FC_GLERROR_CHECK;
-  draw_entry.ventry->cache->renderSolids(action->getState());
+
+  endDraw(action->getState());
+
+  draw_entry.ventry->cache->renderTriangles(action->getState(), SoFCVertexCache::NON_SORTED_ARRAY);
 
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
   FC_GLERROR_CHECK;
@@ -1507,6 +1521,7 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
   bool pauseshadow = (&draw_entries == &this->slentries || &draw_entries == &this->hlentries);
 
   SoState * state = action->getState();
+
   for (std::size_t idx : indices) {
     auto & draw_entry = draw_entries[idx];
     if (draw_entry.skip
@@ -1549,6 +1564,9 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
       {
           continue;
       }
+
+      beginDraw(state, draw_entry, array);
+
       switch (draw_entry.material->type) {
       case Material::Triangle:
         if (&draw_entries != &this->slentries
@@ -1586,6 +1604,33 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
     if (pushed)
       glPopAttrib();
     renderOutline(action, draw_entry, &draw_entries == &this->hlentries);
+  }
+}
+
+void
+SoFCRendererP::beginDraw(SoState * state, DrawEntry &draw_entry, int array)
+{
+  int target = draw_entry.material->type == Material::Triangle ? GL_TRIANGLES :
+    (draw_entry.material->type == Material::Line ? GL_LINES : GL_POINTS);
+  if (this->lastcache != draw_entry.ventry->cache
+      || this->lastarray != array
+      || this->lasttarget != target)
+  {
+    if (this->lastcache)
+      this->lastcache->endDraw(state, lastarray);
+    this->lastcache = draw_entry.ventry->cache;
+    this->lastarray = array;
+    this->lasttarget = target;
+    this->lastcache->beginDraw(state, array, target);
+  }
+}
+
+void
+SoFCRendererP::endDraw(SoState * state)
+{
+  if (this->lastcache) {
+    this->lastcache->endDraw(state, this->lastarray);
+    this->lastcache = nullptr;
   }
 }
 
@@ -1663,6 +1708,8 @@ SoFCRendererP::renderTransparency(SoGLRenderAction * action,
       glDisable(GL_LIGHTING);
       FC_GLERROR_CHECK;
     }
+
+    beginDraw(state, draw_entry, array);
 
     switch (draw_entry.material->type) {
     case Material::Line:
@@ -1786,6 +1833,7 @@ SoFCRenderer::render(SoGLRenderAction * action)
 
     if (PRIVATE(this)->shadowrendering) {
       action->addDelayedPath(action->getCurPath()->copy());
+      PRIVATE(this)->endDraw(state);
       state->pop();
       glPopAttrib();
       FC_GLERROR_CHECK;
@@ -1794,6 +1842,7 @@ SoFCRenderer::render(SoGLRenderAction * action)
   }
 
   if (PRIVATE(this)->shadowmapping) {
+    PRIVATE(this)->endDraw(state);
     state->pop();
     glPopAttrib();
     FC_GLERROR_CHECK;
@@ -1942,6 +1991,7 @@ SoFCRenderer::render(SoGLRenderAction * action)
                               PRIVATE(this)->selspointontop,
                               RenderPassHighlight);
 
+  PRIVATE(this)->endDraw(state);
   state->pop();
   glPopAttrib();
   FC_GLERROR_CHECK;

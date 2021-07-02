@@ -31,6 +31,7 @@ class SoGLRenderAction;
 class SoGroup;
 class SoFCRenderCache;
 class SoFCRenderCacheManagerP;
+class SoFCVertexCache;
 class SoPath;
 class SoDetail;
 
@@ -83,6 +84,12 @@ public:
   SbFCUniqueId getSceneNodeId() const;
 
   void setHatchImage(const void *dataptr, int nc, int width, int height);
+
+  static SoFCVertexCache * getVertexCache(SoState * state,
+                                          SoNode * node,
+                                          bool &isnew,
+                                          bool create);
+  static void removeVertexCache(SoNode *node, SoFCVertexCache *cache);
 
 private:
   friend class SoFCRenderCacheManagerP;

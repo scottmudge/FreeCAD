@@ -56,6 +56,7 @@ public:
     SoSFColor highlightColor;
     SoSFBool  elementSelectable;
     SoSFBool  onTopPattern;
+    SoSFNode  shapeInstance;
 
     static void initClass();
     SoBrepEdgeSet();
@@ -75,7 +76,10 @@ protected:
         SoPickedPoint *pp);
 
     virtual void getBoundingBox(SoGetBoundingBoxAction * action);
-
+    virtual void rayPick(SoRayPickAction *action);
+    virtual void callback(SoCallbackAction * action);
+    virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
+    virtual SoChildList * getChildren(void) const;
     virtual void notify(SoNotList * list);
 
 private:
@@ -88,6 +92,8 @@ private:
     void _renderSelection(SoGLRenderAction *action, bool checkColor, SbColor color, unsigned pattern, bool push);
 
     bool isSelected(SelContextPtr ctx);
+    void doChildAction(SoAction *action);
+    void setupProxy(SoState *state);
 
 private:
     SelContextPtr selContext;
@@ -95,6 +101,9 @@ private:
     Gui::SoFCSelectionCounter selCounter;
     std::vector<SoNode*> siblings;
     std::vector<int> segments;
+    mutable SoChildList *children = nullptr;
+    SoBrepEdgeSet *proxy;
+    int idxOffset;
 };
 
 } // namespace PartGui

@@ -25,7 +25,7 @@
 
 #include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/fields/SoMFInt32.h>
-#include <Inventor/fields/SoMFNode.h>
+#include <Inventor/fields/SoSFNode.h>
 #include <Inventor/fields/SoSubField.h>
 #include <Inventor/fields/SoSFColor.h>
 #include <Inventor/fields/SoSFBool.h>
@@ -91,10 +91,11 @@ public:
     SoMFInt32 highlightIndices;
     SoSFColor highlightColor;
     SoSFBool  elementSelectable;
-    SoMFNode  shapeInfo;
+    SoSFNode  shapeInstance;
 
     static bool makeDistinctColor(SbColor &res, const SbColor &color, const SbColor &other);
     static bool makeDistinctColor(uint32_t &res, uint32_t color, uint32_t other);
+    static void childDoAction(SoAction *, SoNode *);
 
 protected:
     virtual ~SoBrepFaceSet();
@@ -111,6 +112,10 @@ protected:
     virtual void generatePrimitives(SoAction * action);
     virtual void getBoundingBox(SoGetBoundingBoxAction * action);
     virtual void rayPick(SoRayPickAction *action);
+    virtual void callback(SoCallbackAction * action);
+    virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
+    virtual SoChildList * getChildren(void) const;
+    virtual void notify(SoNotList * list);
 
 private:
     enum Binding {
@@ -168,12 +173,14 @@ private:
     bool isSelectAll(const SelContextPtr &ctx);
 
     void generatePrimitivesRange(SoAction * action, int pstart, int fstart, int vstart, int vend);
+    void doChildAction(SoAction *action);
+    void setupProxy(SoState *state);
 
 private:
     SelContextPtr selContext;
     SelContextPtr selContext2;
     std::map<int32_t, int32_t> partIndexMap;
-    std::vector<int32_t> indexOffset;
+    std::vector<int32_t> partIdxOffset;
     std::vector<int32_t> matIndex;
     std::vector<uint32_t> packedColors;
     uint32_t packedColor;
@@ -186,12 +193,16 @@ private:
     Gui::SoFCSelectionCounter selCounter;
     std::vector<SoNode*> siblings;
 
+    mutable SoChildList *children = nullptr;
+
     SoFieldSensor partIndexSensor;
     std::vector<SbBox3f> partBBoxes;
 
-    // Define some VBO pointer for the current mesh
-    class VBO;
-    std::unique_ptr<VBO> pimpl;
+    class Private;
+    std::unique_ptr<Private> pimpl;
+
+    SoBrepFaceSet *proxy;
+    int idxOffset;
 };
 
 } // namespace PartGui

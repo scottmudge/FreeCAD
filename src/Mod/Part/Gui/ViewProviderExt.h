@@ -55,6 +55,7 @@ class SoNormal;
 class SoNormalBinding;
 class SoMaterialBinding;
 class SoIndexedLineSet;
+class SoSensor;
 
 namespace PartGui {
 
@@ -137,7 +138,6 @@ public:
     */
     //@{
     void setHighlightedFaces(const std::vector<App::Color>& colors);
-    void setHighlightedFaces(const std::vector<App::Material>& colors);
     void unsetHighlightedFaces();
     void setHighlightedEdges(const std::vector<App::Color>& colors);
     void unsetHighlightedEdges();
@@ -192,34 +192,33 @@ protected:
             const Base::Matrix4D *mat=0, bool transform=true,
             const Gui::View3DInventorViewer *view=0, int depth=0) const override;
 
+    void _updateVisual(const Part::TopoShape &prevshape, TopAbs_ShapeEnum type);
+    static void updateMaterial(void *data, SoSensor *sensor);
+
 protected:
     /// get called by the container whenever a property has been changed
     virtual void onChanged(const App::Property* prop) override;
-    void getNormals(const TopoDS_Face&  theFace, const Handle(Poly_Triangulation)& aPolyTri,
-                    TColgp_Array1OfDir& theNormals);
 
     virtual bool hasBaseFeature() const;
 
     // nodes for the data representation
-    SoMaterialBinding * pcFaceBind;
-    SoMaterialBinding * pcLineBind;
-    SoMaterialBinding * pcPointBind;
-    SoMaterial        * pcLineMaterial;
-    SoMaterial        * pcPointMaterial;
-    SoDrawStyle       * pcLineStyle;
-    SoDrawStyle       * pcPointStyle;
-    SoShapeHints      * pShapeHints;
-
-    SoCoordinate3     * coords;
-    SoCoordinate3     * pcoords;
-    SoBrepFaceSet     * faceset;
-    SoNormal          * norm;
-    SoNormalBinding   * normb;
-    SoBrepEdgeSet     * lineset;
-    SoBrepPointSet    * nodeset;
+    Gui::CoinPtr<SoMaterialBinding> pcFaceBind;
+    Gui::CoinPtr<SoMaterialBinding> pcLineBind;
+    Gui::CoinPtr<SoMaterialBinding> pcPointBind;
+    Gui::CoinPtr<SoMaterial> pcLineMaterial;
+    Gui::CoinPtr<SoMaterial> pcPointMaterial;
+    Gui::CoinPtr<SoDrawStyle> pcLineStyle;
+    Gui::CoinPtr<SoDrawStyle> pcPointStyle;
+    Gui::CoinPtr<SoShapeHints> pShapeHints;
+    Gui::CoinPtr<SoCoordinate3> coords;
+    Gui::CoinPtr<SoCoordinate3> pcoords;
+    Gui::CoinPtr<SoBrepFaceSet> faceset;
+    Gui::CoinPtr<SoNormal> norm;
+    Gui::CoinPtr<SoNormalBinding> normb;
+    Gui::CoinPtr<SoBrepEdgeSet> lineset;
+    Gui::CoinPtr<SoBrepPointSet> nodeset;
 
     bool VisualTouched;
-    bool NormalsFromUV;
     bool UpdatingColor;
     bool highlightFaceEdges = false;
 
@@ -236,7 +235,8 @@ private:
     static const char* LightingEnums[];
     static const char* DrawStyleEnums[];
 
-    Part::TopoShape cachedShape;
+    struct Private;
+    Private *pimpl;
 };
 
 }

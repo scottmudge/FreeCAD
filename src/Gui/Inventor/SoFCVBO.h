@@ -44,11 +44,6 @@
 
 class SoState;
 
-#ifndef FC_COIN_UNIQUE_ID_DEFINED
-#define FC_COIN_UNIQUE_ID_DEFINED
-typedef uint64_t SbFCUniqueId;
-#endif
-
 class SoFCVBO {
 public:
   SoFCVBO(const GLenum target = GL_ARRAY_BUFFER,
