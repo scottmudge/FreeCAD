@@ -121,6 +121,10 @@ public:
     (PlacementList, std::vector<Base::Placement>, App::PropertyPlacementList, std::vector<Base::Placement>(),\
       "The placement for each element in a link array", ##__VA_ARGS__)
 
+#define LINK_PARAM_AUTO_PLACEMENT(...) \
+    (AutoPlacement, bool, App::PropertyBool, false,\
+      "Enable auto placement of newly created array element", ##__VA_ARGS__)
+
 #define LINK_PARAM_SCALES(...) \
     (ScaleList, std::vector<Base::Vector3d>, App::PropertyVectorList, std::vector<Base::Vector3d>(),\
       "The scale factors for each element in a link array", ##__VA_ARGS__)
@@ -172,6 +176,7 @@ public:
     LINK_PARAM(SCALE)\
     LINK_PARAM(SCALE_VECTOR)\
     LINK_PARAM(PLACEMENTS)\
+    LINK_PARAM(AUTO_PLACEMENT)\
     LINK_PARAM(SCALES)\
     LINK_PARAM(VISIBILITIES)\
     LINK_PARAM(COUNT)\
@@ -469,6 +474,7 @@ public:
     LINK_PARAM_EXT_ATYPE(SCALES, App::Prop_Hidden)\
     LINK_PARAM_EXT(VISIBILITIES)\
     LINK_PARAM_EXT(PLACEMENTS)\
+    LINK_PARAM_EXT(AUTO_PLACEMENT)\
     LINK_PARAM_EXT(ELEMENTS)
 
 #define LINK_PROP_DEFINE(_1,_2,_param) LINK_ETYPE(_param) LINK_ENAME(_param);
