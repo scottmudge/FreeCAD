@@ -122,7 +122,7 @@ SoGroup* ViewProviderWrap::getChildRoot(void) const
     return pcGroupChildren;
 }
 
-std::vector<App::DocumentObject*> ViewProviderWrap::claimChildren(void) const
+std::vector<App::DocumentObject*> ViewProviderWrap::_claimChildren(void) const
 {
     auto owner = Base::freecad_dynamic_cast<PartDesign::FeatureWrap>(getObject());
     if(owner && owner->WrapFeature.getValue())

@@ -90,12 +90,13 @@ public:
     virtual void reattach(App::DocumentObject *) override;
     virtual void beforeDelete() override;
 
+
     virtual std::vector<App::DocumentObject*> claimChildren(void) const override;
+    virtual std::vector<App::DocumentObject*> _claimChildren(void) const {return {};}
 
     virtual bool getDetailPath(const char *subname, SoFullPath *path, bool append, SoDetail *&det) const override;
 
 protected:
-
     virtual void setupContextMenu(QMenu* menu, QObject* receiver, const char* member) override;
     virtual bool setEdit(int ModNum) override;
     virtual void unsetEdit(int ModNum) override;
