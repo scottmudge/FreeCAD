@@ -388,6 +388,9 @@ void TaskTransformedParameters::refresh()
             QSignalBlocker blocker(checkBoxParallel);
             checkBoxParallel->setChecked(getObject()->ParallelTransform.getValue());
         }
+        if (transformOffsetPlacement)
+            transformOffsetPlacement->setPlacement(pcTransformed->TransformOffset.getValue());
+
     }
     updateUI();
 }
@@ -596,8 +599,10 @@ TaskDlgTransformedParameters::TaskDlgTransformedParameters(
     auto feat = Base::freecad_dynamic_cast<PartDesign::Transformed>(vp->getObject());
     if (feat) {
         auto widget = new Gui::Dialog::Placement();
+        parameter->transformOffsetPlacement = widget;
         widget->showDefaultButtons(false);
         widget->bindObject(&feat->TransformOffset);
+        widget->setPlacement(feat->TransformOffset.getValue());
         taskTransformOffset = new Gui::TaskView::TaskBox(QPixmap(), tr("Transform offset"), true, 0);
         taskTransformOffset->groupLayout()->addWidget(widget);
 
