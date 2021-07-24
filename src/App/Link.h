@@ -356,6 +356,9 @@ public:
 
     bool isLinkedToConfigurableObject() const;
 
+    /// Check if the linked object is a copy on change
+    bool isLinkMutated() const;
+
 protected:
     void _handleChangedPropertyName(Base::XMLReader &reader,
             const char * TypeName, const char *PropName);
