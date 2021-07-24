@@ -3900,6 +3900,10 @@ bool ViewProviderLink::iconMouseEvent(QMouseEvent *ev, const QByteArray &tag)
         } else if (tag == _mutateIconTag()) {
             if (auto ext = getLinkExtension()) {
                 if (auto src = ext->getLinkCopyOnChangeSourceValue()) {
+                    if (!(QApplication::queryKeyboardModifiers() & Qt::ControlModifier)) {
+                        Selection().selStackPush();
+                        Selection().clearCompleteSelection();
+                    }
                     Selection().addSelection(App::SubObjectT(src, ""));
                     TreeWidget::scrollItemToTop();
                 }
