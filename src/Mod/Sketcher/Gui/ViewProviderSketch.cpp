@@ -552,6 +552,9 @@ void ViewProviderSketch::setAxisPickStyle(bool on)
 
 bool ViewProviderSketch::keyPressed(bool pressed, int key)
 {
+    if (!edit)
+        return ViewProvider2DObjectGrid::keyPressed(pressed, key);
+
     switch (key)
     {
     case SoKeyboardEvent::ESCAPE:
@@ -706,6 +709,10 @@ void ViewProviderSketch::getCoordsOnSketchPlane(double &u, double &v,const SbVec
 bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVec2s &cursorPos,
                                             const Gui::View3DInventorViewer *viewer)
 {
+    if (!edit)
+        return ViewProvider2DObjectGrid::mouseButtonPressed(
+                Button, pressed, cursorPos, viewer);
+
     assert(edit);
 
     edit->curCursorPos = cursorPos;
@@ -1216,6 +1223,8 @@ bool ViewProviderSketch::getElementPicked(const SoPickedPoint *pp, std::string &
 
 bool ViewProviderSketch::mouseMove(const SbVec2s &cursorPos, Gui::View3DInventorViewer *viewer)
 {
+    if (!edit)
+        return ViewProvider2DObjectGrid::mouseMove(cursorPos, viewer);
     // maximum radius for mouse moves when selecting a geometry before switching to drag mode
     const int dragIgnoredDistance = 3;
 
@@ -6628,11 +6637,24 @@ void ViewProviderSketch::setupContextMenu(QMenu *menu, QObject *receiver, const 
     QAction *act = menu->addAction(tr("Edit sketch"), receiver, member);
     func->trigger(act, boost::bind(&ViewProviderSketch::doubleClicked, this));
 
+    auto sketch = static_cast<Sketcher::SketchObject*>(getObject());
+    if (sketch->MapMode.getValue() == Attacher::mmDeactivated || !sketch->Support.getValue()) {
+        QAction* act = menu->addAction(QObject::tr("Transform"), receiver, member);
+        act->setToolTip(QObject::tr("Transform at the origin of the placement"));
+        act->setData(QVariant((int)ViewProvider::Transform));
+        act = menu->addAction(QObject::tr("Transform at"), receiver, member);
+        act->setToolTip(QObject::tr("Transform at the center of the shape"));
+        act->setData(QVariant((int)ViewProvider::TransformAt));
+    }
+
     PartGui::ViewProviderAttachExtension::extensionSetupContextMenu(menu, receiver, member);
 }
 
 bool ViewProviderSketch::setEdit(int ModNum)
 {
+    if (ModNum == Transform || ModNum == TransformAt)
+        return ViewProvider2DObjectGrid::setEdit(ModNum);
+
     // When double-clicking on the item for this sketch the
     // object unsets and sets its edit mode without closing
     // the task panel
@@ -7236,7 +7258,9 @@ void ViewProviderSketch::showGeometry(bool visible) {
 
 void ViewProviderSketch::unsetEdit(int ModNum)
 {
-    Q_UNUSED(ModNum);
+    if (ModNum == Transform || ModNum == TransformAt)
+        return ViewProvider2DObjectGrid::unsetEdit(ModNum);
+
     TightGrid.setValue(true);
 
     if(listener) {
@@ -7302,7 +7326,9 @@ void ViewProviderSketch::unsetEdit(int ModNum)
 
 void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int ModNum)
 {
-    Q_UNUSED(ModNum);
+    if (ModNum == Transform || ModNum == TransformAt)
+        return ViewProvider2DObjectGrid::setEditViewer(viewer, ModNum);
+
     //visibility automation: save camera
     if (! this->TempoVis.getValue().isNone()){
         try{
@@ -7401,13 +7427,13 @@ void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int Mo
 
 void ViewProviderSketch::unsetEditViewer(Gui::View3DInventorViewer* viewer)
 {
-    viewer->removeGraphicsItem(rubberband);
-    viewer->setEditing(false);
-    SoNode* root = viewer->getSceneGraph();
-    static_cast<Gui::SoFCUnifiedSelection*>(root)->selectionRole.setValue(true);
-
-    if (edit)
+    if (edit) {
+        viewer->removeGraphicsItem(rubberband);
+        viewer->setEditing(false);
+        SoNode* root = viewer->getSceneGraph();
+        static_cast<Gui::SoFCUnifiedSelection*>(root)->selectionRole.setValue(true);
         edit->viewer = nullptr;
+    }
 
     ViewProvider2DObjectGrid::unsetEditViewer(viewer);
 }
