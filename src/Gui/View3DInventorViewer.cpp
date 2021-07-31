@@ -517,6 +517,8 @@ View3DInventorViewer::View3DInventorViewer(const QtGLFormat& format, QWidget* pa
 void View3DInventorViewer::init()
 {
     pcEditingRoot = nullptr;
+    pcGroupOnTopSwitch = nullptr;
+
     _pimpl.reset(new Private(this));
     _pimpl->timer.setSingleShot(true);
     connect(&_pimpl->timer,SIGNAL(timeout()),this,SLOT(redrawShadow()));
@@ -3890,22 +3892,8 @@ void View3DInventorViewer::moveCameraTo(const SbRotation& rot, const SbVec3f& po
 }
 
 bool View3DInventorViewer::getSceneBoundBox(Base::BoundBox3d &box) const {
-    // in the scene graph we may have objects which we want to exclude
-    // when doing a fit all. Such objects must be part of the group
-    // SoSkipBoundingGroup.
-    SoSearchAction sa;
-    sa.setType(SoSkipBoundingGroup::getClassTypeId());
-    sa.setInterest(SoSearchAction::ALL);
-    sa.apply(pcViewProviderRoot);
-    const SoPathList& pathlist = sa.getPaths();
-
-    for (int i = 0; i < pathlist.getLength(); i++) {
-        SoPath* path = pathlist[i];
-        SoSkipBoundingGroup* group = static_cast<SoSkipBoundingGroup*>(path->getTail());
-        group->mode = SoSkipBoundingGroup::EXCLUDE_BBOX;
-    }
-
     SoGetBoundingBoxAction action(this->getSoRenderManager()->getViewportRegion());
+    SoSkipBoundingBoxElement::set(action.getState(), SoSkipBoundingGroup::EXCLUDE_BBOX);
 
     if(guiDocument && ViewParams::instance()->getUseTightBoundingBox()) {
         for(int i=0;i<pcViewProviderRoot->getNumChildren();++i) {
@@ -3942,6 +3930,16 @@ bool View3DInventorViewer::getSceneBoundBox(Base::BoundBox3d &box) const {
         }
     }
 
+    if (pcGroupOnTopSwitch) {
+        action.apply(pcGroupOnTopSwitch);
+        auto bbox = action.getBoundingBox();
+        if(!bbox.isEmpty()) {
+            float minx,miny,minz,maxx,maxy,maxz;
+            bbox.getBounds(minx,miny,minz,maxx,maxy,maxz);
+            box.Add(Base::BoundBox3d(minx,miny,minz,maxx,maxy,maxz));
+        }
+    }
+
     if (pcEditingRoot) { 
         action.apply(pcEditingRoot);
         auto bbox = action.getBoundingBox();
@@ -3952,11 +3950,6 @@ bool View3DInventorViewer::getSceneBoundBox(Base::BoundBox3d &box) const {
         }
     }
 
-    for (int i = 0; i < pathlist.getLength(); i++) {
-        SoPath* path = pathlist[i];
-        SoSkipBoundingGroup* group = static_cast<SoSkipBoundingGroup*>(path->getTail());
-        group->mode = SoSkipBoundingGroup::INCLUDE_BBOX;
-    }
     return box.IsValid();
 }
 
