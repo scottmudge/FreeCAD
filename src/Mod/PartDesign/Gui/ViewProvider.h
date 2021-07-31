@@ -87,8 +87,12 @@ public:
     virtual bool canDropObject(App::DocumentObject*) const override {return false;}
     virtual bool canReplaceObject(App::DocumentObject *, App::DocumentObject *) override;
     virtual int replaceObject(App::DocumentObject *, App::DocumentObject *) override;
+    virtual void reattach(App::DocumentObject *) override;
+    virtual void beforeDelete() override;
 
     virtual std::vector<App::DocumentObject*> claimChildren(void) const override;
+
+    virtual bool getDetailPath(const char *subname, SoFullPath *path, bool append, SoDetail *&det) const override;
 
 protected:
 
