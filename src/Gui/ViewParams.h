@@ -307,6 +307,7 @@ public:
         QT_TRANSLATE_NOOP("ViewParams","Preselection tool tip y offset relative to its docking corner."))\
     FC_VIEW_PARAM(PreselectionToolTipFontSize, int, Int, 0, \
         QT_TRANSLATE_NOOP("ViewParams","Preselection tool tip font size. Set to 0 to use system default."))\
+    FC_VIEW_PARAM2(DefaultFontSize, int , Int, 0,  "") \
 
 #undef FC_VIEW_PARAM
 #define FC_VIEW_PARAM(_name,_ctype,_type,_def,_doc) \
@@ -332,6 +333,8 @@ public:
     static bool highlightIndicesOnFullSelect() {
         return getShowSelectionOnTop() && getPartialHighlightOnFullSelect();
     }
+
+    static void init();
 
 private:
 #undef FC_VIEW_PARAM

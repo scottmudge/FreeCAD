@@ -21,6 +21,9 @@
  ****************************************************************************/
 
 #include "PreCompiled.h"
+#include <QStatusBar>
+#include <QToolBar>
+#include <QMenuBar>
 #include <App/Application.h>
 #include "ViewProvider.h"
 #include "ViewParams.h"
@@ -106,3 +109,25 @@ void ViewParams::onTextCursorWidthChanged() {
     LineEditStyle::setupChildren(getMainWindow());
 }
 
+void ViewParams::onDefaultFontSizeChanged() {
+    static int defaultSize;
+    if (!defaultSize) {
+        QFont font;
+        defaultSize = font.pointSize();
+    }
+    int fontSize = instance()->getDefaultFontSize();
+    if (fontSize <= 0)
+        fontSize = defaultSize;
+    QFont font = QApplication::font();
+    if (font.pointSize() != fontSize) {
+        font.setPointSize(fontSize);
+        QApplication::setFont(font);
+        QEvent e(QEvent::ApplicationFontChange);
+        for (auto w : QApplication::allWidgets())
+            QApplication::sendEvent(w, &e);
+    }
+}
+
+void ViewParams::init() {
+    instance()->onDefaultFontSizeChanged();
+}
