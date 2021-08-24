@@ -1671,8 +1671,18 @@ public:
         addCommand(new StdCmdViewFitSelection());
         addCommand(new StdCmdViewSelectionExtend());
         addCommand(new StdCmdRotationCenterSelection());
-
         addCommand();
+        addCommand(new StdCmdViewIsometric());
+        addCommand(new StdCmdViewDimetric());
+        addCommand(new StdCmdViewTrimetric());
+        addCommand(new StdCmdViewHome());
+        addCommand();
+        addCommand(new StdCmdViewFront());
+        addCommand(new StdCmdViewTop());
+        addCommand(new StdCmdViewRight());
+        addCommand(new StdCmdViewRear());
+        addCommand(new StdCmdViewBottom());
+        addCommand(new StdCmdViewLeft());
     };
     virtual const char* className() const {return "StdCmdViewSelection";}
 };
@@ -4302,16 +4312,6 @@ void CreateViewStdCommands(void)
     CommandManager &rcCmdMgr = Application::Instance->commandManager();
 
     // views
-    rcCmdMgr.addCommand(new StdCmdViewBottom());
-    rcCmdMgr.addCommand(new StdCmdViewHome());
-    rcCmdMgr.addCommand(new StdCmdViewFront());
-    rcCmdMgr.addCommand(new StdCmdViewLeft());
-    rcCmdMgr.addCommand(new StdCmdViewRear());
-    rcCmdMgr.addCommand(new StdCmdViewRight());
-    rcCmdMgr.addCommand(new StdCmdViewTop());
-    rcCmdMgr.addCommand(new StdCmdViewIsometric());
-    rcCmdMgr.addCommand(new StdCmdViewDimetric());
-    rcCmdMgr.addCommand(new StdCmdViewTrimetric());
     rcCmdMgr.addCommand(new StdCmdViewFitAll());
     rcCmdMgr.addCommand(new StdCmdViewVR());
     rcCmdMgr.addCommand(new StdCmdViewSelection());
