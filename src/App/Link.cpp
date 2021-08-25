@@ -1757,7 +1757,8 @@ void LinkBaseExtension::update(App::DocumentObject *parent, const Property *prop
                     auto src = getLinkCopyOnChangeSourceValue();
                     if (src != &obj || !getLinkCopyOnChangeValue())
                         return;
-                    if (obj.testStatus(ObjectStatus::NoTouch) 
+                    if (App::Document::isAnyRestoring()
+                            || obj.testStatus(ObjectStatus::NoTouch) 
                             || (prop.getType() & Prop_Output) 
                             || prop.testStatus(Property::Output))
                         return;
