@@ -200,6 +200,7 @@ void LinkBaseExtension::setProperty(int idx, Property *prop) {
     }
     case PropLinkCopyOnChangeTouched:
     case PropLinkCopyOnChangeSource:
+    case PropLinkCopyOnChangeGroup:
         prop->setStatus(Property::Hidden, true);
         break;
     case PropLinkTransform:
@@ -273,7 +274,7 @@ App::DocumentObjectExecReturn *LinkBaseExtension::extensionExecute(void) {
 
         App::DocumentObject *container = getContainer();
         auto source = getLinkCopyOnChangeSourceValue();
-        if (source && getLinkCopyOnChangeValue() == 3
+        if (source && getLinkCopyOnChangeValue() == CopyOnChangeTracking
                    && getLinkCopyOnChangeTouchedValue())
         {
             syncCopyOnChange();
@@ -332,7 +333,7 @@ App::DocumentObjectExecReturn *LinkBaseExtension::extensionExecute(void) {
         auto parent = getContainer();
         setupCopyOnChange(parent);
 
-        if(hasCopyOnChange && getLinkCopyOnChangeValue()==0) {
+        if(hasCopyOnChange && getLinkCopyOnChangeValue()==CopyOnChangeDisabled) {
             hasCopyOnChange = false;
             std::vector<Property*> props;
             parent->getPropertyList(props);
@@ -443,22 +444,32 @@ void LinkBaseExtension::syncCopyOnChange()
     auto parent = getContainer();
 
     auto linked = linkProp->getValue();
-    // Use deque so that we can emplace_front so that we can remove the object
-    // in reverse dependency order to avoid error, because, some parent objects
-    // may want to delete their children by themselves.
-    std::deque<App::DocumentObjectT> oldObjs;
-    auto objs = getOnChangeCopyObjects(nullptr, linked);
-    for (auto obj : objs) {
-        if (obj->getDocument() != linked->getDocument())
-            continue;
-        auto prop = Base::freecad_dynamic_cast<PropertyUUID>(
-                obj->getPropertyByName("_SourceUUID"));
-        if (prop && prop->getContainer() == obj)
-            oldObjs.emplace_front(prop);
-        else
-            oldObjs.emplace_front(obj);
+    
+    std::vector<App::DocumentObjectT> oldObjs;
+    std::vector<App::DocumentObject*> objs;
+    LinkGroup *copyOnChangeGroup = nullptr;
+    if (auto prop = getLinkCopyOnChangeGroupProperty()) {
+        copyOnChangeGroup = Base::freecad_dynamic_cast<LinkGroup>(prop->getValue());
+        if (!copyOnChangeGroup) {
+            auto group = new LinkGroup;
+            group->LinkMode.setValue(LinkModeAutoDelete);
+            parent->getDocument()->addObject(group, "CopyOnChangeGroup");
+            prop->setValue(group);
+        } else {
+            objs = copyOnChangeGroup->ElementList.getValues();
+            for (auto obj : objs) {
+                if (!obj->getNameInDocument())
+                    continue;
+                auto prop = Base::freecad_dynamic_cast<PropertyUUID>(
+                        obj->getPropertyByName("_SourceUUID"));
+                if (prop && prop->getContainer() == obj)
+                    oldObjs.emplace_back(prop);
+                else
+                    oldObjs.emplace_back(obj);
+            }
+            std::sort(objs.begin(), objs.end());
+        }
     }
-    std::sort(objs.begin(), objs.end());
 
     auto copiedObjs = parent->getDocument()->copyObject(getOnChangeCopyObjects());
     if(copiedObjs.empty())
@@ -476,6 +487,15 @@ void LinkBaseExtension::syncCopyOnChange()
             std::unique_ptr<Property> pCopy(prop->Copy());
             p->Paste(*pCopy);
         }
+    }
+
+    if (copyOnChangeGroup) {
+        // The order of the copied objects is in dependency order (because of
+        // getCopyOnChangeObjects()). We reverse it here so that we can later
+        // on delete it in reverse order to avoid error (because some parent
+        // objects may want to delete their own children).
+        std::reverse(copiedObjs.begin(), copiedObjs.end());
+        copyOnChangeGroup->ElementList.setValues(copiedObjs);
     }
 
     std::map<Base::Uuid, App::DocumentObjectT> newObjs;
@@ -574,13 +594,10 @@ void LinkBaseExtension::setupCopyOnChange(DocumentObject *parent, bool checkSour
     copyOnChangeConns.clear();
 
     auto linked = getTrueLinkedObject(false);
-    if(!linked || getLinkCopyOnChangeValue()==0)
+    if(!linked || getLinkCopyOnChangeValue()==CopyOnChangeDisabled)
         return;
 
-    if (checkSource && !pauseCopyOnChange
-                    && (getLinkCopyOnChangeValue() == 1
-                        || getLinkCopyOnChangeValue() == 3))
-    {
+    if (checkSource && !pauseCopyOnChange) {
         PropertyLink *source = getLinkCopyOnChangeSourceProperty();
         if (source) {
             source->setValue(linked);
@@ -590,6 +607,12 @@ void LinkBaseExtension::setupCopyOnChange(DocumentObject *parent, bool checkSour
     }
 
     hasCopyOnChange = setupCopyOnChange(parent,linked,&copyOnChangeConns,hasCopyOnChange);
+    if (hasCopyOnChange && getLinkCopyOnChangeValue() == CopyOnChangeOwned
+            && getLinkedObjectValue()
+            && getLinkedObjectValue() == getLinkCopyOnChangeSourceValue())
+    {
+        makeCopyOnChange();
+    }
 }
 
 bool LinkBaseExtension::setupCopyOnChange(DocumentObject *parent, DocumentObject *linked,
@@ -699,14 +722,14 @@ void LinkBaseExtension::checkCopyOnChange(
                || parent->getDocument()->isPerformingTransaction())
         return;
 
-    auto linked = getTrueLinkedObject(false);
-    if(!linked || getLinkCopyOnChangeValue()==0
+    auto linked = getLinkedObjectValue();
+    if(!linked || getLinkCopyOnChangeValue()==CopyOnChangeDisabled
                || !isCopyOnChangeProperty(parent,prop))
         return;
 
-    if(getLinkCopyOnChangeValue() == 2 ||
-            (getLinkCopyOnChangeValue() == 3
-             && getLinkedObjectValue() != getLinkCopyOnChangeSourceValue()))
+    if(getLinkCopyOnChangeValue() == CopyOnChangeOwned ||
+            (getLinkCopyOnChangeValue() == CopyOnChangeTracking
+             && linked != getLinkCopyOnChangeSourceValue()))
     {
         auto p = linked->getPropertyByName(prop.getName());
         if(p && p->getTypeId()==prop.getTypeId()) {
@@ -721,6 +744,22 @@ void LinkBaseExtension::checkCopyOnChange(
     if(!linkedProp || linkedProp->getTypeId()!=prop.getTypeId() || linkedProp->isSame(prop))
         return;
 
+    auto copied = makeCopyOnChange();
+    if (copied) {
+        linkedProp = copied->getPropertyByName(prop.getName());
+        if(linkedProp && linkedProp->getTypeId()==prop.getTypeId()) {
+            std::unique_ptr<Property> pcopy(prop.Copy());
+            if(pcopy)
+                linkedProp->Paste(*pcopy);
+        }
+    }
+}
+
+App::DocumentObject *LinkBaseExtension::makeCopyOnChange() {
+    auto linked = getLinkedObjectValue();
+    if (pauseCopyOnChange || !linked)
+        return nullptr;
+    auto parent = getContainer();
     auto srcobjs = getOnChangeCopyObjects(nullptr, linked);
     for (auto obj : srcobjs) {
         if (obj->testStatus(App::PartialObject)) {
@@ -730,24 +769,35 @@ void LinkBaseExtension::checkCopyOnChange(
     }
     auto objs = parent->getDocument()->copyObject(srcobjs);
     if(objs.empty())
-        return;
+        return nullptr;
 
     linked = objs.back();
     linked->Visibility.setValue(false);
-    linkedProp = linked->getPropertyByName(prop.getName());
-    if(linkedProp && linkedProp->getTypeId()==prop.getTypeId()) {
-        std::unique_ptr<Property> pcopy(prop.Copy());
-        if(pcopy)
-            linkedProp->Paste(*pcopy);
-    }
+
     Base::StateLocker guard(pauseCopyOnChange);
     getLinkedObjectProperty()->setValue(linked);
-    if (getLinkCopyOnChangeValue() == 1)
-        getLinkCopyOnChangeProperty()->setValue(2);
-    if (LinkParams::CopyOnChangeClaimChild()) {
-        if (auto p = getLinkClaimChildProperty())
-            p->setValue(true);
+    if (getLinkCopyOnChangeValue() == CopyOnChangeEnabled)
+        getLinkCopyOnChangeProperty()->setValue(CopyOnChangeOwned);
+
+    if (auto prop = getLinkCopyOnChangeGroupProperty()) {
+        if (auto obj = prop->getValue()) {
+            if (obj->getNameInDocument() && obj->getDocument())
+                obj->getDocument()->removeObject(obj->getNameInDocument());
+        }
+        auto group = new LinkGroup;
+        group->LinkMode.setValue(LinkModeAutoDelete);
+        getContainer()->getDocument()->addObject(group, "CopyOnChangeGroup");
+        prop->setValue(group);
+
+        // The order of othe copied bjects is in dependency order (because of
+        // getCopyOnChangeObjects()). We reverse it here so that we can later
+        // on delete it in reverse order to avoid error (because some parent
+        // objects may want to delete their own children).
+        std::reverse(objs.begin(), objs.end());
+        group->ElementList.setValues(objs);
     }
+
+    return linked;
 }
 
 App::GroupExtension *LinkBaseExtension::linkedPlainGroup() const {
@@ -1230,13 +1280,18 @@ bool LinkBaseExtension::extensionGetSubObject(DocumentObject *&ret, const char *
     // LinkClaimChild, we must accept sub-object path that contains the linked
     // object, because other link property may store such reference.
     if (const char* dot=strchr(subname,'.')) {
+        auto group = getLinkCopyOnChangeGroupValue();
         if (subname[0] == '$') {
             CharRange sub(subname+1,dot);
-            if(!boost::equals(sub, linked->Label.getValue()))
+            if (group && boost::equals(sub, group->Label.getValue()))
+                linked = group;
+            else if(!boost::equals(sub, linked->Label.getValue()))
                 dot = nullptr;
         } else {
             CharRange sub(subname,dot);
-            if (!boost::equals(sub, linked->getNameInDocument()))
+            if (group && boost::equals(sub, group->getNameInDocument()))
+                linked = group;
+            else if (!boost::equals(sub, linked->getNameInDocument()))
                 dot = nullptr;
         }
         if (dot) {
@@ -1306,6 +1361,10 @@ void LinkBaseExtension::onExtendedUnsetupObject() {
     getElementListProperty()->setValue();
     for(auto obj : objs)
         detachElement(obj);
+    if (auto obj = getLinkCopyOnChangeGroupValue()) {
+        if(obj->getNameInDocument() && !obj->isRemoving())
+            obj->getDocument()->removeObject(obj->getNameInDocument());
+    }
 }
 
 DocumentObject *LinkBaseExtension::getTrueLinkedObject(
@@ -1744,10 +1803,10 @@ void LinkBaseExtension::update(App::DocumentObject *parent, const Property *prop
         parseSubName();
         syncElementList();
 
-        if(getLinkCopyOnChangeValue()==2
+        if(getLinkCopyOnChangeValue()==CopyOnChangeOwned
                 && !pauseCopyOnChange
                 && !parent->getDocument()->isPerformingTransaction())
-            getLinkCopyOnChangeProperty()->setValue(1);
+            getLinkCopyOnChangeProperty()->setValue(CopyOnChangeEnabled);
         else
             setupCopyOnChange(parent, true);
 
@@ -1758,7 +1817,7 @@ void LinkBaseExtension::update(App::DocumentObject *parent, const Property *prop
             this->connCopyOnChangeSource = source->signalChanged.connect(
                 [this](const DocumentObject & obj, const Property &prop) {
                     auto src = getLinkCopyOnChangeSourceValue();
-                    if (src != &obj || !getLinkCopyOnChangeValue())
+                    if (src != &obj || getLinkCopyOnChangeValue()==CopyOnChangeDisabled)
                         return;
                     if (App::Document::isAnyRestoring()
                             || obj.testStatus(ObjectStatus::NoTouch) 
@@ -2242,7 +2301,7 @@ bool LinkBaseExtension::isSubnameHidden(const App::DocumentObject *obj, const ch
 
 bool LinkBaseExtension::isLinkMutated() const
 {
-    return getLinkCopyOnChangeValue()
+    return getLinkCopyOnChangeValue() != CopyOnChangeDisabled
         && getLinkedObjectValue()
         && (!getLinkCopyOnChangeSourceValue()
             || (getLinkedObjectValue() != getLinkCopyOnChangeSourceValue()));
