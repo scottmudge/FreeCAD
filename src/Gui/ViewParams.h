@@ -97,7 +97,7 @@ public:
        QT_TRANSLATE_NOOP("ViewParams","Muplication factor to increase the width of the selected line."))\
     FC_VIEW_PARAM(SelectionLineMaxWidth,double,Float, 4.0, \
        QT_TRANSLATE_NOOP("ViewParams","Limit the selected line width when applying line thickening."))\
-    FC_VIEW_PARAM(SelectionPointScale,double,Float, 4.0, \
+    FC_VIEW_PARAM(SelectionPointScale,double,Float, 2.5, \
        QT_TRANSLATE_NOOP("ViewParams","Muplication factor to increase the size of the selected point.\n"\
                                       "If zero, then use line multiplication factor."))\
     FC_VIEW_PARAM(SelectionPointMaxSize,double,Float, 6.0, \
@@ -323,6 +323,7 @@ public:
 #undef FC_VIEW_PARAM2
 #define FC_VIEW_PARAM2(_name,_ctype,_type,_def,_doc) \
     static const _ctype &get##_name() { return instance()->_##_name; }\
+    static const _ctype &_name() { return instance()->_##_name; }\
     static void set##_name(const _ctype &_v) { instance()->handle->Set##_type(#_name,_v); instance()->_##_name=_v; }\
     void on##_name##Changed();\
     static void update##_name(ViewParams *self) { \
