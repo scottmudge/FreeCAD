@@ -31,6 +31,9 @@
 #include "OverlayWidgets.h"
 #include "Widgets.h"
 #include "MainWindow.h"
+#include "View3DInventor.h"
+#include "View3DInventorViewer.h"
+#include "QSint/actionpanel/taskheader_p.h"
 
 using namespace Gui;
 
@@ -126,6 +129,10 @@ void ViewParams::onDefaultFontSizeChanged() {
         for (auto w : QApplication::allWidgets())
             QApplication::sendEvent(w, &e);
     }
+}
+
+void ViewParams::onEnableTaskPanelKeyTranslateChanged() {
+    QSint::TaskHeader::enableKeyTranslate(_EnableTaskPanelKeyTranslate);
 }
 
 void ViewParams::init() {
