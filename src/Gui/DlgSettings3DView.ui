@@ -6,7 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>563</width>
+    <width>620</width>
+    <height>722</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -95,19 +96,6 @@ will be shown at the lower left corner in opened files</string>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QCheckBox" name="CheckBox_SortWbList">
-        <property name="toolTip">
-         <string>If checked, workbench entries in the combo box will be sorted by their names</string>
-        </property>
-        <property name="text">
-         <string>Sort workbench list</string>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
@@ -165,51 +153,7 @@ report this setting as enabled when seeking support on the FreeCAD forums</strin
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="4">
-         <widget class="QComboBox" name="renderCache">
-          <property name="minimumSize">
-           <size>
-            <width>120</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="toolTip">
-           <string>'Render Caching' is another way to say 'Rendering Acceleration'.
-There are 3 options available to achieve this: 
-1) 'Auto' (default), let Coin3D decide where to cache.
-2) 'Distributed', manually turn on cache for all view provider root node.
-3) 'Centralized', manually turn off cache in all nodes of all view provider, and
-only cache at the scene graph root node. This offers the fastest rendering speed
-but slower response to any scene changes.</string>
-          </property>
-          <property name="currentIndex">
-           <number>0</number>
-          </property>
-          <item>
-           <property name="text">
-            <string>Auto</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Distributed</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Centralized</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="aliasingLAbel">
-          <property name="text">
-           <string>Anti-Aliasing</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="4">
+        <item row="3" column="1" colspan="2">
          <widget class="Gui::PrefComboBox" name="comboAliasing">
           <property name="minimumSize">
            <size>
@@ -253,14 +197,53 @@ but slower response to any scene changes.</string>
           </item>
          </widget>
         </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="transparentRenderLabel">
+        <item row="0" column="1" colspan="2">
+         <widget class="Gui::PrefComboBox" name="renderCache">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="toolTip">
-           <string/>
+           <string>'Render Caching' is another way to say 'Rendering Acceleration'.
+There are 3 options available to achieve this: 
+1) 'Auto' (default), let Coin3D decide where to cache.
+2) 'Distributed', manually turn on cache for all view provider root node.
+3) 'Centralized', manually turn off cache in all nodes of all view provider, and
+only cache at the scene graph root node. This offers the fastest rendering speed
+but slower response to any scene changes.</string>
           </property>
-          <property name="text">
-           <string>Transparent objects:</string>
+          <property name="currentIndex">
+           <number>0</number>
           </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>RenderCache</cstring>
+          </property>
+          <item>
+           <property name="text">
+            <string>Auto</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Distributed</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Centralized</string>
+           </property>
+          </item>
          </widget>
         </item>
         <item row="0" column="0">
@@ -270,161 +253,17 @@ but slower response to any scene changes.</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="4">
-         <widget class="Gui::PrefComboBox" name="comboTransparentRender">
-          <property name="minimumSize">
-           <size>
-            <width>120</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="toolTip">
-           <string>Render types of transparent objects</string>
-          </property>
-          <property name="prefEntry" stdset="0">
-           <cstring>TransparentObjectRenderType</cstring>
-          </property>
-          <property name="prefPath" stdset="0">
-           <cstring>View</cstring>
-          </property>
-          <item>
-           <property name="text">
-            <string>One pass</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Backface pass</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="markerSizeLabel">
+        <item row="4" column="0">
+         <widget class="QLabel" name="transparentRenderLabel">
           <property name="toolTip">
            <string/>
           </property>
           <property name="text">
-           <string>Marker size:</string>
+           <string>Transparent objects:</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="4">
-         <widget class="QComboBox" name="boxMarkerSize">
-          <property name="minimumSize">
-           <size>
-            <width>120</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="toolTip">
-           <string>Size of vertices in the Sketcher workbench</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="0">
-         <widget class="QLabel" name="spinPickRadiusLabel">
-          <property name="text">
-           <string>Pick radius (px):</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="4">
-         <widget class="Gui::PrefDoubleSpinBox" name="spinPickRadius">
-          <property name="minimumSize">
-           <size>
-            <width>120</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="toolTip">
-           <string>Area for picking elements in 3D view.
-Larger value eases to pick things, but can make small features impossible to select.
-               </string>
-          </property>
-          <property name="inputMethodHints">
-           <set>Qt::ImhPreferNumbers</set>
-          </property>
-          <property name="decimals">
-           <number>1</number>
-          </property>
-          <property name="minimum">
-           <double>0.500000000000000</double>
-          </property>
-          <property name="maximum">
-           <double>200.000000000000000</double>
-          </property>
-          <property name="value">
-           <double>5.000000000000000</double>
-          </property>
-          <property name="prefEntry" stdset="0">
-           <cstring>PickRadius</cstring>
-          </property>
-          <property name="prefPath" stdset="0">
-           <cstring>View</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="spinPreselectionDelayLabel">
-          <property name="text">
-           <string>Eye to eye distance for stereo modes</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="4">
-         <widget class="Gui::PrefDoubleSpinBox" name="FloatSpinBox_EyeDistance">
-          <property name="minimumSize">
-           <size>
-            <width>120</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="toolTip">
-           <string>Eye-to-eye distance used for stereo projections.
-The specified value is a factor that will be multiplied with the
-bounding box size of the 3D object that is currently displayed.</string>
-          </property>
-          <property name="decimals">
-           <number>1</number>
-          </property>
-          <property name="minimum">
-           <double>0.100000000000000</double>
-          </property>
-          <property name="maximum">
-           <double>1000.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>2.000000000000000</double>
-          </property>
-          <property name="value">
-           <double>5.000000000000000</double>
-          </property>
-          <property name="prefEntry" stdset="0">
-           <cstring>EyeDistance</cstring>
-          </property>
-          <property name="prefPath" stdset="0">
-           <cstring>View</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="0">
-         <widget class="Gui::PrefCheckBox" name="checkBoxBacklight">
-          <property name="toolTip">
-           <string>Backlight is enabled with the defined color</string>
-          </property>
-          <property name="text">
-           <string>Backlight color</string>
-          </property>
-          <property name="prefEntry" stdset="0">
-           <cstring>EnableBacklight</cstring>
-          </property>
-          <property name="prefPath" stdset="0">
-           <cstring>View</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="1">
+        <item row="9" column="1">
          <widget class="Gui::PrefColorButton" name="backlightColor">
           <property name="enabled">
            <bool>false</bool>
@@ -447,36 +286,61 @@ bounding box size of the 3D object that is currently displayed.</string>
           </property>
          </widget>
         </item>
-        <item row="7" column="2">
-         <spacer name="horizontalSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
+        <item row="6" column="0">
+         <widget class="QLabel" name="spinPickRadiusLabel">
+          <property name="text">
+           <string>Pick radius (px):</string>
           </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
+         </widget>
         </item>
-        <item row="7" column="3">
-         <widget class="QLabel" name="backlightLabel">
-          <property name="enabled">
-           <bool>false</bool>
+        <item row="7" column="0">
+         <widget class="QLabel" name="spinPreselectionDelayLabel">
+          <property name="text">
+           <string>Eye to eye distance for stereo modes</string>
           </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="aliasingLAbel">
+          <property name="text">
+           <string>Anti-Aliasing</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Pre-selection delay (second):</string>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="0">
+         <widget class="Gui::PrefCheckBox" name="checkBoxBacklight">
+          <property name="toolTip">
+           <string>Backlight is enabled with the defined color</string>
+          </property>
+          <property name="text">
+           <string>Backlight color</string>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>EnableBacklight</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="markerSizeLabel">
           <property name="toolTip">
            <string/>
           </property>
           <property name="text">
-           <string>Intensity</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <string>Marker size:</string>
           </property>
          </widget>
         </item>
-        <item row="7" column="4">
+        <item row="9" column="3">
          <widget class="Gui::PrefSlider" name="sliderIntensity">
           <property name="enabled">
            <bool>false</bool>
@@ -522,14 +386,143 @@ bounding box size of the 3D object that is currently displayed.</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Pre-selection delay (second):</string>
+        <item row="4" column="1" colspan="2">
+         <widget class="Gui::PrefComboBox" name="comboTransparentRender">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>Render types of transparent objects</string>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>TransparentObjectRenderType</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
+          <item>
+           <property name="text">
+            <string>One pass</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Backface pass</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="9" column="4">
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="6" column="1">
+         <widget class="Gui::PrefDoubleSpinBox" name="spinPickRadius">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>Area for picking elements in 3D view.
+Larger value eases to pick things, but can make small features impossible to select.
+               </string>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhPreferNumbers</set>
+          </property>
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="minimum">
+           <double>0.500000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>200.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>5.000000000000000</double>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>PickRadius</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
           </property>
          </widget>
         </item>
-        <item row="6" column="4">
+        <item row="7" column="1">
+         <widget class="Gui::PrefDoubleSpinBox" name="FloatSpinBox_EyeDistance">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>Eye-to-eye distance used for stereo projections.
+The specified value is a factor that will be multiplied with the
+bounding box size of the 3D object that is currently displayed.</string>
+          </property>
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="minimum">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>1000.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>2.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>5.000000000000000</double>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>EyeDistance</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1" colspan="2">
+         <widget class="Gui::PrefComboBox" name="boxMarkerSize">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>Size of vertices in the Sketcher workbench</string>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>MarkerSize</cstring>
+          </property>
+          <property name="prefType" stdset="0">
+           <number>0</number>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="1">
          <widget class="Gui::PrefDoubleSpinBox" name="spinPreselectionDelay">
           <property name="decimals">
            <number>3</number>
@@ -548,6 +541,22 @@ bounding box size of the 3D object that is currently displayed.</string>
           </property>
          </widget>
         </item>
+        <item row="9" column="2">
+         <widget class="QLabel" name="backlightLabel">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string/>
+          </property>
+          <property name="text">
+           <string>Intensity</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
      </layout>
@@ -559,12 +568,37 @@ bounding box size of the 3D object that is currently displayed.</string>
       <string>Camera type</string>
      </property>
      <layout class="QGridLayout" name="gridLayout1">
-      <property name="margin">
+      <property name="leftMargin">
+       <number>11</number>
+      </property>
+      <property name="topMargin">
+       <number>11</number>
+      </property>
+      <property name="rightMargin">
+       <number>11</number>
+      </property>
+      <property name="bottomMargin">
        <number>11</number>
       </property>
       <property name="spacing">
        <number>6</number>
       </property>
+      <item row="0" column="0">
+       <widget class="Gui::PrefRadioButton" name="radioPerspective">
+        <property name="toolTip">
+         <string>Objects will appear in a perspective projection</string>
+        </property>
+        <property name="text">
+         <string>Perspective renderin&amp;g</string>
+        </property>
+        <property name="prefEntry" stdset="0">
+         <cstring>Perspective</cstring>
+        </property>
+        <property name="prefPath" stdset="0">
+         <cstring>View</cstring>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="1">
        <widget class="Gui::PrefRadioButton" name="radioOrthographic">
         <property name="toolTip">
@@ -578,22 +612,6 @@ bounding box size of the 3D object that is currently displayed.</string>
         </property>
         <property name="prefEntry" stdset="0">
          <cstring>Orthographic</cstring>
-        </property>
-        <property name="prefPath" stdset="0">
-         <cstring>View</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="Gui::PrefRadioButton" name="radioPerspective">
-        <property name="toolTip">
-         <string>Objects will appear in a perspective projection</string>
-        </property>
-        <property name="text">
-         <string>Perspective renderin&amp;g</string>
-        </property>
-        <property name="prefEntry" stdset="0">
-         <cstring>Perspective</cstring>
         </property>
         <property name="prefPath" stdset="0">
          <cstring>View</cstring>
@@ -639,6 +657,16 @@ bounding box size of the 3D object that is currently displayed.</string>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
   <customwidget>
+   <class>Gui::PrefSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::PrefComboBox</class>
+   <extends>QComboBox</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+  <customwidget>
    <class>Gui::ColorButton</class>
    <extends>QPushButton</extends>
    <header>Gui/Widgets.h</header>
@@ -646,11 +674,6 @@ bounding box size of the 3D object that is currently displayed.</string>
   <customwidget>
    <class>Gui::PrefRadioButton</class>
    <extends>QRadioButton</extends>
-   <header>Gui/PrefWidgets.h</header>
-  </customwidget>
-  <customwidget>
-   <class>Gui::PrefComboBox</class>
-   <extends>QComboBox</extends>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
   <customwidget>

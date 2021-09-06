@@ -106,7 +106,6 @@ void DlgSettings3DViewImp::saveSettings()
     ui->radioOrthographic->onSave();
     ui->CheckBox_ApplyToViews->onSave();
     ui->spinPreselectionDelay->onSave();
-    ViewParams::setAutoSortWBList(ui->CheckBox_SortWbList->isChecked());
 }
 
 void DlgSettings3DViewImp::loadSettings()
@@ -126,30 +125,18 @@ void DlgSettings3DViewImp::loadSettings()
     ui->radioOrthographic->onRestore();
     ui->CheckBox_ApplyToViews->onRestore();
     ui->spinPreselectionDelay->onRestore();
-    ui->CheckBox_SortWbList->setChecked(ViewParams::getAutoSortWBList());
-
-    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath
-        ("User parameter:BaseApp/Preferences/View");
-
-    int index = hGrp->GetInt("AntiAliasing", int(Gui::View3DInventorViewer::None));
-    index = Base::clamp(index, 0, ui->comboAliasing->count()-1);
-    ui->comboAliasing->setCurrentIndex(index);
-
-    index = hGrp->GetInt("RenderCache", 0);
-    ui->renderCache->setCurrentIndex(index);
-
+    ui->comboAliasing->onRestore();
+    ui->renderCache->onRestore();
     ui->comboTransparentRender->onRestore();
 
-    int const current = hGrp->GetInt("MarkerSize", 9L);
     ui->boxMarkerSize->addItem(tr("5px"), QVariant(5));
     ui->boxMarkerSize->addItem(tr("7px"), QVariant(7));
     ui->boxMarkerSize->addItem(tr("9px"), QVariant(9));
     ui->boxMarkerSize->addItem(tr("11px"), QVariant(11));
     ui->boxMarkerSize->addItem(tr("13px"), QVariant(13));
     ui->boxMarkerSize->addItem(tr("15px"), QVariant(15));
-    index = ui->boxMarkerSize->findData(QVariant(current));
-    if (index < 0) index = 2;
-    ui->boxMarkerSize->setCurrentIndex(index);
+    ui->boxMarkerSize->setCurrentIndex(2); // default value 9px
+    ui->boxMarkerSize->onRestore();
 }
 
 /**
@@ -158,11 +145,7 @@ void DlgSettings3DViewImp::loadSettings()
 void DlgSettings3DViewImp::changeEvent(QEvent *e)
 {
     if (e->type() == QEvent::LanguageChange) {
-        ui->comboAliasing->blockSignals(true);
-        int aliasing = ui->comboAliasing->currentIndex();
         ui->retranslateUi(this);
-        ui->comboAliasing->setCurrentIndex(aliasing);
-        ui->comboAliasing->blockSignals(false);
     }
     else {
         QWidget::changeEvent(e);
