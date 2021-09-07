@@ -97,10 +97,10 @@ std::pair<std::string,std::string> GeoFeature::getElementName(
     if(!name) return ret;
 
     auto prop = getPropertyOfGeometry();
-    if(!prop) return ret;
+    if(!prop) return std::make_pair("", name);
 
     auto geo = prop->getComplexData();
-    if(!geo) return ret;
+    if(!geo) return std::make_pair("", name);
 
     if(Data::ComplexGeoData::isMappedElement(name)) {
         const char *oldName = geo->getElementName(name);
