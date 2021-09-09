@@ -239,6 +239,8 @@ struct EditData {
         hView->Attach(master);
         hPart = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Part");
         hPart->Attach(master);
+        hSketchGeneral = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+        hSketchGeneral->Attach(master);
 
         timer.setSingleShot(true);
         QObject::connect(&timer, &QTimer::timeout, [master]() {
@@ -252,6 +254,7 @@ struct EditData {
     ~EditData() {
         hView->Detach(master);
         hPart->Detach(master);
+        hSketchGeneral->Detach(master);
     }
 
     void removeSelectEdge(int GeoId)
@@ -266,6 +269,7 @@ struct EditData {
     ViewProviderSketch *master;
     ParameterGrp::handle hView;
     ParameterGrp::handle hPart;
+    ParameterGrp::handle hSketchGeneral;
 
     // pointer to the active handler for new sketch objects
     DrawSketchHandler *sketchHandler;
@@ -3097,16 +3101,18 @@ void ViewProviderSketch::updateColor(void)
         return false;
     };
 
-    bool invalidSketch =    getSketchObject()->getLastHasRedundancies()           ||
+    bool showOriginalColor = hGrpp->GetBool("ShowOriginalColor", false);
+    bool invalidSketch =   (getSketchObject()->getLastHasRedundancies()           ||
                             getSketchObject()->getLastHasConflicts()              ||
-                            getSketchObject()->getLastHasMalformedConstraints();
+                            getSketchObject()->getLastHasMalformedConstraints()) && !showOriginalColor;
+    bool fullyConstrained = edit->FullyConstrained && !showOriginalColor;
 
     // colors of the point set
     if( invalidSketch ) {
         for (int  i=0; i < PtNum; i++)
             pcolor[i] = InvalidSketchColor;
     }
-    else if (edit->FullyConstrained) {
+    else if (fullyConstrained) {
         for (int  i=0; i < PtNum; i++)
             pcolor[i] = FullyConstrainedColor;
     }
@@ -3282,14 +3288,14 @@ void ViewProviderSketch::updateColor(void)
                 verts[k] = SbVec3f(x,y,zConstrLine);
             }
         }
-        else if (edit->FullyConstrained) {
+        else if (fullyConstrained) {
             color[i] = FullyConstrainedColor;
             for (int k=j; k<j+vcount; k++) {
                 verts[k].getValue(x,y,z);
                 verts[k] = SbVec3f(x,y,zNormLine);
             }
         }
-        else if (isFullyConstraintElement(getSketchObject(), GeoId)) {
+        else if (!showOriginalColor && isFullyConstraintElement(getSketchObject(), GeoId)) {
             color[i] = FullyConstraintElementColor;
             for (int k=j; k<j+vcount; k++) {
                 verts[k].getValue(x,y,z);
@@ -4180,9 +4186,15 @@ void ViewProviderSketch::OnChange(Base::Subject<const char*> &rCaller, const cha
 {
     (void) rCaller;
     static std::unordered_set<const char *, App::CStringHasher, App::CStringHasher> dict = {
+        "ShowOriginalColor",
+        "TopRenderGeometryId",
+        "MidRenderGeometryId",
+        "LowRenderGeometryId",
+
         "SegmentsPerGeometry",
         "ViewScalingFactor",
         "MarkerSize",
+
         "EditSketcherFontSize",
         "EditedVertexColor",
         "EditedEdgeColor",
