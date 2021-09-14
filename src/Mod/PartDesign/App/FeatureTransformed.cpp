@@ -649,6 +649,7 @@ void Transformed::onChanged(const App::Property *prop) {
 }
 
 void Transformed::setupObject () {
+    FeatureAddSub::setupObject();
     CopyShape.setValue(false);
 }
 
