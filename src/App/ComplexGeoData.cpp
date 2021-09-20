@@ -719,6 +719,8 @@ public:
             }
         }
         do {
+            if (overwrite)
+                erase(idx);
             auto ret = mappedNames.insert(std::make_pair(name, idx));
             if (ret.second) {
                 ret.first->first.compact();
@@ -764,7 +766,7 @@ public:
         auto & ref = indices.names[idx.getIndex()];
         for (auto *r = &ref; r; r = r->next.get())
             this->mappedNames.erase(r->name);
-        this->indexedNames.erase(iter);
+        ref.clear();
         return true;
     }
 
