@@ -48,7 +48,7 @@ OutputStream::OutputStream(std::ostream &rout, bool binary)
     : _out(rout), _binary(binary)
 {
     if(!_binary)
-        _out << std::setprecision(std::numeric_limits<float>::digits10 + 1);
+        _out << std::setprecision(std::numeric_limits<double>::max_digits10);
 }
 
 OutputStream& OutputStream::operator << (const char *s) {
