@@ -301,8 +301,7 @@ void TaskLoftParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
         if (obj == loft->Profile.getValue())
             break;
         App::SubObjectT ref(msg.pOriginalMsg ? msg.pOriginalMsg->Object : msg.Object);
-        ref.setSubName(ref.getSubNameNoElement());
-        ref = PartDesignGui::importExternalObject(ref);
+        ref = PartDesignGui::importExternalElement(ref);
         auto refObj = ref.getSubObject();
         if (refObj) {
             ui->profileBaseEdit->setText(QString::fromUtf8(refObj->Label.getValue()));
@@ -319,8 +318,7 @@ void TaskLoftParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
     }
     case refAdd: {
         App::SubObjectT ref(msg.pOriginalMsg ? msg.pOriginalMsg->Object : msg.Object);
-        ref.setSubName(ref.getSubNameNoElement());
-        ref = PartDesignGui::importExternalObject(ref);
+        ref = PartDesignGui::importExternalElement(ref);
         auto refObj = ref.getSubObject();
         if (refObj) {
             auto sections = loft->Sections.getValues();

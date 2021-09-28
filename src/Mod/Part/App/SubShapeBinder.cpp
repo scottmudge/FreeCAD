@@ -1176,8 +1176,8 @@ SubShapeBinder::import(const App::SubObjectT &feature,
         if (link == container
                 || Part::BodyBase::findBodyOf(link) == container
                 || App::Part::getPartOfObject(link) == container) {
-            if (!noSubElement || !resolved.hasSubElement()
-                    || !noSubObject || !resolved.hasSubObject())
+            if ((!noSubElement || !resolved.hasSubElement())
+                    && (!noSubObject || !resolved.hasSubObject()))
                 return App::SubObjectT(sobj, feature.getElementName());
             featName = "Binder";
         }
