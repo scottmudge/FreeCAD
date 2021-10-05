@@ -152,6 +152,8 @@
 # include <ShapeFix_Face.hxx>
 # include <ShapeFix_Shell.hxx>
 # include <ShapeFix_Solid.hxx>
+# include <ShapeFix_Shape.hxx>
+# include <ShapeFix_ShapeTolerance.hxx>
 # include <ShapeUpgrade_ShellSewing.hxx>
 # include <ShapeUpgrade_RemoveInternalWires.hxx>
 # include <Standard_Version.hxx>
@@ -2305,6 +2307,30 @@ TopoShape &TopoShape::makEFace(const std::vector<TopoShape> &shapes,
     _Shape = ret._Shape;
     _ElementMap = ret._ElementMap;
     Hasher = ret.Hasher;
+
+    if (!isValid()) {
+        ShapeFix_ShapeTolerance aSFT;
+        aSFT.LimitTolerance(getShape(),
+                    Precision::Confusion(), Precision::Confusion(), TopAbs_SHAPE);
+
+        // In some cases, the OCC reports the returned shape having invalid
+        // tolerance. Not sure about the real cause.
+        //
+        // Update: one of the cause is related to OCC bug in
+        // BRepBuilder_FindPlane, A possible call sequence is,
+        //
+        //      makEOffset2D() -> TopoShape::findPlane() -> BRepLib_FindSurface
+        //
+        // See code comments in findPlane() for the description of the bug and
+        // work around.
+
+        ShapeFix_Shape fixer(getShape());
+        fixer.Perform();
+        setShape(fixer.Shape(), false);
+
+        if (!isValid())
+            FC_WARN("makEFace: resulting face is invalid");
+    }
     return *this;
 }
 
@@ -3878,7 +3904,11 @@ bool TopoShape::findPlane(gp_Pln &pln, double tol, double atol) const {
 
         // Check if there is free edges (i.e. edges does not belong to any face)
         if (TopExp_Explorer(getShape(), TopAbs_EDGE, TopAbs_FACE).More()) {
-            BRepLib_FindSurface finder(shape,tol,Standard_True);
+            // Copy shape to work around OCC transformation bug, that is, if
+            // edge has transformation, but underlying geometry does not (or the
+            // other way round), BRepLib_FindSurface returns a plane with the
+            // wrong transformation
+            BRepLib_FindSurface finder(BRepBuilderAPI_Copy(shape).Shape(),tol,Standard_True);
             if (!finder.Found())
                 return false;
             pln = GeomAdaptor_Surface(finder.Surface()).Plane();
