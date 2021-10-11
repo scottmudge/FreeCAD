@@ -496,7 +496,13 @@ PropertyLinkBase::tryReplaceLink(const PropertyContainer *owner, DocumentObject 
             return res;
         }
         return res;
+    } else if (newObj == obj) {
+        // This means the new object is already sub-object of this parent
+        // (consider a case of swapping the tool and base object of the Cut
+        // feature). We'll swap the old and new object.
+        return tryReplaceLink(owner, obj, parent, newObj, oldObj, subname);
     }
+
     if(!subname || !subname[0])
         return res;
 
@@ -506,6 +512,8 @@ PropertyLinkBase::tryReplaceLink(const PropertyContainer *owner, DocumentObject 
     for(auto pos=sub.find('.');pos!=std::string::npos;pos=sub.find('.',pos)) {
         ++pos;
         char c = sub[pos];
+        if (c == '.')
+            continue;
         sub[pos] = 0;
         auto sobj = obj->getSubObject(sub.c_str());
         sub[pos] = c;
@@ -530,6 +538,8 @@ PropertyLinkBase::tryReplaceLink(const PropertyContainer *owner, DocumentObject 
                 return res;
             }
             break;
+        }else if(sobj == newObj) {
+            return tryReplaceLink(owner, obj, parent, newObj, oldObj, subname);
         }else if(prev == parent)
             break;
         prev = sobj;
