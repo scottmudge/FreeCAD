@@ -2360,13 +2360,16 @@ TopoShape &TopoShape::makERefine(const TopoShape &shape, const char *op, bool no
         return *this;
     }
     if(!op) op = TOPOP_REFINE;
+    bool closed = shape.isClosed();
     try {
 #if 1
         MyRefineMaker mkRefine(shape.getShape());
         GenericShapeMapper mapper;
         mkRefine.populate(mapper);
         mapper.init(shape, mkRefine.Shape());
-        return makESHAPE(mkRefine.Shape(), mapper, {shape}, op);
+        makESHAPE(mkRefine.Shape(), mapper, {shape}, op);
+        if (isClosed() == closed)
+            return *this;
 #else
         BRepBuilderAPI_RefineModel mkRefine(shape.getShape());
         return makEShape(mkRefine,shape,op);
