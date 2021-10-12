@@ -263,6 +263,9 @@ public:
      */
     virtual Property *copyBeforeChange(void) const {return nullptr;}
 
+
+    virtual void SetRestoreError(const char *);
+
     /** Return a unique ID for the property
      *
      * The ID of a property is generated from an monotonically increasing
