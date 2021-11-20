@@ -418,9 +418,14 @@ bool TaskAttacher::updatePreview()
     } catch (...) {
         errMessage = tr("unknown error");
     }
+
+    // Check if text is brighter than background, to improve legibility
+    const bool dark_theme_found = (ui->message->palette().color(QPalette::WindowText).value() > 
+        ui->message->palette().color(QPalette::Background).value()) ? true : false;
+
     if (errMessage.length()>0){
         ui->message->setText(tr("Attachment mode failed: %1").arg(errMessage));
-        ui->message->setStyleSheet(QString::fromLatin1("QLabel{color: red;}"));
+        ui->message->setStyleSheet(QString::fromLatin1(dark_theme_found ? "QLabel{color: lightred;}" : "QLabel{color: red;}"));
     } else {
         if (!attached){
             ui->message->setText(tr("Not attached"));
@@ -428,7 +433,7 @@ bool TaskAttacher::updatePreview()
         } else {
             std::vector<QString> strs = AttacherGui::getUIStrings(pcAttach->attacher().getTypeId(),eMapMode(pcAttach->MapMode.getValue()));
             ui->message->setText(tr("Attached with mode %1").arg(strs[0]));
-            ui->message->setStyleSheet(QString::fromLatin1("QLabel{color: green;}"));
+            ui->message->setStyleSheet(QString::fromLatin1(dark_theme_found ? "QLabel{color: lightgreen;}" : "QLabel{color: green;}"));
         }
     }
     QString splmLabelText = attached ? tr("Attachment Offset (in local coordinates):") : tr("Attachment Offset (inactive - not attached):");
