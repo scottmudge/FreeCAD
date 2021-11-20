@@ -27,138 +27,145 @@
 #endif
 
 #include <Base/Console.h>
+#include <QCoreApplication>
+
 #include "LineEdit.h"
 
 using namespace SpreadsheetGui;
 
 LineEdit::LineEdit(QWidget *parent)
     : Gui::ExpressionLineEdit(parent, false, '=')
-    , current()
-    , deltaCol(0)
-    , deltaRow(0)
+    , lastKeyPressed(0)
 {
+    setFocusPolicy(Qt::FocusPolicy::ClickFocus);
 }
 
 bool LineEdit::event(QEvent *event)
 {
-    if (event && event->type() == QEvent::KeyPress) {
+    if (event && event->type() == QEvent::FocusOut) {
+        if (lastKeyPressed)
+            Q_EMIT finishedWithKey(lastKeyPressed, lastModifiers);
+        lastKeyPressed = 0;
+    }
+    else if (event && event->type() == QEvent::KeyPress && !completerActive()) {
         QKeyEvent * kevent = static_cast<QKeyEvent*>(event);
-
-        if (kevent->key() == Qt::Key_Tab) {
-            if (kevent->modifiers() == 0) {
-                deltaCol = 1;
-                deltaRow = 0;
-                Q_EMIT returnPressed();
-                return true;
-            }
-        }
-        else if (kevent->key() == Qt::Key_Backtab) {
-            if (kevent->modifiers() == Qt::ShiftModifier) {
-                deltaCol = -1;
-                deltaRow = 0;
-                Q_EMIT returnPressed();
-                return true;
-            }
-        }
-        else if (kevent->key() == Qt::Key_Enter || kevent->key() == Qt::Key_Return) {
-            if (kevent->modifiers() == 0) {
-                deltaCol = 0;
-                deltaRow = 1;
-                Q_EMIT returnPressed();
-                return true;
-            }
-            else if (kevent->modifiers() == Qt::ShiftModifier) {
-                deltaCol = 0;
-                deltaRow = -1;
-                Q_EMIT returnPressed();
-                return true;
-            }
-        }
+        lastKeyPressed = kevent->key();
+        lastModifiers = kevent->modifiers(); 
     }
     return Gui::ExpressionLineEdit::event(event);
-}
-
-void LineEdit::setIndex(QModelIndex _current)
-{
-    current = _current;
-}
-
-QModelIndex LineEdit::next() const
-{
-    const QAbstractItemModel * m = current.model();
-
-    return m->index(qMin(qMax(0, current.row() + deltaRow), m->rowCount() - 1 ),
-                    qMin(qMax(0, current.column() + deltaCol), m->columnCount() - 1 ) );
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 
 TextEdit::TextEdit(QWidget *parent)
     : Gui::ExpressionTextEdit(parent)
-    , current()
-    , deltaCol(0)
-    , deltaRow(0)
+    , lastKeyPressed(0)
 {
     setLeadChar('=');
 }
 
-bool TextEdit::event(QEvent *event)
+void TextEdit::keyPressEvent(QKeyEvent *event)
 {
-    if (event && event->type() == QEvent::KeyPress) {
-        QKeyEvent * kevent = static_cast<QKeyEvent*>(event);
+    Gui::ExpressionTextEdit::keyPressEvent(event);
+}
 
-        if (kevent->key() == Qt::Key_Tab) {
-            if (kevent->modifiers() == 0) {
-                deltaCol = 1;
-                deltaRow = 0;
-                Q_EMIT returnPressed();
-                return true;
-            }
-        }
-        else if (kevent->key() == Qt::Key_Backtab) {
-            if (kevent->modifiers() == Qt::ShiftModifier) {
-                deltaCol = -1;
-                deltaRow = 0;
-                Q_EMIT returnPressed();
-                return true;
-            }else if(kevent->modifiers() == Qt::ControlModifier) {
-                textCursor().insertText(QString::fromLatin1("\t"));
-                return true;
-            }
-        }
-        else if (kevent->key() == Qt::Key_Enter || kevent->key() == Qt::Key_Return) {
-            if (kevent->modifiers() == 0) {
-                deltaCol = 0;
-                deltaRow = 1;
-                Q_EMIT returnPressed();
-                return true;
-            }
-            else if (kevent->modifiers() == Qt::ShiftModifier) {
-                deltaCol = 0;
-                deltaRow = -1;
-                Q_EMIT returnPressed();
-                return true;
-            }
-            else if (kevent->modifiers() == Qt::ControlModifier) {
-                textCursor().insertText(QString::fromLatin1("\n"));
-                return true;
-            }
+void TextEdit::finishEditing()
+{
+    if (filtering) {
+        filtering = false;
+        qApp->removeEventFilter(this);
+    }
+    if (int key = lastKeyPressed) {
+        lastKeyPressed = 0;
+        Q_EMIT finishedWithKey(key, lastModifiers);
+    }
+}
+
+bool TextEdit::eventFilter(QObject *, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Tab && keyEvent->modifiers() == Qt::ControlModifier) {
+            lastKeyPressed = 0;
+            textCursor().insertText(QString::fromLatin1("\t"));
+            event->accept();
+            return true;
         }
     }
+    return false;
+}
+
+bool TextEdit::event(QEvent *event)
+{
+    if (!event)
+        return false;
+
+    switch (event->type()) {
+    case QEvent::FocusIn:
+        if (!filtering)
+            qApp->installEventFilter(this);
+        break;
+    case QEvent::FocusOut:
+        finishEditing();
+        break;
+    case QEvent::KeyPress: {
+        QKeyEvent * kevent = static_cast<QKeyEvent*>(event);
+        lastKeyPressed = kevent->key();
+        lastModifiers = kevent->modifiers(); 
+
+        switch(kevent->key()) {
+        case Qt::Key_Tab:
+            // We want TextEdit to mimic QLineEdit by default, so do not insert
+            // Tab into the text box if no modifier
+            if (kevent->modifiers() == Qt::NoModifier) {
+                finishEditing();
+                event->accept();
+                return true;
+            }
+            // For some reason Ctrl + Tab is never passed to us even having
+            // handled the ShortcutOverride below. It is possible that the
+            // eventFilter in QMdiArea captures the event, which is installed on
+            // its child sub window. It is not clear how this event filter can
+            // intercept event passing to TextEdit which is a decendent of the
+            // sub window. Anyway, we can work around the problem by installing
+            // a system event filter and handle the Ctrl + Tab there.
+            break;
+        case Qt::Key_Enter:
+        case Qt::Key_Return:
+            // Same for Enter/Return key, except that we can handle Ctrl + Enter
+            // here.
+            if (kevent->modifiers() == Qt::ControlModifier) {
+                lastKeyPressed = 0;
+                textCursor().insertText(QString::fromLatin1("\n"));
+            } else {
+                // Unlike LineEdit, we are derived from QPlainTextEdit, so we
+                // need to manually finish editing on Enter/Return key
+                finishEditing();
+            }
+            event->accept();
+            return true;
+        default:
+            break;
+        }
+        break;
+    }
+    case QEvent::ShortcutOverride: {
+        QKeyEvent * kevent = static_cast<QKeyEvent*>(event);
+        if (kevent->modifiers() != Qt::ControlModifier)
+            break;
+        if (kevent->key() == Qt::Key_Enter
+            || kevent->key() == Qt::Key_Return
+            || kevent->key() == Qt::Key_Tab)
+        {
+            // Override any potential shortcut of Ctrl + Enter/Return/Tab
+            event->accept();
+        }
+        break;
+    }
+    default:
+        break;
+    }
     return Gui::ExpressionTextEdit::event(event);
-}
-
-void TextEdit::setIndex(QModelIndex _current)
-{
-    current = _current;
-}
-
-QModelIndex TextEdit::next() const
-{
-    const QAbstractItemModel * m = current.model();
-
-    return m->index(qMin(qMax(0, current.row() + deltaRow), m->rowCount() - 1 ),
-                    qMin(qMax(0, current.column() + deltaCol), m->columnCount() - 1 ) );
 }
 
 #include "moc_LineEdit.cpp"

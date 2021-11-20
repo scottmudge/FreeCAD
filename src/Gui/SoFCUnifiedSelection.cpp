@@ -1074,8 +1074,10 @@ void SoFCUnifiedSelection::Private::onPreselectTimer() {
         setHighlight(std::move(infos[0]));
     else {
         // Do not remove preslection in case of dock overlay mouse pass through
-        if (!OverlayManager::instance()->isUnderOverlay())
-            setHighlight(PickedInfo());
+        if (!OverlayManager::instance()->isUnderOverlay()) {
+            // setHighlight(PickedInfo());
+            Selection().rmvPreselect();
+        }
     }
 
     preselTime = SbTime::getTimeOfDay();
@@ -1118,7 +1120,7 @@ SoFCUnifiedSelection::Private::setHighlight(SoFullPath *path,
 
         this->preSelection = 1;
         int ret = Gui::Selection().setPreselect(docname,objname,subname,x,y,z,0,true);
-        if(ret) {
+        if(ret > 0 || ret == -1) {
             clearHighlight();
             currentHighlight->append(path);
             highlighted = true;

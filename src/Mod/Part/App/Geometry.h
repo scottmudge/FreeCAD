@@ -183,8 +183,8 @@ public:
     GeomCurve();
     virtual ~GeomCurve();
 
-    static bool isLinear(const Handle(Geom_Curve) &c);
-    bool isLinear() const;
+    static bool isLinear(const Handle(Geom_Curve) &c, Base::Vector3d *dir = nullptr, Base::Vector3d *base = nullptr);
+    bool isLinear(Base::Vector3d *dir = nullptr, Base::Vector3d *base = nullptr) const;
 
     TopoDS_Shape toShape() const;
     /*!
@@ -212,7 +212,7 @@ public:
     double curvatureAt(double u) const;
     double length(double u, double v) const;
     bool normalAt(double u, Base::Vector3d& dir) const;
-    bool intersect(GeomCurve * c,
+    bool intersect(const GeomCurve *c,
                    std::vector<std::pair<Base::Vector3d, Base::Vector3d>>& points,
                    double tol = Precision::Confusion()) const;
 
@@ -324,6 +324,8 @@ public:
 
     void increaseMultiplicity(int index, int multiplicity);
     bool removeKnot(int index, int multiplicity, double tolerance = Precision::PConfusion());
+
+    void Trim(double u, double v);
 
     // Persistence implementer ---------------------
     virtual unsigned int getMemSize(void) const;

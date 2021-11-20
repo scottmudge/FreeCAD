@@ -1164,6 +1164,29 @@ bool TopoShape::hasSubShape(const char *Type) const {
 }
 
 TopoShape TopoShape::getSubTopoShape(const char *Type, bool silent) const {
+    if (!Type || !Type[0]) {
+        switch (shapeType(true)) {
+        case TopAbs_COMPOUND:
+        case TopAbs_COMPSOLID:
+            if (countSubShapes(TopAbs_SOLID) == 1)
+                return getSubTopoShape(TopAbs_SOLID, 1);
+            if (countSubShapes(TopAbs_SHELL) == 1)
+                return getSubTopoShape(TopAbs_SHELL, 1);
+            if (countSubShapes(TopAbs_FACE) == 1)
+                return getSubTopoShape(TopAbs_FACE, 1);
+            if (countSubShapes(TopAbs_WIRE) == 1)
+                return getSubTopoShape(TopAbs_WIRE, 1);
+            if (countSubShapes(TopAbs_EDGE) == 1)
+                return getSubTopoShape(TopAbs_EDGE, 1);
+            if (countSubShapes(TopAbs_VERTEX) == 1)
+                return getSubTopoShape(TopAbs_VERTEX, 1);
+            break;
+        default:
+            break;
+        }
+        return *this;
+    }
+
     Data::MappedElement mapped = getElementName(Type);
     if (!mapped.index && boost::starts_with(Type,elementMapPrefix())) {
         if(!silent)
@@ -4867,12 +4890,21 @@ TopoShape TopoShape::splitWires(std::vector<TopoShape> *inner,
     return TopoShape();
 }
 
-bool TopoShape::isLinearEdge() const
+bool TopoShape::isLinearEdge(Base::Vector3d *dir, Base::Vector3d *base) const
 {
     if (isNull() || getShape().ShapeType() != TopAbs_EDGE)
         return false;
 
-    return GeomCurve::isLinear(BRepAdaptor_Curve(TopoDS::Edge(getShape())).Curve().Curve());
+    if (!GeomCurve::isLinear(BRepAdaptor_Curve(TopoDS::Edge(getShape())).Curve().Curve(), dir, base))
+        return false;
+    if (dir || base) {
+        auto pla = getPlacement();
+        if (dir)
+            pla.multVec(*dir, *dir);
+        if (base)
+            pla.multVec(*base, *base);
+    }
+    return true;
 }
 
 bool TopoShape::isPlanarFace(double tol) const

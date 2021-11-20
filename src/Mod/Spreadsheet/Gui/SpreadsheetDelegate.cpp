@@ -56,6 +56,11 @@ SpreadsheetDelegate::SpreadsheetDelegate(Spreadsheet::Sheet * _sheet, QWidget *p
 {
 }
 
+void SpreadsheetDelegate::setEditTrigger(QAbstractItemView::EditTrigger trigger)
+{
+    editTrigger = trigger;
+}
+
 QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
                                           const QStyleOptionViewItem &,
                                           const QModelIndex &index) const
@@ -81,8 +86,7 @@ QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
             else
                 editor->setObjectName(QLatin1String("label"));
             editor->setContextMenuPolicy(Qt::NoContextMenu);
-            editor->setIndex(index);
-            connect(editor, SIGNAL(returnPressed()), this, SLOT(commitAndCloseEditor()));
+            connect(editor, &SpreadsheetGui::TextEdit::finishedWithKey, this, &SpreadsheetDelegate::on_editorFinishedWithKey);
             lastEditor = editor;
             return editor;
         }
@@ -120,10 +124,9 @@ QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
 
     SpreadsheetGui::TextEdit *editor = new SpreadsheetGui::TextEdit(parent);
     lastEditor = editor;
-    editor->setIndex(index);
 
     editor->setDocumentObject(sheet);
-    connect(editor, SIGNAL(returnPressed()), this, SLOT(commitAndCloseEditor()));
+    connect(editor, &SpreadsheetGui::TextEdit::finishedWithKey, this, &SpreadsheetDelegate::on_editorFinishedWithKey);
     return editor;
 }
 
@@ -177,8 +180,12 @@ void SpreadsheetDelegate::setEditorData(QWidget *editor,
         edit->setPlainText(data.toString());
         if (lastEditor == edit) {
             lastEditor = nullptr;
-            if (edit->blockCount() == 1)
-                edit->selectAll();
+            if (edit->blockCount() == 1) {
+                if (editTrigger == QAbstractItemView::EditKeyPressed)
+                    edit->moveCursor(QTextCursor::End);
+                else
+                    edit->selectAll();
+            }
         }
         return;
     }
@@ -315,6 +322,12 @@ void SpreadsheetDelegate::setModelData(QWidget *editor,
         model->setData(index, checkbox->isChecked());
         return;
     }
+}
+
+void SpreadsheetDelegate::on_editorFinishedWithKey(int key, Qt::KeyboardModifiers modifiers)
+{
+    commitAndCloseEditor();
+    Q_EMIT finishedWithKey(key, modifiers);
 }
 
 QSize SpreadsheetDelegate::sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const

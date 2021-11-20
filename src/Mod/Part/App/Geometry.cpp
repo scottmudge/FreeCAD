@@ -55,7 +55,6 @@
 # include <Geom_RectangularTrimmedSurface.hxx>
 # include <Geom_SurfaceOfRevolution.hxx>
 # include <Geom_SurfaceOfLinearExtrusion.hxx>
-# include <GeomAdaptor_HCurve.hxx>
 # include <GeomAPI_Interpolate.hxx>
 # include <GeomConvert.hxx>
 # include <GeomConvert_CompCurveToBSplineCurve.hxx>
@@ -107,6 +106,9 @@
 # include <ShapeConstruct_Curve.hxx>
 # include <LProp_NotDefined.hxx>
 # include <TopoDS.hxx>
+# if OCC_VERSION_HEX < 0x070600
+# include <GeomAdaptor_HCurve.hxx>
+# endif
 
 # include <memory>
 # include <ctime>
@@ -153,6 +155,9 @@
 
 #include "Geometry.h"
 
+#if OCC_VERSION_HEX >= 0x070600
+using GeomAdaptor_HCurve = GeomAdaptor_Curve;
+#endif
 
 using namespace Part;
 
@@ -668,15 +673,32 @@ static Standard_Boolean IsLinear(const Adaptor3d_Curve& theC)
     return Standard_False;
 }
 
-bool GeomCurve::isLinear() const
+bool GeomCurve::isLinear(Base::Vector3d *dir, Base::Vector3d *base) const
 {
     Handle(Geom_Curve) s = Handle(Geom_Curve)::DownCast(handle());
-    return isLinear(s);
+    return isLinear(s, dir, base);
 }
 
-bool GeomCurve::isLinear(const Handle(Geom_Curve) &s)
+bool GeomCurve::isLinear(const Handle(Geom_Curve) &s, Base::Vector3d *dir, Base::Vector3d *base)
 {
-    return IsLinear(GeomAdaptor_Curve(s));
+    if (!IsLinear(GeomAdaptor_Curve(s)))
+        return false;
+    if (dir || base) {
+        try {
+            GeomLProp_CLProps prop1(s,s->FirstParameter(),0,Precision::Confusion());
+            GeomLProp_CLProps prop2(s,s->LastParameter(),0,Precision::Confusion());
+            const gp_Pnt &p1 = prop1.Value();
+            const gp_Pnt &p2 = prop2.Value();
+            if (base)
+                *base = Base::Vector3d(p1.X(), p1.Y(), p1.Z());
+            if (dir)
+                *dir = Base::Vector3d(p2.X() - p1.X(), p2.Y() - p1.Y(), p2.Z() - p1.Z());
+        }
+        catch (Standard_Failure& e) {
+            THROWM(Base::CADKernelError,e.GetMessageString())
+        }
+    }
+    return true;
 }
 
 GeomLine* GeomCurve::toLine(bool clone) const
@@ -809,7 +831,7 @@ bool GeomCurve::normalAt(double u, Base::Vector3d& dir) const
     return false;
 }
 
-bool GeomCurve::intersect(  GeomCurve * c,
+bool GeomCurve::intersect(  const GeomCurve *c,
                             std::vector<std::pair<Base::Vector3d, Base::Vector3d>>& points,
                             double tol) const
 {
@@ -1684,6 +1706,37 @@ bool GeomBSplineCurve::removeKnot(int index, int multiplicity, double tolerance)
     }
 }
 
+void GeomBSplineCurve::Trim(double u, double v)
+{
+    auto splitUnwrappedBSpline = [this](double u, double v) {
+        // it makes a copy internally (checked in the source code of OCCT)
+        auto handle = GeomConvert::SplitBSplineCurve (  myCurve,
+                                                            u,
+                                                            v,
+                                                            Precision::Confusion()
+                                                        );
+        setHandle(handle);
+    };
+
+    try {
+        if(!isPeriodic()) {
+            splitUnwrappedBSpline(u, v);
+        }
+        else { // periodic
+            if( v < u ) { // wraps over origin
+                v = v + 1.0; // v needs one extra lap (1.0)
+
+                splitUnwrappedBSpline(u, v);
+            }
+            else {
+                splitUnwrappedBSpline(u, v);
+            }
+        }
+    }
+    catch (Standard_Failure& e) {
+        THROWM(Base::CADKernelError,e.GetMessageString())
+    }
+}
 
 // Persistence implementer
 unsigned int GeomBSplineCurve::getMemSize (void) const

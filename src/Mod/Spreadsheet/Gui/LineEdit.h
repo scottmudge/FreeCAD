@@ -36,13 +36,13 @@ public:
     explicit LineEdit(QWidget *parent = 0);
 
     bool event(QEvent *event);
-    void setIndex(QModelIndex _current);
-    QModelIndex next() const;
+
+Q_SIGNALS:
+    void finishedWithKey(int key, Qt::KeyboardModifiers modifiers);
 
 private:
-    QModelIndex current;
-    int deltaCol;
-    int deltaRow;
+    int lastKeyPressed;
+    Qt::KeyboardModifiers lastModifiers;
 };
 
 class TextEdit : public Gui::ExpressionTextEdit
@@ -52,16 +52,17 @@ public:
     explicit TextEdit(QWidget *parent = 0);
 
     bool event(QEvent *event);
-    void setIndex(QModelIndex _current);
-    QModelIndex next() const;
+    void keyPressEvent(QKeyEvent *);
+    bool eventFilter(QObject *, QEvent *);
+    void finishEditing();
 
 Q_SIGNALS:
-    void returnPressed();
+    void finishedWithKey(int key, Qt::KeyboardModifiers modifiers);
 
 private:
-    QModelIndex current;
-    int deltaCol;
-    int deltaRow;
+    int lastKeyPressed;
+    Qt::KeyboardModifiers lastModifiers;
+    bool filtering = false;
 };
 
 
