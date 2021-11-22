@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>322</width>
-    <height>149</height>
+    <height>168</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,6 +26,19 @@
       <string>Import/Export Settings</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
+      <item row="3" column="0">
+       <widget class="QLabel" name="textLabel4">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Auto-switch Workbench: </string>
+        </property>
+       </widget>
+      </item>
       <item row="2" column="0">
        <widget class="QLabel" name="textLabel3">
         <property name="sizePolicy">
@@ -146,6 +159,16 @@
          </size>
         </property>
        </spacer>
+      </item>
+      <item row="3" column="2">
+       <widget class="QCheckBox" name="workbenchAutoSwichCheckbox">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Automatically switch to the Spreadsheet Workbench when a spreadsheet is activated.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

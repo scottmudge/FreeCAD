@@ -61,6 +61,7 @@ void DlgSettingsImp::saveSettings()
     ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Spreadsheet");
     QString delimiter = ui->delimiterComboBox->currentText();
     hGrp->SetASCII("ImportExportDelimiter", delimiter.toStdString().c_str());
+    hGrp->SetBool("AutoSwitchWorkbench", ui->workbenchAutoSwichCheckbox->isChecked());
     ui->quoteCharLineEdit->onSave();
     ui->escapeCharLineEdit->onSave();
 }
@@ -90,6 +91,8 @@ void DlgSettingsImp::loadSettings()
         idx = ui->delimiterComboBox->findText(delimiter, Qt::MatchFixedString);
         ui->delimiterComboBox->setCurrentIndex(idx);
     }
+
+    ui->workbenchAutoSwichCheckbox->setChecked(hGrp->GetBool("AutoSwitchWorkbench", true));
 
     ui->quoteCharLineEdit->onRestore();
     ui->escapeCharLineEdit->onRestore();
