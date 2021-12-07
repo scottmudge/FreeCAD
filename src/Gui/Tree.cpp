@@ -1105,7 +1105,7 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
     this->showHiddenAction = new QAction(this);
     this->showHiddenAction->setCheckable(true);
 #ifndef Q_OS_MAC
-    this->showHiddenAction->setShortcut(Qt::Key_Control + Qt::Key_Shift + Qt::Key_F3);
+    this->showHiddenAction->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_F3);
 #endif
     connect(this->showHiddenAction, SIGNAL(toggled(bool)),
             this, SLOT(onShowHidden()));
@@ -1117,7 +1117,7 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
 
     this->hideInTreeAction = new QAction(this);
 #ifndef Q_OS_MAC
-    this->hideInTreeAction->setShortcut(Qt::Key_Control + Qt::Key_F3);
+    this->hideInTreeAction->setShortcut(Qt::CTRL + Qt::Key_F3);
 #endif
     this->hideInTreeAction->setCheckable(true);
     connect(this->hideInTreeAction, SIGNAL(toggled(bool)),
