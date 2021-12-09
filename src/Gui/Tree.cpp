@@ -1104,9 +1104,6 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
 
     this->showHiddenAction = new QAction(this);
     this->showHiddenAction->setCheckable(true);
-#ifndef Q_OS_MAC
-    this->showHiddenAction->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_F3);
-#endif
     connect(this->showHiddenAction, SIGNAL(toggled(bool)),
             this, SLOT(onShowHidden()));
 
@@ -1116,9 +1113,6 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
             this, SLOT(onShowTempDoc()));
 
     this->hideInTreeAction = new QAction(this);
-#ifndef Q_OS_MAC
-    this->hideInTreeAction->setShortcut(Qt::CTRL + Qt::Key_F3);
-#endif
     this->hideInTreeAction->setCheckable(true);
     connect(this->hideInTreeAction, SIGNAL(toggled(bool)),
             this, SLOT(onHideInTree()));
@@ -1525,6 +1519,23 @@ void TreeWidget::itemSearch(const QString &text, bool select) {
     {
         FC_TRACE("item " << txt << " search exception in " << doc->getName());
     }
+}
+
+void TreeWidget::hideSelectedItems() {
+	auto sels = this->selectedItems();
+    for (auto& sel : sels) {
+        auto* const item = static_cast<DocumentObjectItem*>(sel);
+        item->object()->ShowInTree.setValue(!item->object()->showInTree());
+    }
+}
+
+void TreeWidget::toggleShowHiddenItems() {
+	auto sels = this->selectedItems();
+	if (sels.size() > 0){
+		auto* const item = static_cast<DocumentObjectItem*>(sels[0]);
+        DocumentItem* const docItem = item->getOwnerDocument();
+        docItem->setShowHidden(!docItem->showHidden());
+	}
 }
 
 Gui::Document *TreeWidget::selectedDocument() {

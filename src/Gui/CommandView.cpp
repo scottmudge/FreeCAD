@@ -2849,7 +2849,7 @@ void StdViewBoxZoom::activated(int iMsg)
         View3DInventorViewer* viewer = view->getViewer();
         if (!viewer->isSelecting()) {
             SelectionCallbackHandler::Create(viewer, View3DInventorViewer::BoxZoom, QCursor(QPixmap(cursor_box_zoom), 7, 7));
-		}
+        }
     }
 }
 
@@ -3815,6 +3815,67 @@ void StdTreeDrag::activated(int)
 }
 
 //======================================================================
+// Std_TreeHideSelection
+//======================================================================
+DEF_STD_CMD(StdTreeHideSelection)
+
+StdTreeHideSelection::StdTreeHideSelection()
+    : Command("Std_TreeHideSelection")
+{
+    sGroup = "TreeView";
+    sMenuText = QT_TR_NOOP("Hide item in tree");
+    sToolTipText = QT_TR_NOOP("Hides the selected item in the tree view");
+    sStatusTip = sToolTipText;
+    sWhatsThis = "Std_TreeHideSelection";
+    sPixmap = "tree-item-hide";
+    sAccel = "T,H";
+    eType = 0;
+}
+
+void StdTreeHideSelection::activated(int)
+{
+    if (Gui::Selection().hasSelection()) {
+        for (auto tree : getMainWindow()->findChildren<TreeWidget*>()) {
+            if (tree->isVisible()) {
+                tree->hideSelectedItems();
+                break;
+            }
+        }
+    }
+}
+
+//======================================================================
+// Std_TreeToggleShowHidden
+//======================================================================
+DEF_STD_CMD(StdTreeToggleShowHidden)
+
+StdTreeToggleShowHidden::StdTreeToggleShowHidden()
+	: Command("Std_TreeToggleShowHidden")
+{
+	sGroup = "TreeView";
+	sMenuText = QT_TR_NOOP("Toggle showing hidden items");
+	sToolTipText = QT_TR_NOOP("Toggles whether or not hidden items are visible in the tree");
+	sStatusTip = sToolTipText;
+	sWhatsThis = "Std_TreeToggleShowHidden";
+	sPixmap = "tree-show-hidden";
+	sAccel = "T,S";
+	eType = 0;
+}
+
+void StdTreeToggleShowHidden::activated(int)
+{
+	if (Gui::Selection().hasSelection()) {
+		for (auto tree : getMainWindow()->findChildren<TreeWidget*>()) {
+			if (tree->isVisible()) {
+				tree->toggleShowHiddenItems();
+				break;
+			}
+		}
+	}
+}
+
+
+//======================================================================
 // Std_TreeViewActions
 //===========================================================================
 //
@@ -3848,6 +3909,8 @@ public:
 
         addCommand(new StdTreeDrag(),cmds.size());
         addCommand(new StdTreeSelection(),cmds.size());
+        addCommand(new StdTreeHideSelection());
+        addCommand(new StdTreeToggleShowHidden());
     };
     virtual const char* className() const {return "StdCmdTreeViewActions";}
 };
