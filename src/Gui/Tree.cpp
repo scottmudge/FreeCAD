@@ -1530,12 +1530,11 @@ void TreeWidget::hideSelectedItems() {
 }
 
 void TreeWidget::toggleShowHiddenItems() {
-	auto sels = this->selectedItems();
-	if (sels.size() > 0){
-		auto* const item = static_cast<DocumentObjectItem*>(sels[0]);
+	auto* const item = static_cast<DocumentObjectItem*>(this->currentItem());
+    if (item) {
         DocumentItem* const docItem = item->getOwnerDocument();
         docItem->setShowHidden(!docItem->showHidden());
-	}
+    }
 }
 
 Gui::Document *TreeWidget::selectedDocument() {
