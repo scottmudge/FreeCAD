@@ -644,12 +644,6 @@ void ProfileBased::addOffsetToFace(TopoShape& upToFace, const gp_Dir& dir, doubl
         mov.SetTranslation(offset * gp_Vec(dir));
         TopLoc_Location loc(mov);
         upToFace.move(loc);
-
-        // When using the face with BRepFeat_MakePrism::Perform(const TopoDS_Shape& Until)
-        // then the algorithm expects that the 'NaturalRestriction' flag is set in order
-        // to work as expected (see generatePrism())
-        BRep_Builder builder;
-        builder.NaturalRestriction(TopoDS::Face(upToFace.getShape()), Standard_True);
     }
 }
 

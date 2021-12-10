@@ -1829,7 +1829,7 @@ void GenericShapeMapper::init(const TopoShape &src, const TopoDS_Shape &dst)
 TopoShape &TopoShape::makEPrism(const TopoShape &_base,
                                 const TopoShape& sketchshape,
                                 const TopoShape& supportface,
-                                const TopoShape& _uptoface,
+                                const TopoShape& __uptoface,
                                 const gp_Dir& direction,
                                 PrismMode _Mode,
                                 Standard_Boolean checkLimits,
@@ -1839,6 +1839,17 @@ TopoShape &TopoShape::makEPrism(const TopoShape &_base,
     if(!op) op = TOPOP_PRISM;
 
     BRepFeat_MakePrism PrismMaker;
+
+    TopoShape _uptoface(__uptoface);
+    if (_uptoface.shapeType(true) == TopAbs_FACE
+            && !BRep_Tool::NaturalRestriction(TopoDS::Face(_uptoface.getShape()))) {
+        // When using the face with BRepFeat_MakePrism::Perform(const TopoDS_Shape& Until)
+        // then the algorithm expects that the 'NaturalRestriction' flag is set in order
+        // to work as expected.
+        BRep_Builder builder;
+        _uptoface = _uptoface.makECopy();
+        builder.NaturalRestriction(TopoDS::Face(_uptoface.getShape()), Standard_True);
+    }
 
     TopoShape uptoface(_uptoface);
     TopoShape base(_base);
