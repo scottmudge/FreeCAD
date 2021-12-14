@@ -82,6 +82,9 @@ public:
 
     virtual App::PropertyLinkList *getShapeLinksProperty() {return nullptr;}
 
+    virtual std::pair<std::string,std::string> getElementName(
+            const char *name, ElementNameType type=Normal) const override;
+
     static std::list<Data::HistoryItem> getElementHistory(App::DocumentObject *obj,
             const char *name, bool recursive=true, bool sameType=false);
 

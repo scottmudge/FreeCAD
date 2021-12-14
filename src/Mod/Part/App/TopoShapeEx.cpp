@@ -143,6 +143,7 @@
 # include <Geom_SphericalSurface.hxx>
 # include <Geom_ToroidalSurface.hxx>
 # include <GeomLib_IsPlanarSurface.hxx>
+# include <GeomConvert.hxx>
 # include <Poly_Triangulation.hxx>
 # include <Standard_Failure.hxx>
 # include <StlAPI_Writer.hxx>
@@ -380,14 +381,35 @@ public:
 
             if (s._Cache->cachedElementMap)
                 res.resetElementMap(s._Cache->cachedElementMap);
-            else if (parent._ParentCache)
+            else if (parent._ParentCache) {
+                // If no cachedElementMap exists, we use _ParentCache for
+                // delayed generation of sub element map so that we don't need
+                // to always generate a full map whenever we returns a sub
+                // shape.  To simplify the mapping and avoid circular
+                // dependency, we do not chain parent and grand parent.
+                // Instead, we always use the cache from the top parent. And to
+                // make it work, we must accumulate the TopLoc_Location along
+                // the lineage, which is required for OCCT shape mapping to
+                // work.
+                //
+                // Cache::subLocation is shared and only contains the location
+                // in the direct parent shape, while TopoShape::_SubLocation is
+                // used to accumulate locations in higher ancestors. We
+                // separate these two to avoid invalidating cache.
+
+                res._SubLocation = parent._SubLocation * parent._Cache->subLocation;
                 res._ParentCache = parent._ParentCache;
-            else
+            } else
                 res._ParentCache = owner->shared_from_this();
             return res;
         }
 
     public:
+        void clear()
+        {
+            topoShapes.clear();
+        }
+
         TopoShape getTopoShape(const TopoShape &parent, int index) {
             TopoShape res;
             if(index<=0 || index>shapes.Extent())
@@ -535,17 +557,27 @@ void TopoShape::initCache(int reset, const char *file, int line) const{
             else
                 FC_TRACE("invalidate cache");
         }
-        if (_ParentCache)
+        if (_ParentCache) {
             _ParentCache.reset();
+            _SubLocation.Identity();
+        }
         _Cache = std::make_shared<Cache>(_Shape);
     }
 }
 
 Data::ElementMapPtr TopoShape::resetElementMap(Data::ElementMapPtr elementMap)
 {
-    INIT_SHAPE_CACHE();
-    if (elementMap)
+    if (_Cache && elementMap != this->elementMap(false)) {
+        for (auto &info : _Cache->infos)
+            info.clear();
+    } else
+        INIT_SHAPE_CACHE();
+    if (elementMap) {
         _Cache->cachedElementMap = elementMap;
+        _Cache->subLocation.Identity();
+        _SubLocation.Identity();
+        _ParentCache.reset();
+    }
     return Data::ComplexGeoData::resetElementMap(elementMap);
 }
 
@@ -555,16 +587,17 @@ void TopoShape::flushElementMap() const
     if (!elementMap(false) && this->_Cache) {
         if (this->_Cache->cachedElementMap) {
             const_cast<TopoShape*>(this)->resetElementMap(this->_Cache->cachedElementMap);
-            this->_ParentCache.reset();
         }
         else if (this->_ParentCache) {
             TopoShape parent(this->Tag, this->Hasher, this->_ParentCache->shape);
             parent._Cache = _ParentCache;
-            _ParentCache.reset();
             parent.flushElementMap();
-            TopoShape self(this->Tag, this->Hasher, this->_Shape.Located(this->_Cache->subLocation));
+            TopoShape self(this->Tag, this->Hasher,
+                    this->_Shape.Located(this->_SubLocation * this->_Cache->subLocation));
             self._Cache = _Cache;
             self.mapSubElement(parent);
+            this->_ParentCache.reset();
+            this->_SubLocation.Identity();
             const_cast<TopoShape*>(this)->resetElementMap(self.elementMap());
         }
     }
@@ -611,6 +644,7 @@ void TopoShape::operator = (const TopoShape& sh)
         this->Hasher = sh.Hasher;
         this->_Cache = sh._Cache;
         this->_ParentCache = sh._ParentCache;
+        this->_SubLocation = sh._SubLocation;
         resetElementMap(sh.elementMap(false));
     }
 }
@@ -2596,11 +2630,11 @@ TopoShape::sortEdges(std::list<TopoShape>& edges, bool keepOrder, double tol)
         first = curve->ReversedParameter(first);
         last = curve->ReversedParameter(last);
         TopoShape res(BRepBuilderAPI_MakeEdge(curve->Reversed(), last, first));
-        Data::IndexedName edgeName("Edge", 1);
+        auto edgeName = Data::IndexedName::fromConst("Edge", 1);
         if (auto mapped = edge.getMappedName(edgeName))
             res.setElementName(edgeName, mapped);
-        Data::IndexedName v1Name("Vertex", 1);
-        Data::IndexedName v2Name("Vertex", 2);
+        auto v1Name = Data::IndexedName::fromConst("Vertex", 1);
+        auto v2Name = Data::IndexedName::fromConst("Vertex", 2);
         auto v1 = edge.getMappedName(v1Name);
         auto v2 = edge.getMappedName(v2Name);
         if (v1 && v2) {
@@ -3329,7 +3363,7 @@ Data::MappedName TopoShape::setElementComboName(const Data::IndexedName & elemen
             if(first)
                 first = false;
             else
-                ss << ',';
+                ss << '|';
             ss << *it;
         }
         ss << ')';
@@ -3341,6 +3375,67 @@ Data::MappedName TopoShape::setElementComboName(const Data::IndexedName & elemen
     }
     encodeElementName(element[0],newName,ss,&sids,op);
     return setElementName(element,newName,&sids);
+}
+
+std::vector<Data::MappedName>
+TopoShape::decodeElementComboName(const Data::IndexedName &element,
+                                  const Data::MappedName &name,
+                                  const char *marker,
+                                  std::string *postfix) const
+{
+    std::vector<Data::MappedName> names;
+    if (!element)
+        return names;
+    if (!marker)
+        marker = "";
+
+    int len;
+    int pos = findTagInElementName(name, nullptr, &len);
+    if (len < 0)
+        return names;
+
+    int plen = (int)elementMapPrefix().size();
+    if (name.find(elementMapPrefix(), len) != len
+            || name.find(marker, len+plen) != len+plen)
+        return {};
+
+    names.emplace_back(name, 0, len);
+
+    std::string text;
+    len += plen + strlen(marker);
+    name.toString(text, len, pos-len);
+
+    if (this->Hasher) {
+        if (auto id = App::StringID::fromString(names.back().toRawBytes())) {
+            if (App::StringIDRef sid = this->Hasher->getID(id)) {
+                names.pop_back();
+                names.emplace_back(sid);
+            }
+            else
+                return {};
+        }
+        if (auto id = App::StringID::fromString(text.c_str())) {
+            if (App::StringIDRef sid = this->Hasher->getID(id))
+                text = sid.dataToText();
+            else
+                return {};
+        }
+    }
+    if (text.empty() || text[0] != '(')
+        return {};
+    auto endPos = text.rfind(')');
+    if (endPos == std::string::npos)
+        return {};
+
+    if (postfix)
+        *postfix = text.substr(endPos+1);
+
+    text.resize(endPos);
+    std::istringstream iss(text.c_str()+1);
+    std::string token;
+    while(std::getline(iss, token, '|')) 
+        names.emplace_back(token);
+    return names;
 }
 
 struct NameKey {
@@ -4702,14 +4797,81 @@ bool TopoShape::isSame(const Data::ComplexGeoData &_other) const
 
 TopoShape & TopoShape::makEBSplineFace(const TopoShape & shape, FillingStyle style, const char *op)
 {
-    int edgeCount = shape.countSubShapes(TopAbs_EDGE);
-    if (edgeCount < 2 || edgeCount > 4)
-        FC_THROWM(Base::CADKernelError, "Require minimum two, maimum four edges");
+    std::vector<TopoShape> input(1, shape);
+    return makEBSplineFace(input, style, op);
+}
+
+TopoShape & TopoShape::makEBSplineFace(const std::vector<TopoShape> &input, FillingStyle style, const char *op)
+{
+    std::vector<TopoShape> edges;
+    for (auto &s : input) {
+        auto e = s.getSubTopoShapes(TopAbs_EDGE);
+        edges.insert(edges.end(), e.begin(), e.end());
+    }
+
+    if (edges.size() == 1 && edges[0].isClosed()) {
+        auto edge = edges[0].getSubShape(TopAbs_EDGE, 1);
+        auto e = TopoDS::Edge(edge);
+        auto v = TopExp::FirstVertex(e);
+        Standard_Real first, last;
+        Handle(Geom_Curve) curve = BRep_Tool::Curve(e, first, last);
+
+        BRepBuilderAPI_MakeEdge mk1,mk2,mk3,mk4;
+        Handle(Geom_BSplineCurve) bspline = Handle(Geom_BSplineCurve)::DownCast(curve);
+        if (bspline.IsNull()) {
+            ShapeConstruct_Curve scc;
+            bspline = scc.ConvertToBSpline(curve, first, last, Precision::Confusion());
+            if (bspline.IsNull())
+                FC_THROWM(Base::CADKernelError, "Failed to convert edge to bspline");
+            first = bspline->FirstParameter();
+            last = bspline->LastParameter();
+        }
+        auto step = (last - first) * 0.25;
+        auto m1 = first + step;
+        auto m2 = m1 + step;
+        auto m3 = m2 + step;
+        auto c1 = GeomConvert::SplitBSplineCurve(bspline, first, m1, Precision::Confusion());
+        auto c2 = GeomConvert::SplitBSplineCurve(bspline, m1, m2, Precision::Confusion());
+        auto c3 = GeomConvert::SplitBSplineCurve(bspline, m2, m3, Precision::Confusion());
+        auto c4 = GeomConvert::SplitBSplineCurve(bspline, m3, last, Precision::Confusion());
+        mk1.Init(c1);
+        mk2.Init(c2);
+        mk3.Init(c3);
+        mk4.Init(c4);
+
+        if(!mk1.IsDone() || !mk2.IsDone() || !mk3.IsDone() || !mk4.IsDone())
+            FC_THROWM(Base::CADKernelError, "Failed to split edge");
+
+        auto e1 = mk1.Edge();
+        auto e2 = mk2.Edge();
+        auto e3 = mk3.Edge();
+        auto e4 = mk4.Edge();
+
+        ShapeMapper mapper;
+        mapper.populate(true, e, {e1, e2, e3, e4});
+        mapper.populate(false, v, {TopExp::FirstVertex(e1)});
+        mapper.populate(false, v, {TopExp::LastVertex(e4)});
+
+        BRep_Builder builder;
+        TopoDS_Compound comp;
+        builder.MakeCompound(comp);
+        builder.Add(comp, e1);
+        builder.Add(comp, e2);
+        builder.Add(comp, e3);
+        builder.Add(comp, e4);
+
+        TopoShape s;
+        s.makESHAPE(comp, mapper, edges, TOPOP_SPLIT);
+        return makEBSplineFace(s, style, op);
+    }
+
+    if (edges.size() < 2 || edges.size() > 4)
+        FC_THROWM(Base::CADKernelError, "Require minimum one, maximum four edges");
 
     std::vector<Handle(Geom_BSplineCurve)> curves;
     curves.reserve(4);
     Standard_Real u1, u2; // contains output
-    for (auto & e : shape.getSubTopoShapes(TopAbs_EDGE)) {
+    for (auto & e : edges) {
         const TopoDS_Edge& edge = TopoDS::Edge (e.getShape());
         TopLoc_Location heloc; // this will be output
         Handle(Geom_Curve) c_geom = BRep_Tool::Curve(edge, heloc, u1, u2); //The geometric curve
@@ -4761,13 +4923,13 @@ TopoShape & TopoShape::makEBSplineFace(const TopoShape & shape, FillingStyle sty
     }
     GeomFill_BSplineCurves aSurfBuilder; //Create Surface Builder
 
-    if (edgeCount == 2) {
+    if (edges.size() == 2) {
         aSurfBuilder.Init(curves[0], curves[1], fstyle);
     }
-    else if (edgeCount == 3) {
+    else if (edges.size() == 3) {
         aSurfBuilder.Init(curves[0], curves[1], curves[2], fstyle);
     }
-    else if (edgeCount == 4) {
+    else if (edges.size() == 4) {
         aSurfBuilder.Init(curves[0], curves[1], curves[2], curves[3], fstyle);
     }
 
@@ -4789,20 +4951,19 @@ TopoShape & TopoShape::makEBSplineFace(const TopoShape & shape, FillingStyle sty
         FC_THROWM(Base::CADKernelError, "Resulting Face is null");
     }
 
-    std::ostringstream ss;
-    for (int i=0; i<edgeCount; ++i) {
-        Data::IndexedName element = Data::IndexedName::fromConst("Edge", i+1);
-        for(auto &v : getElementMappedNames(element, true)) {
-            auto &name = v.first;
-            auto &sids = v.second;
-            ss.str("");
-            encodeElementName(element[0],name,ss,&sids,op,this->Tag);
-            aFace.setElementName(element,name,&sids);
-        }
+    auto newEdges = aFace.getSubTopoShapes(TopAbs_EDGE);
+    if (newEdges.size() != edges.size())
+        FC_ERR("Face edge count mismatch");
+    else {
+        int i = 0;
+        for (auto &edge : newEdges)
+            edge.resetElementMap(edges[i++].elementMap());
+        aFace.mapSubElement(newEdges);
     }
 
     Data::ElementIDRefs sids;
-    Data::MappedName edgeName = aFace.getMappedName(Data::IndexedName::fromConst("Edge",1), true, &sids);
+    Data::MappedName edgeName = aFace.getMappedName(
+            Data::IndexedName::fromConst("Edge",1), true, &sids);
     aFace.setElementComboName(Data::IndexedName::fromConst("Face",1),
                               {edgeName},
                               TOPOP_BSPLANE_FACE,

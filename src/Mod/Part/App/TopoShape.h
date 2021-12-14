@@ -399,6 +399,9 @@ public:
         FillingStyle_Coons,
         FillingStyle_Curved,
     };
+    TopoShape &makEBSplineFace(const std::vector<TopoShape> &input,
+                               FillingStyle style = FillingStyle_Strech,
+                               const char *op=0);
     TopoShape &makEBSplineFace(const TopoShape &input,
                                FillingStyle style = FillingStyle_Strech,
                                const char *op=0);
@@ -736,6 +739,11 @@ public:
                                          const char *op=0,
                                          const Data::ElementIDRefs *sids=nullptr);
 
+    std::vector<Data::MappedName> decodeElementComboName(const Data::IndexedName &element,
+                                                         const Data::MappedName &name,
+                                                         const char *marker = 0,
+                                                         std::string *postfix = nullptr) const;
+
     virtual void reTagElementMap(long tag, App::StringHasherRef hasher, const char *postfix=0);
 
     long isElementGenerated(const Data::MappedName &name, int depth=1) const;
@@ -903,6 +911,7 @@ private:
     ShapeProtector _Shape;
     mutable std::shared_ptr<Cache> _Cache;
     mutable std::shared_ptr<Cache> _ParentCache;
+    mutable TopLoc_Location _SubLocation;
 };
 
 } //namespace Part

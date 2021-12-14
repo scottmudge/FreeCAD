@@ -89,8 +89,8 @@ PyObject* GeoFeature::getPyObject(void)
 }
 
 
-std::pair<std::string,std::string> GeoFeature::getElementName(
-        const char *name, ElementNameType type) const
+std::pair<std::string,std::string>
+GeoFeature::getElementName(const char *name, ElementNameType type) const
 {
     (void)type;
 
@@ -103,8 +103,13 @@ std::pair<std::string,std::string> GeoFeature::getElementName(
     auto geo = prop->getComplexData();
     if(!geo) return std::make_pair("", name);
 
-    Data::MappedElement mapped = geo->getElementName(name);
+    return _getElementName(name, geo->getElementName(name));
+}
 
+std::pair<std::string,std::string>
+GeoFeature::_getElementName(const char *name, const Data::MappedElement &mapped) const
+{
+    std::pair<std::string,std::string> ret;
     if (mapped.index && mapped.name) {
         std::ostringstream ss;
         ss << Data::ComplexGeoData::elementMapPrefix()
@@ -112,7 +117,7 @@ std::pair<std::string,std::string> GeoFeature::getElementName(
         ret.first = ss.str();
         mapped.index.toString(ret.second);
     } else if (mapped.name) {
-        FC_TRACE("element mapped name not found " << name << " in " << getFullName());
+        FC_TRACE("element mapped name " << name << " not found in " << getFullName());
         ret.first = name;
         const char *dot = strrchr(name,'.');
         if(dot) {

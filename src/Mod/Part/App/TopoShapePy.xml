@@ -623,7 +623,7 @@ isInfinite() -> bool
     <Methode Name="findPlane" Const="true">
       <Documentation>
           <UserDocu>return a plane if the shape is planar
-findPlane(tol=None) -> Shape
+findPlane(tol=None) -> Plane
           </UserDocu>
       </Documentation>
     </Methode>

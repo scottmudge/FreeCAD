@@ -167,6 +167,7 @@ protected:
     virtual void onChanged(const Property* prop);
     virtual void onDocumentRestored();
     void updateElementReference();
+    std::pair<std::string,std::string> _getElementName(const char *name, const Data::MappedElement &mapped) const;
 
 private:
     std::vector<Data::MappedElement> _elementMapCache;

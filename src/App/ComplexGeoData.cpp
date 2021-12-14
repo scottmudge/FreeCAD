@@ -885,8 +885,10 @@ public:
             }
             if (count) {
                 res.reserve(count);
-                for (auto r = &ref; r; r = r->next.get())
-                    res.emplace_back(r->name, r->sids);
+                for (auto r = &ref; r; r = r->next.get()) {
+                    if (r->name)
+                        res.emplace_back(r->name, r->sids);
+                }
                 return res;
             }
         }
@@ -1790,7 +1792,7 @@ int ComplexGeoData::findTagInElementName(const MappedName & name,
         // #94;:G0;XTR;:H19:8,F;:H1a,F;BND:-1:0;:H1b:10,F
         //                     |              |   ^^ ^^
         //                     |              |   |   |  
-        //                     |--len = 0x10---  tag len
+        //                     ---len = 0x10---  tag len
 
         iss >> std::hex;
         // _tag field can be skipped, if it is 0
@@ -1811,7 +1813,7 @@ int ComplexGeoData::findTagInElementName(const MappedName & name,
         // multiple segments usually separated by elementMapPrefix().
         //
         // For newer tagPostfix(), this counts the number of characters that
-        // proceeds this tag postfix segment that forms the entire postfix (see
+        // proceeds this tag postfix segment that forms the op code (see
         // example above).
         //
         // The reason of this change is so that the postfix can stay the same
