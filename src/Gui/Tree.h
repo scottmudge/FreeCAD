@@ -124,7 +124,9 @@ public:
                                      App::SubObjectT *resT = nullptr,
                                      bool sync = false,
                                      bool select = false);
-   static int iconSize();
+    static void refreshItemLabels();
+
+    static int iconSize();
 
     int iconHeight() const;
     void setIconHeight(int height);
@@ -159,7 +161,7 @@ public:
     const char *getTreeName() const;
 
     static void updateStatus(bool delay=true);
-
+    
     // Check if obj can be considered as a top level object
     static void checkTopParent(App::DocumentObject *&obj, std::string &subname);
 

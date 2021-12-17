@@ -771,7 +771,7 @@ void TreeParams::onHideColumnChanged()
 }
 
 void TreeParams::onShowGenericAuxNamesChanged() {
-    refreshTreeViews();
+    TreeWidget::refreshItemLabels();
 }
 
 TreeParams *TreeParams::instance() {
@@ -4954,6 +4954,22 @@ static QString getItemStatus(const App::SubObjectT objT)
                         "Right click to show children.\n"
                         "Shift + Left click to edit.\n"
                         "Shift + Right click show the edit menu."));
+}
+
+void TreeWidget::refreshItemLabels() {
+    const bool use_generic = TreeParams::ShowGenericAuxNames();
+    
+    for (auto tree : TreeWidget::Instances) {
+        QSignalBlocker blocker(tree);
+        for (QTreeWidgetItemIterator it(tree); *it; ++it) {
+            auto item = *it;
+            if (item->type() == ObjectType) {
+                App::DocumentObject* obj = static_cast<DocumentObjectItem*>(item)->object()->getObject();
+                if (obj) item->setText(0, QString::fromStdString(use_generic ? obj->getVisualLabel() : obj->Label.getStrValue()));
+            }
+        }
+        tree->resizeColumnToContents(0);
+    }
 }
 
 void TreeWidget::populateSelUpMenu(QMenu *menu, const App::SubObjectT *pObjT)
