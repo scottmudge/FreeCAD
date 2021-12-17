@@ -116,6 +116,8 @@ public:
        QT_TRANSLATE_NOOP("TreeParams", "Tree view item background padding."))\
     FC_TREE_PARAM2(HideColumn,bool,Bool,false, \
        QT_TRANSLATE_NOOP("TreeParams", "Hide extra tree view column for item description."))\
+    FC_TREE_PARAM2(ShowGenericAuxNames,bool,Bool,false, \
+       QT_TRANSLATE_NOOP("TreeParams", "Show generic names for auxillary groups."))\
     FC_TREE_PARAM(HideScrollBar,bool,Bool,true, \
         QT_TRANSLATE_NOOP("TreeParams", "Hide tree view scroll bar in dock overlay"))\
     FC_TREE_PARAM(HideHeaderView,bool,Bool,true, \

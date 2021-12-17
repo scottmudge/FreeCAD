@@ -770,6 +770,10 @@ void TreeParams::onHideColumnChanged()
         tree->setColumnHidden(1, TreeParams::HideColumn());
 }
 
+void TreeParams::onShowGenericAuxNamesChanged() {
+    refreshTreeViews();
+}
+
 TreeParams *TreeParams::instance() {
     static TreeParams *instance;
     if(!instance)
@@ -1116,7 +1120,7 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
             this, SLOT(onHideInTree()));
 
     this->relabelObjectAction = new QAction(this);
-#ifndef Q_OS_MAC
+#ifndef Q_OS_MAC 
     this->relabelObjectAction->setShortcut(Qt::Key_F2);
 #endif
     connect(this->relabelObjectAction, SIGNAL(triggered()),
@@ -1156,6 +1160,9 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
     this->searchObjectsAction->setStatusTip(tr("Search for objects"));
     connect(this->searchObjectsAction, SIGNAL(triggered()),
             this, SLOT(onSearchObjects()));
+
+    // Prevent default F2 rename to hook into rename event.
+    setEditTriggers(QAbstractItemView::EditTrigger::NoEditTriggers);
 
     // Setup connections
     connectNewDocument = Application::Instance->signalNewDocument.connect(boost::bind(&TreeWidget::slotNewDocument, this, bp::_1, bp::_2));
@@ -1730,8 +1737,15 @@ void TreeWidget::showEvent(QShowEvent *ev) {
 void TreeWidget::onRelabelObject()
 {
     QTreeWidgetItem* item = currentItem();
-    if (item)
-        editItem(item, item->type()==ObjectType?currentColumn():0);
+    if (item) {
+        editItem(item, item->type() == ObjectType ? currentColumn() : 0);
+        
+        // set name/label back to actual value if using generic labels
+        if (TreeParams::ShowGenericAuxNames()) {
+            App::DocumentObject* obj = static_cast<DocumentObjectItem*>(item)->object()->getObject();
+            if (obj) item->setText(0, QString::fromStdString(obj->Label.getStrValue()));
+        }
+    }
 }
 
 void TreeWidget::onStartEditing()
@@ -2385,6 +2399,11 @@ void TreeWidget::keyPressEvent(QKeyEvent *event)
             return;
         }
     }
+
+    // handle rename/edit to provide custom hook
+    if (key == Qt::Key_F2) 
+        onRelabelObject();
+    
     QTreeWidget::keyPressEvent(event);
 }
 
@@ -5607,8 +5626,12 @@ bool DocumentItem::createNewItem(const Gui::ViewProviderDocumentObject& obj,
                 pdata->label = firstData->label;
                 pdata->label2 = firstData->label2;
             } else {
-                pdata->label = QString::fromUtf8(obj.getObject()->Label.getValue());
-                pdata->label2 = QString::fromUtf8(obj.getObject()->Label2.getValue());
+                pdata->label = TreeParams::ShowGenericAuxNames() ? 
+                    QString::fromStdString(obj.getObject()->getVisualLabel()) :
+                    QString::fromUtf8(obj.getObject()->Label.getValue());
+                pdata->label2 = TreeParams::ShowGenericAuxNames() ?
+                    QString::fromStdString(obj.getObject()->getVisualLabel2()) :
+                    QString::fromUtf8(obj.getObject()->Label2.getValue());
             }
             entry.insert(pdata);
         }else if(pdata->rootItem && parent==NULL) {
@@ -7325,7 +7348,11 @@ void DocumentObjectItem::setData (int column, int role, const QVariant & value)
         ss << "Change " << getName() << '.' << label.getName();
         App::AutoTransaction committer(ss.str().c_str());
         label.setValue((const char *)value.toString().toUtf8());
-        myValue = QString::fromUtf8(label.getValue());
+        myValue = (TreeParams::ShowGenericAuxNames() ? 
+            // visual label may be different from actual label
+            QString::fromStdString(column ? obj->getVisualLabel2() : obj->getVisualLabel()) :
+            // or use normal label
+            QString::fromUtf8(label.getValue()));
     }
     QTreeWidgetItem::setData(column, role, myValue);
 }

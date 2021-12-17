@@ -42,6 +42,11 @@
 using namespace PartDesign;
 namespace bp = boost::placeholders;
 
+// For comparisons and returning a string by reference.
+static const std::string SketchesStr    = "Sketches";
+static const std::string DatumsStr      = "Datums";
+static const std::string MiscStr        = "Misc";
+
 PROPERTY_SOURCE(PartDesign::AuxGroup, App::DocumentObject)
 
 AuxGroup::AuxGroup()
@@ -87,11 +92,11 @@ AuxGroup::GroupType AuxGroup::getGroupType() const
         return groupType;
     if (!getNameInDocument())
         return UnknownGroup;
-    if (boost::starts_with(getNameInDocument(), "Sketches"))
+    if (boost::starts_with(getNameInDocument(), SketchesStr))
         groupType = SketchGroup;
-    else if (boost::starts_with(getNameInDocument(), "Datums"))
+    else if (boost::starts_with(getNameInDocument(), DatumsStr))
         groupType = DatumGroup;
-    else if (boost::starts_with(getNameInDocument(), "Misc"))
+    else if (boost::starts_with(getNameInDocument(), MiscStr))
         groupType = MiscGroup;
     else
         groupType = OtherGroup;
@@ -159,4 +164,12 @@ void AuxGroup::refresh()
         }
     }
     Group.setValues(children);
+}
+
+const std::string& AuxGroup::getVisualLabel() const {
+    return
+        boost::starts_with(getNameInDocument(), SketchesStr) ? SketchesStr :
+        boost::starts_with(getNameInDocument(), DatumsStr) ? DatumsStr :
+        boost::starts_with(getNameInDocument(), MiscStr) ? MiscStr :
+        Label.getStrValue();
 }

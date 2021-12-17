@@ -52,6 +52,9 @@ public:
     virtual void onDocumentRestored() override;
     virtual void onChanged(const App::Property* prop) override;
 
+    // Return generic label if that mode is enabled
+    virtual const std::string& getVisualLabel() const override;
+
     bool isObjectAllowed(const App::DocumentObject *obj) const;
 
     enum GroupType {

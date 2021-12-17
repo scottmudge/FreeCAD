@@ -101,6 +101,11 @@ public:
 
     PropertyString Label;
     PropertyString Label2;
+
+    /// Allow override for dynamic labels in certain locations (e.g., tree view) by certain object types.
+    virtual const std::string& getVisualLabel() const { return Label.getStrValue(); }
+    virtual const std::string& getVisualLabel2() const { return Label2.getStrValue(); }
+
     PropertyExpressionEngine ExpressionEngine;
 
     /// Allow control visibility status in App name space
