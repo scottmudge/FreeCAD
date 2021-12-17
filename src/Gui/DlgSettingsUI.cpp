@@ -59,7 +59,7 @@ public:
     FC_UI_CHECKBOX(TreeParams, ResizableColumn,"Resizable columns") \
     FC_UI_CHECKBOX(TreeParams, CheckBoxesSelection,"Show item checkbox") \
     FC_UI_CHECKBOX(TreeParams, HideColumn, "Hide extra column") \
-    FC_UI_CHECKBOX(TreeParams, ShowGenericAuxNames, "Show generic auxillary group names") \
+    FC_UI_CHECKBOX(TreeParams, ShowGenericAuxNames, "Show generic auxiliary group names") \
     FC_UI_CHECKBOX(TreeParams, HideScrollBar,"Hide scroll bar") \
     FC_UI_CHECKBOX(TreeParams, HideHeaderView,"Hide header") \
 
