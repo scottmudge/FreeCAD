@@ -27,5 +27,15 @@ macro(SetupBoost)
                             " ${NO_BOOST_COMPONENTS}\n"
                             "=============================================\n")
     endif(NOT Boost_FOUND)
+    
+    if (WIN32)
+        if (Boost_VERSION VERSION_GREATER_EQUAL "1.78.0")
+            message("-- NOTE: Boost version >= 1.78 and building on Windows: (1) disabling Win32 Regex Localization (2) enabling generic cmath.")
+            add_compile_options(/Oi /Os /arch:AVX2 /GS- /Gw -DBOOST_REGEX_NO_WIN32_LOCALE -DBOOST_CORE_USE_GENERIC_CMATH)
+            link_libraries(libomp.lib)
+        endif()
+    endif(WIN32)
+    
+    
 
 endmacro(SetupBoost)

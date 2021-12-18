@@ -1619,7 +1619,7 @@ MappedName ComplexGeoData::setElementName(const IndexedName & element,
         MappedName res = _ElementMap->addName(n, element, *sid, overwrite, &existing);
         if (res)
             return res;
-        if (++i == 100) {
+        if (++i == 4096) {
             FC_ERR("unresolved duplicate element mapping '" << name 
                     <<' ' << element << '/' << existing);
             return name;
