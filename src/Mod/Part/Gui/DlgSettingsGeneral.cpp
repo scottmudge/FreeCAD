@@ -63,6 +63,7 @@ void DlgSettingsGeneral::saveSettings()
     ui->comboBoxCommandOverride->onSave();
     ui->comboBoxWrapFeature->onSave();
     ui->checkAutoGroupSolids->onSave();
+    ui->checkAutoAuxiliaryGrouping->onSave();
 }
 
 void DlgSettingsGeneral::loadSettings()
@@ -76,6 +77,7 @@ void DlgSettingsGeneral::loadSettings()
     ui->comboBoxCommandOverride->onRestore();
     ui->comboBoxWrapFeature->onRestore();
     ui->checkAutoGroupSolids->onRestore();
+    ui->checkAutoAuxiliaryGrouping->onRestore();
 }
 
 /**

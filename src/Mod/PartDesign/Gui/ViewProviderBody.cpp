@@ -176,41 +176,7 @@ void ViewProviderBody::setupContextMenu(QMenu* menu, QObject* receiver, const ch
                 return;
             App::AutoTransaction committer("Toggle aux group");
             try {
-                std::vector<App::DocumentObjectT> groups;
-                for (auto obj : body->Group.getValues()) {
-                    if (obj->isDerivedFrom(PartDesign::AuxGroup::getClassTypeId())) {
-                        auto group = static_cast<PartDesign::AuxGroup*>(obj);
-                        if (group->getGroupType() != PartDesign::AuxGroup::OtherGroup)
-                            groups.emplace_back(obj);
-                    }
-                }
-                if (groups.empty()) {
-                    int pos = 0;
-                    auto children = body->Group.getValues();
-                    if (children.size() && children[0] == body->BaseFeature.getValue())
-                        ++pos;
-                    auto sketchGroup = static_cast<PartDesign::AuxGroup*>(
-                            body->getDocument()->addObject("PartDesign::AuxGroup", "Sketches"));
-                    auto datumGroup = static_cast<PartDesign::AuxGroup*>(
-                            body->getDocument()->addObject("PartDesign::AuxGroup", "Datums"));
-                    auto miscGroup = static_cast<PartDesign::AuxGroup*>(
-                            body->getDocument()->addObject("PartDesign::AuxGroup", "Misc"));
-                    children.insert(children.begin()+pos, miscGroup);
-                    children.insert(children.begin()+pos, datumGroup);
-                    children.insert(children.begin()+pos, sketchGroup);
-                    body->Group.setValues(children);
-                    sketchGroup->_Body.setValue(body);
-                    datumGroup->_Body.setValue(body);
-                    miscGroup->_Body.setValue(body);
-                } else {
-                    for (auto & objT : groups) {
-                        auto group = static_cast<PartDesign::AuxGroup*>(objT.getObject());
-                        if (group) {
-                            group->_Body.setValue(nullptr);
-                            body->getDocument()->removeObject(group->getNameInDocument());
-                        }
-                    }
-                }
+                body->toggleAutoAuxGrouping();
             } catch (Base::Exception &e) {
                 e.ReportException();
                 QMessageBox::critical(Gui::getMainWindow(), tr("Auto group"),

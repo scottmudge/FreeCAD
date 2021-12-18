@@ -370,6 +370,9 @@ void CmdPartDesignBody::activated(int iMsg)
         }
     }
 
+    // Toggle auto-aux grouping
+    if (body && Part::PartParams::AutoAuxiliaryGrouping()) body->toggleAutoAuxGrouping();
+
     // if no part feature was there then auto-adjust the camera
     if (viewAll && PartGui::PartParams::AdjustCameraForNewFeature()) {
         Gui::Document* doc = Gui::Application::Instance->getDocument(getDocument());

@@ -66,6 +66,7 @@ public:
     FC_APP_PART_PARAM(UseBrepToolsOuterWire, bool, Bool, true) \
     FC_APP_PART_PARAM(UseBaseObjectName,bool,Bool,false) \
     FC_APP_PART_PARAM(AutoGroupSolids,bool,Bool,false) \
+    FC_APP_PART_PARAM(AutoAuxiliaryGrouping,bool,Bool,false) \
     FC_APP_PART_PARAM(SingleSolid,bool,Bool,false) \
     FC_APP_PART_PARAM(UsePipeForExtrusionDraft,bool,Bool,false) \
     FC_APP_PART_PARAM(LinearizeExtrusionDraft,bool,Bool,true) \

@@ -111,7 +111,7 @@ public:
     FC_TREE_PARAM2(ItemSpacing,int,Int,0, \
        QT_TRANSLATE_NOOP("TreeParams", ""))\
     FC_TREE_PARAM2(ItemBackground,unsigned long,Unsigned,0, \
-       QT_TRANSLATE_NOOP("TreeParams", "Tree view item background. Only effecitve in overlay."))\
+       QT_TRANSLATE_NOOP("TreeParams", "Tree view item background. Only effective in overlay."))\
     FC_TREE_PARAM2(ItemBackgroundPadding,int,Int,10, \
        QT_TRANSLATE_NOOP("TreeParams", "Tree view item background padding."))\
     FC_TREE_PARAM2(HideColumn,bool,Bool,false, \

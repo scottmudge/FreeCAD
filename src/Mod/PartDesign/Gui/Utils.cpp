@@ -260,6 +260,8 @@ PartDesign::Body * makeBody(App::Document *doc)
         auto gdoc = Gui::Application::Instance->getDocument(doc);
         if (gdoc && gdoc->getActiveView())
             gdoc->getActiveView()->setActiveObject(topParent, PDBODYKEY, topSubName.c_str());
+
+        if (Part::PartParams::AutoAuxiliaryGrouping()) body->toggleAutoAuxGrouping();
     }
     return body;
 }

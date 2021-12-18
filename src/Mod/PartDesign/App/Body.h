@@ -198,6 +198,9 @@ public:
     // a body is solid if it has features that are solid according to member isSolidFeature.
     bool isSolid(void);
 
+    // Toggles if auto auxiliary grouping
+    void toggleAutoAuxGrouping();
+
 protected:
     virtual void onSettingDocument() override;
 
