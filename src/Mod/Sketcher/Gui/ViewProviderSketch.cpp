@@ -183,6 +183,9 @@ SbVec2s ViewProviderSketch::prvClickPos;
 SbVec2s ViewProviderSketch::prvCursorPos;
 SbVec2s ViewProviderSketch::newCursorPos;
 
+static bool _AllowFaceExternal;
+static const char *_ParamAllowFaceExternal = "AllowFaceExternalPick";
+
 //**************************************************************************
 // Edit data structure
 
@@ -246,6 +249,7 @@ struct EditData {
         hPart->Attach(master);
         hSketchGeneral = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/General");
         hSketchGeneral->Attach(master);
+        _AllowFaceExternal = hSketchGeneral->GetBool(_ParamAllowFaceExternal, true);
 
         timer.setSingleShot(true);
         QObject::connect(&timer, &QTimer::timeout, [master]() {
@@ -2483,6 +2487,21 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
     if(corners[0].getValue()[0] > corners[1].getValue()[0])
         touchMode = true;
 
+    auto selectEdge = [this](int GeoId) {
+        std::ostringstream ss;
+        if (GeoId >= 0)
+            ss << "Edge" << GeoId + 1;
+        else // external geometry
+            ss << "ExternalEdge" << -GeoId + Sketcher::GeoEnum::RefExt + 1; // convert index start from -3 to 1
+        Gui::Selection().addSelection2(SEL_PARAMS);
+    };
+
+    auto selectVertex = [this](int VertexId) {
+        std::stringstream ss;
+        ss << "Vertex" << VertexId;
+        Gui::Selection().addSelection2(SEL_PARAMS);
+    };
+
     for (std::vector<Part::Geometry *>::const_iterator it = geomlist.begin(); it != geomlist.end()-2; ++it, ++GeoId) {
 
         if (GeoId >= intGeoCount)
@@ -2496,9 +2515,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
             VertexId += 1;
 
             if (polygon.Contains(Base::Vector2d(pnt0.x, pnt0.y))) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId + 1;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId+1);
             }
 
         } else if ((*it)->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
@@ -2513,21 +2530,15 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
             bool pnt1Inside = polygon.Contains(Base::Vector2d(pnt1.x, pnt1.y));
             bool pnt2Inside = polygon.Contains(Base::Vector2d(pnt2.x, pnt2.y));
             if (pnt1Inside) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId);
             }
 
             if (pnt2Inside) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId + 1;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId+1);
             }
 
             if ((pnt1Inside && pnt2Inside) && !touchMode) {
-                std::stringstream ss;
-                ss << "Edge" << GeoId + 1;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectEdge(GeoId);
             }
             //check if line intersects with polygon
             else if (touchMode) {
@@ -2537,9 +2548,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
                     std::list<Base::Polygon2d> resultList;
                     polygon.Intersect(lineAsPolygon, resultList);
                     if (!resultList.empty()) {
-                        std::stringstream ss;
-                        ss << "Edge" << GeoId + 1;
-                        Gui::Selection().addSelection2(SEL_PARAMS);
+                        selectEdge(GeoId);
                     }
                 }
 
@@ -2555,9 +2564,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
 
             if (polygon.Contains(Base::Vector2d(pnt0.x, pnt0.y)) || touchMode) {
                 if (polygon.Contains(Base::Vector2d(pnt0.x, pnt0.y))) {
-                    std::stringstream ss;
-                    ss << "Vertex" << VertexId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectVertex(VertexId+1);
                 }
                 int countSegments = 12;
                 if (touchMode)
@@ -2589,9 +2596,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
                 }
 
                 if (bpolyInside) {
-                    std::stringstream ss;
-                    ss << "Edge" << GeoId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectEdge(GeoId);
                 }
             }
         } else if ((*it)->getTypeId() == Part::GeomEllipse::getClassTypeId()) {
@@ -2605,9 +2610,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
 
             if (polygon.Contains(Base::Vector2d(pnt0.x, pnt0.y)) || touchMode) {
                 if (polygon.Contains(Base::Vector2d(pnt0.x, pnt0.y))) {
-                    std::stringstream ss;
-                    ss << "Vertex" << VertexId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectVertex(VertexId+1);
                 }
 
                 int countSegments = 12;
@@ -2640,9 +2643,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
                 }
 
                 if (bpolyInside) {
-                    std::stringstream ss;
-                    ss << "Edge" << GeoId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectEdge(GeoId);
                 }
             }
 
@@ -2702,28 +2703,20 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
                 }
 
                 if (bpolyInside) {
-                    std::stringstream ss;
-                    ss << "Edge" << GeoId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectEdge(GeoId);
                 }
             }
 
             if (pnt0Inside) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId - 1;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId-1);
             }
 
             if (pnt1Inside) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId);
             }
 
             if (polygon.Contains(Base::Vector2d(pnt2.x, pnt2.y))) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId + 1;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId+1);
             }
         } else if ((*it)->getTypeId() == Part::GeomArcOfEllipse::getClassTypeId()) {
             // Check if arc lies inside box selection
@@ -2784,27 +2777,19 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
                 }
 
                 if (bpolyInside) {
-                    std::stringstream ss;
-                    ss << "Edge" << GeoId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectEdge(GeoId);
                 }
             }
             if (pnt0Inside) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId - 1;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId-1);
             }
 
             if (pnt1Inside) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId);
             }
 
             if (polygon.Contains(Base::Vector2d(pnt2.x, pnt2.y))) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId + 1;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId+1);
             }
 
         } else if ((*it)->getTypeId() == Part::GeomArcOfHyperbola::getClassTypeId()) {
@@ -2868,26 +2853,18 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
                 }
 
                 if (bpolyInside) {
-                    std::stringstream ss;
-                    ss << "Edge" << GeoId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectEdge(GeoId);
                 }
                 if (pnt0Inside) {
-                    std::stringstream ss;
-                    ss << "Vertex" << VertexId - 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectVertex(VertexId-1);
                 }
 
                 if (pnt1Inside) {
-                    std::stringstream ss;
-                    ss << "Vertex" << VertexId;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectVertex(VertexId);
                 }
 
                 if (polygon.Contains(Base::Vector2d(pnt2.x, pnt2.y))) {
-                    std::stringstream ss;
-                    ss << "Vertex" << VertexId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectVertex(VertexId+1);
                 }
 
             }
@@ -2954,26 +2931,18 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
                 }
 
                 if (bpolyInside) {
-                    std::stringstream ss;
-                    ss << "Edge" << GeoId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectEdge(GeoId);
                 }
                 if (pnt0Inside) {
-                    std::stringstream ss;
-                    ss << "Vertex" << VertexId - 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectVertex(VertexId-1);
                 }
 
                 if (pnt1Inside) {
-                    std::stringstream ss;
-                    ss << "Vertex" << VertexId;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectVertex(VertexId);
                 }
 
                 if (polygon.Contains(Base::Vector2d(pnt2.x, pnt2.y))) {
-                    std::stringstream ss;
-                    ss << "Vertex" << VertexId + 1;
-                    Gui::Selection().addSelection2(SEL_PARAMS);
+                    selectVertex(VertexId+1);
                 }
             }
 
@@ -2990,15 +2959,11 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
             bool pnt1Inside = polygon.Contains(Base::Vector2d(pnt1.x, pnt1.y));
             bool pnt2Inside = polygon.Contains(Base::Vector2d(pnt2.x, pnt2.y));
             if (pnt1Inside || (touchMode && pnt2Inside)) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId);
             }
 
             if (pnt2Inside || (touchMode && pnt1Inside)) {
-                std::stringstream ss;
-                ss << "Vertex" << VertexId + 1;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectVertex(VertexId+1);
             }
 
             // This is a rather approximated approach. No it does not guarantee that the whole curve is boxed, specially
@@ -3007,9 +2972,7 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
             // where it is indeed comprised in the box.
             // The implementation of the touch mode is also far from a desirable "touch" as it only recognizes touched points not the curve itself
             if ((pnt1Inside && pnt2Inside) || (touchMode && (pnt1Inside || pnt2Inside))) {
-                std::stringstream ss;
-                ss << "Edge" << GeoId + 1;
-                Gui::Selection().addSelection2(SEL_PARAMS);
+                selectEdge(GeoId);
             }
         }
     }
@@ -4278,8 +4241,16 @@ void ViewProviderSketch::OnChange(Base::Subject<const char*> &rCaller, const cha
         "HighlightColor",
         "SelectionColor",
     };
-    if(edit && dict.count(sReason))
+    if(!edit) return;
+    if (dict.count(sReason))
         edit->timer.start(100);
+    else if (boost::equals(sReason, _ParamAllowFaceExternal))
+        _AllowFaceExternal = edit->hSketchGeneral->GetBool(_ParamAllowFaceExternal, true);
+}
+
+bool ViewProviderSketch::allowFaceExternalPick()
+{
+    return _AllowFaceExternal;
 }
 
 void ViewProviderSketch::updateInventorNodeSizes()

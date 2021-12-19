@@ -420,8 +420,10 @@ static std::vector<std::pair<long,Data::MappedName> >
 getElementSource(App::DocumentObject *owner, 
         TopoShape shape, const Data::MappedName & name, char type)
 {
+    std::set<std::pair<App::Document*, long>> tagSet;
     std::vector<std::pair<long,Data::MappedName> > ret;
     ret.emplace_back(0,name);
+    int depth = 0;
     while(1) {
         Data::MappedName original;
         std::vector<Data::MappedName> history;
@@ -434,8 +436,19 @@ getElementSource(App::DocumentObject *owner,
         if(!tag) 
             break;
         auto obj = owner;
+        App::Document *doc = nullptr;
         if(owner) {
-            App::Document *doc = owner->getDocument();
+            doc = owner->getDocument();
+            for(;;++depth) {
+                auto linked = owner->getLinkedObject(false,nullptr,false,depth);
+                if (linked == owner)
+                    break;
+                owner = linked;
+                if (owner->getDocument() != doc) {
+                    doc = owner->getDocument();
+                    break;
+                }
+            }
             if (owner->isDerivedFrom(App::GeoFeature::getClassTypeId())) {
                 auto o = static_cast<App::GeoFeature*>(owner)->getElementOwner(ret.back().second);
                 if (o)
@@ -454,10 +467,22 @@ getElementSource(App::DocumentObject *owner,
             // Object maybe deleted, but it is still possible to extract the
             // source element name from hasher table.
             shape.setShape(TopoDS_Shape());
+            doc = nullptr;
         }else 
             shape = Part::Feature::getTopoShape(obj,0,false,0,&owner); 
         if(type && shape.elementType(original)!=type)
             break;
+
+        if (std::abs(tag) != ret.back().first
+                && !tagSet.insert(std::make_pair(doc,tag)).second) {
+            // Because an object might be deleted, which may be a link/binder
+            // that points to an external object that contain element name
+            // using external hash table. We shall prepare for cicular element
+            // map due to looking up in the wrong table.
+            if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                FC_WARN("circular elelement mapping");
+            break;
+        }
         ret.emplace_back(tag,original);
     }
     return ret;

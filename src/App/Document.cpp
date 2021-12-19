@@ -4259,11 +4259,7 @@ int Document::_recomputeFeature(DocumentObject* Feat)
     else {
         returnCode->Which = Feat;
         d->addRecomputeLog(returnCode);
-#ifdef FC_DEBUG
         FC_ERR("Failed to recompute " << Feat->getFullName() << ": " << returnCode->Why);
-#else
-        FC_LOG("Failed to recompute " << Feat->getFullName() << ": " << returnCode->Why);
-#endif
         return 1;
     }
     return 0;

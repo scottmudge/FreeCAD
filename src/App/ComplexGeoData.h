@@ -187,6 +187,8 @@ public:
     static const std::string &tagPostfix();
     /// Special postfix to mark the following tag encoded as decimal number
     static const std::string &decTagPostfix();
+    /// Special postfix to mark the name includes encoding from an external object
+    static const std::string &externalTagPostfix();
     /// Special postfix to mark the index of an array element
     static const std::string &indexPostfix();
     /// Special prefix to mark a missing element
