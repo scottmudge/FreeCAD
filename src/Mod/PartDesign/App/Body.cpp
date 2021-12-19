@@ -846,7 +846,7 @@ bool Body::isSolid()
 }
 
 void Body::toggleAutoAuxGrouping() {
-    std::vector<App::DocumentObjectT> groups;
+        std::vector<App::DocumentObjectT> groups;
     for (auto obj : this->Group.getValues()) {
         if (obj->isDerivedFrom(PartDesign::AuxGroup::getClassTypeId())) {
             auto group = static_cast<PartDesign::AuxGroup*>(obj);
@@ -861,10 +861,13 @@ void Body::toggleAutoAuxGrouping() {
             ++pos;
         auto sketchGroup = static_cast<PartDesign::AuxGroup*>(
             this->getDocument()->addObject("PartDesign::AuxGroup", "Sketches"));
+        sketchGroup->Label.setValue("Sketches");
         auto datumGroup = static_cast<PartDesign::AuxGroup*>(
             this->getDocument()->addObject("PartDesign::AuxGroup", "Datums"));
+        datumGroup->Label.setValue("Datums");
         auto miscGroup = static_cast<PartDesign::AuxGroup*>(
             this->getDocument()->addObject("PartDesign::AuxGroup", "Misc"));
+        miscGroup->Label.setValue("Misc");
         children.insert(children.begin() + pos, miscGroup);
         children.insert(children.begin() + pos, datumGroup);
         children.insert(children.begin() + pos, sketchGroup);
