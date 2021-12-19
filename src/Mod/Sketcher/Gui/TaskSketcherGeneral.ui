@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>396</width>
-    <height>302</height>
+    <height>344</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -125,6 +125,22 @@ Points must be set closer than a fifth of the grid size to a grid line to snap.<
      </property>
      <property name="prefEntry" stdset="0">
       <cstring>ShowOriginalColor</cstring>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="Gui::PrefCheckBox" name="checkBoxAllowFace">
+     <property name="text">
+      <string>Enable face external geometry picking</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <property name="prefEntry" stdset="0">
+      <cstring>AllowFaceExternalPick</cstring>
+     </property>
+     <property name="prefPath" stdset="0">
+      <cstring>Mod/Sketcher/General</cstring>
      </property>
     </widget>
    </item>

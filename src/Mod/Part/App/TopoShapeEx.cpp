@@ -3779,7 +3779,7 @@ TopoShape &TopoShape::makESHAPE(const TopoDS_Shape &shape, const Mapper &mapper,
                     if(first)
                         first = false;
                     else
-                        ss << ',';
+                        ss << '|';
                     auto &other_info = it->second;
                     std::ostringstream ss2;
                     if(other_info.index!=1) {
@@ -3991,7 +3991,7 @@ TopoShape &TopoShape::makESHAPE(const TopoDS_Shape &shape, const Mapper &mapper,
                         if(first)
                             first = false;
                         else
-                            ss << ',';
+                            ss << '|';
                         ss << it->first;
 
                         // To avoid the name becoming to long, just put some limit here

@@ -34,6 +34,8 @@
 # include <memory>
 #endif
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <Base/Console.h>
 #include <Base/Exception.h>
 #include <Base/Tools.h>
@@ -6661,11 +6663,22 @@ namespace SketcherGui {
             Sketcher::SketchObject *sketch = static_cast<Sketcher::SketchObject*>(object);
 
             this->notAllowedReason = "";
+
+            if (!sSubName || sSubName[0] == '\0') {
+                this->notAllowedReason = QT_TR_NOOP("No element. ");
+                return false;
+            }
+
+            if (!ViewProviderSketch::allowFaceExternalPick() && boost::starts_with(sSubName, "Face")) {
+                this->notAllowedReason = QT_TR_NOOP("Face picking disabled in the task panel. ");
+                return false;
+            }
+
             Sketcher::SketchObject::eReasonList msg;
             if (!sketch->isExternalAllowed(pDoc, pObj, &msg)){
                 switch(msg){
                 case Sketcher::SketchObject::rlCircularReference:
-                    this->notAllowedReason = QT_TR_NOOP("Linking this will cause circular dependency.");
+                    this->notAllowedReason = QT_TR_NOOP("Linking this will cause circular dependency. ");
                     break;
 
                     // We'll auto create shapebinder in the following cases.
@@ -6700,8 +6713,6 @@ namespace SketcherGui {
                 //return false;
             //}
 
-            if (!sSubName || sSubName[0] == '\0')
-                return false;
             std::string element(sSubName);
             if ((element.size() > 4 && element.substr(0,4) == "Edge") ||
                 (element.size() > 6 && element.substr(0,6) == "Vertex") ||

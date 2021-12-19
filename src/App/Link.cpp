@@ -1379,8 +1379,17 @@ void LinkBaseExtension::checkGeoElementMap(const App::DocumentObject *obj,
     if(!pyObj || !*pyObj || !PyObject_TypeCheck(*pyObj, &Data::ComplexGeoDataPy::Type))
         return;
 
-    (void)linked;
     auto geoData = static_cast<Data::ComplexGeoDataPy*>(*pyObj)->getComplexGeoDataPtr();
+    std::string _postfix;
+    if (linked && obj && linked->getDocument() != obj->getDocument()) {
+        _postfix = Data::ComplexGeoData::externalTagPostfix();
+        if (postfix) {
+            if (!boost::starts_with(postfix, Data::ComplexGeoData::elementMapPrefix()))
+                _postfix += Data::ComplexGeoData::elementMapPrefix();
+            _postfix += postfix;
+        }
+        postfix = _postfix.c_str();
+    }
     geoData->reTagElementMap(obj->getID(),obj->getDocument()->getStringHasher(),postfix);
 }
 

@@ -287,6 +287,8 @@ public:
     virtual bool getElementPicked(const SoPickedPoint *pp, std::string &subname) const;
     virtual bool isEditingPickExclusive() const;
 
+    static bool allowFaceExternalPick();
+
     /** Observer for parameter group. */
     void OnChange(Base::Subject<const char*> &rCaller, const char * sReason) override;
 

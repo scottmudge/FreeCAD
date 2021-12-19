@@ -53,6 +53,7 @@
 # include <BRepBuilderAPI_MakeEdge.hxx>
 # include <BRepBuilderAPI_MakeVertex.hxx>
 # include <GeomAPI_IntSS.hxx>
+# include <GeomLProp_CLProps.hxx>
 # include <BRepProj_Projection.hxx>
 # include <GeomConvert_BSplineCurveKnotSplitting.hxx>
 # include <TColStd_Array1OfInteger.hxx>
@@ -64,6 +65,7 @@
 # include <BRepBuilderAPI_MakeWire.hxx>
 # include <TopExp.hxx>
 # include <TopTools_IndexedMapOfShape.hxx>
+# include <ElCLib.hxx>
 # include <boost_bind_bind.hpp>
 //# include <QtGlobal>
 #endif
@@ -7025,6 +7027,89 @@ static void getParameterRange(Handle(Geom_Curve) curve,
     lastParameter = plast.LowerDistanceParameter();
 }
 
+#if 0
+static void adjustParameterRange(const TopoDS_Edge &edge,
+                                 Handle(Geom_Plane) gPlane,
+                                 const gp_Trsf &mov,
+                                 Handle(Geom_Curve) curve,
+                                 double &firstParameter,
+                                 double &lastParameter)
+{
+    // This function is to deal with the ambiguity of trimming a periodic
+    // curve, e.g. given two points on a circle, whether to get the upper or
+    // lower arc. Because projection orientation may swap the first and last
+    // parameter of the original curve.
+    //
+    // We project the middel point of the original curve to the projected curve
+    // to decide whether to flip the parameters.
+
+    Handle(Geom_Curve) origCurve = BRepAdaptor_Curve(edge).Curve().Curve();
+
+    // GeomAPI_ProjectPointOnCurve will project a point to an untransformed
+    // curve, so make sure to obtain the point on an untransformed edge.
+    auto e = edge.Located(TopLoc_Location());
+
+    gp_Pnt firstPoint = BRep_Tool::Pnt(TopExp::FirstVertex(TopoDS::Edge(e)));
+    double f = GeomAPI_ProjectPointOnCurve(firstPoint, origCurve).LowerDistanceParameter();
+
+    gp_Pnt lastPoint = BRep_Tool::Pnt(TopExp::LastVertex(TopoDS::Edge(e)));
+    double l = GeomAPI_ProjectPointOnCurve(lastPoint, origCurve).LowerDistanceParameter();
+
+    auto adjustPeriodic = [](Handle(Geom_Curve) curve, double &f, double &l) {
+        // Copied from Geom_TrimmedCurve::setTrim()
+        if (curve->IsPeriodic()) {
+            Standard_Real Udeb = curve->FirstParameter();
+            Standard_Real Ufin = curve->LastParameter();
+            // set f in the range Udeb , Ufin
+            // set l in the range f , f + Period()
+            ElCLib::AdjustPeriodic(Udeb, Ufin,
+                    std::min(std::abs(f-l)/2,Precision::PConfusion()),
+                    f, l);
+        }
+    };
+
+    // Adjust for periodic curve to deal with orientation
+    adjustPeriodic(origCurve, f, l);
+
+    // Obtain the middle parameter in order to get the mid point of the arc
+    double m = (l - f) * 0.5 + f;
+    GeomLProp_CLProps prop(origCurve,m,0,Precision::Confusion());
+    gp_Pnt midPoint = prop.Value();
+    
+    // Transform all three points to the world coordinate
+    auto trsf = edge.Location().Transformation();
+    midPoint.Transform(trsf);
+    firstPoint.Transform(trsf);
+    lastPoint.Transform(trsf);
+
+    // Project the points to the sketch plane. Note the coordinates are still
+    // in world coordinate system.
+    gp_Pnt pm = GeomAPI_ProjectPointOnSurf(midPoint, gPlane).NearestPoint();
+    gp_Pnt pf = GeomAPI_ProjectPointOnSurf(firstPoint, gPlane).NearestPoint();
+    gp_Pnt pl = GeomAPI_ProjectPointOnSurf(lastPoint, gPlane).NearestPoint();
+
+    // Transform the projected points to sketch plane local coordinates
+    pm.Transform(mov);
+    pf.Transform(mov);
+    pl.Transform(mov);
+
+    // Obtain the cooresponding parameters for those points in the projected curve
+    double f2 = GeomAPI_ProjectPointOnCurve(pf, curve).LowerDistanceParameter();
+    double l2 = GeomAPI_ProjectPointOnCurve(pl, curve).LowerDistanceParameter();
+    double m2 = GeomAPI_ProjectPointOnCurve(pm, curve).LowerDistanceParameter();
+
+    firstParameter = f2;
+    lastParameter = l2;
+
+    adjustPeriodic(curve, f2, l2);
+    adjustPeriodic(curve, f2, m2);
+    // If the middle point is out of range, it means we need to choose the
+    // other half of the arc.
+    if (m2 > l2)
+        std::swap(firstParameter, lastParameter);
+}
+#endif
+
 void SketchObject::rebuildExternalGeometry(bool defining)
 {
     Base::StateLocker lock(managedoperation, true); // no need to check input data validity as this is an sketchobject managed operation.
@@ -7183,6 +7268,7 @@ void SketchObject::rebuildExternalGeometry(bool defining)
             case TopAbs_EDGE: {
                 const TopoDS_Edge& edge = TopoDS::Edge(refSubShape);
                 BRepAdaptor_Curve curve(edge);
+                Handle(Geom_Curve) origCurve = curve.Curve().Curve();
                 gp_Pnt firstPoint = BRep_Tool::Pnt(TopExp::FirstVertex(edge));
                 gp_Pnt lastPoint = BRep_Tool::Pnt(TopExp::LastVertex(edge));
 
@@ -7191,12 +7277,15 @@ void SketchObject::rebuildExternalGeometry(bool defining)
                 firstProjPt.Transform(mov);
                 lastProjPt.Transform(mov);
 
-                if (Part::GeomCurve::isLinear(curve.Curve().Curve())) {
+                if (Part::GeomCurve::isLinear(origCurve)) {
                     geos.emplace_back(projectLine(curve, gPlane, invPlm));
                 }
                 else if (curve.GetType() == GeomAbs_Circle) {
                     gp_Dir vec1 = sketchPlane.Axis().Direction();
                     gp_Dir vec2 = curve.Circle().Axis().Direction();
+
+                    if(vec1.Dot(vec2)<0)
+                        std::swap(firstProjPt, lastProjPt);
 
                     gp_Circ circle = curve.Circle();
                     gp_Pnt cnt = circle.Location();
@@ -7235,6 +7324,7 @@ void SketchObject::rebuildExternalGeometry(bool defining)
                             Handle(Geom_Curve) hCircle = new Geom_Circle(circle);
 
                             double firstParam, lastParam;
+                            // adjustParameterRange(edge, gPlane, mov, hCircle, firstParam, lastParam);
                             getParameterRange(hCircle, firstProjPt, lastProjPt, firstParam, lastParam);
 
                             Handle(Geom_TrimmedCurve) tCurve = 
@@ -7363,6 +7453,7 @@ void SketchObject::rebuildExternalGeometry(bool defining)
                                 geos.emplace_back(ellipse);
                             } else {
                                 double firstParam, lastParam;
+                                // adjustParameterRange(edge, gPlane, mov, curve, firstParam, lastParam);
                                 getParameterRange(curve, firstProjPt, lastProjPt, firstParam, lastParam);
 
                                 Part::GeomArcOfEllipse* gArc = new Part::GeomArcOfEllipse();
@@ -7444,7 +7535,8 @@ void SketchObject::rebuildExternalGeometry(bool defining)
                         geos.emplace_back(circle);
                     }
                     else {
-                        if (sketchPlane.Position().Direction().IsNormal(elipsOrig.Position().Direction(), Precision::Angular())) {
+                        if (destAxisMinor.SquareMagnitude() < Precision::SquareConfusion()) {
+                            // minor axis is practically zero, means we are projecting to a line
                             gp_Vec start = gp_Vec(destCenter.XYZ()) + destAxisMajor;
                             gp_Vec end = gp_Vec(destCenter.XYZ()) - destAxisMajor;
 
@@ -7465,7 +7557,13 @@ void SketchObject::rebuildExternalGeometry(bool defining)
                                 GeometryFacade::setConstruction(ellipse, true);
                                 geos.emplace_back(ellipse);
                             } else {
+                                gp_Dir vec1 = sketchPlane.Axis().Direction();
+                                gp_Dir vec2 = elipsOrig.Axis().Direction();
+                                if(vec1.Dot(vec2)<0)
+                                    std::swap(firstProjPt, lastProjPt);
+
                                 double firstParam, lastParam;
+                                // adjustParameterRange(edge, gPlane, mov, curve, firstParam, lastParam);
                                 getParameterRange(curve, firstProjPt, lastProjPt, firstParam, lastParam);
 
                                 Part::GeomArcOfEllipse* gArc = new Part::GeomArcOfEllipse();

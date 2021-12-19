@@ -95,6 +95,7 @@ void SketcherGeneralWidget::saveSettings()
     ui->checkBoxRedundantAutoconstraints->onSave();
     ui->showOriginalColor->onSave();
     ui->autoTransparentPick->onSave();
+    ui->checkBoxAllowFace->onSave();
 
     saveOrderingOrder();
 }
@@ -121,6 +122,7 @@ void SketcherGeneralWidget::loadSettings()
     ui->checkBoxRedundantAutoconstraints->onRestore();
     ui->showOriginalColor->onRestore();
     ui->autoTransparentPick->onRestore();
+    ui->checkBoxAllowFace->onRestore();
 
     loadOrderingOrder();
 }
