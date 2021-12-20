@@ -7027,7 +7027,6 @@ static void getParameterRange(Handle(Geom_Curve) curve,
     lastParameter = plast.LowerDistanceParameter();
 }
 
-#if 0
 static void adjustParameterRange(const TopoDS_Edge &edge,
                                  Handle(Geom_Plane) gPlane,
                                  const gp_Trsf &mov,
@@ -7108,7 +7107,6 @@ static void adjustParameterRange(const TopoDS_Edge &edge,
     if (m2 > l2)
         std::swap(firstParameter, lastParameter);
 }
-#endif
 
 void SketchObject::rebuildExternalGeometry(bool defining)
 {
@@ -7272,20 +7270,12 @@ void SketchObject::rebuildExternalGeometry(bool defining)
                 gp_Pnt firstPoint = BRep_Tool::Pnt(TopExp::FirstVertex(edge));
                 gp_Pnt lastPoint = BRep_Tool::Pnt(TopExp::LastVertex(edge));
 
-                gp_Pnt firstProjPt = GeomAPI_ProjectPointOnSurf(firstPoint, gPlane).NearestPoint();
-                gp_Pnt lastProjPt = GeomAPI_ProjectPointOnSurf(lastPoint, gPlane).NearestPoint();
-                firstProjPt.Transform(mov);
-                lastProjPt.Transform(mov);
-
                 if (Part::GeomCurve::isLinear(origCurve)) {
                     geos.emplace_back(projectLine(curve, gPlane, invPlm));
                 }
                 else if (curve.GetType() == GeomAbs_Circle) {
                     gp_Dir vec1 = sketchPlane.Axis().Direction();
                     gp_Dir vec2 = curve.Circle().Axis().Direction();
-
-                    if(vec1.Dot(vec2)<0)
-                        std::swap(firstProjPt, lastProjPt);
 
                     gp_Circ circle = curve.Circle();
                     gp_Pnt cnt = circle.Location();
@@ -7324,8 +7314,7 @@ void SketchObject::rebuildExternalGeometry(bool defining)
                             Handle(Geom_Curve) hCircle = new Geom_Circle(circle);
 
                             double firstParam, lastParam;
-                            // adjustParameterRange(edge, gPlane, mov, hCircle, firstParam, lastParam);
-                            getParameterRange(hCircle, firstProjPt, lastProjPt, firstParam, lastParam);
+                            adjustParameterRange(edge, gPlane, mov, hCircle, firstParam, lastParam);
 
                             Handle(Geom_TrimmedCurve) tCurve = 
                                 new Geom_TrimmedCurve(hCircle, firstParam, lastParam);
@@ -7453,8 +7442,7 @@ void SketchObject::rebuildExternalGeometry(bool defining)
                                 geos.emplace_back(ellipse);
                             } else {
                                 double firstParam, lastParam;
-                                // adjustParameterRange(edge, gPlane, mov, curve, firstParam, lastParam);
-                                getParameterRange(curve, firstProjPt, lastProjPt, firstParam, lastParam);
+                                adjustParameterRange(edge, gPlane, mov, curve, firstParam, lastParam);
 
                                 Part::GeomArcOfEllipse* gArc = new Part::GeomArcOfEllipse();
                                 Handle(Geom_TrimmedCurve) tCurve = 
@@ -7557,14 +7545,8 @@ void SketchObject::rebuildExternalGeometry(bool defining)
                                 GeometryFacade::setConstruction(ellipse, true);
                                 geos.emplace_back(ellipse);
                             } else {
-                                gp_Dir vec1 = sketchPlane.Axis().Direction();
-                                gp_Dir vec2 = elipsOrig.Axis().Direction();
-                                if(vec1.Dot(vec2)<0)
-                                    std::swap(firstProjPt, lastProjPt);
-
                                 double firstParam, lastParam;
-                                // adjustParameterRange(edge, gPlane, mov, curve, firstParam, lastParam);
-                                getParameterRange(curve, firstProjPt, lastProjPt, firstParam, lastParam);
+                                adjustParameterRange(edge, gPlane, mov, curve, firstParam, lastParam);
 
                                 Part::GeomArcOfEllipse* gArc = new Part::GeomArcOfEllipse();
                                 Handle(Geom_TrimmedCurve) tCurve = 
