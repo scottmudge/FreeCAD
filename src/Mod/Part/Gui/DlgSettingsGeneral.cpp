@@ -29,8 +29,12 @@
 # include <Interface_Static.hxx>
 #endif
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <Base/Parameter.h>
 #include <App/Application.h>
+#include <App/Document.h>
+#include <App/DocumentObject.h>
+#include <App/DocumentObserver.h>
 #include "DlgSettingsGeneral.h"
 #include "ui_DlgSettingsGeneral.h"
 #include "ui_DlgImportExportIges.h"
@@ -42,6 +46,62 @@ DlgSettingsGeneral::DlgSettingsGeneral(QWidget* parent)
   : PreferencePage(parent), ui(new Ui_DlgSettingsGeneral)
 {
     ui->setupUi(this);
+    QObject::connect(ui->btnAuxGroup, &QPushButton::pressed, [this]() {
+        bool checked = ui->checkBoxAuxGroup->isChecked();
+        const char *typeName = "PartDesign::AuxGroup";
+        try {
+            Base::Type::importModule(typeName);
+            auto type = Base::Type::fromName(typeName);
+
+            std::vector<std::pair<App::DocumentObjectT, const char*>> objs;
+
+            auto checkName = [&objs](App::DocumentObject *obj, const char *name) {
+                if (boost::starts_with(obj->getNameInDocument(), name)) {
+                    objs.emplace_back(obj, name);
+                    return true;
+                }
+                return false;
+            };
+
+            for (auto doc : App::GetApplication().getDocuments()) {
+                if (doc->testStatus(App::Document::PartialDoc))
+                    continue;
+                for (auto obj : doc->getObjects()) {
+                    if (!obj->isDerivedFrom(type)) continue;
+                    if (!checkName(obj, "Sketches") && !checkName(obj, "Datums"))
+                        checkName(obj, "Misc");
+                }
+            }
+
+            if (checked) {
+                // About to change back to unique indexed label (i.e. the
+                // group's internal name). There may be a small chance of label
+                // conflict here where a group uses an indexed label that
+                // happens to be another group's internal name. So we first
+                // change all groups to some temporary name, and later reset
+                // their label to their internal name together.
+                std::string tmp;
+                for (auto &v : objs) {
+                    if (auto obj = v.first.getObject()) {
+                        tmp = std::string(v.second) + "_";
+                        obj->Label.setValue(tmp);
+                    }
+                }
+                for (auto &v : objs) {
+                    if (auto obj = v.first.getObject())
+                        obj->Label.setValue(obj->getNameInDocument());
+                }
+            } else {
+                for (auto &v : objs) {
+                    if (auto obj = v.first.getObject())
+                        obj->Label.setValue(v.second);
+                }
+            }
+        } catch (Base::Exception &e) {
+            e.ReportException();
+            return;
+        }
+    });
 }
 
 /**
@@ -63,6 +123,7 @@ void DlgSettingsGeneral::saveSettings()
     ui->comboBoxCommandOverride->onSave();
     ui->comboBoxWrapFeature->onSave();
     ui->checkAutoGroupSolids->onSave();
+    ui->checkBoxAuxGroup->onSave();
     ui->checkAutoAuxiliaryGrouping->onSave();
 }
 
@@ -77,6 +138,7 @@ void DlgSettingsGeneral::loadSettings()
     ui->comboBoxCommandOverride->onRestore();
     ui->comboBoxWrapFeature->onRestore();
     ui->checkAutoGroupSolids->onRestore();
+    ui->checkBoxAuxGroup->onRestore();
     ui->checkAutoAuxiliaryGrouping->onRestore();
 }
 
