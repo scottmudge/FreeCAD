@@ -66,12 +66,12 @@
 #include <Mod/Part/App/OpenCascadeAll.h>
 
 // Other needed opencascade
-# include <ShapeFix_Wire.hxx>
-# include <BRepOffsetAPI_NormalProjection.hxx>
-# include <GeomConvert_BSplineCurveKnotSplitting.hxx>
-# include <TopoDS.hxx>
-# include <TopoDS_Edge.hxx>
-# include <BRepBuilderAPI_MakeWire.hxx>
+#include <ShapeFix_Wire.hxx>
+#include <BRepOffsetAPI_NormalProjection.hxx>
+#include <GeomConvert_BSplineCurveKnotSplitting.hxx>
+#include <TopoDS.hxx>
+#include <TopoDS_Edge.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRep_Tool.hxx>
 #include <gp_Pnt.hxx>
 #include <Precision.hxx>
@@ -82,6 +82,7 @@
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Vertex.hxx>
+#include <ElCLib.hxx>
 
 #include <Python.h>
 
