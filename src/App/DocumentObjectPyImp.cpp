@@ -338,9 +338,6 @@ PyObject*  DocumentObjectPy::setExpression(PyObject * args)
 
         getDocumentObjectPtr()->setExpression(p, shared_expr);
     }
-    else if (PyUnicode_Check(expr)) {
-        std::string exprStr = PyUnicode_AsUTF8(expr);
-    }
     else
         throw Py::TypeError("String or None expected.");
     Py_Return;

@@ -172,7 +172,7 @@ Feature::getElementName(const char *name, ElementNameType type) const
         // choosen elements are not enough to disambiguate the higher element,
         // we'll include an index for disambiguation.
 
-        auto subshape = shape.getSubTopoShape(res.first, res.second);
+        auto subshape = shape.getSubTopoShape(res.first, res.second, true);
         TopAbs_ShapeEnum lower;
         Data::IndexedName idxName;
         if (!subshape.isNull()) {
