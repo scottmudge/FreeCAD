@@ -636,8 +636,8 @@ class Plane:
         --------
         alignToFace, alignToCurve
         """
-        import FreeCADGui, Part
-        sex = FreeCADGui.Selection.getSelectionEx(FreeCAD.ActiveDocument.Name, 0)
+        import Part
+        sel_ex = FreeCADGui.Selection.getSelectionEx(FreeCAD.ActiveDocument.Name, 0)
         if not sel_ex:
             return False
 
