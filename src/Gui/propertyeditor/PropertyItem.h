@@ -234,6 +234,7 @@ class GuiExport PropertyStringItem: public PropertyItem
 protected:
     virtual QVariant value(const App::Property*) const;
     virtual void setValue(const QVariant&);
+    virtual QVariant toolTip(const App::Property*) const;
 
 protected:
     PropertyStringItem();

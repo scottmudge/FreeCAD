@@ -110,6 +110,13 @@ PrefWidget::~PrefWidget()
     m_EntryHandle->Detach(this);
 }
 
+void PrefWidget::initAutoSave(bool enable)
+{
+  onRestore();
+  setAutoSave(enable);
+  PrefParam::removeEntry(this);
+}
+
 /** Sets the preference name to \a name. */
 void PrefWidget::setEntryName( const QByteArray& name )
 {
@@ -438,8 +445,10 @@ bool PrefWidget::restoreSubEntry(const SubEntry &entry, const char *change)
           name, entry.defvalue.toString().toUtf8().constData()).c_str());
     break;
   }
-  if (!m_Validate || m_Validate(entry.name, v))
+  if (!m_Validate || m_Validate(entry.name, v)) {
     m_Base->setProperty(entry.name, v);
+    signalSubEntryChanged(m_Base, &entry);
+  }
   return true;
 }
 

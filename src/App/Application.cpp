@@ -121,6 +121,7 @@
 #include <App/MaterialPy.h>
 #include <Base/GeometryPyCXX.h>
 #include "Link.h"
+#include "SavedView.h"
 
 #include "DocumentPy.h"
 #include "DocumentObjectGroupPy.h"
@@ -2046,6 +2047,7 @@ void Application::initTypes(void)
     App ::LinkElementPython         ::init();
     App ::LinkGroup                 ::init();
     App ::LinkGroupPython           ::init();
+    App ::SavedView                 ::init();
 
     // Expression classes
     App ::Expression                ::init();

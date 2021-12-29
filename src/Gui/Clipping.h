@@ -25,8 +25,55 @@
 #define GUI_DIALOG_CLIPPING_H
 
 #include <QDialog>
+#include <Inventor/fields/SoSFColor.h>
+#include <Inventor/fields/SoSFPlane.h>
+#include <Inventor/fields/SoSFFloat.h>
+#include <Base/Placement.h>
+#include "InventorBase.h"
+#include "SoFCCSysDragger.h"
 
 class QDockWidget;
+
+class SoDrawStyle;
+class SoClipPlane;
+class SoBaseColor;
+class SoCoordinate3;
+
+class ClipDragger : public Gui::SoFCCSysDragger {
+    typedef SoFCCSysDragger inherited;
+
+    SO_NODE_HEADER(ClipDragger);
+
+public:
+    SoSFFloat planeSize;
+    SoSFFloat lineWidth;
+    SoSFColor planeColor;
+    SoSFPlane plane;
+    std::function<void(ClipDragger*)> dragDone;
+
+    static void initClass(void);
+
+    ClipDragger(SoClipPlane *clip = nullptr, bool custom = false);
+    ~ClipDragger();
+
+    virtual void notify(SoNotList * l) override;
+
+    void init(SoClipPlane *clip, bool custom = false);
+
+    SoClipPlane *getClipPlane() const {return clip;}
+
+    void onDragStart();
+    void onDragFinish();
+    void onDragMotion();
+    void updateSize();
+
+private:
+    Gui::CoinPtr<SoCoordinate3> coords;
+    Gui::CoinPtr<SoClipPlane> clip;
+    Gui::CoinPtr<SoBaseColor> color;
+    Gui::CoinPtr<SoDrawStyle> drawStyle;
+    bool busy = false;
+};
 
 namespace Gui {
 class View3DInventor;
@@ -43,7 +90,21 @@ public:
     Clipping(Gui::View3DInventor* view, QWidget* parent = nullptr);
     ~Clipping();
 
-    static void toggle();
+    static void restoreClipPlanes(Gui::View3DInventor *view,
+                                  const Base::Vector3d &posX, bool enableX,
+                                  const Base::Vector3d &posY, bool enableY,
+                                  const Base::Vector3d &posZ, bool enableZ,
+                                  const Base::Placement &plaCustom, bool enableCustom);
+
+    static void getClipPlanes(Gui::View3DInventor *view,
+                              Base::Vector3d &posX, bool &enableX,
+                              Base::Vector3d &posY, bool &enableY,
+                              Base::Vector3d &posZ, bool &enableZ,
+                              Base::Placement &plaCustom, bool &enableCustom);
+
+    static void toggle(View3DInventor *view = nullptr);
+
+    virtual bool eventFilter(QObject *, QEvent*);
 
 protected Q_SLOTS:
     void onViewDestroyed(QObject *);
@@ -63,10 +124,13 @@ protected Q_SLOTS:
     void on_dirX_valueChanged(double);
     void on_dirY_valueChanged(double);
     void on_dirZ_valueChanged(double);
+    void on_angleX_valueChanged(double);
+    void on_angleY_valueChanged(double);
     void on_checkBoxFill_toggled(bool);
     void on_checkBoxInvert_toggled(bool);
     void on_checkBoxConcave_toggled(bool);
     void on_checkBoxOnTop_toggled(bool);
+    void on_checkBoxShowPlane_toggled(bool);
     void on_spinBoxHatchScale_valueChanged(double);
     void on_checkBoxHatch_toggled(bool on);
     void on_editHatchTexture_fileNameSelected(const QString &filename);

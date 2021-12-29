@@ -234,6 +234,7 @@ generate_from_xml(WorkbenchPy)
 generate_from_xml(SelectionObjectPy)
 generate_from_xml(LinkViewPy)
 generate_from_xml(ViewProviderLinkPy)
+generate_from_xml(ViewProviderSavedViewPy)
 generate_from_xml(AxisOriginPy)
 generate_from_xml(CommandPy)
 
@@ -250,6 +251,7 @@ SET(FreeCADGui_XML_SRCS
     DocumentPy.xml
     LinkViewPy.xml
     ViewProviderLinkPy.xml
+    ViewProviderSavedViewPy.xml
     AxisOriginPy.xml
     CommandPy.xml
 )
@@ -946,8 +948,10 @@ SET(Viewprovider_CPP_SRCS
     ViewProviderLink.cpp
     LinkViewPyImp.cpp
     ViewProviderLinkPyImp.cpp
+    ViewProviderSavedViewPyImp.cpp
     AxisOriginPyImp.cpp
     AxisOrigin.cpp
+    ViewProviderSavedView.cpp
 )
 SET(Viewprovider_SRCS
     ${Viewprovider_CPP_SRCS}
@@ -980,6 +984,7 @@ SET(Viewprovider_SRCS
     ViewProviderTextDocument.h
     ViewProviderLink.h
     AxisOrigin.h
+    ViewProviderSavedView.h
 )
 SOURCE_GROUP("View3D\\Viewprovider" FILES ${Viewprovider_SRCS})
 

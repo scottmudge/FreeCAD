@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenerateModel xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="generateMetaModel_Module.xsd">
+	<PythonExport 
+		Father="ViewProviderDocumentObjectPy" 
+		Name="ViewProviderSavedViewPy" 
+		Twin="ViewProviderSavedView" 
+		TwinPointer="ViewProviderSavedView" 
+		Include="Gui/ViewProviderSavedView.h" 
+		Namespace="Gui" 
+		FatherInclude="Gui/ViewProviderDocumentObjectPy.h"
+		FatherNamespace="Gui">
+		<Documentation>
+			<Author Licence="LGPL" Name="Zheng, Lei" EMail="realthunder.dev@gmail.com" />
+			<UserDocu>This is the ViewProviderSavedView class</UserDocu>
+		</Documentation>
+        <Methode Name="capture">
+            <Documentation>
+                <UserDocu>capture(options = None) -- capture the current view with given option
+
+options: an optional list of possible flags including
+    * 'Visibilities': capture objects visibilities
+    * 'Camera': capture camera settings
+    * 'Shadow': capture shadow draw style settings
+    * 'Clippings': capture clip plane settings
+    * 'All': capture all settings
+
+If options is not given, it captures all settings enabled by various 'SaveXXX' properties.
+                </UserDocu>
+            </Documentation>
+        </Methode>
+        <Methode Name="apply">
+            <Documentation>
+                <UserDocu>apply(options = None) -- restore the captured view</UserDocu>
+
+options: an optional list of possible flags including
+    * 'Visibilities': restore objects visibilities
+    * 'Camera': restore camera settings
+    * 'Shadow': restore shadow draw style settings
+    * 'Clippings': crestore clip plane settings
+    * 'All': restore all settings
+
+If options is not given, it restores settings enabled by various 'SaveXXX' properties.
+            </Documentation>
+        </Methode>
+	</PythonExport>
+</GenerateModel>

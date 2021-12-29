@@ -75,6 +75,7 @@
 #include "SoFCDirectionalLight.h"
 #include "SoFCSpotLight.h"
 #include "SoMouseWheelEvent.h"
+#include "Clipping.h"
 
 #include "propertyeditor/PropertyItem.h"
 #include "NavigationStyle.h"
@@ -145,6 +146,7 @@ void Gui::SoFCDB::init()
     SoAutoZoomTranslation           ::initClass();
     MarkerBitmaps                   ::initClass();
     SoFCCSysDragger                 ::initClass();
+    ClipDragger                     ::initClass();
     SmSwitchboard                   ::initClass();
     SoFCSwitch                      ::initClass();
     SoFCSeparator                   ::initClass();

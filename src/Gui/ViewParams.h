@@ -350,6 +350,13 @@ public:
         QT_TRANSLATE_NOOP("ViewParams","Section filling texture image path."))\
     FC_VIEW_PARAM(SectionHatchTextureEnable, bool, Bool, true, \
         QT_TRANSLATE_NOOP("ViewParams","Enable section fill texture."))\
+    FC_VIEW_PARAM(SectionFillGroup, bool, Bool, true, \
+        QT_TRANSLATE_NOOP("ViewParams","Render cross section filling of objects with similar materials together.\n"\
+                                       "Intersecting objects will act as boolean cut operation"))\
+    FC_VIEW_PARAM(ShowClipPlane, bool, Bool, false, QT_TRANSLATE_NOOP("ViewParams","Show clip plane"))\
+    FC_VIEW_PARAM(ClipPlaneSize, double, Float, 40.0, QT_TRANSLATE_NOOP("ViewParams","Clip plane visual size"))\
+    FC_VIEW_PARAM(ClipPlaneColor, std::string, ASCII, "cyan", QT_TRANSLATE_NOOP("ViewParams","Clip plane color"))\
+    FC_VIEW_PARAM(ClipPlaneLineWidth, double, Float, 2.0, QT_TRANSLATE_NOOP("ViewParams","Clip plane line width"))\
     FC_VIEW_PARAM(TransformOnTop, bool, Bool, true, "") \
     FC_VIEW_PARAM(SelectionColorDifference, double, Float, 25.0, \
         QT_TRANSLATE_NOOP("ViewParams","Color difference threshold for auto making distinct\n"\
@@ -372,6 +379,9 @@ public:
     FC_VIEW_PARAM2(DefaultFontSize, int , Int, 0,  "") \
     FC_VIEW_PARAM2(EnableTaskPanelKeyTranslate, bool, Bool, false, "") \
     FC_VIEW_PARAM(EnableMenuBarCheckBox, bool, Bool, FC_ENABLE_MENUBAR_CHECKBOX, "")\
+    FC_VIEW_PARAM(EnableBacklight, bool, Bool, false, "")\
+    FC_VIEW_PARAM(BacklightColor, unsigned long, Unsigned, 0xffffffff, "")\
+    FC_VIEW_PARAM(BacklightIntensity, double, Float, 1.0, "")\
 
 #undef FC_VIEW_PARAM
 #define FC_VIEW_PARAM(_name,_ctype,_type,_def,_doc) \

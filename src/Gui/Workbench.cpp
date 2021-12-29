@@ -663,7 +663,7 @@ MenuItem* StdWorkbench::setupMenuBar() const
     *view << "Std_ViewCreate" << "Std_OrthographicCamera" << "Std_PerspectiveCamera" << "Std_MainFullscreen" << "Separator"
           << stdviews << "Std_FreezeViews" << "Std_DrawStyle" << "Std_SelOptions"
           << "Separator" << view3d << zoom
-          << "Std_ViewDockUndockFullscreen" << "Std_AxisCross" << "Std_ToggleClipPlane"
+          << "Std_ViewDockUndockFullscreen" << "Std_AxisCross" << "Std_ToggleClipPlane" << "Std_ClipPlaneDragger"
           << "Std_TextureMapping"
 #ifdef BUILD_VR
           << "Std_ViewVR"
@@ -684,6 +684,7 @@ MenuItem* StdWorkbench::setupMenuBar() const
           << "Std_CmdPresets"
           << "Separator"
           << "Std_ViewScreenShot"
+          << "Std_SaveView"
           << "Std_SceneInspector"
           << "Std_DependencyGraph"
           << "Std_ProjectUtil"

@@ -24,6 +24,8 @@
 #ifndef GUI_PREFWIDGETS_H
 #define GUI_PREFWIDGETS_H
 
+#include <boost_signals2.hpp>
+
 #include <memory>
 #include <QVector>
 #include <QCheckBox>
@@ -109,7 +111,19 @@ public:
   void restoreSubEntries();
   void saveSubEntries();
 
+  boost::signals2::signal<void (QObject *, const SubEntry *)> signalSubEntryChanged;
+
   virtual void setAutoSave(bool enable) = 0;
+
+  /** Initial auto save
+   *
+   * @param enable: enable auto save
+   *
+   * This is a convenience function that calls onRestore(), and then
+   * setAutoSave(enable), and finally PrefParam::removeEntry() to detach auto
+   * save setting from PrefParam::AutoSave() parameter.
+   */
+  void initAutoSave(bool enable = true);
 
   template<class F, class O>
   void autoSave(bool enable, O *o, F f, int delay=100) {

@@ -78,6 +78,8 @@ source_group("source" FILES ${Renderer_CPP_SRCS})
 source_group("include" FILES ${Renderer_HPP_SRCS})
 source_group("interface" FILES ${Renderer_Headers})
 
+SET_BIN_DIR(FreeCADRenderer FreeCADRenderer)
+
 if(WIN32)
     install(TARGETS FreeCADRenderer
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

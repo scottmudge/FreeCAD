@@ -126,16 +126,12 @@ struct DrawEntry {
   const Material * material;
   const VertexCacheEntry * ventry;
   SbBox3f bbox;
-  float radius;
   int skip;
 
   DrawEntry(const Material * m, const VertexCacheEntry * v)
     :material(m), ventry(v), skip(0)
   {
     v->cache->getBoundingBox(v->identity ? nullptr : &v->matrix, this->bbox);
-    SbSphere sphere;
-    sphere.circumscribe(this->bbox);
-    this->radius = sphere.getRadius();
   }
 };
 
@@ -153,6 +149,7 @@ enum RenderPass {
   RenderPassLinePattern       = 2,
   RenderPassLineMask          = 3,
   RenderPassHighlight         = 4,
+  RenderPassSectionFill       = 5,
 };
 
 struct HatchTexture
@@ -193,7 +190,9 @@ public:
                                    const Material & material,
                                    const VertexCacheEntry & ventry);
 
-  bool renderSection(SoGLRenderAction *action, DrawEntry &draw_entry, int &pass, bool &pushed);
+  bool renderSection(SoGLRenderAction *action, DrawEntry &draw_entry, int &pass, bool &pushed, bool transp);
+  void _renderSection(SoGLRenderAction *action, DrawEntry **pp_draw_entry, size_t count, int &pass, bool &pushed, bool setupmatrix);
+  void renderSectionGrouped(SoGLRenderAction *action, bool transp);
 
   void renderOutline(SoGLRenderAction *action, DrawEntry &draw_entry, bool highlight);
 
@@ -241,6 +240,9 @@ public:
   SbFCVector<std::size_t> selspointontop; // include only explictly selected points
   SbFCVector<std::size_t> highlightlinesontop; // include pre-selected lines and points
   bool updateselection;
+
+  SbFCVector<DrawEntry*> section_entries;
+  SbFCVector<DrawEntry*> transp_section_entries;
 
   std::unordered_map<CacheKeyPtr,
                      SbFCVector<std::size_t>,
@@ -1309,7 +1311,8 @@ bool
 SoFCRendererP::renderSection(SoGLRenderAction *action,
                              DrawEntry &draw_entry,
                              int &pass,
-                             bool &pushed)
+                             bool &pushed,
+                             bool transp)
 {
   int curpass = pass++;
 
@@ -1319,8 +1322,6 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
   if (this->depthwriteonly
       || curpass >= numclip
       || draw_entry.ventry->partidx >= 0
-      || (draw_entry.material->shapetype != SoShapeHintsElement::SOLID
-            && !draw_entry.ventry->cache->hasSolid())
       || (!ViewParams::getSectionFill() && !concave))
     return curpass == 0;
 
@@ -1340,12 +1341,79 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
     return true;
   }
 
+  if (draw_entry.material->shapetype != SoShapeHintsElement::SOLID
+      && !draw_entry.ventry->cache->hasSolid())
+    return curpass == 0;
+
+  if (!concave && ViewParams::SectionFillGroup()) {
+    if (curpass != 0)
+      return false;
+    if (transp)
+      this->transp_section_entries.push_back(&draw_entry);
+    else
+      this->section_entries.push_back(&draw_entry);
+    return true;
+  }
+
+  auto pdraw_entry = &draw_entry;
+  _renderSection(action, &pdraw_entry, 1, curpass, pushed, false);
+  pass = curpass;
+  return true;
+}
+
+void
+SoFCRendererP::renderSectionGrouped(SoGLRenderAction *action, bool transp)
+{
+  bool pushed = false;
+
+  size_t head = 0;
+  auto & entries = transp ? this->transp_section_entries : this->section_entries;
+  size_t size = entries.size();
+  if (size == 0)
+    return;
+  const Material * head_mat;
+  for (size_t i = 0; i < size; ++i) {
+    const auto &draw_entry = *entries[i];
+    const Material *this_mat = draw_entry.material;
+    bool last = i+1 == size;
+    if (i == head) {
+      head_mat = this_mat;
+      if (!last)
+        continue;
+    } else if (!last && head_mat->diffuse == this_mat->diffuse
+                     && head_mat->clippers == this_mat->clippers
+                     && head_mat->autozoom == this_mat->autozoom)
+      continue;
+
+    applyMaterial(action, *head_mat, true, RenderPassSectionFill);
+    int numclip = this->material.clippers.getNum();
+    size_t count = last ? size - head : i - head;
+    for (int pass = 0; pass < numclip;)
+      _renderSection(action, &entries[head], count, pass, pushed, true);
+  }
+
+  if (pushed)
+    glPopAttrib();
+}
+
+void
+SoFCRendererP::_renderSection(SoGLRenderAction *action,
+                              DrawEntry **pp_draw_entry,
+                              size_t count,
+                              int &pass,
+                              bool &pushed,
+                              bool setupmatrix)
+{
+  int curpass = pass++;
   if (!pushed) {
     pushed = true;
     glPushAttrib(GL_ENABLE_BIT
         | GL_DEPTH_BUFFER_BIT
         | GL_STENCIL_BUFFER_BIT);
   }
+
+  int numclip = this->material.clippers.getNum();
+  bool concave = ViewParams::getSectionConcave() && numclip > 1;
 
   if (curpass == 0 && concave) {
     if (this->material.depthfunc != SoDepthBuffer::LESS)
@@ -1379,8 +1447,23 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
   glDisable(GL_LIGHTING);
   glStencilOp (GL_KEEP, GL_KEEP, GL_INVERT);
   FC_GLERROR_CHECK;
-  draw_entry.ventry->cache->renderSolids(action->getState());
-  ++this->drawcallcount;
+
+  SbBox3f bbox;
+  for (size_t i=0; i<count; ++i) {
+    const auto &draw_entry = *pp_draw_entry[i];
+    if (setupmatrix)
+      setupMatrix(action, draw_entry);
+    draw_entry.ventry->cache->renderSolids(action->getState());
+    if (!setupmatrix)
+      bbox.extendBy(draw_entry.bbox);
+    else {
+      auto matrix = SoModelMatrixElement::get(action->getState());
+      auto bb = draw_entry.bbox;
+      bb.transform(matrix);
+      bbox.extendBy(bb);
+    }
+    ++this->drawcallcount;
+  }
 
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
   FC_GLERROR_CHECK;
@@ -1421,10 +1504,14 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
   SbRotation rotation(SbVec3f(0,0,1), dir);
   SbVec3f u,v;
   rotation.multVec(SbVec3f(1,0,0), u);
-  u *= draw_entry.radius;
+
+  SbSphere sphere;
+  sphere.circumscribe(bbox);
+  float radius = sphere.getRadius();
+  u *= radius;
   rotation.multVec(SbVec3f(0,1,0), v);
-  v *= draw_entry.radius;
-  SbVec3f center = draw_entry.bbox.getCenter();
+  v *= radius;
+  SbVec3f center = bbox.getCenter();
   dir *= -1;
   center += dir * plane.getDistance(center);
   SbVec3f v1,v2,v3,v4;
@@ -1434,11 +1521,15 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
   v3 = v4 = center - v;
   v3 += u;
   v4 -= u;
-  auto matrix = SoModelMatrixElement::get(action->getState()).inverse();
-  matrix.multVecMatrix(v1, v1);
-  matrix.multVecMatrix(v2, v2);
-  matrix.multVecMatrix(v3, v3);
-  matrix.multVecMatrix(v4, v4);
+  if (setupmatrix)
+    SoModelMatrixElement::makeIdentity(action->getState(), NULL);
+  else {
+    auto matrix = SoModelMatrixElement::get(action->getState()).inverse();
+    matrix.multVecMatrix(v1, v1);
+    matrix.multVecMatrix(v2, v2);
+    matrix.multVecMatrix(v3, v3);
+    matrix.multVecMatrix(v4, v4);
+  }
 
   if (ViewParams::getSectionFillInvert()) {
     auto col = this->material.diffuse;
@@ -1492,7 +1583,7 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
     // This gives the pixel size of the current world unit size
     float pixelsize = vp_size[0] / scale;
     // This gives the pixel width of the current drawing section plane
-    float width = draw_entry.radius * pixelsize;
+    float width = radius * pixelsize;
     // And now we have the texture scale
     hatchscale = std::max(1e-3f, width / hatch->width);
   }
@@ -1530,7 +1621,8 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
   FC_GLERROR_CHECK;
 
   if (!concave) {
-    renderSection(action, draw_entry, pass, pushed);
+    if (pass < numclip)
+      _renderSection(action, pp_draw_entry, count, pass, pushed, setupmatrix);
     if (curpass == 0) {
       for (int i=0; i<numclip; ++i) {
         glEnable(GL_CLIP_PLANE0 + i);
@@ -1546,7 +1638,6 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
       FC_GLERROR_CHECK;
     }
   }
-  return true;
 }
 
 void
@@ -1596,7 +1687,7 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
 
     int n = 0;
     bool pushed = false;
-    while (renderSection(action, draw_entry, n, pushed)) {
+    while (renderSection(action, draw_entry, n, pushed, false)) {
       if (!ViewParams::getSectionConcave()
           && this->material.clippers.getNum() > 0
           && SoCullElement::cullTest(state, draw_entry.bbox, FALSE))
@@ -1740,7 +1831,7 @@ SoFCRendererP::renderTransparency(SoGLRenderAction * action,
       {
         bool pushed = false;
         int n = 0;
-        while (renderSection(action, draw_entry, n, pushed)) {
+        while (renderSection(action, draw_entry, n, pushed, true)) {
           if (!ViewParams::getSectionConcave()
               && this->material.clippers.getNum() > 0
               && SoCullElement::cullTest(state, draw_entry.bbox, FALSE))
@@ -1796,6 +1887,9 @@ SoFCRenderer::render(SoGLRenderAction * action)
   PRIVATE(this)->shadowmapping = (shapestyleflags & SoShapeStyleElement::SHADOWMAP) ? true : false;
   PRIVATE(this)->transpshadowmapping = PRIVATE(this)->shadowmapping && (shapestyleflags & 0x01000000);
 
+  PRIVATE(this)->section_entries.clear();
+  PRIVATE(this)->transp_section_entries.clear();
+
   if (PRIVATE(this)->shadowmapping
       && !PRIVATE(this)->transpshadowmapping
       && PRIVATE(this)->transpvcache.size()
@@ -1839,6 +1933,8 @@ SoFCRenderer::render(SoGLRenderAction * action)
                                 PRIVATE(this)->opaqueselections,
                                 RenderPassHighlight);
 
+  PRIVATE(this)->renderSectionGrouped(action, false);
+
     PRIVATE(this)->recheckmaterial = true;
     PRIVATE(this)->notexture = false;
 
@@ -1873,6 +1969,8 @@ SoFCRenderer::render(SoGLRenderAction * action)
                                     PRIVATE(this)->drawentries,
                                     PRIVATE(this)->transpontop,
                                     false);
+
+  PRIVATE(this)->renderSectionGrouped(action, true);
 
   if (PRIVATE(this)->shadowmapping) {
     state->pop();

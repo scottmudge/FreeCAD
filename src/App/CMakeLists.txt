@@ -180,6 +180,7 @@ SET(Document_CPP_SRCS
     Link.cpp
     LinkBaseExtensionPyImp.cpp
     ExpressionPyImp.cpp
+    SavedView.cpp
 )
 
 SET(Document_HPP_SRCS
@@ -222,6 +223,7 @@ SET(Document_HPP_SRCS
     MergeDocuments.h
     TextDocument.h
     Link.h
+    SavedView.h
 )
 SET(Document_SRCS
     ${Document_CPP_SRCS}

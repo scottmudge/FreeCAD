@@ -134,6 +134,8 @@
 #include "ViewProviderGroupExtension.h"
 #include "ViewProviderLink.h"
 #include "LinkViewPy.h"
+#include "ViewProviderSavedView.h"
+#include "ViewProviderSavedViewPy.h"
 #include "AxisOriginPy.h"
 #include "CommandPy.h"
 
@@ -479,6 +481,7 @@ Application::Application(bool GUIenabled)
         Base::Interpreter().addType(&ViewProviderPy::Type, module, "ViewProvider");
         Base::Interpreter().addType(&ViewProviderDocumentObjectPy::Type, module, "ViewProviderDocumentObject");
         Base::Interpreter().addType(&ViewProviderLinkPy::Type, module, "ViewProviderLink");
+        Base::Interpreter().addType(&ViewProviderSavedViewPy::Type, module, "ViewProviderSavedView");
     }
 
     Base::PyGILStateLocker lock;
@@ -2000,6 +2003,7 @@ void Application::initTypes(void)
     Gui::ViewProviderLink                       ::init();
     Gui::ViewProviderLinkPython                 ::init();
     Gui::AxisOrigin                             ::init();
+    Gui::ViewProviderSavedView                  ::init();
 
     // Workbench
     Gui::Workbench                              ::init();
