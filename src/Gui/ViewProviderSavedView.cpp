@@ -22,6 +22,7 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <QApplication>
 # include <QMouseEvent>
 # include <QByteArray>
 # include <QMenu>
@@ -38,6 +39,7 @@
 #include "Application.h"
 #include "Document.h"
 #include "Command.h"
+#include "Action.h"
 #include "ViewParams.h"
 #include "ViewProviderSavedView.h"
 #include "ViewProviderSavedViewPy.h"
@@ -61,23 +63,69 @@ void ViewProviderSavedView::setupContextMenu(QMenu *menu, QObject*, const char*)
     prepareMenu(menu);
 }
 
+QString propertyName(const App::Property &prop)
+{
+    QString name = QString::fromLatin1(prop.getName() ? prop.getName() : "?");
+    QString display;
+    bool upper = false;
+    for (int i=0; i<name.length(); i++) {
+        if (name[i].isUpper() && !display.isEmpty()) {
+            // if there is a sequence of capital letters do not insert spaces
+            if (!upper) {
+                QChar last = display.at(display.length()-1);
+                if (!last.isSpace())
+                    display += QLatin1String(" ");
+            }
+        }
+        upper = name[i].isUpper();
+        display += name[i];
+    }
+    return display;
+}
+
 void ViewProviderSavedView::prepareMenu(QMenu *menu)
 {
     auto obj = Base::freecad_dynamic_cast<App::SavedView>(getObject());
     if (!obj)
         return;
+    QMenu *submenu;
     menu->addAction(QObject::tr("Capture"), [this]() {capture();});
-    menu->addAction(QObject::tr("Capture clip planes"), [this]() {capture(CaptureOption::Clippings);});
-    menu->addAction(QObject::tr("Capture camera"), [this]() {capture(CaptureOption::Camera);});
-    menu->addAction(QObject::tr("Capture visibilities"), [this]() {capture(CaptureOption::Visibilities);});
-    menu->addAction(QObject::tr("Capture shadow settings"), [this]() {capture(CaptureOption::Shadow);});
+    submenu = menu->addMenu(QObject::tr("Capture options"));
+
+    auto addOption = [submenu](App::PropertyBool &prop) {
+        auto action = Action::addCheckBox(submenu,
+                        QApplication::translate("App::Property", propertyName(prop).toUtf8()),
+                        QApplication::translate("App::Property", prop.getDocumentation()),
+                        QIcon(),
+                        prop.getValue());
+        QObject::connect(action, &QAction::toggled, [&prop](bool checked){prop.setValue(checked);});
+    };
+    addOption(obj->SaveClippings);
+    addOption(obj->SaveCamera);
+    addOption(obj->SaveVisibilities);
+    addOption(obj->SaveShowOnTop);
+    addOption(obj->SaveShadowSettings);
+
+    submenu = menu->addMenu(QObject::tr("Partial capture"));
+    submenu->addAction(QObject::tr("Clipping settings"), [this]() {capture(CaptureOption::Clippings);});
+    submenu->addAction(QObject::tr("Camera settings"), [this]() {capture(CaptureOption::Camera);});
+    submenu->addAction(QObject::tr("Visibilities"), [this]() {capture(CaptureOption::Visibilities);});
+    submenu->addAction(QObject::tr("Show on top"), [this]() {capture(CaptureOption::ShowOnTop);});
+    submenu->addAction(QObject::tr("Shadow settings"), [this]() {capture(CaptureOption::Shadow);});
+
     menu->addAction(QObject::tr("Capture all"), [this]() {capture(CaptureOption::All);});
+
     menu->addSeparator();
+
     menu->addAction(QObject::tr("Restore"), [this]() {apply();});
-    menu->addAction(QObject::tr("Restore clip planes"), [this]() {apply(CaptureOption::Clippings);});
-    menu->addAction(QObject::tr("Restore camera"), [this]() {apply(CaptureOption::Camera);});
-    menu->addAction(QObject::tr("Restore visibilities"), [this]() {apply(CaptureOption::Visibilities);});
-    menu->addAction(QObject::tr("Restore shadow settings"), [this]() {apply(CaptureOption::Shadow);});
+
+    submenu = menu->addMenu(QObject::tr("Partial restore"));
+    submenu->addAction(QObject::tr("Clipping settings"), [this]() {apply(CaptureOption::Clippings);});
+    submenu->addAction(QObject::tr("Camera settings"), [this]() {apply(CaptureOption::Camera);});
+    submenu->addAction(QObject::tr("Visibilities"), [this]() {apply(CaptureOption::Visibilities);});
+    submenu->addAction(QObject::tr("Show on top"), [this]() {apply(CaptureOption::ShowOnTop);});
+    submenu->addAction(QObject::tr("Shadow settings"), [this]() {apply(CaptureOption::Shadow);});
+
     menu->addAction(QObject::tr("Restore all"), [this]() {apply(CaptureOption::All);});
 }
 
@@ -155,16 +203,7 @@ void ViewProviderSavedView::apply(CaptureOptions options)
         if (!view)
             throw Base::RuntimeError("No 3D view");
 
-        if (options & CaptureOption::Default) {
-            if (obj->SaveClippings.getValue())
-                options |= CaptureOption::Clippings;
-            if (obj->SaveCamera.getValue())
-                options |= CaptureOption::Camera;
-            if (obj->SaveVisibilities.getValue())
-                options |= CaptureOption::Visibilities;
-            if (obj->SaveShadowSettings.getValue())
-                options |= CaptureOption::Shadow;
-        }
+        checkOptions(obj, options);
 
         if (options & CaptureOption::Clippings) {
             if (auto prop = obj->getClippingProperty<App::PropertyBool>("ClipFill"))
@@ -218,7 +257,7 @@ void ViewProviderSavedView::apply(CaptureOptions options)
             if (auto prop = obj->getCameraProperty<App::PropertyString>("CameraSettings")) {
                 try {
                     if (boost::starts_with(prop->getStrValue(), "SetCamera "))
-                        view->onMsg(prop->getValue(), nullptr);
+                        view->setCamera(prop->getValue()+10, 20, 400);
                 } catch (Base::Exception &e) {
                     e.ReportException();
                 }
@@ -276,9 +315,42 @@ void ViewProviderSavedView::apply(CaptureOptions options)
             }
         }
 
+        if (options & CaptureOption::ShowOnTop) {
+            if (auto prop = obj->getVisibilityProperty<App::PropertyStringList>("ShowOnTops")) {
+                view->getViewer()->clearGroupOnTop(true);
+                const char *docName = obj->getDocument()->getName();
+                for (const auto &path : prop->getValues()) {
+                    size_t pos = path.find('.');
+                    if (pos == std::string::npos)
+                        continue;
+                    view->getViewer()->checkGroupOnTop(
+                            SelectionChanges(SelectionChanges::AddSelection,
+                                             docName,
+                                             path.substr(0, pos).c_str(),
+                                             path.c_str() + pos + 1),
+                            true);
+                }
+            }
+        }
         Command::updateActive();
     } catch (Base::Exception &e) {
         e.ReportException();
+    }
+}
+
+void ViewProviderSavedView::checkOptions(App::SavedView *obj, CaptureOptions &options) const
+{
+    if (options & CaptureOption::Default) {
+        if (obj->SaveClippings.getValue())
+            options |= CaptureOption::Clippings;
+        if (obj->SaveCamera.getValue())
+            options |= CaptureOption::Camera;
+        if (obj->SaveVisibilities.getValue())
+            options |= CaptureOption::Visibilities;
+        if (obj->SaveShadowSettings.getValue())
+            options |= CaptureOption::Shadow;
+        if (obj->SaveShowOnTop.getValue())
+            options |= CaptureOption::ShowOnTop;
     }
 }
 
@@ -294,16 +366,7 @@ void ViewProviderSavedView::capture(CaptureOptions options)
         if (!view)
             throw Base::RuntimeError("No 3D view");
 
-        if (options & CaptureOption::Default) {
-            if (obj->SaveClippings.getValue())
-                options |= CaptureOption::Clippings;
-            if (obj->SaveCamera.getValue())
-                options |= CaptureOption::Camera;
-            if (obj->SaveVisibilities.getValue())
-                options |= CaptureOption::Visibilities;
-            if (obj->SaveShadowSettings.getValue())
-                options |= CaptureOption::Shadow;
-        }
+        checkOptions(obj, options);
 
         if (options & CaptureOption::Clippings) {
             obj->SaveClippings.setValue(true);
@@ -396,6 +459,14 @@ void ViewProviderSavedView::capture(CaptureOptions options)
                 }
             }
             obj->getVisibilityProperty<App::PropertyStringList>("Visibilities", true)->setValues(std::move(values));
+        }
+
+        if (options & CaptureOption::ShowOnTop) {
+            obj->SaveShowOnTop.setValue(true);
+            std::vector<std::string> values;
+            for (const auto &objT : view->getViewer()->getObjectsOnTop())
+                values.push_back(objT.getSubNameNoElement(true));
+            obj->getVisibilityProperty<App::PropertyStringList>("ShowOnTops", true)->setValues(std::move(values));
         }
     } catch (Base::Exception &e) {
         e.ReportException();

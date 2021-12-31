@@ -37,6 +37,7 @@ class AppExport SavedView : public App::DocumentObject
 
 public:
     App::PropertyBool SaveVisibilities;
+    App::PropertyBool SaveShowOnTop;
     App::PropertyBool SaveCamera;
     App::PropertyBool SaveClippings;
     App::PropertyBool SaveShadowSettings;

@@ -795,7 +795,7 @@ bool View3DInventor::onHasMsg(const char* pMsg) const
     return MDIView::onHasMsg(pMsg);
 }
 
-bool View3DInventor::setCamera(const char* pCamera)
+bool View3DInventor::setCamera(const char* pCamera, int animateSteps, int animateDuration)
 {
     SoCamera * CamViewer = _viewer->getSoRenderManager()->getCamera();
     if (!CamViewer) {
@@ -833,11 +833,17 @@ bool View3DInventor::setCamera(const char* pCamera)
 
     if (Cam->getTypeId() == SoPerspectiveCamera::getClassTypeId()) {
         if (CamViewerP){
-            CamViewerP->position      = static_cast<SoPerspectiveCamera *>(Cam)->position;
-            CamViewerP->orientation   = static_cast<SoPerspectiveCamera *>(Cam)->orientation;
             CamViewerP->nearDistance  = static_cast<SoPerspectiveCamera *>(Cam)->nearDistance;
             CamViewerP->farDistance   = static_cast<SoPerspectiveCamera *>(Cam)->farDistance;
             CamViewerP->focalDistance = static_cast<SoPerspectiveCamera *>(Cam)->focalDistance;
+            if (animateSteps && animateDuration) {
+                _viewer->moveCameraTo(static_cast<SoPerspectiveCamera *>(Cam)->orientation.getValue(),
+                                      static_cast<SoPerspectiveCamera *>(Cam)->position.getValue(),
+                                      animateSteps, animateDuration); 
+            } else {
+                CamViewerP->position      = static_cast<SoPerspectiveCamera *>(Cam)->position;
+                CamViewerP->orientation   = static_cast<SoPerspectiveCamera *>(Cam)->orientation;
+            }
         }
         else {
             throw Base::TypeError("Camera type mismatch");
@@ -846,13 +852,19 @@ bool View3DInventor::setCamera(const char* pCamera)
     else if (Cam->getTypeId() == SoOrthographicCamera::getClassTypeId()) {
         if (CamViewerO){
             CamViewerO->viewportMapping  = static_cast<SoOrthographicCamera *>(Cam)->viewportMapping;
-            CamViewerO->position         = static_cast<SoOrthographicCamera *>(Cam)->position;
-            CamViewerO->orientation      = static_cast<SoOrthographicCamera *>(Cam)->orientation;
             CamViewerO->nearDistance     = static_cast<SoOrthographicCamera *>(Cam)->nearDistance;
             CamViewerO->farDistance      = static_cast<SoOrthographicCamera *>(Cam)->farDistance;
             CamViewerO->focalDistance    = static_cast<SoOrthographicCamera *>(Cam)->focalDistance;
             CamViewerO->aspectRatio      = static_cast<SoOrthographicCamera *>(Cam)->aspectRatio ;
             CamViewerO->height           = static_cast<SoOrthographicCamera *>(Cam)->height;
+            if (animateSteps && animateDuration) {
+                _viewer->moveCameraTo(static_cast<SoOrthographicCamera *>(Cam)->orientation.getValue(),
+                                      static_cast<SoOrthographicCamera *>(Cam)->position.getValue(),
+                                      animateSteps, animateDuration); 
+            } else {
+                CamViewerO->position         = static_cast<SoOrthographicCamera *>(Cam)->position;
+                CamViewerO->orientation      = static_cast<SoOrthographicCamera *>(Cam)->orientation;
+            }
         }
         else {
             throw Base::TypeError("Camera type mismatch");

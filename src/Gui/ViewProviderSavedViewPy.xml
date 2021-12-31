@@ -19,6 +19,7 @@
 
 options: an optional list of possible flags including
     * 'Visibilities': capture objects visibilities
+    * 'ShowOnTop': restore show-on-top objects
     * 'Camera': capture camera settings
     * 'Shadow': capture shadow draw style settings
     * 'Clippings': capture clip plane settings
@@ -34,6 +35,7 @@ If options is not given, it captures all settings enabled by various 'SaveXXX' p
 
 options: an optional list of possible flags including
     * 'Visibilities': restore objects visibilities
+    * 'ShowOnTop': restore show-on-top objects
     * 'Camera': restore camera settings
     * 'Shadow': restore shadow draw style settings
     * 'Clippings': crestore clip plane settings

@@ -121,7 +121,7 @@ public:
      * GL widget to get all key events in \a TopLevel or \a Fullscreen mode.
      */
     void setCurrentViewMode(ViewMode b);
-    bool setCamera(const char* pCamera);
+    bool setCamera(const char* pCamera, int animateSteps=0, int animateDuration=0);
     void toggleClippingPlane();
     bool hasClippingPlane() const;
 

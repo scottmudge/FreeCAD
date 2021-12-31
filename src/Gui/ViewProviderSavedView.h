@@ -26,6 +26,10 @@
 #include <QFlags>
 #include "ViewProviderDocumentObject.h"
 
+namespace App {
+class SavedView;
+}
+
 namespace Gui {
 
 class GuiExport ViewProviderSavedView : public ViewProviderDocumentObject {
@@ -47,12 +51,15 @@ public:
         Camera          = 0x02,
         Visibilities    = 0x04,
         Shadow          = 0x08,
+        ShowOnTop       = 0x10,
         Default         = 0x80,
-        All             = Clippings | Camera | Visibilities | Shadow,
+        All             = Clippings | Camera | Visibilities | ShowOnTop | Shadow,
     };
     Q_DECLARE_FLAGS(CaptureOptions, CaptureOption);
+
     void capture(CaptureOptions options = Default);
     void apply(CaptureOptions options = Default);
+    void checkOptions(App::SavedView *obj, CaptureOptions &options) const;
 
 protected:
     bool setEdit(int ModNum) override;

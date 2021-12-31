@@ -30,6 +30,7 @@ PROPERTY_SOURCE(App::SavedView, App::DocumentObject)
 SavedView::SavedView()
 {
     ADD_PROPERTY_TYPE(SaveVisibilities, (true), "VisibilitySettings", App::Prop_None, "Enable saving object visibilities");
+    ADD_PROPERTY_TYPE(SaveShowOnTop, (true), "VisibilitySettings", App::Prop_None, "Enable saving show on top objects");
     ADD_PROPERTY_TYPE(SaveCamera, (true), "CameraSettings", App::Prop_None, "Enable saving camera settings");
     ADD_PROPERTY_TYPE(SaveClippings, (true), "ClipSettings", App::Prop_None, "Enable saving clipping planes");
     ADD_PROPERTY_TYPE(SaveShadowSettings, (true), "Shadow", App::Prop_None, "Enable saving shadow drawstyle settings");

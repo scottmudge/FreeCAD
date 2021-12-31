@@ -76,6 +76,8 @@ static bool getOptions(PyObject *tuple, ViewProviderSavedView::CaptureOptions &o
         for (auto &opt : opts) {
             if (boost::iequals(opt, "visibilities"))
                 options |= ViewProviderSavedView::CaptureOption::Visibilities;
+            else if (boost::iequals(opt, "showontop"))
+                options |= ViewProviderSavedView::CaptureOption::ShowOnTop;
             else if (boost::iequals(opt, "camera"))
                 options |= ViewProviderSavedView::CaptureOption::Camera;
             else if (boost::iequals(opt, "shadow"))
