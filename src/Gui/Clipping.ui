@@ -15,11 +15,11 @@
   </property>
   <layout class="QGridLayout" name="gridLayout_5">
    <item row="1" column="0">
-    <widget class="QScrollArea" name="scrollArea">
+    <widget class="QScrollArea" name="ClippingScrollArea">
      <property name="widgetResizable">
       <bool>true</bool>
      </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents">
+     <widget class="QWidget" name="ClippingScrollAreaContents">
       <property name="geometry">
        <rect>
         <x>0</x>
@@ -44,10 +44,17 @@
            </property>
           </widget>
          </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="label_5">
+         <item row="6" column="0" colspan="2">
+          <widget class="QLabel" name="label_6">
            <property name="text">
-            <string>Hatch scale</string>
+            <string>Translation increment:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="0" colspan="2">
+          <widget class="QLabel" name="label_7">
+           <property name="text">
+            <string>Rotation increment</string>
            </property>
           </widget>
          </item>
@@ -58,57 +65,10 @@
            </property>
           </widget>
          </item>
-         <item row="6" column="0" colspan="2">
-          <widget class="QLabel" name="label_6">
+         <item row="5" column="0">
+          <widget class="QLabel" name="label_5">
            <property name="text">
-            <string>Translation increment:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="3">
-          <widget class="Gui::PrefDoubleSpinBox" name="spinBoxPlaneSize">
-           <property name="minimumSize">
-            <size>
-             <width>50</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Clip plane visual size</string>
-           </property>
-           <property name="decimals">
-            <number>1</number>
-           </property>
-           <property name="minimum">
-            <double>1.000000000000000</double>
-           </property>
-           <property name="maximum">
-            <double>100000.000000000000000</double>
-           </property>
-           <property name="singleStep">
-            <double>1.000000000000000</double>
-           </property>
-           <property name="value">
-            <double>40.000000000000000</double>
-           </property>
-           <property name="prefEntry" stdset="0">
-            <cstring>ClipPlaneSize</cstring>
-           </property>
-           <property name="prefPath" stdset="0">
-            <cstring>View</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="Gui::PrefCheckBox" name="checkBoxConcave">
-           <property name="text">
-            <string>Concave section</string>
-           </property>
-           <property name="prefEntry" stdset="0">
-            <cstring>SectionConcave</cstring>
-           </property>
-           <property name="prefPath" stdset="0">
-            <cstring>View</cstring>
+            <string>Hatch scale</string>
            </property>
           </widget>
          </item>
@@ -138,56 +98,35 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="0">
-          <widget class="Gui::PrefCheckBox" name="checkBoxGroupRendering">
-           <property name="toolTip">
-            <string>Render clip section fill of objects with similar materials
-so that the intersecting objects effectively become a
-boolean substraction operation.</string>
-           </property>
+         <item row="2" column="0">
+          <widget class="Gui::PrefCheckBox" name="checkBoxBacklight">
            <property name="text">
-            <string>Grouped rendering</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
+            <string>Back face light</string>
            </property>
            <property name="prefEntry" stdset="0">
-            <cstring>SectionFillGroup</cstring>
-           </property>
-           <property name="prefPath" stdset="0">
-            <string>View</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="Gui::PrefColorButton" name="backlightColor">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>30</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Back face light color</string>
-           </property>
-           <property name="prefEntry" stdset="0">
-            <cstring>BacklightColor</cstring>
+            <cstring>EnableBacklight</cstring>
            </property>
            <property name="prefPath" stdset="0">
             <cstring>View</cstring>
            </property>
-           <property name="color" stdset="0">
-            <color>
-             <red>255</red>
-             <green>255</green>
-             <blue>255</blue>
-            </color>
+          </widget>
+         </item>
+         <item row="7" column="2">
+          <widget class="Gui::PrefDoubleSpinBox" name="spinBoxRotation">
+           <property name="decimals">
+            <number>2</number>
+           </property>
+           <property name="minimum">
+            <double>0.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>100000.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="value">
+            <double>1.000000000000000</double>
            </property>
           </widget>
          </item>
@@ -203,22 +142,6 @@ boolean substraction operation.</string>
             <cstring>View</cstring>
            </property>
           </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="Gui::PrefCheckBox" name="checkBoxBacklight">
-           <property name="text">
-            <string>Back face light</string>
-           </property>
-           <property name="prefEntry" stdset="0">
-            <cstring>EnableBacklight</cstring>
-           </property>
-           <property name="prefPath" stdset="0">
-            <cstring>View</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1" colspan="3">
-          <widget class="Gui::FileChooser" name="editHatchTexture" native="true"/>
          </item>
          <item row="2" column="2" colspan="2">
           <widget class="Gui::PrefSlider" name="sliderIntensity">
@@ -266,10 +189,85 @@ boolean substraction operation.</string>
            </property>
           </widget>
          </item>
-         <item row="7" column="0" colspan="2">
-          <widget class="QLabel" name="label_7">
+         <item row="3" column="3">
+          <widget class="Gui::PrefDoubleSpinBox" name="spinBoxPlaneSize">
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Clip plane visual size</string>
+           </property>
+           <property name="decimals">
+            <number>1</number>
+           </property>
+           <property name="minimum">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>100000.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>40.000000000000000</double>
+           </property>
+           <property name="prefEntry" stdset="0">
+            <cstring>ClipPlaneSize</cstring>
+           </property>
+           <property name="prefPath" stdset="0">
+            <cstring>View</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1" colspan="3">
+          <widget class="Gui::FileChooser" name="editHatchTexture" native="true"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="Gui::PrefCheckBox" name="checkBoxConcave">
            <property name="text">
-            <string>Rotation increment</string>
+            <string>Concave section</string>
+           </property>
+           <property name="prefEntry" stdset="0">
+            <cstring>SectionConcave</cstring>
+           </property>
+           <property name="prefPath" stdset="0">
+            <cstring>View</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="Gui::PrefColorButton" name="backlightColor">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Back face light color</string>
+           </property>
+           <property name="prefEntry" stdset="0">
+            <cstring>BacklightColor</cstring>
+           </property>
+           <property name="prefPath" stdset="0">
+            <cstring>View</cstring>
+           </property>
+           <property name="color" stdset="0">
+            <color>
+             <red>255</red>
+             <green>255</green>
+             <blue>255</blue>
+            </color>
            </property>
           </widget>
          </item>
@@ -292,25 +290,6 @@ boolean substraction operation.</string>
            </property>
           </widget>
          </item>
-         <item row="7" column="2">
-          <widget class="Gui::PrefDoubleSpinBox" name="spinBoxRotation">
-           <property name="decimals">
-            <number>2</number>
-           </property>
-           <property name="minimum">
-            <double>0.000000000000000</double>
-           </property>
-           <property name="maximum">
-            <double>100000.000000000000000</double>
-           </property>
-           <property name="singleStep">
-            <double>0.100000000000000</double>
-           </property>
-           <property name="value">
-            <double>1.000000000000000</double>
-           </property>
-          </widget>
-         </item>
          <item row="5" column="1" colspan="2">
           <widget class="Gui::PrefDoubleSpinBox" name="spinBoxHatchScale">
            <property name="decimals">
@@ -330,6 +309,27 @@ boolean substraction operation.</string>
            </property>
            <property name="prefPath" stdset="0">
             <cstring>View</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="Gui::PrefCheckBox" name="checkBoxGroupRendering">
+           <property name="toolTip">
+            <string>Render clip section fill of objects with similar materials
+so that the intersecting objects effectively become a
+boolean substraction operation.</string>
+           </property>
+           <property name="text">
+            <string>Grouped rendering</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <property name="prefEntry" stdset="0">
+            <cstring>SectionFillGroup</cstring>
+           </property>
+           <property name="prefPath" stdset="0">
+            <string>View</string>
            </property>
           </widget>
          </item>

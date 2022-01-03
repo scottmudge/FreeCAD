@@ -651,6 +651,8 @@ SoFCRenderCacheManagerP::updateSelection(void * userdata, SoSensor * _sensor)
       flags |= SoFCRenderCache::CheckIndices;
     if (elentry.id > 0)
       flags |= SoFCRenderCache::WholeOnTop;
+    if (elentry.id & SoFCRenderer::SelIdAlt)
+      flags |= SoFCRenderCache::AltGroup;
     elentry.vcachemap = sensor->cache->buildHighlightCache(
         self->sharedcache, elentry.id, elentry.detail.get(), elentry.color, flags);
 
@@ -753,6 +755,8 @@ SoFCRenderCacheManager::addSelection(const std::string & key,
           flags |= SoFCRenderCache::CheckIndices;
         if (elentry.id > 0)
           flags |= SoFCRenderCache::WholeOnTop;
+        if (elentry.id & SoFCRenderer::SelIdAlt)
+          flags |= SoFCRenderCache::AltGroup;
         elentry.vcachemap = sensor->cache->buildHighlightCache(
             PRIVATE(this)->sharedcache, elentry.id, elentry.detail.get(), elentry.color, flags);
         PRIVATE(this)->renderer->addSelection(elentry.id, elentry.vcachemap);
@@ -787,6 +791,8 @@ SoFCRenderCacheManager::addSelection(const std::string & key,
       flags |= SoFCRenderCache::CheckIndices;
     if (elentry.id > 0)
       flags |= SoFCRenderCache::WholeOnTop;
+    if (elentry.id & SoFCRenderer::SelIdAlt)
+      flags |= SoFCRenderCache::AltGroup;
     elentry.vcachemap = sensor->cache->buildHighlightCache(
         PRIVATE(this)->sharedcache, elentry.id, elentry.detail.get(), elentry.color, flags);
     PRIVATE(this)->renderer->addSelection(elentry.id, elentry.vcachemap);
@@ -855,12 +861,12 @@ SoFCRenderCacheManager::removeSelection(const std::string & key,
       ++itpath;
       continue;
     }
-    if (element.empty())
-      PRIVATE(this)->selpaths.erase(elentry.id);
     if (elentry.id & SoFCRenderer::SelIdAlt) {
       if (elentry.id & SoFCRenderer::SelIdSelected) {
+        PRIVATE(this)->selpaths.erase(elentry.id);
         PRIVATE(this)->renderer->removeSelection(elentry.id);
         elentry.id &= ~(SoFCRenderer::SelIdSelected);
+        PRIVATE(this)->selpaths[elentry.id] = itpath->first;
         elentry.color &= 0xff;
         elentry.vcachemap = sensor.cache->buildHighlightCache(
             PRIVATE(this)->sharedcache, elentry.id, elentry.detail.get(), elentry.color,
@@ -870,6 +876,8 @@ SoFCRenderCacheManager::removeSelection(const std::string & key,
       ++itpath;
       continue;
     }
+    if (element.empty())
+      PRIVATE(this)->selpaths.erase(elentry.id);
     PRIVATE(this)->renderer->removeSelection(elentry.id);
     sensor.elements.erase(iter);
     if (sensor.ontop && element.size()) {
@@ -929,7 +937,9 @@ SoFCRenderCacheManager::clearSelection(bool alt)
           if (elentry.id & SoFCRenderer::SelIdSelected) {
             ++res;
             PRIVATE(this)->renderer->removeSelection(elentry.id);
+            PRIVATE(this)->selpaths.erase(elentry.id);
             elentry.id &= ~(SoFCRenderer::SelIdSelected);
+            PRIVATE(this)->selpaths[elentry.id] = itpath->first;
             elentry.color &= 0xff;
             if (sensor.cache) {
               elentry.vcachemap = sensor.cache->buildHighlightCache(

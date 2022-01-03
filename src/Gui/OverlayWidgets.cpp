@@ -1221,19 +1221,20 @@ public:
                 "Gui--CallTipsList::item { background-color: rgba(200,200,200,200);}"
                 "Gui--CallTipsList::item::selected { background-color: palette(highlight);}"
 
-                "QAbstractButton { background: rgba(250,250,250,80);"
-                                  "padding: 2px 4px;}"
-                "QAbstractButton::hover { background: rgba(250,250,250,200);}"
-                "QAbstractButton::focus { background: rgba(250,250,250,255);}"
-                "QAbstractButton::pressed { background: rgba(100,100,100,100);"
+                "QPushButton { background: rgba(250,250,250,80);padding: 2px 4px;}"
+                "QPushButton::hover { background: rgba(250,250,250,200);}"
+                "QPushButton::focus { background: rgba(250,250,250,255);}"
+                "QPushButton::pressed { background: rgba(100,100,100,100);"
                                            "border: 1px inset palette(dark) }"
-                "QAbstractButton::checked { background: rgba(100,100,100,100);"
+                "QPushButton::checked { background: rgba(100,100,100,100);"
                                            "border: 1px inset palette(dark) }"
-                "QAbstractButton::checked:hover { background: rgba(150,150,150,200);"
+                "QPushButton::checked:hover { background: rgba(150,150,150,200);"
                                                  "border: 1px inset palette(dark) }"
                 "Gui--OverlayToolButton { background: transparent; padding: 0px; border: none }"
                 "Gui--OverlayTitleBar,"
                 "Gui--OverlaySplitterHandle { background-color: rgba(200, 200, 200, 150); }"
+                "QWidget#ClippingScrollAreaContents, "
+                "QScrollArea#ClippingScrollArea { border: none; background-color: #a0e6e6e6; }"
             );
             activeStyleSheet = _default;
         }
@@ -1328,13 +1329,17 @@ void OverlayTabWidget::_setOverlayMode(QWidget *widget, int enable)
             return;
         }
     }
-    if(enable!=0) {
-        widget->setWindowFlags(widget->windowFlags() | Qt::FramelessWindowHint);
-    } else {
-        widget->setWindowFlags(widget->windowFlags() & ~Qt::FramelessWindowHint);
+
+    if (!qobject_cast<QScrollArea*>(widget)
+            || !qobject_cast<Dialog::Clipping*>(widget->parentWidget())) {
+        if(enable!=0) {
+            widget->setWindowFlags(widget->windowFlags() | Qt::FramelessWindowHint);
+        } else {
+            widget->setWindowFlags(widget->windowFlags() & ~Qt::FramelessWindowHint);
+        }
+        widget->setAttribute(Qt::WA_NoSystemBackground, enable!=0);
+        widget->setAttribute(Qt::WA_TranslucentBackground, enable!=0);
     }
-    widget->setAttribute(Qt::WA_NoSystemBackground, enable!=0);
-    widget->setAttribute(Qt::WA_TranslucentBackground, enable!=0);
 }
 
 void OverlayTabWidget::setOverlayMode(QWidget *widget, int enable)

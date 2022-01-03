@@ -176,6 +176,11 @@ Gui--OverlaySplitterHandle {
   background-color: rgba(80, 80, 80, 150)
 }
 
+QScrollArea#ClippingScrollArea,
+QWidget#ClippingScrollAreaContents {
+  background-color: #808c8c8c;
+}
+
 QSint--ActionGroup QFrame[class="content"] {
   background-color: #a08c8c8c; /* Task Panel background color */
 }

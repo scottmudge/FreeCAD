@@ -1259,7 +1259,9 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
       glDisable(GL_LINE_STIPPLE);
       // glDisable(GL_DEPTH_TEST);
       auto col = drawidx >= 0 ? this->material.emissive
-                              : draw_entry.material->hiddenlinecolor;
+                              : (draw_entry.material->linecolor 
+                                  ? draw_entry.material->linecolor
+                                  : draw_entry.material->diffuse);
       glColor3ub((unsigned char)((col>>24)&0xff),
           (unsigned char)((col>>16)&0xff),
           (unsigned char)((col>>8)&0xff));

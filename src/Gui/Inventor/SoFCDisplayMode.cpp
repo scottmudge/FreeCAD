@@ -38,7 +38,7 @@ SoFCDisplayMode::SoFCDisplayMode()
 
   SO_NODE_ADD_FIELD(faceColor, (SbColor()));
   SO_NODE_ADD_FIELD(lineColor, (SbColor()));
-  SO_NODE_ADD_FIELD(transparency, (0.0f));
+  SO_NODE_ADD_FIELD(transparency, (-1.0f));
   SO_NODE_ADD_FIELD(showHiddenLines,  (FALSE));
   SO_NODE_ADD_FIELD(showOutline,  (FALSE));
   SO_NODE_ADD_FIELD(displayMode,  (""));
@@ -67,7 +67,7 @@ void SoFCDisplayMode::doAction(SoAction * action)
     SoFCDisplayModeElement::setColors(state, this,
         this->faceColor.isIgnored() ? nullptr : &fc,
         this->lineColor.isIgnored() ? nullptr : &lc,
-        this->transparency.isIgnored() ? 0.0f : t);
+        this->transparency.isIgnored() ? -1.0f : t);
   }
 }
 

@@ -1696,7 +1696,7 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
             auto detail = pps[i]->getDetail();
             if(!detail)
                 continue;
-            if(detail->isOfType(SoFaceDetail::getClassTypeId())) {
+            if(backFace != -1 && detail->isOfType(SoFaceDetail::getClassTypeId())) {
                 if(backFace == 1) {
                     ppFace = pps[i];
                     continue;
@@ -1714,7 +1714,7 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
                         ppFace = _ppFace.get();
                     }
                 } else {
-                    if(-backFace == (int)faceDistances.size()) {
+                    if(-backFace+1 == (int)faceDistances.size()) {
                         auto itLast = --faceDistances.end();
                         if(dist >= itLast->first)
                             continue;

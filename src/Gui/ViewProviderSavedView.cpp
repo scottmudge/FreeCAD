@@ -91,6 +91,7 @@ void ViewProviderSavedView::prepareMenu(QMenu *menu)
     QMenu *submenu;
     menu->addAction(QObject::tr("Capture"), [this]() {capture();});
     submenu = menu->addMenu(QObject::tr("Capture options"));
+    submenu->setToolTipsVisible(true);
 
     auto addOption = [submenu](App::PropertyBool &prop) {
         auto action = Action::addCheckBox(submenu,
@@ -98,8 +99,19 @@ void ViewProviderSavedView::prepareMenu(QMenu *menu)
                         QApplication::translate("App::Property", prop.getDocumentation()),
                         QIcon(),
                         prop.getValue());
-        QObject::connect(action, &QAction::toggled, [&prop](bool checked){prop.setValue(checked);});
+        QObject::connect(action, &QAction::toggled, [&prop](bool checked){
+            prop.setValue(checked);
+        });
     };
+
+    QObject::connect(submenu, &QMenu::aboutToShow, []() {
+        if (!App::GetApplication().getActiveTransaction())
+            App::GetApplication().setActiveTransaction(QT_TRANSLATE_NOOP("Command", "Change saved view"));
+    });
+    QObject::connect(submenu, &QMenu::aboutToHide, []() {
+        App::GetApplication().closeActiveTransaction();
+    });
+
     addOption(obj->SaveClippings);
     addOption(obj->SaveCamera);
     addOption(obj->SaveVisibilities);
@@ -443,7 +455,7 @@ void ViewProviderSavedView::capture(CaptureOptions options)
                 for (auto sub : o->getSubObjects(App::DocumentObject::GS_SELECT)) {
                     App::DocumentObject *parent = nullptr;
                     childName.clear();
-                    auto sobj = obj->resolve(sub.c_str(),&parent,&childName);
+                    auto sobj = o->resolve(sub.c_str(),&parent,&childName);
                     int vis;
                     if(!sobj || !parent
                             || parent->getDocument() != obj->getDocument()

@@ -609,7 +609,7 @@ public:
     bool getElementPicked(bool addname, int type,
             const SoPickedPoint *pp, std::ostream &str) const
     {
-        if(!pp || !isLinked() || !pcLinked->isSelectable())
+        if(!pp || !isLinked() || (!pcLinked->isSelectable() && !ViewParams::OverrideSelectability()))
             return false;
 
         if(addname)

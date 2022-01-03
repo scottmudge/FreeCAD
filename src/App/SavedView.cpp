@@ -51,6 +51,7 @@ App::Property *SavedView::getProperty(const Base::Type &type, const char *name, 
         prop = addDynamicProperty(type.getName(), name, group);
         if (!prop)
             FC_THROWM(Base::RuntimeError,"Failed to get property " << name);
+        prop->setStatus(App::Property::Hidden, true);
     }
     return prop;
 }

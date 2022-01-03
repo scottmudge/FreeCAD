@@ -1935,6 +1935,11 @@ CommandManager::CommandManager()
 CommandManager::~CommandManager()
 {
     clearCommands();
+
+    // In case of unregistering Python callback
+    Base::PyGILStateLocker lock;
+    _CallbackMap.clear();
+    _Callbacks.clear();
 }
 
 int CommandManager::registerCallback(const CallbackFunction & func, const char *cmd)
@@ -1951,6 +1956,8 @@ bool CommandManager::unregisterCallback(int id)
     auto it = _Callbacks.find(id);
     if (it == _Callbacks.end())
         return false;
+    // In case of unregistering Python callback
+    Base::PyGILStateLocker lock;
     _CallbackMap.erase(it->second);
     _Callbacks.erase(it);
     return true;

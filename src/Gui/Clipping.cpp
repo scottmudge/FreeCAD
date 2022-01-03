@@ -308,8 +308,8 @@ public:
         initClip(this->clipZ, this->draggerZ, ui.clipZ, camera, 0, 0, 1);
         initClip(this->clipView, this->draggerCustom, ui.clipView, camera, 0, 0, 1);
 
-        // this->auxNode = static_cast<SoGroup*>(viewer->getAuxSceneGraph());
-        this->auxNode = static_cast<SoGroup*>(viewer->getSceneGraph());
+        this->auxNode = static_cast<SoGroup*>(viewer->getAuxSceneGraph());
+        // this->auxNode = static_cast<SoGroup*>(viewer->getSceneGraph());
         this->auxNode->insertChild(this->clipSwitch, 0);
     }
 

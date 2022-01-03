@@ -382,6 +382,8 @@ public:
     FC_VIEW_PARAM(EnableBacklight, bool, Bool, false, "")\
     FC_VIEW_PARAM(BacklightColor, unsigned long, Unsigned, 0xffffffff, "")\
     FC_VIEW_PARAM(BacklightIntensity, double, Float, 1.0, "")\
+    FC_VIEW_PARAM(OverrideSelectability, bool , Bool, false,  \
+        QT_TRANSLATE_NOOP("ViewParams","Override object selectability to enable selection")) \
 
 #undef FC_VIEW_PARAM
 #define FC_VIEW_PARAM(_name,_ctype,_type,_def,_doc) \

@@ -181,7 +181,7 @@ public:
 
   typedef COWVector<NodeInfo> NodeInfoArray;
 
-  struct Material {
+  struct _Material {
     enum Type {
       Triangle,
       Line,
@@ -200,6 +200,9 @@ public:
       FLAG_LIGHT_MODEL,
       FLAG_LINE_PATTERN,
       FLAG_LINE_WIDTH,
+      FLAG_LINE_COLOR,
+      FLAG_FACE_COLOR,
+      FLAG_FACE_TRANSPARENCY,
       FLAG_MATERIAL_BINDING,
       FLAG_POINT_SIZE,
       FLAG_SHAPE_HINTS,
@@ -226,7 +229,8 @@ public:
     uint32_t emissive;
     uint32_t specular;
     uint32_t linepattern;
-    uint32_t hiddenlinecolor;
+    uint32_t linecolor;
+    uint32_t facecolor;
     float linewidth;
     float pointsize;
     float shininess;
@@ -270,7 +274,7 @@ public:
       return (linepattern & 0xffff) != 0xffff;
     }
 
-    inline bool operator<(const Material &other) const {
+    inline bool operator<(const _Material &other) const {
       if (order < other.order) return true;
       if (order > other.order) return false;
       if (annotation < other.annotation) return true;
@@ -302,8 +306,10 @@ public:
         if (shadowstyle > other.shadowstyle) return false;
         if (diffuse < other.diffuse) return true;
         if (diffuse > other.diffuse) return false;
-        if (hiddenlinecolor < other.hiddenlinecolor) return true;
-        if (hiddenlinecolor > other.hiddenlinecolor) return false;
+        if (facecolor < other.facecolor) return true;
+        if (facecolor > other.facecolor) return false;
+        if (linecolor < other.linecolor) return true;
+        if (linecolor > other.linecolor) return false;
         if (pervertexcolor < other.pervertexcolor) return true;
         if (pervertexcolor > other.pervertexcolor) return false;
         if (ambient < other.ambient) return true;
@@ -356,6 +362,16 @@ public:
         }
       }
       return overrideflags.to_ulong() < other.overrideflags.to_ulong();
+    }
+  };
+
+  struct Material : _Material {
+    const Material &operator=(const Material &other) {
+      if (other.linecolor)
+        static_cast<_Material&>(*this) = other;
+      else
+        static_cast<_Material&>(*this) = other;
+      return *this;
     }
   };
 
@@ -493,6 +509,7 @@ public:
     PreselectHighlight = 1,
     CheckIndices = 2,
     WholeOnTop = 4,
+    AltGroup = 8,
   };
   VertexCacheMap buildHighlightCache(SbFCMap<int, Gui::CoinPtr<SoFCVertexCache> > &sharedcache,
                                      int order,

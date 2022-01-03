@@ -63,7 +63,7 @@ public:
 protected: 
     virtual void setAddSubColor(const App::Color &color, float t);
     virtual void updateAddSubShapeIndicator();
-    virtual PartGui::ViewProviderPart * getAddSubView();
+    virtual PartGui::ViewProviderPartExt * getAddSubView();
 
 protected:
     Gui::CoinPtr<Gui::SoFCPathAnnotation>   previewGroup;
@@ -74,7 +74,7 @@ private:
     std::string                 displayMode;
     App::DocumentObjectT        baseFeature;
     int                         baseChild = -1;
-    std::unique_ptr<PartGui::ViewProviderPart> pAddSubView;
+    std::unique_ptr<PartGui::ViewProviderPartExt> pAddSubView;
     bool                        previewActive = false;
 };
 

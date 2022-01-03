@@ -92,7 +92,7 @@ SoFCDisplayModeElement::set(SoState * const state,
     else {
       element->hasFaceColor = false;
       element->hasLineColor = false;
-      element->transp = 0.0f;
+      element->transp = -1.0f;
       element->outline = false;
     }
   }
@@ -252,7 +252,7 @@ SoFCDisplayModeElement::init(SoState * state)
   this->outline = FALSE;
   this->hasFaceColor = FALSE;
   this->hasLineColor = FALSE;
-  this->transp = 0.0f;
+  this->transp = -1.0f;
 }
 
 // vim: noai:ts=2:sw=2

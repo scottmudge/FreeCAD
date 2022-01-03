@@ -488,7 +488,8 @@ SoFCUnifiedSelection::Private::getPickedInfo(std::vector<PickedInfo> &ret,
         info.vpd = static_cast<ViewProviderDocumentObject*>(vp);
         if(!(master->useNewSelection.getValue()
                 || info.vpd->useNewSelectionModel())
-            || !info.vpd->isSelectable())
+            || (!info.vpd->isSelectable()
+                && !ViewParams::OverrideSelectability()))
         {
             if(!singlePick) continue;
             if(ret.empty()) {
@@ -656,7 +657,7 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
     this->rayPickAction.setResetClipPlane(false);
 
     this->rayPickAction.setPickBackFace(singlePick ? pickBackFace : 0);
-    if (singlePick && pickBackFace && ret.size()) {
+    if (singlePick && (ViewParams::hiddenLineSelectionOnTop() || pickBackFace) && ret.size()) {
         // Here means, we got some pick in the on top group. But user is
         // holding SHIFT for backface picking. Right now, we can't pick back
         // face beyond on top group yet. But we can pick other edge or vertex
@@ -695,8 +696,11 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
     if(singlePick && pickBackFace) {
         if(pickBackFace > 1 && this->rayPickAction.getBackFaceCount() < pickBackFace)
             pickBackFace = std::max(1, this->rayPickAction.getBackFaceCount());
-        else if (pickBackFace < 0 && this->rayPickAction.getBackFaceCount() < -pickBackFace)
-            pickBackFace = std::min(-1, -this->rayPickAction.getBackFaceCount());
+        else if (pickBackFace < -1 && this->rayPickAction.getBackFaceCount() < -pickBackFace+1) {
+            // Note pickBackFace == -1 is reserved for picking hidden
+            // edge/vertex. So we start from -2 for picking actual back face
+            pickBackFace = std::min(-2, -this->rayPickAction.getBackFaceCount()-1);
+        }
     }
 
     FC_TIME_TRACE(t,"pick radius " << radius << ", count " << ret.size() << ',');
@@ -932,7 +936,8 @@ bool SoFCUnifiedSelection::Private::doAction(SoAction * action)
             App::DocumentObject* obj = doc->getObject(hilaction->SelChange->pObjectName);
             ViewProvider*vp = Application::Instance->getViewProvider(obj);
             if (vp && vp->isDerivedFrom(ViewProviderDocumentObject::getClassTypeId()) &&
-                (master->useNewSelection.getValue()||vp->useNewSelectionModel()) && vp->isSelectable())
+                (master->useNewSelection.getValue()||vp->useNewSelectionModel())
+                && (vp->isSelectable() || ViewParams::OverrideSelectability()))
             {
                 detailPath->truncate(0);
                 SoDetail *det = 0;
@@ -966,7 +971,9 @@ bool SoFCUnifiedSelection::Private::doAction(SoAction * action)
             App::Document* doc = App::GetApplication().getDocument(selaction->SelChange->pDocName);
             App::DocumentObject* obj = doc->getObject(selaction->SelChange->pObjectName);
             ViewProvider*vp = Application::Instance->getViewProvider(obj);
-            if (vp && (master->useNewSelection.getValue()||vp->useNewSelectionModel()) && vp->isSelectable()) {
+            if (vp && (master->useNewSelection.getValue()||vp->useNewSelectionModel())
+                   && (vp->isSelectable() || ViewParams::OverrideSelectability()))
+            {
                 SoDetail *detail = nullptr;
                 detailPath->truncate(0);
                 if (useRenderer()) {
@@ -1061,7 +1068,8 @@ bool SoFCUnifiedSelection::Private::doAction(SoAction * action)
                 ViewProviderDocumentObject* vpd = static_cast<ViewProviderDocumentObject*>(*it);
                 if (master->useNewSelection.getValue() || vpd->useNewSelectionModel()) {
                     SoSelectionElementAction::Type type;
-                    if(Selection().isSelected(vpd->getObject()) && vpd->isSelectable())
+                    if(Selection().isSelected(vpd->getObject())
+                            && (vpd->isSelectable() || ViewParams::OverrideSelectability()))
                         type = SoSelectionElementAction::All;
                     else
                         type = SoSelectionElementAction::None;
@@ -1498,15 +1506,17 @@ SoFCUnifiedSelection::Private::handleEvent(SoHandleEventAction * action)
             if (shiftDown && event->wasCtrlDown()) {
                 auto wev = static_cast<const SoMouseWheelEvent*>(event);
                 if (wev->getDelta() > 0) {
-                    if(pickBackFace == 1)
-                        pickBackFace = -1;
-                    else
+                    if(pickBackFace == 1) {
+                        // Note pickBackFace == -1 is reserved for picking hidden
+                        // edge/vertex. So we start from -2 for picking actual back face
+                        pickBackFace = -2;
+                    } else
                         --pickBackFace;
                     doPick = true;
                     FC_LOG("back face forward " << pickBackFace << " " << wev->getDelta());
                     action->setHandled();
                 } else if (wev->getDelta() < 0) {
-                    if(pickBackFace == -1)
+                    if(pickBackFace == -2)
                         pickBackFace = 1;
                     else
                         ++pickBackFace;
@@ -2718,7 +2728,8 @@ void SoFCSelectionRoot::pick(SoPickAction * action) {
 }
 
 void SoFCSelectionRoot::rayPick(SoRayPickAction * action) {
-    if(selectionStyle.getValue() == Unpickable)
+    if(!ViewParams::OverrideSelectability()
+            && selectionStyle.getValue() == Unpickable)
         return;
     auto stack = beginAction(action);
     if (!stack)
@@ -2789,7 +2800,8 @@ void SoFCSelectionRoot::callback(SoCallbackAction *action) {
 }
 
 void SoFCSelectionRoot::doAction(SoAction *action) {
-    if(selectionStyle.getValue() == Unpickable
+    if(!ViewParams::OverrideSelectability()
+            && selectionStyle.getValue() == Unpickable
             && action->getCurPathCode() != SoAction::IN_PATH)
     {
         if(action->isOfType(SoSelectionElementAction::getClassTypeId())
