@@ -122,6 +122,7 @@ SubShapeBinder::SubShapeBinder()
             "Stores the context of this binder. It is used for monitoring and auto updating\n"
             "the relative placement of the bound shape");
     Context.setScope(App::LinkScope::Hidden);
+    Context.setSilentRestore(true);
 
     ADD_PROPERTY_TYPE(_Version,(0),"Base",(App::PropertyType)(
                 App::Prop_Hidden|App::Prop_ReadOnly), "");

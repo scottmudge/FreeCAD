@@ -164,12 +164,14 @@ struct DocumentP
     typedef boost::signals2::shared_connection_block ConnectionBlock;
     ConnectionBlock connectActObjectBlocker;
 
-    App::PropertyStringList * getOnTopProperty(App::Document *doc) {
+    App::PropertyStringList * getOnTopProperty(App::Document *doc, bool create) {
         try {
             if (!doc)
                 return nullptr;
             auto prop = doc->getPropertyByName("OnTopObjects");
             if (!prop || !prop->isDerivedFrom(App::PropertyStringList::getClassTypeId())) {
+                if (!create)
+                    return nullptr;
                 if (prop)
                     doc->removeDynamicProperty("OnTopObjects");
                 prop = doc->addDynamicProperty("App::PropertyStringList", "OnTopObjects", "Views");
@@ -272,7 +274,7 @@ Document::Document(App::Document* pcDocument,Application * app)
 
     d->connectStartSave = pcDocument->signalStartSave.connect(
         [this](const App::Document &doc, const std::string &) {
-            if (auto prop = d->getOnTopProperty(& const_cast<App::Document&>(doc))) {
+            if (auto prop = d->getOnTopProperty(& const_cast<App::Document&>(doc), true)) {
                 try {
                     std::vector<std::string> values;
                     std::ostringstream ss;
@@ -1712,7 +1714,7 @@ void Document::slotFinishRestoreDocument(const App::Document& doc)
 
         size_t i=0;
         std::map<int, std::vector<std::pair<std::string,std::string>>> onTopObjs;
-        if (auto prop = d->getOnTopProperty(getDocument())) {
+        if (auto prop = d->getOnTopProperty(getDocument(), false)) {
             for (const auto &path : prop->getValues()) {
                 std::istringstream iss(path);
                 int id = -1;

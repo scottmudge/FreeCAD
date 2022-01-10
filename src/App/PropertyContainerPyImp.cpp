@@ -257,6 +257,10 @@ PyObject*  PropertyContainerPy::setPropertyStatus(PyObject *args)
                     auto linkProp = static_cast<PropertyLinkBase*>(prop);
                     linkProp->setAllowPartial(value);
                     continue;
+                } else if(v == "SilentRestore" && prop->isDerivedFrom(PropertyLinkBase::getClassTypeId())) {
+                    auto linkProp = static_cast<PropertyLinkBase*>(prop);
+                    linkProp->setSilentRestore(value);
+                    continue;
                 } else if(v == "ReturnNewElement" && prop->isDerivedFrom(PropertyLinkBase::getClassTypeId())) {
                     auto linkProp = static_cast<PropertyLinkBase*>(prop);
                     linkProp->setReturnNewElement(value);

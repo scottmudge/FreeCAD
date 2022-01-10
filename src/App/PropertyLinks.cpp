@@ -86,6 +86,10 @@ void PropertyLinkBase::setAllowExternal(bool allow) {
     setFlag(LinkAllowExternal,allow);
 }
 
+void PropertyLinkBase::setSilentRestore(bool allow) {
+    setFlag(LinkSilentRestore,allow);
+}
+
 void PropertyLinkBase::setReturnNewElement(bool enable)
 { 
     setFlag(LinkNewElement, enable);
@@ -3000,10 +3004,11 @@ public:
             info = it->second;
             if(!info->pcDoc) {
                 QString fullpath(info->getFullPath());
-                if(fullpath.size() &&
-                   App::GetApplication().addPendingDocument(
-                       fullpath.toUtf8().constData(),objName,
-                       l->testFlag(PropertyLinkBase::LinkAllowPartial))==0)
+                if ((!l->testFlag(PropertyLinkBase::LinkSilentRestore) || QFileInfo(fullpath).exists())
+                        && fullpath.size()
+                        && App::GetApplication().addPendingDocument(
+                            fullpath.toUtf8().constData(),objName,
+                            l->testFlag(PropertyLinkBase::LinkAllowPartial))==0)
                 {
                     for(App::Document *doc : App::GetApplication().getDocuments()) {
                         if(getFullPath(doc->getFileName()) == fullpath) {
@@ -3096,7 +3101,7 @@ public:
         QString fullpath(getFullPath());
         if(fullpath.isEmpty())
             FC_ERR("document not found " << filePath());
-        else{
+        else {
             for(App::Document *doc : App::GetApplication().getDocuments()) {
                 if(getFullPath(doc->getFileName()) == fullpath) {
                     if(doc->testStatus(App::Document::PartialDoc) && !doc->getObject(objName))
@@ -3104,6 +3109,10 @@ public:
                     attach(doc);
                     return;
                 }
+            }
+            if (l->testFlag(PropertyLinkBase::LinkSilentRestore) && !QFileInfo(fullpath).exists()) {
+                FC_LOG("document file does not exists: " << filePath());
+                return;
             }
             FC_LOG("document pending " << filePath());
             app.addPendingDocument(fullpath.toUtf8().constData(),objName,
@@ -3635,7 +3644,7 @@ bool PropertyXLink::upgrade(Base::XMLReader &reader, const char *typeName) {
 
 int PropertyXLink::checkRestore(std::string *msg) const {
     if(!docInfo) {
-        if(!_pcLink && objectName.size()) {
+        if(!testFlag(LinkSilentRestore) && !_pcLink && objectName.size()) {
             // this condition means linked object not found
             if(msg) {
                 std::ostringstream ss;
@@ -3650,6 +3659,8 @@ int PropertyXLink::checkRestore(std::string *msg) const {
         return 0;
     }
     if(!_pcLink) {
+        if (testFlag(LinkSilentRestore))
+            return 0;
         if(testFlag(LinkAllowPartial) &&
            (!docInfo->pcDoc ||
             docInfo->pcDoc->testStatus(App::Document::PartialDoc)))

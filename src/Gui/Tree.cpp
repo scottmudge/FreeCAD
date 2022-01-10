@@ -224,6 +224,7 @@ private:
     std::map<App::SubObjectT, std::vector<DocumentObjectItem*>> itemsOnTop;
     bool updatingItemsOnTop = false;
     bool itemSorted = false;
+    bool docRestored = false;
 
     friend class TreeWidget;
     friend class DocumentObjectData;
@@ -5618,6 +5619,11 @@ void DocumentItem::slotNewObject(const Gui::ViewProviderDocumentObject& obj) {
 
 void DocumentItem::setupTreeRank(DocumentObjectItem *item)
 {
+    if(!this->connectChgObject.connected()) {
+        // This means the document is not fully restored yet by the tree view.
+        // Don't touch tree rank just yet.
+        return;
+    }
     auto ranks = document()->getDocument()->treeRanks();
     auto obj = item->object()->getObject();
     if (obj->TreeRank.getValue() < ranks.second) {
@@ -5757,7 +5763,10 @@ void TreeWidget::_slotDeleteObject(const Gui::ViewProviderDocumentObject& view, 
                 // claimed children cache is expected to have been cleared.
                 docItem->populateItem(item, true);
             }
-            item->myOwner = 0;
+            if (item->myOwner) {
+                item->myOwner->removeItemOnTop(item);
+                item->myOwner = 0;
+            }
             delete item;
         }
         blockConnection(lock);
