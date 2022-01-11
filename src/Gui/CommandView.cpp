@@ -4162,7 +4162,7 @@ VIEW_CMD_DEF(HiddenLineSelectionOnTop, HiddenLineSelectionOnTop)
   sToolTipText  = ViewParams::docHiddenLineSelectionOnTop();
   sWhatsThis    = "Std_HiddenLineSelectionOnTop";
   sStatusTip    = sToolTipText;
-  eType         = Alter3DView;
+  eType         = NoDefaultAction;
 }
 
 //======================================================================

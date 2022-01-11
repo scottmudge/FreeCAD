@@ -1734,6 +1734,7 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
                 break;
             }
             if(detail->isOfType(SoLineDetail::getClassTypeId())) {
+                pp = pps[i];
                 const SbVec3f &pos = pps[i]->getPoint();
                 for(int j=i+1;j<c;++j) {
                     if(!pos.equals(pps[j]->getPoint(),0.01f))
@@ -1763,8 +1764,15 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
     const SbVec3f &pos = pp->getPoint();
     float dist = getDistance(this,pos);
     int p = SoFCUnifiedSelection::getPriority(pp);
+    
+    if (backFace == -1
+            && pp != ppFace
+            && ppList->getLength()
+            && (*ppList)[0]->getDetail()
+            && (*ppList)[0]->getDetail()->isOfType(SoFaceDetail::getClassTypeId()))
+        ppList->truncate(0);
 
-    if(!ppList->getLength()) {
+    if(ppList->getLength() == 0) {
         lastPriority = p;
         if(backFace && pp == ppFace) {
             if(pp == _ppFace.get())
