@@ -176,7 +176,7 @@ inline void SketcherAddWorkbenchSketchActions(T& sketch)
     sketch  << "Sketcher_NewSketch"
             << "Sketcher_EditSketch"
             << "Sketcher_LeaveSketch"
-            << "Sketcher_ViewSketch"
+            << "Sketcher_ViewSketchGroup"
             << "Sketcher_ViewSection"
             << "Sketcher_MapSketch";
     SketcherAddWorkspaceSketchExtra(sketch);

@@ -114,6 +114,7 @@
         <file>icons/general/Sketcher_ValidateSketch.svg</file>
         <file>icons/general/Sketcher_ViewSection.svg</file>
         <file>icons/general/Sketcher_ViewSketch.svg</file>
+        <file>icons/general/Sketcher_ViewSketchOther.svg</file>
     </qresource>
     <qresource>
         <file>icons/geometry/Sketcher_AlterFillet.svg</file>

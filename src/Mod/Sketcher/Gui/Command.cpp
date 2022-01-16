@@ -710,6 +710,69 @@ bool CmdSketcherViewSketch::isActive(void)
     return false;
 }
 
+DEF_STD_CMD_A(CmdSketcherViewSketchOther)
+
+CmdSketcherViewSketchOther::CmdSketcherViewSketchOther()
+    : Command("Sketcher_ViewSketchOther")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = "Sketcher";
+    sMenuText       = QT_TR_NOOP("View sketch other");
+    sToolTipText    = QT_TR_NOOP("When in edit mode, "
+                                 "set the camera orientation perpendicular to the oppsite side of sketch plane.");
+    sWhatsThis      = "Sketcher_ViewSketchOther";
+    sStatusTip      = sToolTipText;
+    sPixmap         = "Sketcher_ViewSketchOther";
+    sAccel          = "Q, R";
+    eType           = 0;
+}
+
+void CmdSketcherViewSketchOther::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+    Gui::Document *doc = getActiveGuiDocument();
+    SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
+    if (vp) {
+        runCommand(Gui,"Gui.ActiveDocument.ActiveView.setCameraOrientation("
+                "(Gui.editDocument().EditingTransform.getTransform()[1] * App.Rotation(App.Vector(1,0,0), 180)).Q)");
+    }
+}
+
+bool CmdSketcherViewSketchOther::isActive(void)
+{
+    Gui::Document *doc = getActiveGuiDocument();
+    if (doc) {
+        // checks if a Sketch Viewprovider is in Edit and is in no special mode
+        SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
+        if (vp /*&& vp->getSketchMode() == ViewProviderSketch::STATUS_NONE*/)
+            return true;
+    }
+    return false;
+}
+
+class CmdSketcherViewSketchGroup: public Gui::GroupCommand
+{
+public:
+    CmdSketcherViewSketchGroup()
+        : GroupCommand("Sketcher_ViewSketchGroup")
+    {
+        sAppModule      = "Sketcher";
+        sGroup          = "Sketcher";
+        sMenuText       = QT_TR_NOOP("View sketch");
+        sToolTipText    = QT_TR_NOOP("Set sketch view orientation");
+        sWhatsThis      = "Sketcher_ViewSketchGroup";
+        sStatusTip      = sToolTipText;
+        sPixmap         = "Sketcher_ViewSketchGroup";
+        eType           = 0;
+        bCanLog       = false;
+
+        addCommand(new CmdSketcherViewSketch);
+        addCommand(new CmdSketcherViewSketchOther);
+    }
+
+    virtual const char* className() const {return "CmdSketcherViewSketch";}
+};
+
 DEF_STD_CMD_A(CmdSketcherValidateSketch)
 
 CmdSketcherValidateSketch::CmdSketcherValidateSketch()
@@ -984,7 +1047,7 @@ void CreateSketcherCommands(void)
     rcCmdMgr.addCommand(new CmdSketcherStopOperation());
     rcCmdMgr.addCommand(new CmdSketcherReorientSketch());
     rcCmdMgr.addCommand(new CmdSketcherMapSketch());
-    rcCmdMgr.addCommand(new CmdSketcherViewSketch());
+    rcCmdMgr.addCommand(new CmdSketcherViewSketchGroup());
     rcCmdMgr.addCommand(new CmdSketcherValidateSketch());
     rcCmdMgr.addCommand(new CmdSketcherMirrorSketch());
     rcCmdMgr.addCommand(new CmdSketcherMergeSketches());

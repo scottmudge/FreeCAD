@@ -1037,8 +1037,6 @@ void ParameterGrp::GetBlob(const char* /*Name*/, void* /*pBuf*/, long /*lMaxLeng
 
 void  ParameterGrp::SetASCII(const char* Name, const char *sValue)
 {
-    if (boost::equals(Name, "StyleSheet"))
-        Name = Name;
     if (!_pGroupNode) {
         if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
             FC_WARN("Setting attribute " << "FCText:"

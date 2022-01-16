@@ -351,6 +351,7 @@ private:
     int timerId = 0;
     bool blink = false;
     bool mouseMovePending = false;
+    bool ignoreMouse = false;
 };
 
 class OverlaySizeGrip: public QWidget

@@ -499,7 +499,7 @@ Gui::MenuItem* Workbench::setupMenuBar() const
 
     *sketch << "PartDesign_NewSketch"
             << "Sketcher_LeaveSketch"
-            << "Sketcher_ViewSketch"
+            << "Sketcher_ViewSketchGroup"
             << "Sketcher_MapSketch"
             << "Sketcher_ReorientSketch"
             << "Sketcher_ValidateSketch";
