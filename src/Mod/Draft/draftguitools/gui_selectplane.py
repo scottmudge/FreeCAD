@@ -192,7 +192,7 @@ class Draft_SelectPlane:
         objs = []
         import Part
         for sel in FreeCADGui.Selection.getSelectionEx('', 0):
-            for sub in sel.SubElementNames:
+            for sub in sel.SubElementNames if sel.SubElementNames else ['']:
                 objs.append(Part.getShape(sel.Object, sub, needSubElement=True, retType=2))
         if len(objs) == 1:
             shape, matrix, obj = objs[0]
