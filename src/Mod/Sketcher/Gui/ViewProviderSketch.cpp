@@ -1251,9 +1251,16 @@ bool ViewProviderSketch::getElementPicked(const SoPickedPoint *pp, std::string &
                 pp, edit->viewer, edit->curCursorPos, false);
         if (edit->lastPreselection.empty())
             return false;
-        if (edit->lastCstrPreselections.empty())
-            getSketchObject()->checkSubName(edit->lastPreselection.c_str()).toString(subname);
-        else {
+        if (edit->lastCstrPreselections.empty()) {
+            subname = edit->lastPreselection;
+            // For Edge and Vertex, change to small case to differentiate
+            // editing geometry to normal shape. The differentiation is
+            // necessary because the index maybe different.
+            if (boost::starts_with(subname, "Edge"))
+                subname[0] = 'e';
+            else if (boost::starts_with(subname, "Vertex"))
+                subname[0] = 'v';
+        } else {
             std::ostringstream ss;
             bool first = true;
             for (int id : edit->lastCstrPreselections) {
