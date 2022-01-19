@@ -470,6 +470,7 @@ protected:
     static SbVec2s prvClickPos; //used by double-click-detector
     static SbVec2s prvCursorPos;
     static SbVec2s newCursorPos;
+    static SbVec2f prvPickedPoint;
 
     float zCross;
     //float zLines;

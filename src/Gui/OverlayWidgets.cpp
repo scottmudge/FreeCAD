@@ -1653,8 +1653,11 @@ void OverlayTabWidget::setRect(QRect rect)
             setGeometry(rect.translated(offset));
         }
         proxyWidget->setGeometry(rectHint.translated(offset));
-        proxyWidget->show();
-        proxyWidget->raise();
+        if (count()) {
+            proxyWidget->show();
+            proxyWidget->raise();
+        } else
+            proxyWidget->hide();
 
     } else {
         setGeometry(rectOverlay.translated(offset));

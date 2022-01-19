@@ -155,6 +155,9 @@ void SketcherGeneralWidget::loadOrderingOrder()
         newItem->setText(lowid==1?tr("Normal Geometry"):lowid==2?tr("Construction Geometry"):tr("External Geometry"));
         ui->renderingOrder->insertItem(2,newItem);
     }
+    ui->renderingOrder->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    ui->renderingOrder->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    ui->renderingOrder->setFixedHeight(ui->renderingOrder->sizeHintForRow(0) * ui->renderingOrder->count() + 10);
 }
 
 void SketcherGeneralWidget::setGridSize(double val)

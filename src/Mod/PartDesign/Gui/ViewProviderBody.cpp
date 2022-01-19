@@ -712,13 +712,16 @@ bool ViewProviderBody::canDropObject(App::DocumentObject* obj) const
             && group->getGroupType() == PartDesign::AuxGroup::OtherGroup;
     }
 
-    if (!PartDesign::Body::isAllowed(obj) || PartDesign::Body::findBodyOf(obj) == body)
+    if (PartDesign::Body::findBodyOf(obj) == body)
         return false;
 
     if (!body->getPrevSolidFeature()
             && !body->BaseFeature.getValue()
             && obj->isDerivedFrom(Part::Feature::getClassTypeId()))
         return true;
+
+    if (!PartDesign::Body::isAllowed(obj))
+        return false;
 
     // App::Part checking is too restrictive. It may mess up things, or it may
     // not. Just let user undo if anything is wrong.
