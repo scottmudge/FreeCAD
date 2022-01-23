@@ -364,6 +364,7 @@ SET(Gui_UIC_SRCS
     DlgObjectSelection.ui
     DlgAddProperty.ui
     VectorListEditor.ui
+    DlgIconBrowser.ui
 )
 
 SET(Gui_RES_SRCS
@@ -444,6 +445,7 @@ SET(Dialog_CPP_SRCS
     DlgObjectSelection.cpp
     DlgAddProperty.cpp
     VectorListEditor.cpp
+    DlgIconBrowser.cpp
 )
 
 SET(Dialog_HPP_SRCS
@@ -482,6 +484,7 @@ SET(Dialog_HPP_SRCS
     DlgObjectSelection.h
     DlgAddProperty.h
     VectorListEditor.h
+    DlgIconBrowser.h
 )
 
 SET(Dialog_SRCS
@@ -522,6 +525,7 @@ SET(Dialog_SRCS
     TaskElementColors.ui
     DlgObjectSelection.ui
     VectorListEditor.ui
+    DlgIconBrowser.ui
 )
 SOURCE_GROUP("Dialog" FILES ${Dialog_SRCS})
 

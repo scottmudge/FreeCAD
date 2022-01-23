@@ -300,9 +300,6 @@ private:
     QTimer* preselectTimer;
     QTimer* toolTipTimer;
     QTime preselectTime;
-    QPixmap documentPixmap;
-    QPixmap documentPartialPixmap;
-    QPixmap documentTempPixmap;
     std::unordered_map<const Gui::Document*,DocumentItem*> DocumentMap;
     std::unordered_map<App::DocumentObject*,std::set<DocumentObjectDataPtr> > ObjectTable;
 

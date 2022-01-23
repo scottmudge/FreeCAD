@@ -370,6 +370,13 @@ public:
         return master->getTreeName();
     }
 
+    static QIcon getItemIcon(int currentStatus,
+                             const ViewProviderDocumentObject *vp,
+                             std::vector<std::pair<QByteArray, int> > *iconInfo = nullptr);
+    static QIcon getItemIcon(App::Document *doc, const ViewProviderDocumentObject *vp);
+
+    void refreshIcons();
+
     void checkDropEvent(QDropEvent *event, bool *replace = nullptr, int *reorder = nullptr);
 
     void setReorderingItem(QTreeWidgetItem *item, bool before = true)
@@ -606,6 +613,20 @@ public:
     QPixmap pixmapReorderDown;
     QPixmap pixmapForbid;
 
+    QPixmap pxHidden;
+    QPixmap pxError;
+    QPixmap pxRecompute;
+    QPixmap pxExternal;
+    QPixmap pxInvisibleOnTop;
+    QPixmap pxVisibleOnTop;
+    QPixmap pxInvisible;
+    QPixmap pxVisible;
+    QPixmap pxUnselectable;
+
+    QPixmap documentPixmap;
+    QPixmap documentPartialPixmap;
+    QPixmap documentTempPixmap;
+
     bool restorePreselCursor = false;
     bool skipMouseRelease = false;
     bool checkHiddenItems = false;
@@ -618,7 +639,6 @@ public:
     QModelIndex reorderingIndex;
     QTreeWidgetItem *tooltipItem = nullptr;
 };
-
 
 //--------------------------------------------------------------------------
 
@@ -1233,18 +1253,7 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
 
     setupText();
 
-    if(instance() != this) {
-        documentPixmap = instance()->documentPixmap;
-        documentPartialPixmap = instance()->documentPartialPixmap;
-        documentTempPixmap = instance()->documentTempPixmap;
-    } else {
-        documentPixmap = Gui::BitmapFactory().pixmap("Document");
-        QIcon icon(documentPixmap);
-        documentPartialPixmap = icon.pixmap(documentPixmap.size(),QIcon::Disabled);
-
-        QPixmap pxHidden = BitmapFactory().pixmapFromSvg("TreeHidden", QSizeF(32,32));
-        documentTempPixmap = BitmapFactory().merge(documentPixmap, pxHidden, BitmapFactoryInst::TopLeft);
-    }
+    pimpl->refreshIcons();
 
     for(auto doc : App::GetApplication().getDocuments()) {
         auto gdoc = Application::Instance->getDocument(doc);
@@ -1282,6 +1291,33 @@ TreeWidget::~TreeWidget()
         auto gdoc = Application::Instance->getDocument(doc);
         if(gdoc)
             slotDeleteDocument(*gdoc);
+    }
+}
+
+void TreeWidget::Private::refreshIcons()
+{
+    documentPixmap = Gui::BitmapFactory().pixmap("Document");
+    QIcon icon(documentPixmap);
+    documentPartialPixmap = icon.pixmap(documentPixmap.size(),QIcon::Disabled);
+
+    pxHidden = BitmapFactory().pixmap("TreeHidden");
+    pxError = BitmapFactory().pixmap("TreeError");
+    pxRecompute = BitmapFactory().pixmap("TreeRecompute");
+    pxExternal = BitmapFactory().pixmap("TreeExternal");
+    pxInvisibleOnTop = BitmapFactory().pixmap("TreeItemInvisibleOnTop");
+    pxVisibleOnTop = BitmapFactory().pixmap("TreeItemVisibleOnTop");
+    pxInvisible = BitmapFactory().pixmap("TreeItemInvisible");
+    pxVisible = BitmapFactory().pixmap("TreeItemVisible");
+    pxUnselectable = BitmapFactory().pixmap("TreeItemUnselectable");
+
+    documentTempPixmap = BitmapFactory().merge(documentPixmap, pxHidden, BitmapFactoryInst::TopLeft);
+
+    master->recomputeObjectAction->setIcon(BitmapFactory().iconFromTheme("view-refresh"));
+    master->markRecomputeAction->setIcon(BitmapFactory().iconFromTheme("Std_MarkToRecompute"));
+
+    for (auto &v : master->ObjectTable) {
+        for (auto &data : v.second)
+            data->slotChangeIcon();
     }
 }
 
@@ -3893,9 +3929,9 @@ void TreeWidget::slotNewDocument(const Gui::Document& Doc, bool isMainDoc)
     if(isMainDoc)
         this->expandItem(item);
     if(Doc.getDocument()->testStatus(App::Document::TempDoc))
-        item->setIcon(0, documentTempPixmap);
+        item->setIcon(0, pimpl->documentTempPixmap);
     else
-        item->setIcon(0, documentPixmap);
+        item->setIcon(0, pimpl->documentPixmap);
     item->setDocumentLabel();
     DocumentMap[ &Doc ] = item;
 }
@@ -4197,7 +4233,7 @@ void TreeWidget::onUpdateStatus(void)
         }
 
         if(doc->testStatus(App::Document::PartialDoc))
-            docItem->setIcon(0, documentPartialPixmap);
+            docItem->setIcon(0, pimpl->documentPartialPixmap);
         else if(docItem->_ExpandInfo) {
             for(auto &entry : *docItem->_ExpandInfo) {
                 const char *name = entry.first.c_str();
@@ -4537,11 +4573,9 @@ void TreeWidget::setupText()
 
     this->markRecomputeAction->setText(tr("Mark to recompute"));
     this->markRecomputeAction->setStatusTip(tr("Mark this object to be recomputed"));
-    this->markRecomputeAction->setIcon(BitmapFactory().iconFromTheme("Std_MarkToRecompute"));
 
     this->recomputeObjectAction->setText(tr("Recompute object"));
     this->recomputeObjectAction->setStatusTip(tr("Recompute the selected object"));
-    this->recomputeObjectAction->setIcon(BitmapFactory().iconFromTheme("view-refresh"));
 }
 
 void TreeWidget::onShowHidden()
@@ -4610,7 +4644,8 @@ void TreeWidget::changeEvent(QEvent *e)
 {
     if (e->type() == QEvent::LanguageChange)
         setupText();
-
+    else if (e->type() == QEvent::StyleChange)
+        pimpl->refreshIcons();
     QTreeWidget::changeEvent(e);
 }
 
@@ -4939,11 +4974,7 @@ enum ItemStatus {
     ItemStatusUnSelectable = 128,
 };
 
-static QIcon getItemIcon(int currentStatus,
-                         const ViewProviderDocumentObject *vp,
-                         std::vector<std::pair<QByteArray, int> > *iconInfo = nullptr);
-
-static QIcon getItemIcon(App::Document *doc, const ViewProviderDocumentObject *vp)
+QIcon TreeWidget::Private::getItemIcon(App::Document *doc, const ViewProviderDocumentObject *vp)
 {
     App::DocumentObject *obj = vp->getObject();
     bool external = (doc != obj->getDocument()
@@ -5130,7 +5161,7 @@ void TreeWidget::populateSelUpMenu(QMenu *menu, const App::SubObjectT *pObjT)
         menu->addSeparator();
     }
 
-    QAction *action = menu->addAction(tree->documentPixmap, docItem->text(0));
+    QAction *action = menu->addAction(tree->pimpl->documentPixmap, docItem->text(0));
     action->setData(QByteArray(lastItemNames.back().c_str()));
     // The first item is a document item.
     items.pop_front();
@@ -5155,7 +5186,7 @@ void TreeWidget::populateSelUpMenu(QMenu *menu, const App::SubObjectT *pObjT)
             // current item.
             text = QString::fromUtf8("\xe2\x96\xB6  ") + text;
         }
-        QAction *action = menu->addAction(getItemIcon(doc, item->object()), text);
+        QAction *action = menu->addAction(Private::getItemIcon(doc, item->object()), text);
         action->setData(QVariant::fromValue(objT));
         action->setToolTip(getItemStatus(objT));
     }
@@ -5307,7 +5338,7 @@ void TreeWidget::_setupSelUpSubMenu(QMenu *parentMenu,
                         + citem->object()->getObject()->getNameInDocument() + ".");
             } else
                 sobjT = App::SubObjectT(citem->object()->getObject(), "");
-            QAction *action = menu.addAction(getItemIcon(doc, citem->object()), citem->text(0));
+            QAction *action = menu.addAction(pimpl->getItemIcon(doc, citem->object()), citem->text(0));
             action->setData(QVariant::fromValue(sobjT));
             action->setToolTip(getItemStatus(sobjT));
         }
@@ -7222,7 +7253,7 @@ void DocumentObjectItem::testItemStatus(bool resetStatus)
         myData->icon1 = QIcon();
         myData->icon2 = QIcon();
         myData->iconInfo.clear();
-        icon = getItemIcon(currentStatus, object(), &myData->iconInfo);
+        icon = TreeWidget::Private::getItemIcon(currentStatus, object(), &myData->iconInfo);
     }
     _Timing(2,setIcon);
     this->setIcon(0, icon);
@@ -7272,24 +7303,17 @@ static QPixmap mergePixmaps(const std::vector<std::pair<QByteArray, QPixmap> > &
     return px;
 }
 
-static QIcon getItemIcon(int currentStatus,
-                         const ViewProviderDocumentObject *vp,
-                         std::vector<std::pair<QByteArray, int> > *iconInfo)
+QIcon TreeWidget::Private::getItemIcon(int currentStatus,
+                                       const ViewProviderDocumentObject *vp,
+                                       std::vector<std::pair<QByteArray, int> > *iconInfo)
 {
     QIcon icon;
     QPixmap px;
-    if (currentStatus & ItemStatusError) {
-        static QPixmap pxError;
-        if(pxError.isNull())
-            pxError = BitmapFactory().pixmapFromSvg("TreeError", QSizeF(32,32));
-        px = pxError;
-    }
-    else if (currentStatus & ItemStatusTouched) {
-        static QPixmap pxRecompute;
-        if(pxRecompute.isNull())
-            pxRecompute = BitmapFactory().pixmapFromSvg("TreeRecompute", QSizeF(32,32));
-        px = pxRecompute;
-    }
+    auto &pimpl = TreeWidget::instance()->pimpl;
+    if (currentStatus & ItemStatusError)
+        px = pimpl->pxError;
+    else if (currentStatus & ItemStatusTouched)
+        px = pimpl->pxRecompute;
 
     QPixmap pxOn,pxOff;
     QIcon icon_orig = vp->getIcon();
@@ -7313,48 +7337,29 @@ static QIcon getItemIcon(int currentStatus,
     }
 
     if(currentStatus & ItemStatusHidden)  {// hidden item
-        static QPixmap pxHidden;
-        if(pxHidden.isNull())
-            pxHidden = BitmapFactory().pixmapFromSvg("TreeHidden", QSizeF(32,32));
         if (hasPxOff)
-            pxOff = BitmapFactory().merge(pxOff, pxHidden, BitmapFactoryInst::TopLeft);
-        pxOn = BitmapFactory().merge(pxOn, pxHidden, BitmapFactoryInst::TopLeft);
+            pxOff = BitmapFactory().merge(pxOff, pimpl->pxHidden, BitmapFactoryInst::TopLeft);
+        pxOn = BitmapFactory().merge(pxOn, pimpl->pxHidden, BitmapFactoryInst::TopLeft);
     }
 
     if(currentStatus & ItemStatusExternal) {// external item
-        static QPixmap pxExternal;
-        if(pxExternal.isNull())
-            pxExternal = BitmapFactory().pixmapFromSvg("TreeExternal", QSizeF(32,32));
         if (hasPxOff)
-            pxOff = BitmapFactory().merge(pxOff, pxExternal, BitmapFactoryInst::BottomRight);
-        pxOn = BitmapFactory().merge(pxOn, pxExternal, BitmapFactoryInst::BottomRight);
+            pxOff = BitmapFactory().merge(pxOff, pimpl->pxExternal, BitmapFactoryInst::BottomRight);
+        pxOn = BitmapFactory().merge(pxOn, pimpl->pxExternal, BitmapFactoryInst::BottomRight);
     }
 
     if (currentStatus & (ItemStatusInvisible | ItemStatusVisible)) {
-        static QPixmap pxInvisible, pxVisible, pxInvisibleOnTop, pxVisibleOnTop;
-
         std::vector<std::pair<QByteArray, QPixmap> > icons;
         QPixmap *pixmap;
         if (currentStatus & ItemStatusShowOnTop) {
-            if (pxInvisibleOnTop.isNull())
-                pxInvisibleOnTop = BitmapFactory().pixmap("TreeItemInvisibleOnTop.svg");
-            if (pxVisibleOnTop.isNull())
-                pxVisibleOnTop = BitmapFactory().pixmap("TreeItemVisibleOnTop.svg");
-            pixmap = (currentStatus & ItemStatusVisible) ? &pxVisibleOnTop : &pxInvisibleOnTop;
+            pixmap = (currentStatus & ItemStatusVisible) ? &pimpl->pxVisibleOnTop : &pimpl->pxInvisibleOnTop;
         } else {
-            if (pxInvisible.isNull())
-                pxInvisible = BitmapFactory().pixmap("TreeItemInvisible.svg");
-            if (pxVisible.isNull())
-                pxVisible = BitmapFactory().pixmap("TreeItemVisible.svg");
-            pixmap = (currentStatus & ItemStatusVisible) ? &pxVisible : &pxInvisible;
+            pixmap = (currentStatus & ItemStatusVisible) ? &pimpl->pxVisible : &pimpl->pxInvisible;
         }
         icons.emplace_back(Gui::treeVisibilityIconTag(), *pixmap);
 
         if (currentStatus & ItemStatusUnSelectable) {
-            static QPixmap pixmap;
-            if (pixmap.isNull())
-                pixmap = BitmapFactory().pixmap("TreeItemUnselectable.svg");
-            icons.emplace_back(Gui::treeUnselectableIconTag(), pixmap);
+            icons.emplace_back(Gui::treeUnselectableIconTag(), pimpl->pxUnselectable);
         }
 
         icons.emplace_back(Gui::treeMainIconTag(), pxOn);

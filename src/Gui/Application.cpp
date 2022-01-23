@@ -1628,7 +1628,7 @@ QPixmap Application::workbenchIcon(const QString& wb) const
     if (pcWorkbench) {
         // make a unique icon name
         std::stringstream str;
-        str << static_cast<const void *>(pcWorkbench) << std::ends;
+        str << "Icon_" << wb.toLatin1().constData();
         std::string iconName = str.str();
         QPixmap icon;
         if (BitmapFactory().findPixmapInCache(iconName.c_str(), icon))
@@ -2146,6 +2146,11 @@ void postAppSetup()
                         + "Gui/Stylesheets/menu").c_str());
     QDir::setSearchPaths(QString::fromLatin1("qssm"), qssMenuPaths);
 
+    QStringList iconSetPaths;
+    iconSetPaths << QString::fromUtf8((App::Application::getUserAppDataDir()
+                        + "Gui/IconSets").c_str());
+    QDir::setSearchPaths(QString::fromLatin1("iconset"), iconSetPaths);
+
     // set search paths for images
     QStringList imagePaths;
     imagePaths << QString::fromUtf8((App::Application::getUserAppDataDir() + "Gui/images").c_str())
@@ -2197,7 +2202,12 @@ void postAppSetup()
 #else
     // Option to opt-out from using a Linux desktop icon theme.
     // https://forum.freecadweb.org/viewtopic.php?f=4&t=35624
-    bool themePaths = hTheme->GetBool("ThemeSearchPaths",true);
+    //
+    // bool themePaths = hTheme->GetBool("ThemeSearchPaths",true);
+    //
+    // Disable system theme by default, as it rarely works with FreeCAD, because
+    // there are so many icons can't be find in common themes.
+    bool themePaths = hTheme->GetBool("_ThemeSearchPaths",false);
     if (!themePaths) {
         QStringList searchPaths;
         searchPaths.prepend(QString::fromUtf8(":/icons"));
@@ -2618,11 +2628,32 @@ void Application::setStyleSheet(const QString& qssFile, bool tiledBackground)
         qApp->setPalette(newPal);
     }
 
-
     QString current = mw->property("fc_currentStyleSheet").toString();
     mw->setProperty("fc_currentStyleSheet", qssFile);
 
-    if (!qssFile.isEmpty() && current != qssFile) {
+    auto hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/MainWindow");
+    QString iconSet = QString::fromUtf8(hGrp->GetASCII("IconSet").c_str());
+    if (!iconSet.isEmpty()) {
+        QString prefix(QLatin1String("iconset:"));
+        QFile f;
+        if (QFile::exists(iconSet)) {
+            f.setFileName(iconSet);
+        }
+        else if (QFile::exists(prefix + iconSet)) {
+            f.setFileName(prefix + iconSet);
+        }
+
+        if (!f.fileName().isEmpty() && f.open(QFile::ReadOnly | QFile::Text)) {
+            QTextStream str(&f);
+            getMainWindow()->setOverrideExtraIcons(str.readAll());
+        }
+    }
+
+    // Icon set change is also triggered by style change, so we'll set
+    // stylesheet regardless of changes
+    //
+    // if (!qssFile.isEmpty() && current != qssFile) {
+    if (!qssFile.isEmpty()) {
         // Search for stylesheet in user-defined search paths.
         // For qss they are set-up in runApplication() with the prefix "qss"
         QString prefix(QLatin1String("qss:"));

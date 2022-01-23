@@ -188,8 +188,8 @@ Py::Object View3DInventorViewerPy::getattr(const char * attr)
                 op->m_ml->ml_meth = method_varargs_ext_handler;
             } else if (op->m_ml->ml_flags == METH_KEYWORDS) {
                 if (!pycxx_kwd_handler)
-                    pycxx_kwd_handler = (PyCFunctionWithKeywords)op->m_ml->ml_meth;
-                op->m_ml->ml_meth = (PyCFunction)method_keyword_ext_handler;
+                    pycxx_kwd_handler = reinterpret_cast<PyCFunctionWithKeywords>(reinterpret_cast<void (*) (void)>(op->m_ml->ml_meth));
+                op->m_ml->ml_meth = reinterpret_cast<PyCFunction>(reinterpret_cast<void (*) (void)>(method_keyword_ext_handler));
             }
         }
         return obj;

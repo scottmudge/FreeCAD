@@ -74,7 +74,19 @@ namespace sp = std::placeholders;
 // Std_Workbench
 //===========================================================================
 
-DEF_STD_CMD_AC(StdCmdWorkbench)
+class StdCmdWorkbench : public Gui::Command
+{
+public:
+    StdCmdWorkbench();
+    virtual ~StdCmdWorkbench(){}
+    virtual const char* className() const
+    { return "StdCmdWorkbench"; }
+    virtual void refreshIcon();
+protected: 
+    virtual void activated(int iMsg);
+    virtual bool isActive(void);
+    virtual Gui::Action * createAction(void);
+};
 
 StdCmdWorkbench::StdCmdWorkbench()
   : Command("Std_Workbench")
@@ -133,6 +145,12 @@ Action * StdCmdWorkbench::createAction(void)
         pcAction->setIcon(Gui::BitmapFactory().iconFromTheme(getPixmap()));
 
     return pcAction;
+}
+
+void StdCmdWorkbench::refreshIcon()
+{
+    if (_pcAction)
+        static_cast<WorkbenchGroup*>(_pcAction)->refreshWorkbenchList();
 }
 
 //===========================================================================

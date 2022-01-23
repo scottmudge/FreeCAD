@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DlgIconBrowser</class>
+ <widget class="QDialog" name="DlgIconBrowser">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>629</width>
+    <height>415</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Icon Browser</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Filter</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="editFilter"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Icon set</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="Gui::PrefComboBox" name="IconSets">
+       <property name="toolTip">
+        <string>User defined icon set</string>
+       </property>
+       <property name="prefPath" stdset="0">
+        <cstring>MainWindow</cstring>
+       </property>
+       <property name="prefEntry" stdset="0">
+        <cstring>IconSet</cstring>
+       </property>
+       <property name="prefType" stdset="0">
+        <cstring></cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Icon size</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="Gui::PrefSpinBox" name="spinBoxIconSize">
+       <property name="minimum">
+        <number>16</number>
+       </property>
+       <property name="value">
+        <number>32</number>
+       </property>
+       <property name="prefEntry" stdset="0">
+        <cstring>IconBrowserIconSize</cstring>
+       </property>
+       <property name="prefPath" stdset="0">
+        <cstring>View</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnRefresh">
+       <property name="text">
+        <string>Refresh</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <widget class="QTreeWidget" name="treeWidget">
+      <property name="selectionMode">
+       <enum>QAbstractItemView::ExtendedSelection</enum>
+      </property>
+      <property name="rootIsDecorated">
+       <bool>false</bool>
+      </property>
+      <property name="itemsExpandable">
+       <bool>false</bool>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
+      <property name="columnCount">
+       <number>3</number>
+      </property>
+      <column>
+       <property name="text">
+        <string>Icon</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Styled Icon</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Resource path</string>
+       </property>
+      </column>
+     </widget>
+     <widget class="QPlainTextEdit" name="editOutput">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Icon directory</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="Gui::PrefLineEdit" name="editPrefix">
+       <property name="toolTip">
+        <string>Icon export directory. It is a subdirectory, Gui/IconSets, in your application user directory.</string>
+       </property>
+       <property name="prefEntry" stdset="0">
+        <cstring>IconBrowserIconPrefix</cstring>
+       </property>
+       <property name="prefPath" stdset="0">
+        <cstring>View</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnSave">
+       <property name="toolTip">
+        <string>To override application icons, you can save the above configurations into your
+application user directory Gui/IconSets/. You can then select your icons set in
+Preference -&gt; General -&gt; Icon set.
+
+For stylesheet authors, you can also override icons through Gui::MainWindow
+property 'overrideIcons' as shown below. Please note that the icon settings in
+the stylesheet takes precedence over icon set configurations.
+
+Gui--MainWindow {
+  qproperty-overrideIcons : url(
+TreeItemVisible, iconset:MyIcons/TreeItemVisible.svg
+TreeItemInvisible, iconset:MyIcons/TreeItemInvisible.svg
+);}</string>
+       </property>
+       <property name="text">
+        <string>Save</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnExport">
+       <property name="toolTip">
+        <string>Export selected icons</string>
+       </property>
+       <property name="text">
+        <string>Export</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Gui::PrefSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::PrefLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::PrefComboBox</class>
+   <extends>QComboBox</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

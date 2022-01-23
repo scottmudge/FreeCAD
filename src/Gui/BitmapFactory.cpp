@@ -80,11 +80,41 @@ static const char *not_found[]={
 "........................"};
 
 namespace Gui {
+
+static std::vector<const char *> _BitmapContext;
+BitmapCacheContext::BitmapCacheContext(const char *ctx)
+    :ctx(ctx)
+{
+    if (ctx)
+        _BitmapContext.push_back(ctx);
+}
+
+BitmapCacheContext::~BitmapCacheContext()
+{
+    if (ctx)
+        _BitmapContext.pop_back();
+}
+
+
 class BitmapFactoryInstP
 {
 public:
-    QMap<std::string, const char**> xpmMap;
-    QMap<std::string, QPixmap> xpmCache;
+    struct XpmInfo {
+        QPixmap xpm;
+        QPixmap pixmap;
+        QPixmap styledPixmap;
+        bool styled = false;
+        std::set<std::string> context;
+
+        void checkContext(const char *ctx = nullptr)
+        {
+            if (_BitmapContext.size() && _BitmapContext.back()[0])
+                context.insert(_BitmapContext.back());
+            if (ctx && ctx[0])
+                context.insert(ctx);
+        }
+    };
+    QMap<std::string, XpmInfo> xpmCache;
 };
 }
 
@@ -185,35 +215,92 @@ QStringList BitmapFactoryInst::findIconFiles() const
 
 void BitmapFactoryInst::addXPM(const char* name, const char** pXPM)
 {
-    d->xpmMap[name] = pXPM;
+    d->xpmCache[name].xpm = QPixmap(pXPM);
 }
 
-void BitmapFactoryInst::addPixmapToCache(const char* name, const QPixmap& icon)
+void BitmapFactoryInst::addPixmapToCache(const char* name, const QPixmap& icon, bool styled, const char *ctx)
 {
-    d->xpmCache[name] = icon;
+    auto &info = d->xpmCache[name];
+    info.checkContext(ctx);
+    if (styled) {
+        info.styled = styled;
+        info.styledPixmap = icon;
+    } else
+        info.pixmap = icon;
 }
 
-bool BitmapFactoryInst::findPixmapInCache(const char* name, QPixmap& px) const
+bool BitmapFactoryInst::findPixmapInCache(const char* name, QPixmap& px, QPixmap *original) const
 {
-    QMap<std::string, QPixmap>::ConstIterator it = d->xpmCache.find(name);
+    auto it = d->xpmCache.find(name);
     if (it != d->xpmCache.end()) {
-        px = it.value();
-        return true;
+        it->checkContext();
+        if (!it->styledPixmap.isNull()) {
+            if (original) {
+                if (!it->pixmap.isNull())
+                    *original = it->pixmap;
+                else
+                    *original = it->xpm;
+            }
+            px = it->styledPixmap;
+        } else if (!it->pixmap.isNull())
+            px = it->pixmap;
+        else
+            px = it->xpm;
+        return !px.isNull();
     }
     return false;
 }
 
+void BitmapFactoryInst::onStyleChange()
+{
+    for (auto it = d->xpmCache.begin(); it != d->xpmCache.end(); ++it) {
+        if (!it.value().styled)
+            it.value().styledPixmap = QPixmap();
+        else
+            it.value().styled = false;
+    }
+}
+
+void BitmapFactoryInst::addContext(const char *name, const char *ctx)
+{
+    auto it = d->xpmCache.find(name);
+    if (ctx && it != d->xpmCache.end())
+        it->context.insert(ctx);
+}
+
+const std::set<std::string> &BitmapFactoryInst::getContext(const char *name) const
+{
+    auto it = d->xpmCache.find(name);
+    if (it != d->xpmCache.end())
+        return it->context;
+
+    static std::set<std::string> dummy;
+    return dummy;
+}
+
 QIcon BitmapFactoryInst::iconFromTheme(const char* name, const QIcon& fallback)
 {
+    if (!name)
+        return QIcon();
+
     QString iconName = QString::fromLatin1(name);
-    QIcon icon = QIcon::fromTheme(iconName, fallback);
-    if (icon.isNull()) {
-        QPixmap px = pixmap(name);
-        if (!px.isNull())
-            icon.addPixmap(px);
+    auto it = d->xpmCache.find(name);
+    if (it != d->xpmCache.end()) {
+        it->checkContext();
+        if (!it->styledPixmap.isNull())
+            return it->styledPixmap;
     }
 
-    return icon;
+    QIcon icon = QIcon::fromTheme(iconName, fallback);
+    if (!icon.isNull())
+        return icon;
+
+    if (it == d->xpmCache.end())
+        return pixmap(name);
+    else if (!it->pixmap.isNull())
+        return it->pixmap;
+    else
+        return it->xpm;
 }
 
 bool BitmapFactoryInst::loadPixmap(const QString& filename, QPixmap& icon) const
@@ -237,24 +324,20 @@ bool BitmapFactoryInst::loadPixmap(const QString& filename, QPixmap& icon) const
     return !icon.isNull();
 }
 
-QPixmap BitmapFactoryInst::pixmap(const char* name, bool silent) const
+QPixmap BitmapFactoryInst::pixmap(const char* name, bool silent, QPixmap *original) const
 {
     if (!name || *name == '\0')
         return QPixmap();
 
-    // as very first test check whether the pixmap is in the cache
-    QMap<std::string, QPixmap>::ConstIterator it = d->xpmCache.find(name);
-    if (it != d->xpmCache.end())
-        return it.value();
-
-    // now try to find it in the built-in XPM
     QPixmap icon;
-    QMap<std::string,const char**>::ConstIterator It = d->xpmMap.find(name);
-    if (It != d->xpmMap.end())
-        icon = QPixmap(It.value());
+    if (findPixmapInCache(name, icon, original))
+        return icon;
+
+    QString path;
 
     // Try whether an absolute path is given
     QString fn = QString::fromUtf8(name);
+    path = fn;
     if (icon.isNull())
         loadPixmap(fn, icon);
 
@@ -264,10 +347,11 @@ QPixmap BitmapFactoryInst::pixmap(const char* name, bool silent) const
         formats.prepend("SVG"); // check first for SVG to use special import mechanism
 
         QString fileName = QString::fromLatin1("icons:") + fn;
+        path = fileName;
         if (!loadPixmap(fileName, icon)) {
             // Go through supported file formats
             for (QList<QByteArray>::iterator fm = formats.begin(); fm != formats.end(); ++fm) {
-                QString path = QString::fromLatin1("%1.%2").arg(fileName,
+                path = QString::fromLatin1("%1.%2").arg(fileName,
                     QString::fromLatin1((*fm).toLower().constData()));
                 if (loadPixmap(path, icon)) {
                     break;
@@ -277,7 +361,10 @@ QPixmap BitmapFactoryInst::pixmap(const char* name, bool silent) const
     }
 
     if (!icon.isNull()) {
-        d->xpmCache[name] = icon;
+        // "-|" is a marker used to identify path in context, used in
+        // DlgIconBrowser
+        const_cast<BitmapFactoryInst*>(this)->addPixmapToCache(name, icon, false, 
+                (path+QStringLiteral("-|")).toUtf8().constData());
         return icon;
     }
 
@@ -354,9 +441,7 @@ QPixmap BitmapFactoryInst::pixmapFromSvg(const QByteArray& originalContents, con
 QStringList BitmapFactoryInst::pixmapNames() const
 {
     QStringList names;
-    for (QMap<std::string,const char**>::ConstIterator It = d->xpmMap.begin(); It != d->xpmMap.end(); ++It)
-        names << QString::fromUtf8(It.key().c_str());
-    for (QMap<std::string, QPixmap>::ConstIterator It = d->xpmCache.begin(); It != d->xpmCache.end(); ++It) {
+    for (auto It = d->xpmCache.begin(); It != d->xpmCache.end(); ++It) {
         QString item = QString::fromUtf8(It.key().c_str());
         if (!names.contains(item))
             names << item;

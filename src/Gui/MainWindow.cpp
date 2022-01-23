@@ -203,7 +203,13 @@ struct MainWindowP
     bool _closingAll = false;
     QTime _showNormal;
 
+    QString overrideIcons;
+    bool hasOverrideIcons = false;
+    QString overrideExtraIcons;
+    bool hasOverrideExtraIcons = false;
+
     void restoreWindowState(const QByteArray &);
+    void applyOverrideIcons(const QString &icons);
 };
 
 class MDITabbar : public QTabBar
@@ -2243,6 +2249,55 @@ void MainWindow::childEvent(QChildEvent *e)
     QMainWindow::childEvent(e);
 }
 
+QString MainWindow::overrideIcons() const
+{
+    return d->overrideIcons;
+}
+
+void MainWindow::setOverrideIcons(const QString &icons)
+{
+    d->overrideIcons = icons;
+    d->hasOverrideIcons = true;
+}
+
+QString MainWindow::overrideExtraIcons() const
+{
+    return d->overrideExtraIcons;
+}
+
+void MainWindow::setOverrideExtraIcons(const QString &icons)
+{
+    d->overrideExtraIcons = icons;
+    d->hasOverrideExtraIcons = true;
+}
+
+void MainWindowP::applyOverrideIcons(const QString &icons)
+{
+    for (auto &s : icons.split(QRegExp(QStringLiteral("[\r\n]")),QString::SkipEmptyParts)) {
+        s = s.trimmed();
+        if (s.startsWith(QStringLiteral("#")) || s.startsWith(QStringLiteral("//")))
+            continue;
+        auto pair = s.split(QLatin1Char(','));
+        if (pair.isEmpty())
+            continue;
+        if (pair.size() > 2) {
+            FC_WARN("Invalid icon override in stylesheet: " << s.toUtf8().constData());
+            continue;
+        }
+        QByteArray name = pair[0].trimmed().toLatin1();
+        QPixmap icon;
+        if (pair.size() == 2) {
+            QString path = pair[1].trimmed();
+            if (path.size()) {
+                if (!BitmapFactory().loadPixmap(path, icon))
+                    FC_WARN("Cannot find icon for " << name.constData()
+                            << " from " << path.toUtf8().constData());
+            }
+        }
+        BitmapFactory().addPixmapToCache(name, icon, true);
+    }
+}
+
 void MainWindow::changeEvent(QEvent *e)
 {
     if (e->type() == QEvent::LanguageChange) {
@@ -2256,6 +2311,23 @@ void MainWindow::changeEvent(QEvent *e)
         // reload current workbench to retranslate all actions and window titles
         Workbench* wb = WorkbenchManager::instance()->active();
         if (wb) wb->retranslate();
+    }
+    else if (e->type() == QEvent::StyleChange) {
+        if (d->hasOverrideExtraIcons) {
+            d->hasOverrideExtraIcons = false;
+            d->applyOverrideIcons(d->overrideExtraIcons);
+        } else
+            d->overrideExtraIcons.clear();
+
+        if (d->hasOverrideIcons) {
+            d->hasOverrideIcons = false;
+            d->applyOverrideIcons(d->overrideIcons);
+        } else
+            d->overrideIcons.clear();
+
+        BitmapFactory().onStyleChange();
+        Application::Instance->commandManager().refreshIcons();
+        OverlayManager::instance()->refreshIcons();
     }
     else if (e->type() == QEvent::ActivationChange) {
         if (isActiveWindow()) {

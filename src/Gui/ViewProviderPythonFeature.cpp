@@ -377,6 +377,30 @@ QIcon ViewProviderPythonFeatureImp::getIcon() const
         Py::Object ret(Base::pyCall(py_getIcon.ptr()));
         if(ret.isNone())
             return QIcon();
+
+        std::string _type;
+        const char *type = nullptr;
+        if (object && object->getObject()) {
+            auto prop = Base::freecad_dynamic_cast<App::PropertyPythonObject>(
+                    object->getObject()->getPropertyByName("Proxy"));
+            if (prop) {
+                try {
+                    auto proxy = prop->getValue();
+                    if(!proxy.isNone() && !proxy.isString() && !proxy.isNumeric()) {
+                        if (proxy.hasAttr("__class__")) {
+                            _type = proxy.getAttr("__class__").as_string();
+                            type = _type.c_str();
+                        } else
+                            type = proxy.ptr()->ob_type->tp_name;
+                    }
+                } catch (Py::Exception &) {
+                    Base::PyException e;
+                    e.ReportException();
+                }
+            }
+        }
+        BitmapCacheContext ctx(type);
+
         QPixmap px = getPixmapFromPython(ret);
         if (!px.isNull())
             return px;

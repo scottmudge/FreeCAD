@@ -80,6 +80,7 @@
 #include "SelectionView.h"
 #include "MouseSelection.h"
 #include "PieMenu.h"
+#include "DlgIconBrowser.h"
 
 #include <Base/Console.h>
 #include <Base/Tools2D.h>
@@ -3389,6 +3390,34 @@ void StdCmdSceneInspector::activated(int iMsg)
 }
 
 //===========================================================================
+// Std_IconBrowser
+//===========================================================================
+
+DEF_STD_CMD(StdCmdIconBrowser)
+
+StdCmdIconBrowser::StdCmdIconBrowser()
+  : Command("Std_IconBrowser")
+{
+    // setting the
+    sGroup        = "Tools";
+    sMenuText     = QT_TR_NOOP("Icon browser...");
+    sToolTipText  = QT_TR_NOOP("Browse cache icon images");
+    sWhatsThis    = "Std_IconBrowser";
+    sStatusTip    = QT_TR_NOOP("Icon browser");
+    eType         = 0;
+}
+
+void StdCmdIconBrowser::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+    static QPointer<Gui::Dialog::DlgIconBrowser> dlg = 0;
+    if (!dlg)
+        dlg = new Gui::Dialog::DlgIconBrowser(getMainWindow());
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
+}
+
+//===========================================================================
 // Std_TextureMapping
 //===========================================================================
 
@@ -4688,6 +4717,7 @@ void CreateViewStdCommands(void)
     rcCmdMgr.addCommand(new StdCmdTreeSelectAllInstances());
     rcCmdMgr.addCommand(new StdCmdMeasureDistance());
     rcCmdMgr.addCommand(new StdCmdSceneInspector());
+    rcCmdMgr.addCommand(new StdCmdIconBrowser());
     rcCmdMgr.addCommand(new StdCmdTextureMapping());
     rcCmdMgr.addCommand(new StdCmdDemoMode());
     rcCmdMgr.addCommand(new StdCmdToggleNavigation());

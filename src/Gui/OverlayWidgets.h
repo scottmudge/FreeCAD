@@ -52,6 +52,7 @@ public:
     void restore();
     void save();
     void retranslate();
+    void refreshIcons();
 
     enum ReloadMode {
         ReloadPending = 0,
@@ -256,6 +257,7 @@ protected:
 
     static void _setOverlayMode(QWidget *widget, int enable);
     void retranslate();
+    void refreshIcons();
 
 protected Q_SLOTS:
     void onCurrentChanged(int index);
@@ -394,6 +396,7 @@ public:
     OverlaySplitterHandle(Qt::Orientation, QSplitter *parent);
     void setTitleItem(QLayoutItem *);
     void retranslate();
+    void refreshIcons();
     QDockWidget * dockWidget();
 
     void showTitle(bool enable);

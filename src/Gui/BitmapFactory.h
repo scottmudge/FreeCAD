@@ -24,6 +24,7 @@
 #ifndef GUI_BITMAPFACTORY_H
 #define GUI_BITMAPFACTORY_H
 
+#include <set>
 #include <Base/Factory.h>
 #include <QPixmap>
 #include <QIcon>
@@ -65,16 +66,34 @@ public:
     QStringList findIconFiles() const;
     /// Adds a build in XPM pixmap under a given name
     void addXPM(const char* name, const char** pXPM);
-    /// Adds a build in XPM pixmap under a given name
-    void addPixmapToCache(const char* name, const QPixmap& icon);
-    /// Checks whether the pixmap is already registered.
-    bool findPixmapInCache(const char* name, QPixmap& icon) const;
+    /** Adds a build in XPM pixmap under a given name
+     * @param name: pixmap cache key
+     * @param icon: the pixmap to be cached
+     * @param styled: indicate if this is a pixmap set by a stylesheet
+     * @param ctx: optional text indicating the usage context of this pixmap
+     */
+    void addPixmapToCache(const char* name, const QPixmap& icon, bool styled=false, const char *ctx=nullptr);
+    /** Checks whether the pixmap is already registered.
+     * @param name: pixmap cache key
+     * @param icon: output as the cached pixmap
+     * @param original: optional output of the original pixmap if the icon is overridden by stylesheet
+     * @return Return whether the cached icon is found
+     */
+    bool findPixmapInCache(const char* name, QPixmap& icon, QPixmap *original=nullptr) const;
     /** Returns the QIcon corresponding to name in the current icon theme.
      * If no such icon is found in the current theme fallback is returned instead.
      */
     QIcon iconFromTheme(const char* name, const QIcon& fallback = QIcon());
-    /// Retrieves a pixmap by name
-    QPixmap pixmap(const char* name, bool silent = false) const;
+    /** Retrieves a pixmap by name
+     * @param name: pixmap cache name
+     * @param silent: do not output error if the requested pixmap does not exist
+     * @param original: optional output of the original pixmap if the icon is overridden by stylesheet
+     */
+    QPixmap pixmap(const char* name, bool silent=false, QPixmap *original=nullptr) const;
+    /// Add a user defined context of a cached icon
+    void addContext(const char *name, const char *ctx);
+    /// Retrieve user defined contexts of a cached icon
+    const std::set<std::string> &getContext(const char *name) const;
     /** Retrieves a pixmap by name and size created by an
      * scalable vector graphics (SVG).
      *
@@ -137,8 +156,11 @@ public:
     /// Helper method to merge a pixmap into one corner of a QIcon
     static QIcon mergePixmap (const QIcon &base, const QPixmap &px, Gui::BitmapFactoryInst::Position position);
 
-private:
     bool loadPixmap(const QString& path, QPixmap&) const;
+
+    void onStyleChange();
+
+private:
     void restoreCustomPaths();
 
     static BitmapFactoryInst* _pcSingleton;
@@ -153,6 +175,19 @@ inline BitmapFactoryInst& BitmapFactory(void)
 {
     return BitmapFactoryInst::instance();
 }
+
+/// Help class to provide some context of the icon cache
+class BitmapCacheContext
+{
+private:
+    /// Private new operator to prevent heap allocation
+    void* operator new(size_t size);
+public:
+    BitmapCacheContext(const char *ctx);
+    ~BitmapCacheContext();
+private:
+    const char *ctx;
+};
 
 } // namespace Gui
 

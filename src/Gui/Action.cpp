@@ -945,14 +945,14 @@ void WorkbenchTabBar::updateWorkbenches()
         else if (tab->tabData(i).toString() == action->objectName())
             changed = false;
 
-        if (changed) {
-            tab->setTabIcon(i, action->icon());
-            tab->setTabData(i, action->objectName());
-            tab->setTabToolTip(i, 
-                    Action::createToolTip(action->toolTip(),
+        tab->setTabIcon(i, action->icon());
+        tab->setTabToolTip(i, 
+                Action::createToolTip(action->toolTip(),
                                         action->text(),
                                         action->font(),
                                         action->shortcut().toString(QKeySequence::NativeText)));
+        if (changed) {
+            tab->setTabData(i, action->objectName());
         }
         if (showText) {
             if (tab->tabText(i) != action->text())

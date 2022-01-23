@@ -245,6 +245,7 @@ bool Command::isViewOfType(Base::Type t) const
 void Command::addTo(QWidget *pcWidget)
 {
     if (!_pcAction) {
+        BitmapCacheContext ctx(getName());
         _pcAction = createAction();
         testActive();
     }
@@ -261,6 +262,7 @@ void Command::addToGroup(ActionGroup* group, bool checkable)
 void Command::addToGroup(ActionGroup* group)
 {
     if (!_pcAction) {
+        BitmapCacheContext ctx(getName());
         _pcAction = createAction();
         testActive();
     }
@@ -972,6 +974,12 @@ Action * Command::createAction(void)
     return pcAction;
 }
 
+void Command::refreshIcon()
+{
+    if (_pcAction && sPixmap)
+        _pcAction->setIcon(Gui::BitmapFactory().iconFromTheme(sPixmap));
+}
+
 void Command::languageChange()
 {
     if (_pcAction) {
@@ -1094,6 +1102,7 @@ void GroupCommand::setup(Action *pcAction) {
     int idx = pcAction->property("defaultAction").toInt();
     if(idx>=0 && idx<(int)cmds.size() && cmds[idx].first) {
         auto cmd = cmds[idx].first;
+        BitmapCacheContext ctx(cmd->getName());
         pcAction->setText(QCoreApplication::translate(className(), getMenuText()));
         pcAction->setIcon(BitmapFactory().iconFromTheme(cmd->getPixmap()));
         const char *context = dynamic_cast<PythonCommand*>(cmd) ? cmd->getName() : cmd->className();
@@ -1110,6 +1119,17 @@ void GroupCommand::setup(Action *pcAction) {
             pcAction->setIcon(Gui::BitmapFactory().iconFromTheme(sPixmap));
     }
     
+}
+
+void GroupCommand::refreshIcon()
+{
+    if (_pcAction) {
+        for (auto &v : cmds) {
+            if (v.first)
+                v.first->refreshIcon();
+        }
+        setup(_pcAction);
+    }
 }
 
 //===========================================================================
@@ -1493,6 +1513,13 @@ Action * PythonCommand::createAction(void)
     return pcAction;
 }
 
+void PythonCommand::refreshIcon()
+{
+    const char * pixmap = getResource("Pixmap");
+    if (_pcAction && pixmap && pixmap[0])
+        _pcAction->setIcon(Gui::BitmapFactory().iconFromTheme(pixmap));
+}
+
 const char* PythonCommand::getWhatsThis() const
 {
     const char* whatsthis = getResource("WhatsThis");
@@ -1741,6 +1768,41 @@ Action * PythonGroupCommand::createAction(void)
     pcAction->setProperty("defaultAction", QVariant(defaultId));
 
     return pcAction;
+}
+
+void PythonGroupCommand::refreshIcon()
+{
+    if (!_pcAction)
+        return;
+
+    try {
+        Base::PyGILStateLocker lock;
+        Py::Object cmd(_pcPyCommand);
+
+        Py::Callable call(cmd.getAttr("GetCommands"));
+        Py::Sequence args;
+        Py::Sequence ret(call.apply(args));
+        Gui::CommandManager &rcCmdMgr = Gui::Application::Instance->commandManager();
+        for (auto it = ret.begin(); it != ret.end(); ++it) {
+            Py::String str(*it);
+            if (auto cmd = rcCmdMgr.getCommandByName(static_cast<std::string>(str).c_str()))
+                cmd->refreshIcon();
+        }
+    }
+    catch(Py::Exception&) {
+        Base::PyGILStateLocker lock;
+        Base::PyException e;
+        Base::Console().Error("refreshIcon() of the Python command '%s' failed:\n%s\n%s",
+                              sName, e.getStackTrace().c_str(), e.what());
+    }
+
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+    int idx = _pcAction->property("defaultAction").toInt();
+    if(idx>=0 && idx<a.size() && a[idx])
+        _pcAction->setIcon(a[idx]->icon());
+    else if (strcmp(getResource("Pixmap"),"") != 0)
+        _pcAction->setIcon(Gui::BitmapFactory().iconFromTheme(getResource("Pixmap")));
 }
 
 void PythonGroupCommand::languageChange()
@@ -2086,6 +2148,12 @@ std::vector <Command*> CommandManager::getAllCommands(void) const
     }
 
     return vCmds;
+}
+
+void CommandManager::refreshIcons()
+{
+    for (auto &v : _sCommands)
+        v.second->refreshIcon();
 }
 
 std::vector <Command*> CommandManager::getGroupCommands(const char *sGrpName) const

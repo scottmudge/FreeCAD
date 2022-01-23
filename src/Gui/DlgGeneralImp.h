@@ -30,6 +30,9 @@
 class QTabWidget;
 
 namespace Gui {
+
+class PrefComboBox;
+
 namespace Dialog {
 class Ui_DlgGeneral;
 class DlgCreateNewPreferencePackImp;
@@ -50,6 +53,12 @@ public:
 
     void saveSettings();
     void loadSettings();
+
+    static void populateStylesheets(const char *key,
+                                    const char *path,
+                                    PrefComboBox *combo,
+                                    const char *def,
+                                    QStringList filter = QStringList());
 
 protected:
     void changeEvent(QEvent *e);

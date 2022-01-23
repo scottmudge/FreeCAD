@@ -371,41 +371,19 @@ OverlayTabWidget::OverlayTabWidget(QWidget *parent, Qt::DockWidgetArea pos)
     setOverlayMode(true);
     hide();
 
-    actTransparent.setIcon(BitmapFactory().pixmap("qss:overlay/transparent.svg"));
     actTransparent.setCheckable(true);
     actTransparent.setData(QString::fromLatin1("OBTN Transparent"));
     actTransparent.setParent(this);
     addAction(&actTransparent);
 
-    QPixmap pxAutoHide = BitmapFactory().pixmap("qss:overlay/autohide.svg");
-    switch(dockArea) {
-    case Qt::LeftDockWidgetArea:
-        actAutoHide.setIcon(pxAutoHide);
-        break;
-    case Qt::RightDockWidgetArea:
-        actAutoHide.setIcon(pxAutoHide.transformed(QTransform().scale(-1,1)));
-        break;
-    case Qt::TopDockWidgetArea:
-        actAutoHide.setIcon(pxAutoHide.transformed(QTransform().rotate(90)));
-        break;
-    case Qt::BottomDockWidgetArea:
-        actAutoHide.setIcon(pxAutoHide.transformed(QTransform().rotate(-90)));
-        break;
-    default:
-        break;
-    }
     actAutoHide.setData(QString::fromLatin1("OBTN AutoHide"));
 
-    actEditHide.setIcon(BitmapFactory().pixmap("qss:overlay/edithide.svg"));
     actEditHide.setData(QString::fromLatin1("OBTN EditHide"));
 
-    actEditShow.setIcon(BitmapFactory().pixmap("qss:overlay/editshow.svg"));
     actEditShow.setData(QString::fromLatin1("OBTN EditShow"));
 
-    actTaskShow.setIcon(BitmapFactory().pixmap("qss:overlay/taskshow.svg"));
     actTaskShow.setData(QString::fromLatin1("OBTN TaskShow"));
 
-    actNoAutoMode.setIcon(BitmapFactory().pixmap("qss:overlay/mode.svg"));
     actNoAutoMode.setData(QString::fromLatin1("OBTN NoAutoMode"));
 
     actAutoMode.setData(QString::fromLatin1("OBTN AutoMode"));
@@ -417,7 +395,6 @@ OverlayTabWidget::OverlayTabWidget(QWidget *parent, Qt::DockWidgetArea pos)
     autoModeMenu.addAction(&actEditShow);
     autoModeMenu.addAction(&actEditHide);
     autoModeMenu.addAction(&actTaskShow);
-    syncAutoMode();
     addAction(&actAutoMode);
 
     static QIcon pxIncrease;
@@ -468,12 +445,12 @@ OverlayTabWidget::OverlayTabWidget(QWidget *parent, Qt::DockWidgetArea pos)
     actDecrease.setParent(this);
     // addAction(&actDecrease);
 
-    actOverlay.setIcon(BitmapFactory().pixmap("qss:overlay/overlay.svg"));
     actOverlay.setData(QString::fromLatin1("OBTN Overlay"));
     actOverlay.setParent(this);
     addAction(&actOverlay);
 
     retranslate();
+    refreshIcons();
 
     connect(tabBar(), SIGNAL(tabBarClicked(int)), this, SLOT(onCurrentChanged(int)));
     connect(tabBar(), SIGNAL(tabMoved(int,int)), this, SLOT(onTabMoved(int,int)));
@@ -491,6 +468,34 @@ OverlayTabWidget::OverlayTabWidget(QWidget *parent, Qt::DockWidgetArea pos)
     connect(_animator, SIGNAL(stateChanged(QAbstractAnimation::State, 
                                            QAbstractAnimation::State)),
             this, SLOT(onAnimationStateChanged()));
+}
+
+void OverlayTabWidget::refreshIcons()
+{
+    actOverlay.setIcon(BitmapFactory().pixmap("qss:overlay/overlay.svg"));
+    actNoAutoMode.setIcon(BitmapFactory().pixmap("qss:overlay/mode.svg"));
+    actTaskShow.setIcon(BitmapFactory().pixmap("qss:overlay/taskshow.svg"));
+    actEditShow.setIcon(BitmapFactory().pixmap("qss:overlay/editshow.svg"));
+    actEditHide.setIcon(BitmapFactory().pixmap("qss:overlay/edithide.svg"));
+    actTransparent.setIcon(BitmapFactory().pixmap("qss:overlay/transparent.svg"));
+    QPixmap pxAutoHide = BitmapFactory().pixmap("qss:overlay/autohide.svg");
+    switch(dockArea) {
+    case Qt::LeftDockWidgetArea:
+        actAutoHide.setIcon(pxAutoHide);
+        break;
+    case Qt::RightDockWidgetArea:
+        actAutoHide.setIcon(pxAutoHide.transformed(QTransform().scale(-1,1)));
+        break;
+    case Qt::TopDockWidgetArea:
+        actAutoHide.setIcon(pxAutoHide.transformed(QTransform().rotate(90)));
+        break;
+    case Qt::BottomDockWidgetArea:
+        actAutoHide.setIcon(pxAutoHide.transformed(QTransform().rotate(-90)));
+        break;
+    default:
+        break;
+    }
+    syncAutoMode();
 }
 
 void OverlayTabWidget::onAnimationStateChanged()
@@ -2300,11 +2305,16 @@ OverlaySplitterHandle::OverlaySplitterHandle(Qt::Orientation orientation, QSplit
 {
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
-    actFloat.setIcon(BitmapFactory().pixmap("qss:overlay/float.svg"));
     retranslate();
+    refreshIcons();
     QObject::connect(&actFloat, SIGNAL(triggered(bool)), this, SLOT(onAction()));
     timer.setSingleShot(true);
     QObject::connect(&timer, SIGNAL(timeout()), this, SLOT(onTimer()));
+}
+
+void OverlaySplitterHandle::refreshIcons()
+{
+    actFloat.setIcon(BitmapFactory().pixmap("qss:overlay/float.svg"));
 }
 
 void OverlaySplitterHandle::onTimer()
@@ -2915,16 +2925,12 @@ public:
             refresh();
         });
 
-        _actOverlay.setIcon(BitmapFactory().pixmap("qss:overlay/overlay.svg"));
         _actOverlay.setData(QString::fromLatin1("OBTN Overlay"));
-
-        _actFloat.setIcon(BitmapFactory().pixmap("qss:overlay/float.svg"));
         _actFloat.setData(QString::fromLatin1("OBTN Float"));
-
-        _actClose.setIcon(BitmapFactory().pixmap("qss:overlay/close.svg"));
         _actClose.setData(QString::fromLatin1("OBTN Close"));
 
         retranslate();
+        refreshIcons();
 
         for(auto action : _actions) {
             QObject::connect(action, SIGNAL(triggered(bool)), host, SLOT(onAction()));
@@ -2938,6 +2944,18 @@ public:
 
         QIcon px = BitmapFactory().pixmap("cursor-through");
         _cursor = QCursor(px.pixmap(32,32), 10, 9);
+    }
+
+    void refreshIcons()
+    {
+        _actFloat.setIcon(BitmapFactory().pixmap("qss:overlay/float.svg"));
+        _actOverlay.setIcon(BitmapFactory().pixmap("qss:overlay/overlay.svg"));
+        _actClose.setIcon(BitmapFactory().pixmap("qss:overlay/close.svg"));
+        for (OverlayTabWidget *tabWidget : _Overlays) {
+            tabWidget->refreshIcons();
+            for (auto handle : tabWidget->findChildren<OverlaySplitterHandle*>())
+                handle->refreshIcons();
+        }
     }
 
     void setMouseTransparent(bool enabled)
@@ -4154,6 +4172,11 @@ void OverlayManager::onDockWidgetTitleChange(const QString &title)
 void OverlayManager::retranslate()
 {
     d->retranslate();
+}
+
+void OverlayManager::refreshIcons()
+{
+    d->refreshIcons();
 }
 
 void OverlayManager::onTimer()

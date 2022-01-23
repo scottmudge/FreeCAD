@@ -75,6 +75,7 @@ public:
 class GuiExport MainWindow : public QMainWindow
 {
     Q_OBJECT
+    Q_PROPERTY(QString overrideIcons READ overrideIcons WRITE setOverrideIcons)
 
 public:
     enum ConfirmSaveResult {
@@ -137,6 +138,12 @@ public:
      * Returns true that the context menu contains the 'Customize...' menu item.
      */
     QMenu * createPopupMenu();
+
+    QString overrideIcons() const;
+    void setOverrideIcons(const QString &);
+
+    QString overrideExtraIcons() const;
+    void setOverrideExtraIcons(const QString &);
 
     /** @name Splasher and access methods */
     //@{

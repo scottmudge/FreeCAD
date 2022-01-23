@@ -33,6 +33,7 @@
 # include <Inventor/SoInput.h>
 # include <Inventor/actions/SoGetPrimitiveCountAction.h>
 # include <Inventor/nodes/SoSeparator.h>
+# include <QInputDialog>
 #endif
 
 #include <xercesc/util/XMLString.hpp>
@@ -110,11 +111,20 @@ PyMethodDef Application::Methods[] = {
    "addIcon(string, string or list) -> None\n\n"
    "Add an icon as file name or in XPM format to the system"},
   {"getIcon",                 (PyCFunction) Application::sGetIcon, METH_VARARGS,
-   "getIcon(string) -> QIcon\n\n"
+   "getIcon(key:string, original=False) -> QIcon\n\n"
    "Get an icon in the system"},
+  {"getIconContext",          (PyCFunction) Application::sGetIconContext, METH_VARARGS,
+   "getIconContext(string) -> list(string)\n\n"
+   "Get user defined icon usage context"},
+  {"addIconContext",          (PyCFunction) Application::sAddIconContext, METH_VARARGS,
+   "addIconContext(string) -> None\n\n"
+   "Set user defined icon usage context"},
   {"isIconCached",           (PyCFunction) Application::sIsIconCached, METH_VARARGS,
    "isIconCached(String) -> Bool\n\n"
    "Check if an icon with the given name is cached"},
+  {"getIconNames",                 (PyCFunction) Application::sGetIconNames, METH_VARARGS,
+   "getIconNames() -> list(string)\n\n"
+   "Get all cached icon names in the system"},
   {"getMainWindow",           (PyCFunction) Application::sGetMainWindow, METH_VARARGS,
    "getMainWindow() -> QMainWindow\n\n"
    "Return the main window instance"},
@@ -1289,15 +1299,40 @@ PyObject* Application::sAddIcon(PyObject * /*self*/, PyObject *args)
 PyObject* Application::sGetIcon(PyObject * /*self*/, PyObject *args)
 {
     char *iconName;
-    if (!PyArg_ParseTuple(args, "s", &iconName))
+    PyObject *original = Py_False;
+    if (!PyArg_ParseTuple(args, "s|O", &iconName, &original))
         return NULL;
 
     PythonWrapper wrap;
     wrap.loadGuiModule();
     wrap.loadWidgetsModule();
-    auto pixmap = BitmapFactory().pixmap(iconName);
+    QPixmap pxOriginal;
+    auto pixmap = BitmapFactory().pixmap(iconName, false, PyObject_IsTrue(original) ? &pxOriginal : nullptr);
     if(!pixmap.isNull())
-        return Py::new_reference_to(wrap.fromQIcon(new QIcon(pixmap)));
+        return Py::new_reference_to(wrap.fromQIcon(new QIcon(pxOriginal.isNull()?pixmap:pxOriginal)));
+    Py_Return;
+}
+
+PyObject* Application::sGetIconContext(PyObject * /*self*/, PyObject *args)
+{
+    char *iconName;
+    if (!PyArg_ParseTuple(args, "s", &iconName))
+        return NULL;
+
+    Py::List res;
+    for (auto &ctx : BitmapFactory().getContext(iconName))
+        res.append(Py::String(ctx));
+    return Py::new_reference_to(res);
+}
+
+PyObject* Application::sAddIconContext(PyObject * /*self*/, PyObject *args)
+{
+    char *iconName;
+    char *ctx;
+    if (!PyArg_ParseTuple(args, "ss", &iconName, &ctx))
+        return NULL;
+
+    BitmapFactory().addContext(iconName, ctx);
     Py_Return;
 }
 
@@ -1309,6 +1344,17 @@ PyObject* Application::sIsIconCached(PyObject * /*self*/, PyObject *args)
 
     QPixmap icon;
     return Py::new_reference_to(Py::Boolean(BitmapFactory().findPixmapInCache(iconName, icon)));
+}
+
+PyObject* Application::sGetIconNames(PyObject * /*self*/, PyObject *args)
+{
+    if (!PyArg_ParseTuple(args, ""))
+        return NULL;
+
+    Py::List res;
+    for (auto &name : BitmapFactory().pixmapNames())
+        res.append(Py::String(name.toUtf8().constData()));
+    return Py::new_reference_to(res);
 }
 
 PyObject* Application::sAddCommand(PyObject * /*self*/, PyObject *args)

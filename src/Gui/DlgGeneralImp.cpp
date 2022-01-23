@@ -174,10 +174,66 @@ void DlgGeneralImp::saveSettings()
     ui->checkPopUpWindow->onSave();
     ui->toolbarIconSize->onSave();
     ui->StyleSheets->onSave();
+    ui->IconSets->onSave();
     ui->OverlayStyleSheets->onSave();
     ui->MenuStyleSheets->onSave();
     ui->checkboxTaskList->onSave();
     saveTreeMode(ui->treeMode->currentIndex());
+}
+
+void DlgGeneralImp::populateStylesheets(const char *key,
+                                        const char *path,
+                                        PrefComboBox *combo,
+                                        const char *def,
+                                        QStringList filter) {
+    auto hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/MainWindow");
+    // List all .qss/.css files
+    QMap<QString, QString> cssFiles;
+    QDir dir;
+    if (filter.isEmpty()) {
+        filter << QString::fromLatin1("*.qss");
+        filter << QString::fromLatin1("*.css");
+    }
+    QFileInfoList fileNames;
+
+    // read from user, resource and built-in directory
+    QStringList qssPaths = QDir::searchPaths(QString::fromLatin1(path));
+    for (QStringList::iterator it = qssPaths.begin(); it != qssPaths.end(); ++it) {
+        dir.setPath(*it);
+        fileNames = dir.entryInfoList(filter, QDir::Files, QDir::Name);
+        for (QFileInfoList::iterator jt = fileNames.begin(); jt != fileNames.end(); ++jt) {
+            if (cssFiles.find(jt->baseName()) == cssFiles.end()) {
+                cssFiles[jt->baseName()] = jt->fileName();
+            }
+        }
+    }
+
+    // now add all unique items
+    combo->addItem(tr(def), QString::fromLatin1(""));
+    for (QMap<QString, QString>::iterator it = cssFiles.begin(); it != cssFiles.end(); ++it) {
+        combo->addItem(it.key(), it.value());
+    }
+
+    QString selectedStyleSheet = QString::fromLatin1(hGrp->GetASCII(key).c_str());
+    int index = combo->findData(selectedStyleSheet);
+
+    // might be an absolute path name
+    if (index < 0 && !selectedStyleSheet.isEmpty()) {
+        QFileInfo fi(selectedStyleSheet);
+        if (fi.isAbsolute()) {
+            QString path = fi.absolutePath();
+            if (qssPaths.indexOf(path) >= 0) {
+                selectedStyleSheet = fi.fileName();
+            }
+            else {
+                selectedStyleSheet = fi.absoluteFilePath();
+                combo->addItem(fi.baseName(), selectedStyleSheet);
+            }
+        }
+    }
+
+    combo->setCurrentIndex(index);
+    combo->onRestore();
 }
 
 void DlgGeneralImp::loadSettings()
@@ -248,58 +304,8 @@ void DlgGeneralImp::loadSettings()
     QObject::connect(ui->treeMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
         [this](int value) { if (PrefParam::AutoSave()) saveTreeMode(value); });
 
-    hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/MainWindow");
-    auto populateStylesheets = 
-    [hGrp](const char *key, const char *path, PrefComboBox *combo, const char *def) {
-        // List all .qss/.css files
-        QMap<QString, QString> cssFiles;
-        QDir dir;
-        QStringList filter;
-        filter << QString::fromLatin1("*.qss");
-        filter << QString::fromLatin1("*.css");
-        QFileInfoList fileNames;
-
-        // read from user, resource and built-in directory
-        QStringList qssPaths = QDir::searchPaths(QString::fromLatin1(path));
-        for (QStringList::iterator it = qssPaths.begin(); it != qssPaths.end(); ++it) {
-            dir.setPath(*it);
-            fileNames = dir.entryInfoList(filter, QDir::Files, QDir::Name);
-            for (QFileInfoList::iterator jt = fileNames.begin(); jt != fileNames.end(); ++jt) {
-                if (cssFiles.find(jt->baseName()) == cssFiles.end()) {
-                    cssFiles[jt->baseName()] = jt->fileName();
-                }
-            }
-        }
-
-        // now add all unique items
-        combo->addItem(tr(def), QString::fromLatin1(""));
-        for (QMap<QString, QString>::iterator it = cssFiles.begin(); it != cssFiles.end(); ++it) {
-            combo->addItem(it.key(), it.value());
-        }
-
-        QString selectedStyleSheet = QString::fromLatin1(hGrp->GetASCII(key).c_str());
-        int index = combo->findData(selectedStyleSheet);
-
-        // might be an absolute path name
-        if (index < 0 && !selectedStyleSheet.isEmpty()) {
-            QFileInfo fi(selectedStyleSheet);
-            if (fi.isAbsolute()) {
-                QString path = fi.absolutePath();
-                if (qssPaths.indexOf(path) >= 0) {
-                    selectedStyleSheet = fi.fileName();
-                }
-                else {
-                    selectedStyleSheet = fi.absoluteFilePath();
-                    combo->addItem(fi.baseName(), selectedStyleSheet);
-                }
-            }
-        }
-
-        combo->setCurrentIndex(index);
-        combo->onRestore();
-    };
-
     populateStylesheets("StyleSheet", "qss", ui->StyleSheets, "No style sheet");
+    populateStylesheets("IconSet", "iconset", ui->IconSets, "None", QStringList(QStringLiteral("*.txt")));
     populateStylesheets("OverlayActiveStyleSheet", "overlay", ui->OverlayStyleSheets, "Auto");
     populateStylesheets("MenuStyleSheet", "qssm", ui->MenuStyleSheets, "Auto");
 
@@ -440,6 +446,7 @@ struct ParamHandlers {
 
     void attach() {
         handlers[ParamKey("BaseApp/Preferences/MainWindow", "StyleSheet")] = applyStyleSheet;
+        handlers[ParamKey("BaseApp/Preferences/MainWindow", "IconSet")] = applyStyleSheet;
 
         auto hGrp = App::GetApplication().GetParameterGroupByPath(
                 "User parameter:BaseApp/Preferences/DockWindows");
