@@ -268,7 +268,12 @@ void DlgCustomCommandsImp::changeEvent(QEvent *e)
             }
             ++it;
         }
-        onGroupActivated(ui->categoryTreeWidget->topLevelItem(0));
+        if (ui->categoryTreeWidget->currentItem())
+            onGroupActivated(ui->categoryTreeWidget->currentItem());
+    }
+    else if (e->type() == QEvent::StyleChange) {
+        if (ui->categoryTreeWidget->currentItem())
+            onGroupActivated(ui->categoryTreeWidget->currentItem());
     }
     QWidget::changeEvent(e);
 }

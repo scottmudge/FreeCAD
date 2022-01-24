@@ -52,6 +52,7 @@
 #include "DlgKeyboardImp.h"
 #include "DlgCustomizeSpaceball.h"
 #include "DlgCustomizeSpNavSettings.h"
+#include "DlgIconBrowser.h"
 #include "InputField.h"
 #include "QuantitySpinBox.h"
 #include "PrefWidgets.h"
@@ -93,6 +94,7 @@ WidgetFactorySupplier::WidgetFactorySupplier()
     new CustomPageProducer<DlgCustomToolbarsImp>;
   //new CustomPageProducer<DlgCustomToolBoxbarsImp>;
     new CustomPageProducer<DlgCustomActionsImp>;
+    new CustomPageProducer<DlgIconBrowser>;
     new CustomPageProducer<DlgCustomizeSpNavSettings>;
     new CustomPageProducer<DlgCustomizeSpaceball>;
 

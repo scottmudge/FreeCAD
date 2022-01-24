@@ -65,6 +65,18 @@ DlgWorkbenchesImp::DlgWorkbenchesImp(QWidget* parent)
         QStringList() << ui->lw_enabled_workbenches->objectName()
                       << ui->lw_disabled_workbenches->objectName());
 
+}
+
+/** Destroys the object and frees any allocated resources */
+DlgWorkbenchesImp::~DlgWorkbenchesImp()
+{
+}
+
+void DlgWorkbenchesImp::populate()
+{
+    ui->lw_enabled_workbenches->clear();
+    ui->lw_disabled_workbenches->clear();
+
     QStringList enabled_wbs_list = load_enabled_workbenches();
     QStringList disabled_wbs_list = load_disabled_workbenches();
     QStringList workbenches = Application::Instance->workbenches();
@@ -91,11 +103,6 @@ DlgWorkbenchesImp::DlgWorkbenchesImp(QWidget* parent)
     ui->lw_disabled_workbenches->setCurrentRow(0);
 }
 
-/** Destroys the object and frees any allocated resources */
-DlgWorkbenchesImp::~DlgWorkbenchesImp()
-{
-}
-
 void DlgWorkbenchesImp::set_lw_properties(QListWidgetCustom *lw)
 {
     lw->setDragDropMode(QAbstractItemView::DragDrop);
@@ -119,6 +126,9 @@ void DlgWorkbenchesImp::changeEvent(QEvent *e)
 {
     if (e->type() == QEvent::LanguageChange) {
         ui->retranslateUi(this);
+    }
+    else if (e->type() == QEvent::StyleChange) {
+        populate();
     }
     else {
         QWidget::changeEvent(e);

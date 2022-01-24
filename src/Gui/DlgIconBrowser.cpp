@@ -53,9 +53,9 @@ using namespace Gui;
 using namespace Gui::Dialog;
 
 DlgIconBrowser::DlgIconBrowser(QWidget* parent)
-  : QDialog(parent)
+  : CustomizeActionPage(parent)
   , ui(new Ui_DlgIconBrowser)
-  , widgetStates(new Gui::PrefWidgetStates(this))
+  , widgetStates(new Gui::PrefWidgetStates(this, false))
 {
     ui->setupUi(this);
     widgetStates->addSplitter(ui->splitter);
@@ -86,6 +86,13 @@ DlgIconBrowser::~DlgIconBrowser()
     this->hGrp->Detach(this);
     ui->spinBoxIconSize->onSave();
     ui->editPrefix->onSave();
+}
+
+void DlgIconBrowser::changeEvent(QEvent *e)
+{
+    if (e->type() == QEvent::StyleChange)
+        on_btnRefresh_clicked();
+    CustomizeActionPage::changeEvent(e);
 }
 
 void DlgIconBrowser::on_spinBoxIconSize_valueChanged(int value)

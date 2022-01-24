@@ -926,6 +926,8 @@ void DlgCustomToolbars::changeEvent(QEvent *e)
         }
         on_categoryBox_currentIndexChanged(ui->categoryBox->currentIndex());
     }
+    else if (e->type() == QEvent::StyleChange)
+        on_categoryBox_currentIndexChanged(ui->categoryBox->currentIndex());
     QWidget::changeEvent(e);
 }
 

@@ -70,6 +70,7 @@ private:
                         QListWidgetItem *wi);
     void save_workbenches();
     void shift_workbench(bool up);
+    void populate();
 
 private:
     std::unique_ptr<Ui_DlgWorkbenches> ui;

@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DlgIconBrowser</class>
- <widget class="QDialog" name="DlgIconBrowser">
+ <class>Gui::Dialog::DlgIconBrowser</class>
+ <widget class="QWidget" name="Gui::Dialog::DlgIconBrowser">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>629</width>
-    <height>415</height>
+    <width>663</width>
+    <height>429</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Icon Browser</string>
+   <string>Icons</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -137,7 +137,8 @@
      <item>
       <widget class="Gui::PrefLineEdit" name="editPrefix">
        <property name="toolTip">
-        <string>Icon export directory. It is a subdirectory, Gui/IconSets, in your application user directory.</string>
+        <string>Icon export directory. It is located inside a subdirectory (Gui/IconSets)
+in your application user directory.</string>
        </property>
        <property name="prefEntry" stdset="0">
         <cstring>IconBrowserIconPrefix</cstring>

@@ -531,6 +531,8 @@ void DlgCustomKeyboardImp::changeEvent(QEvent *e)
         }
         on_categoryBox_activated(ui->categoryBox->currentIndex());
     }
+    else if (e->type() == QEvent::StyleChange)
+        on_categoryBox_activated(ui->categoryBox->currentIndex());
     QWidget::changeEvent(e);
 }
 

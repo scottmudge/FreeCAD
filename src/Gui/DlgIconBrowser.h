@@ -26,8 +26,7 @@
 #include <memory>
 #include <QTimer>
 #include <Base/Parameter.h>
-
-class Ui_DlgIconBrowser;
+#include "PropertyPage.h"
 
 namespace Gui {
 
@@ -35,12 +34,13 @@ class PrefWidgetStates;
 
 namespace Dialog {
 
-class GuiExport DlgIconBrowser : public QDialog, public ParameterGrp::ObserverType
+class Ui_DlgIconBrowser;
+
+class DlgIconBrowser : public CustomizeActionPage, public ParameterGrp::ObserverType
 {
     Q_OBJECT
-
 public:
-    DlgIconBrowser(QWidget *parent);
+    DlgIconBrowser(QWidget *parent = nullptr);
     ~DlgIconBrowser();
     void OnChange(Base::Subject<const char*> &, const char *reason);
 
@@ -55,6 +55,12 @@ public Q_SLOTS:
     void onTimerFilter();
     void on_spinBoxIconSize_valueChanged(int value);
     QString getPrefix();
+
+protected:
+    virtual void changeEvent(QEvent *e);
+    virtual void onAddMacroAction(const QByteArray&) {}
+    virtual void onRemoveMacroAction(const QByteArray&) {}
+    virtual void onModifyMacroAction(const QByteArray&) {}
 
 private:
     std::unique_ptr<Ui_DlgIconBrowser> ui;

@@ -1300,10 +1300,10 @@ void TreeWidget::Private::refreshIcons()
     QIcon icon(documentPixmap);
     documentPartialPixmap = icon.pixmap(documentPixmap.size(),QIcon::Disabled);
 
-    pxHidden = BitmapFactory().pixmap("TreeHidden");
-    pxError = BitmapFactory().pixmap("TreeError");
-    pxRecompute = BitmapFactory().pixmap("TreeRecompute");
-    pxExternal = BitmapFactory().pixmap("TreeExternal");
+    pxHidden = BitmapFactory().pixmap("TreeHidden").scaled(32, 32, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    pxError = BitmapFactory().pixmap("TreeError").scaled(32, 32, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    pxRecompute = BitmapFactory().pixmap("TreeRecompute").scaled(32, 32, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    pxExternal = BitmapFactory().pixmap("TreeExternal").scaled(32, 32, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
     pxInvisibleOnTop = BitmapFactory().pixmap("TreeItemInvisibleOnTop");
     pxVisibleOnTop = BitmapFactory().pixmap("TreeItemVisibleOnTop");
     pxInvisible = BitmapFactory().pixmap("TreeItemInvisible");
