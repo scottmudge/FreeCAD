@@ -19,6 +19,7 @@ macro(InitializeFreeCADBuildOptions)
     else()
         option(FREECAD_USE_QT_FILEDIALOG "Use Qt's file dialog instead of the native one." ON)
     endif()
+    option(FREECAD_FORCE_USE_QT_FILEDIALOG "Always use Qt's file dialog and ignore user parameter settings." OFF)
 
     # == Win32 is default behaviour use the LibPack copied in Source tree ==========
     if(MSVC)

@@ -922,7 +922,6 @@ DocumentObject::getSubObjectList(const char *subname,
         auto sobj = getSubObject(sub.c_str());
         if(!sobj || !sobj->getNameInDocument())
             continue;
-        res.push_back(sobj);
         if (flatten) {
             if (auto linked = sobj->getLinkedObject()) {
                 auto grp = App::GeoFeatureGroupExtension::getGroupOfObject(linked);
@@ -941,6 +940,7 @@ DocumentObject::getSubObjectList(const char *subname,
                 }
             }
         }
+        res.push_back(sobj);
         if (sublist)
             sublist->push_back(pos+1);
         sub[pos+1] = c;

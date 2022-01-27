@@ -2740,7 +2740,7 @@ Py::Object View3DInventorPy::isObjectOnTop(const Py::Tuple &args) {
         subname = sub.c_str();
     }
     if(obj && obj->getDocument() && obj->getNameInDocument()) {
-        if(_view->getViewer()->isInGroupOnTop(obj->getNameInDocument(),subname))
+        if(_view->getViewer()->isInGroupOnTop(App::SubObjectT(obj, subname)))
             return Py::TupleN(Py::asObject(obj->getPyObject()),Py::String(subname));
     }
     return Py::None();

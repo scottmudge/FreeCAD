@@ -111,6 +111,21 @@ public:
         pTypeName = TypeName.c_str();
     }
 
+    SelectionChanges(MsgType type,
+                     const App::SubObjectT &objT,
+                     float x=0, float y=0, float z=0, int subtype=0,
+                     const char *typeName = nullptr)
+        : Type(type), SubType(subtype)
+        , x(x),y(y),z(z)
+        , Object(objT)
+    {
+        pDocName = Object.getDocumentName().c_str();
+        pObjectName = Object.getObjectName().c_str();
+        pSubName = Object.getSubName().c_str();
+        if(typeName) TypeName = typeName;
+        pTypeName = TypeName.c_str();
+    }
+
     SelectionChanges(const SelectionChanges &other) {
         *this = other;
     }

@@ -224,7 +224,6 @@ private:
     std::map<App::SubObjectT, std::vector<DocumentObjectItem*>> itemsOnTop;
     bool updatingItemsOnTop = false;
     bool itemSorted = false;
-    bool docRestored = false;
 
     friend class TreeWidget;
     friend class DocumentObjectData;
@@ -280,7 +279,7 @@ public:
     int getSubName(std::ostringstream &str, App::DocumentObject *&topParent) const;
     int _getSubName(std::ostringstream &str, App::DocumentObject *&topParent) const;
 
-    App::SubObjectT getSubNameT() const {
+    App::SubObjectT getSubNameT(bool normalize = true) const {
         std::ostringstream ss;
         App::DocumentObject *parent = nullptr;
         getSubName(ss, parent);
@@ -288,7 +287,10 @@ public:
             parent = object()->getObject();
         else
             ss << object()->getObject()->getNameInDocument() << ".";
-        return App::SubObjectT(parent, ss.str().c_str());
+        auto objT =  App::SubObjectT(parent, ss.str().c_str());
+        if (normalize)
+            objT.normalize();
+        return objT;
     }
 
     void setHighlight(bool set, HighlightMode mode = HighlightMode::UserDefined);
@@ -2700,27 +2702,13 @@ void TreeWidget::Private::toggleItemShowOnTop(DocumentObjectItem *oitem)
         return;
     if (oitem->showOnTop.getObjectName().size()) {
         view->getViewer()->checkGroupOnTop(SelectionChanges(
-                    SelectionChanges::RmvSelection,
-                    oitem->showOnTop.getDocumentName(),
-                    oitem->showOnTop.getObjectName(),
-                    oitem->showOnTop.getSubName()), true);
+                    SelectionChanges::RmvSelection, oitem->showOnTop), true);
         master->_updateStatus();
         return;
     }
 
-    App::DocumentObject *topParent = 0;
-    std::ostringstream ss;
-    oitem->getSubName(ss,topParent);
-    if(!topParent)
-        topParent = oitem->object()->getObject();
-    else
-        ss << oitem->object()->getObject()->getNameInDocument() << '.';
-    std::string subname = ss.str();
     view->getViewer()->checkGroupOnTop(SelectionChanges(
-                SelectionChanges::AddSelection,
-                topParent->getDocument()->getName(),
-                topParent->getNameInDocument(),
-                subname.c_str()), true);
+                SelectionChanges::AddSelection, oitem->getSubNameT()), true);
     master->_updateStatus();
 }
 
@@ -6457,10 +6445,7 @@ void DocumentItem::removeItemOnTop(DocumentObjectItem *item)
         Base::StateLocker guard(updatingItemsOnTop);
         document()->foreachView<View3DInventor>([item](View3DInventor* view) {
             view->getViewer()->checkGroupOnTop(SelectionChanges(
-                        SelectionChanges::RmvSelection,
-                        item->showOnTop.getDocumentName(),
-                        item->showOnTop.getObjectName(),
-                        item->showOnTop.getSubName()), true);
+                        SelectionChanges::RmvSelection, item->showOnTop), true);
         });
     }
 }
@@ -6488,10 +6473,7 @@ void DocumentItem::testItemStatus(void)
                 it2 = items.erase(it2);
                 if (items.empty()) {
                     viewer->checkGroupOnTop(SelectionChanges(
-                                SelectionChanges::RmvSelection,
-                                item->showOnTop.getDocumentName(),
-                                item->showOnTop.getObjectName(),
-                                item->showOnTop.getSubName()), true);
+                                SelectionChanges::RmvSelection, item->showOnTop), true);
                 }
                 item->showOnTop = objT;
             }
@@ -6506,10 +6488,7 @@ void DocumentItem::testItemStatus(void)
             items.push_back(item);
             if (items.size() == 1)
                 view->getViewer()->checkGroupOnTop(SelectionChanges(
-                            SelectionChanges::AddSelection,
-                            item->showOnTop.getDocumentName(),
-                            item->showOnTop.getObjectName(),
-                            item->showOnTop.getSubName()), true);
+                            SelectionChanges::AddSelection, item->showOnTop), true);
         }
     } else {
         for (auto &v : itemsOnTop) {

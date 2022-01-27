@@ -184,6 +184,7 @@ DlgParameterImp::DlgParameterImp( QWidget* parent,  Qt::WindowFlags fl )
  */
 DlgParameterImp::~DlgParameterImp()
 {
+    saveState();
     // no need to delete child widgets, Qt does it all for us
     delete ui;
     paramValue->_owner = nullptr;

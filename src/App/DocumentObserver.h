@@ -257,7 +257,7 @@ public:
     DocumentObject *getSubObject() const;
 
     /// Return all objects along the subname path
-    std::vector<DocumentObject *> getSubObjectList() const;
+    std::vector<DocumentObject *> getSubObjectList(bool flatten = false) const;
 
     bool operator<(const SubObjectT &other) const;
 
@@ -270,10 +270,10 @@ public:
     /** Normalize the subname path to use only the object internal name and old style element name
      * @return Return whether the subname has been changed
      */
-    bool normalize();
+    bool normalize(bool noElement=false, bool flatten=true);
 
     /// Return a normalize copy of itself
-    SubObjectT normalized() const;
+    SubObjectT normalized(bool noElement=false, bool flattern=true) const;
 
     /// Return the parent object
     SubObjectT getParent() const;

@@ -162,8 +162,7 @@ public:
     void checkGroupOnTop(const SelectionChanges &Reason, bool alt=false);
     void clearGroupOnTop(bool alt=false);
 
-    bool isInGroupOnTop(const char *objname, const char *subname, bool altOnly=true) const;
-    bool isInGroupOnTop(const std::string &key, bool altOnly=true) const;
+    bool isInGroupOnTop(const App::SubObjectT &objT, bool altOnly=true) const;
     const std::set<App::SubObjectT> &getObjectsOnTop() const;
 
     SoDirectionalLight* getBacklight(void) const;
@@ -546,8 +545,8 @@ private:
         void clearElements();
     };
 
-    std::unordered_map<std::string,OnTopInfo> objectsOnTopSel;
-    std::unordered_map<std::string,OnTopInfo> objectsOnTopPreSel;
+    std::map<App::SubObjectT,OnTopInfo> objectsOnTopSel;
+    std::map<App::SubObjectT,OnTopInfo> objectsOnTopPreSel;
 
     SoSelectionElementAction *selAction;
     SoHighlightElementAction *preselAction;

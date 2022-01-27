@@ -1101,25 +1101,14 @@ void View3DInventorViewer::clearGroupOnTop(bool alt) {
     tmpPath.truncate(0);
 }
 
-bool View3DInventorViewer::isInGroupOnTop(const char *objname,
-                                          const char *subname,
-                                          bool altOnly) const
+bool View3DInventorViewer::isInGroupOnTop(const App::SubObjectT &_objT, bool altOnly) const
 {
-    if(!objname)
-        return false;
-    std::string key(objname);
-    key += '.';
-    auto element = Data::ComplexGeoData::findElementName(subname);
-    if(subname)
-        key.insert(key.end(),subname,element);
-    return isInGroupOnTop(key, altOnly);
-}
-
-bool View3DInventorViewer::isInGroupOnTop(const std::string &key, bool altOnly) const {
+    auto objT(_objT);
+    objT.normalize();
     auto manager = selectionRoot->getRenderManager();
     if (manager)
-        return manager->isOnTop(key, altOnly);
-    auto it = objectsOnTopSel.find(key);
+        return manager->isOnTop(objT.getSubNameNoElement(true), altOnly);
+    auto it = objectsOnTopSel.find(objT);
     return it!=objectsOnTopSel.end() && (!altOnly || it->second.alt);
 }
 
@@ -1131,26 +1120,27 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
             return;
         switch(Reason.Type) {
         case SelectionChanges::AddSelection: {
-            ViewProvider *vp = Application::Instance->getViewProvider(Reason.Object.getObject());
+            auto objT = Reason.Object.normalized();
+            ViewProvider *vp = Application::Instance->getViewProvider(objT.getObject());
             if (vp) {
                 SoDetail *detail = nullptr;
                 SoFullPath * nodePath = _pimpl->tmpPath.get();
                 nodePath->truncate(0);
                 nodePath->append(selectionRoot);
-                vp->getDetailPath(Reason.Object.getSubNameNoElement().c_str(), nodePath, true, detail);
+                vp->getDetailPath(objT.getSubNameNoElement().c_str(), nodePath, true, detail);
                 delete detail;
                 detail = nullptr;
 
                 SoFullPath * detailPath = nodePath;
-                if (Reason.Object.hasSubElement()) {
+                if (objT.hasSubElement()) {
                     detailPath = _pimpl->tmpPath2.get();
                     detailPath->truncate(0);
                     detailPath->append(selectionRoot);
-                    vp->getDetailPath(Reason.pSubName, detailPath, true, detail);
+                    vp->getDetailPath(objT.getSubName().c_str(), detailPath, true, detail);
                 }
 
-                manager->addSelection(Reason.Object.getSubNameNoElement(true),
-                                      Reason.Object.getOldElementName(),
+                manager->addSelection(objT.getSubNameNoElement(true),
+                                      objT.getOldElementName(),
                                       nodePath,
                                       detailPath,
                                       detail,
@@ -1158,7 +1148,6 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
                                       true,
                                       true);
                 if (guiDocument) {
-                    auto objT = Reason.Object;
                     objT.setSubName(objT.getSubNameNoElement());
                     _pimpl->objectsOnTop.insert(objT);
                     guiDocument->signalOnTopObject(Reason.Type, objT);
@@ -1169,17 +1158,18 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
             }
             break;
         }
-        case SelectionChanges::RmvSelection:
-            manager->removeSelection(Reason.Object.getSubNameNoElement(true),
-                                     Reason.Object.getOldElementName(),
+        case SelectionChanges::RmvSelection: {
+            auto objT = Reason.Object.normalized();
+            manager->removeSelection(objT.getSubNameNoElement(true),
+                                     objT.getOldElementName(),
                                      true);
             if (guiDocument) {
-                auto objT = Reason.Object;
                 objT.setSubName(objT.getSubNameNoElement());
                 _pimpl->objectsOnTop.erase(objT);
                 guiDocument->signalOnTopObject(Reason.Type, objT);
             }
             break;
+        }
         case SelectionChanges::ClrSelection:
             manager->clearSelection(true);
             if (guiDocument && _pimpl->objectsOnTop.size()) {
@@ -1202,7 +1192,7 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
         if(!guiDocument)
             return;
         else {
-            auto sels = Gui::Selection().getSelection(guiDocument->getDocument()->getName(),0);
+            auto sels = Gui::Selection().getSelectionT(guiDocument->getDocument()->getName(),0);
             if(ViewParams::instance()->getMaxOnTopSelections() < (int)sels.size()) {
                 // setSelection() is normally used for selectAll(). Let's not blow up
                 // the whole scene with all those invisible objects
@@ -1210,8 +1200,7 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
                 return;
             }
             for(auto &sel : sels ) {
-                checkGroupOnTop(SelectionChanges(SelectionChanges::AddSelection,
-                            sel.DocName,sel.FeatName,sel.SubName));
+                checkGroupOnTop(SelectionChanges(SelectionChanges::AddSelection,sel));
             }
         }
         return;
@@ -1231,29 +1220,19 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
     if(!getDocument() || !Reason.pDocName || !Reason.pDocName[0] || !Reason.pObjectName)
         return;
 
+    std::string element = Reason.Object.getOldElementName();
+    auto objT = Reason.Object.normalized(true); // do not include sub-element
     if (alt && Reason.Type == SelectionChanges::RmvSelection) {
-        auto objT = Reason.Object;
         _pimpl->objectsOnTop.erase(objT);
         guiDocument->signalOnTopObject(Reason.Type, objT);
     }
-
-    auto obj = getDocument()->getDocument()->getObject(Reason.pObjectName);
-    if(!obj || !obj->getNameInDocument())
-        return;
-    std::string key(obj->getNameInDocument());
-    key += '.';
-    auto subname = Reason.pSubName;
-    auto element = Data::ComplexGeoData::findElementName(subname);
-    if(subname)
-        key.insert(key.end(),subname,element);
 
     switch(Reason.Type) {
     case SelectionChanges::SetPreselect:
         if(Reason.SubType!=2) {
             // 2 means it is triggered from tree view. If not from tree view
             // and not belong to on top object, do not handle it.
-            // if(!objectsOnTopSel.count(key))
-                return;
+            return;
         }
         break;
     case SelectionChanges::HideSelection:
@@ -1270,7 +1249,7 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
             pCurrentHighlightPath = nullptr;
         }
 
-        auto it = objs.find(key.c_str());
+        auto it = objs.find(objT);
         if(it == objs.end())
             return;
         auto &info = it->second;
@@ -1300,7 +1279,7 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
         }
 
         if(preselect) {
-            auto it2 = objectsOnTopSel.find(key);
+            auto it2 = objectsOnTopSel.find(objT);
             if(it2!=objectsOnTopSel.end()
                     && it2->second.elements.empty()
                     && !it2->second.alt)
@@ -1356,9 +1335,10 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
             objs.erase(it);
             if(alt) {
                 Gui::Selection().rmvPreselect();
-                if (Reason.Object.isVisible())
+                if (objT.isVisible()) {
                     Gui::Selection().updateSelection(true,
                             Reason.pDocName, Reason.pObjectName, Reason.pSubName);
+                }
             }
         }
         return;
@@ -1367,29 +1347,22 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
         break;
     }
 
-    if(!preselect && element && element[0]
+    if(!preselect && element.size()
             && ViewParams::instance()->getShowSelectionBoundingBox())
         return;
 
     auto &objs = preselect?objectsOnTopPreSel:objectsOnTopSel;
     auto pcGroup = preselect?pcGroupOnTopPreSel:pcGroupOnTopSel;
 
+    const char *subname = Reason.pSubName;
     auto vp = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(
-            Application::Instance->getViewProvider(obj));
+            Application::Instance->getViewProvider(objT.getObject()));
     if(!vp)
         return;
-    auto svp = vp;
-    if(subname && *subname) {
-        auto sobj = obj->getSubObject(subname);
-        if(!sobj || !sobj->getNameInDocument())
-            return;
-        if(sobj!=obj) {
-            svp = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(
-                    Application::Instance->getViewProvider(sobj));
-            if(!svp)
-                return;
-        }
-    }
+    auto svp = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(
+            Application::Instance->getViewProvider(objT.getSubObject()));
+    if(!svp)
+        return;
     int onTop;
     // onTop==2 means on top only if whole object is selected,
     // onTop==3 means on top only if some sub-element is selected
@@ -1397,7 +1370,7 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
     if(Gui::Selection().needPickedList()
             || (alt && Reason.Type == SelectionChanges::AddSelection)
             || ViewParams::instance()->getShowSelectionOnTop()
-            || isInGroupOnTop(key))
+            || isInGroupOnTop(objT))
         onTop = 1;
     else if(vp->OnTopWhenSelected.getValue())
         onTop = vp->OnTopWhenSelected.getValue();
@@ -1432,15 +1405,13 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
     detailPath.truncate(0);
 
     if (alt && Reason.Type == SelectionChanges::AddSelection) {
-        auto objT = Reason.Object;
-        objT.setSubName(objT.getSubNameNoElement());
         _pimpl->objectsOnTop.insert(objT);
         guiDocument->signalOnTopObject(Reason.Type, objT);
     }
 
     SoDetail *det = 0;
     if(vp->getDetailPath(subname, &detailPath, true, det) && detailPath.getLength()) {
-        auto &info = objs[key];
+        auto &info = objs[objT];
         if(!info.node) {
             info.node = new SoFCPathAnnotation(vp,subname,this);
             info.node->priority.setValue(preselect?1:0);
@@ -1492,7 +1463,7 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
 
                 info.node->setPath(0);
 
-                auto &selInfo = objectsOnTopSel[key];
+                auto &selInfo = objectsOnTopSel[objT];
                 if(!selInfo.node) {
                     selInfo.node = new SoFCPathAnnotation(vp,subname,this);
                     selInfo.node->ref();
@@ -4406,7 +4377,7 @@ View3DInventorViewer::Private::checkElementIntersection(ViewProviderDocumentObje
         sobj = obj->resolve(subname,&parent,&childName);
         if(!sobj)
             return -1;
-        if(!owner->isInGroupOnTop(obj->getNameInDocument(), subname, false)
+        if(!owner->isInGroupOnTop(App::SubObjectT(obj, subname), false)
                 && !sobj->testStatus(App::ObjEditing)) {
             int vis;
             if(!parent || (vis=parent->isElementVisibleEx(
@@ -4415,7 +4386,7 @@ View3DInventorViewer::Private::checkElementIntersection(ViewProviderDocumentObje
             if(!vis)
                 return -1;
         }
-    } else if (!owner->isInGroupOnTop(obj->getNameInDocument(), "", false)
+    } else if (!owner->isInGroupOnTop(App::SubObjectT(obj, ""), false)
             && !obj->testStatus(App::ObjEditing)
             && !obj->Visibility.getValue())
     {

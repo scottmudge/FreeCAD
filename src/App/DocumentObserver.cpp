@@ -425,17 +425,18 @@ bool SubObjectT::isVisible() const
     return sobj && sobj->Visibility.getValue();
 }
 
-bool SubObjectT::normalize()
+bool SubObjectT::normalize(bool noElement, bool flatten)
 {
     std::ostringstream ss;
-    auto objs = getSubObjectList();
+    auto objs = getSubObjectList(flatten);
     for (unsigned i=1; i<objs.size(); ++i)
         ss << objs[i]->getNameInDocument() << ".";
     if (objs.front()->getSubObject(ss.str().c_str()) != objs.back()) {
         // something went wrong
         return false;
     }
-    ss << getOldElementName();
+    if (!noElement)
+        ss << getOldElementName();
     std::string sub = ss.str();
     if (subname != sub) {
         subname = std::move(sub);
@@ -444,10 +445,10 @@ bool SubObjectT::normalize()
     return false;
 }
 
-SubObjectT App::SubObjectT::normalized() const
+SubObjectT App::SubObjectT::normalized(bool noElement, bool flatten) const
 {
     SubObjectT res(*this);
-    res.normalize();
+    res.normalize(flatten, noElement);
     return res;
 }
 
@@ -524,10 +525,10 @@ std::string SubObjectT::getSubObjectPython(bool force) const {
     return str.str();
 }
 
-std::vector<App::DocumentObject*> SubObjectT::getSubObjectList() const {
+std::vector<App::DocumentObject*> SubObjectT::getSubObjectList(bool flatten) const {
     auto obj = getObject();
     if(obj)
-        return obj->getSubObjectList(subname.c_str());
+        return obj->getSubObjectList(subname.c_str(), nullptr, flatten);
     return {};
 }
 

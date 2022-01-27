@@ -56,15 +56,18 @@ bool FileDialog::dontUseNativeDialog(bool checkModifier)
 // Use Qt file dialog in order to support of save into directory without
 // compression.
 //
-#if defined(USE_QT_FILEDIALOG)
-    bool notNativeDialog = true;
-#else
-    bool notNativeDialog = false;
-#endif
 
+    bool notNativeDialog = false;
+#if defined(FORCE_USE_QT_FILEDIALOG) // ignore user parameter settings
+    notNativeDialog = true;
+#else
+#   if defined(USE_QT_FILEDIALOG)
+    notNativeDialog = true;
+#   endif
     ParameterGrp::handle group = App::GetApplication().GetUserParameter().
           GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Dialog");
     notNativeDialog = group->GetBool("DontUseNativeDialog", notNativeDialog);
+#endif
 
     if (checkModifier && QApplication::queryKeyboardModifiers() == Qt::ShiftModifier)
         return !notNativeDialog;

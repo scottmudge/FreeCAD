@@ -1314,6 +1314,10 @@ if (FREECAD_USE_QT_FILEDIALOG)
     set_source_files_properties(FileDialog.cpp PROPERTIES COMPILE_FLAGS -DUSE_QT_FILEDIALOG)
 endif()
 
+if (FREECAD_FORCE_USE_QT_FILEDIALOG)
+    set_source_files_properties(FileDialog.cpp PROPERTIES COMPILE_FLAGS -DFORCE_USE_QT_FILEDIALOG)
+endif()
+
 # Suppress some very long Eigen3 warnings of older versions and
 # suppress this warning for the SbMatrix class
 if (EIGEN3_NO_DEPRECATED_COPY)
