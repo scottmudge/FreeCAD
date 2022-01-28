@@ -429,6 +429,8 @@ bool SubObjectT::normalize(bool noElement, bool flatten)
 {
     std::ostringstream ss;
     auto objs = getSubObjectList(flatten);
+    if (objs.empty())
+        return false;
     for (unsigned i=1; i<objs.size(); ++i)
         ss << objs[i]->getNameInDocument() << ".";
     if (objs.front()->getSubObject(ss.str().c_str()) != objs.back()) {
