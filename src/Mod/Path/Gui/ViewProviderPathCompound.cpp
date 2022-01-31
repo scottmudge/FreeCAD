@@ -101,7 +101,10 @@ bool ViewProviderPathCompound::canDropObjects() const
 
 bool ViewProviderPathCompound::canDropObject(App::DocumentObject* obj) const
 {
-    return obj->isDerivedFrom(App::DocumentObjectGroup::getClassTypeId());
+    auto feat = static_cast<Path::FeatureCompound *>(getObject());
+    return obj && obj->getNameInDocument()
+        && (obj->isDerivedFrom(App::DocumentObjectGroup::getClassTypeId())
+            || feat->Group.find(obj->getNameInDocument()));
 }
 
 void ViewProviderPathCompound::dropObject(App::DocumentObject* obj)
@@ -113,6 +116,12 @@ void ViewProviderPathCompound::dropObject(App::DocumentObject* obj)
         auto groups = feat->Groups.getValues();
         groups.push_back(obj);
         feat->Groups.setValues(std::move(groups));
+    }
+    else if (auto grp = App::GroupExtension::getGroupOfObject(obj)) {
+        if (feat->Group.find(grp->getNameInDocument())) {
+            grp->getExtensionByType<App::GroupExtension>()->removeObject(obj);
+            feat->Group.touch();
+        }
     }
 }
 

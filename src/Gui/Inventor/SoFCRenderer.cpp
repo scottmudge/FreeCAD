@@ -675,9 +675,9 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
     this->material.vertexordering = next.vertexordering;
   }
 
-  int8_t twoside = next.twoside;
+  bool twoside = next.twoside;
   if (transp || next.isOnTop())
-    twoside = 1;
+    twoside = true;
   if (first || this->material.twoside != twoside) {
     SoLazyElement::setTwosideLighting(state, twoside);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, twoside ? GL_TRUE : GL_FALSE);
@@ -685,9 +685,9 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
     this->material.twoside = twoside;
   }
 
-  int8_t culling = next.culling;
+  bool culling = next.culling;
   if (transp)
-    culling = 0;
+    culling = false;
   if (first || this->material.culling != culling) {
     if (culling) glEnable(GL_CULL_FACE);
     else glDisable(GL_CULL_FACE);

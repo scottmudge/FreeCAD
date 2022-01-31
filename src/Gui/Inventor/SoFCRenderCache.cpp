@@ -481,7 +481,7 @@ SoFCRenderCache::setLightModel(SoState * state, const SoLightModel * lightmode)
   if (PRIVATE(this)->material.overrideflags.test(Material::FLAG_LIGHT_MODEL))
     return;
   if (lightmode->isOverride())
-    PRIVATE(this)->material.overrideflags.test(Material::FLAG_LIGHT_MODEL);
+    PRIVATE(this)->material.overrideflags.set(Material::FLAG_LIGHT_MODEL);
   PRIVATE(this)->material.maskflags.set(Material::FLAG_LIGHT_MODEL);
   PRIVATE(this)->material.lightmodel = SoLightModelElement::get(state);
 }
@@ -611,7 +611,7 @@ SoFCRenderCache::setDepthBuffer(SoState * state, const SoDepthBuffer * node)
     m.depthwrite = node->write.getValue();
   }
   if (!node->function.isIgnored()) {
-    m.maskflags.test(Material::FLAG_DEPTH_FUNC);
+    m.maskflags.set(Material::FLAG_DEPTH_FUNC);
     m.depthfunc = node->function.getValue();
   }
 }
@@ -1738,7 +1738,7 @@ SoFCRenderCache::buildHighlightCache(SbFCMap<int, VertexCachePtr> &sharedcache,
       // 'wholeontop' and there is some highlight detail, it means we are
       // highlighting some sub-element of a shape node.
 
-      if (child.first.selectstyle == Material::Unpickable && !ViewParams::OverrideSelectability) {
+      if (child.first.selectstyle == Material::Unpickable && !ViewParams::OverrideSelectability()) {
         // Either the parent is not selectable, or the shape is not
         // sub-element selectable (checked in the loop below).
         continue;

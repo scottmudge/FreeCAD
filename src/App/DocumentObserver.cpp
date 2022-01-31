@@ -450,7 +450,7 @@ bool SubObjectT::normalize(bool noElement, bool flatten)
 SubObjectT App::SubObjectT::normalized(bool noElement, bool flatten) const
 {
     SubObjectT res(*this);
-    res.normalize(flatten, noElement);
+    res.normalize(noElement, flatten);
     return res;
 }
 

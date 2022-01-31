@@ -812,11 +812,6 @@ bool ViewProvider::canReplaceObject(App::DocumentObject* oldValue, App::Document
         res = ext->extensionCanReplaceObject(oldValue, newValue);
         return res>=0;
     });
-
-    if(res < 0) {
-        // no one implements this function, fallback to canDropObject
-        return canDropObject(newValue);
-    }
     return res>0;
 }
 
