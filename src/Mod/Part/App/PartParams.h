@@ -73,6 +73,7 @@ public:
     FC_APP_PART_PARAM(AutoCorrectLink,bool,Bool,false) \
     FC_APP_PART_PARAM(RefineModel,bool,Bool,false) \
     FC_APP_PART_PARAM(AuxGroupUniqueLabel,bool,Bool,false) \
+    FC_APP_PART_PARAM(BRepSaveFormat,int,Int,0) \
 
 #undef FC_APP_PART_PARAM
 #define FC_APP_PART_PARAM(_name,_ctype,_type,_def) \

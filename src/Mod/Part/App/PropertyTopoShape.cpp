@@ -431,6 +431,20 @@ void PropertyPartShape::Restore(Base::XMLReader &reader)
 static void BRepTools_Write(const TopoDS_Shape& Sh, Standard_OStream& S) {
   BRepTools_ShapeSet SS(Standard_False);
   // SS.SetProgress(PR);
+#if OCC_VERSION_HEX >= 0x070600
+  TopTools_FormatVersion theVersion;
+  switch(PartParams::BRepSaveFormat()) {
+  case 2:
+    theVersion = TopTools_FormatVersion_VERSION_2;
+    break;
+  case 3:
+    theVersion = TopTools_FormatVersion_VERSION_3;
+    break;
+  default:
+    theVersion = TopTools_FormatVersion_VERSION_1;
+  }
+  SS.SetFormatNb(theVersion);
+#endif
   SS.Add(Sh);
   SS.Write(S);
   SS.Write(Sh,S);
