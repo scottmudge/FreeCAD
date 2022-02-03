@@ -44,6 +44,8 @@
 #include <QWindow>
 #include <QStack>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <Base/Console.h>
 #include <Base/Sequencer.h>
 #include <Base/Tools.h>
@@ -145,6 +147,8 @@ public:
     class ExpandInfo;
     typedef std::shared_ptr<ExpandInfo> ExpandInfoPtr;
 
+    bool isSelGroup() const {return selGroup;}
+
 protected:
     /** Adds a view provider to the document item.
      * If this view provider is already added nothing happens.
@@ -163,6 +167,7 @@ protected:
     void slotRecomputed      (const App::Document &doc, const std::vector<App::DocumentObject*> &objs);
     void slotRecomputedObject(const App::DocumentObject &);
     void slotOnTopObject(int, const App::SubObjectT &);
+    void slotChangedDocument(const App::Document &doc, const App::Property &prop);
 
     bool updateObject(const Gui::ViewProviderDocumentObject&, const App::Property &prop);
 
@@ -220,10 +225,13 @@ private:
     Connection connectDetachView;
     boost::signals2::scoped_connection connOnTopObject;
     boost::signals2::scoped_connection connActivateView;
+    boost::signals2::scoped_connection connSignalChanged;
 
     std::map<App::SubObjectT, std::vector<DocumentObjectItem*>> itemsOnTop;
     bool updatingItemsOnTop = false;
     bool itemSorted = false;
+    bool selGroup = false;
+    DocumentObjectItem *selGroupItem = nullptr;
 
     friend class TreeWidget;
     friend class DocumentObjectData;
@@ -248,6 +256,7 @@ public:
     bool isChildOfItem(DocumentObjectItem*);
 
     void restoreBackground();
+    void detachOwner();
 
     App::SubObjectT getSubObjectT() const;
 
@@ -293,6 +302,22 @@ public:
         return objT;
     }
 
+    App::SubObjectT getTreeSubNameT() const {
+        std::ostringstream ss;
+        auto parent = getTreeSubName(ss);
+        return App::SubObjectT(parent, ss.str().c_str());
+    }
+
+    App::DocumentObject *getTreeSubName(std::ostream &ss) const {
+        App::DocumentObject *parent = nullptr;
+        if (auto item = getParentItem())
+            parent = item->getTreeSubName(ss);
+        else
+            return object()->getObject();
+        ss << object()->getObject()->getNameInDocument() << '.';
+        return parent;
+    }
+
     void setHighlight(bool set, HighlightMode mode = HighlightMode::UserDefined);
 
     const char *getName() const;
@@ -303,6 +328,7 @@ public:
     bool isParentLink() const;
     int isGroup() const;
     int isParentGroup() const;
+    bool isSelGroup() const {return selGroup;}
 
     DocumentObjectItem *getParentItem() const;
     TreeWidget *getTree() const;
@@ -322,6 +348,7 @@ private:
     int previousStatus;
     int selected;
     bool populated;
+    bool selGroup = false;
     App::SubObjectT showOnTop;
     Gui::HighlightMode highlightMode = Gui::HighlightMode::None;
 
@@ -596,6 +623,8 @@ public:
 
     void checkItemEntered(QTreeWidgetItem *item, const QByteArray &tag);
 
+    void setupSelectingGroupAction(QMenu &menu, App::Document *doc, std::string &&subname);
+
     TreeWidget *master;
 
     bool disableSyncView = false;
@@ -753,6 +782,11 @@ void TreeParams::onTreeActiveColorChanged()
 }
 
 void TreeParams::onTreeEditColorChanged()
+{
+    refreshTreeViews();
+}
+
+void TreeParams::onSelectingGroupColorChanged()
 {
     refreshTreeViews();
 }
@@ -1004,6 +1038,26 @@ void TreeWidgetItemDelegate::paint(QPainter *painter,
         if (width < rect.width())
             rect.setWidth(width);
         painter->fillRect(rect, _TreeItemBackground);
+    }
+
+    bool selGroup = false;
+    auto titem = tree->itemFromIndex(index);
+    if (titem->type() == TreeWidget::ObjectType)
+        selGroup = static_cast<DocumentObjectItem*>(titem)->isSelGroup();
+    else if (titem->type() == TreeWidget::DocumentType)
+        selGroup = static_cast<DocumentItem*>(titem)->isSelGroup();
+    if (selGroup) {
+        QBrush brush;
+        auto color = App::Color((uint32_t)TreeParams::SelectingGroupColor()).asValue<QColor>();
+        brush = QBrush(color);
+        auto rect = opt.rect;
+        if (opt.backgroundBrush.style() != Qt::NoBrush) {
+            painter->fillRect(rect, opt.backgroundBrush);
+            opt.backgroundBrush = QBrush();
+            auto vrect = tree->visualItemRect(titem);
+            rect.setRight(std::min(rect.right(), vrect.left() + vrect.width()/2));
+        }
+        painter->fillRect(rect, brush);
     }
     style->drawControl(QStyle::CE_ItemViewItem, &opt, painter, tree);
 
@@ -1326,9 +1380,12 @@ void TreeWidget::Private::refreshIcons()
 QTreeWidgetItem *TreeWidget::findItem(const App::SubObjectT &objT,
                                       QTreeWidgetItem *context,
                                       App::SubObjectT *resT,
-                                      bool sync,
-                                      bool select)
+                                      FindItemOptions options)
 {
+    bool sync = options & Sync;
+    bool select = options & Select;
+    bool treeSub = options & TreeSubName;
+
     auto tree = instance();
     if (!tree)
         return nullptr;
@@ -1358,23 +1415,21 @@ QTreeWidgetItem *TreeWidget::findItem(const App::SubObjectT &objT,
             }
         }
     }
-        
+
     if (!item) {
         item = docItem->findItemByObject(sync, obj, objT.getSubName().c_str(), select);
         if (item && item->object()->getObject() != sobj)
             return nullptr;
     }
     if (item && resT) {
-        App::DocumentObject *topParent = 0;
-        std::ostringstream ss;
-        static_cast<DocumentObjectItem*>(item)->getSubName(ss, topParent);
-        if(!topParent)
-            topParent = obj;
+        auto objItem = static_cast<DocumentObjectItem*>(item);
+        std::string element = objT.getElementName();
+        if (treeSub)
+            *resT = objItem->getTreeSubNameT();
         else
-            ss << obj->getNameInDocument() << '.';
-        ss << objT.getElementName();
-        *resT = topParent;
-        resT->setSubName(ss.str().c_str());
+            *resT = objItem->getSubNameT(false);
+        if (element.size())
+            resT->setSubName(resT->getSubName() + element);
     }
     return item;
 }
@@ -1614,6 +1669,28 @@ void TreeWidget::_setupDocumentMenu(DocumentItem *docitem, QMenu &menu)
             menu.addAction(this->allowPartialRecomputeAction);
         menu.addAction(this->markRecomputeAction);
     }
+
+    pimpl->setupSelectingGroupAction(menu, doc, "*");
+}
+
+void TreeWidget::Private::setupSelectingGroupAction(QMenu &menu,
+                                                    App::Document *doc,
+                                                    std::string &&subname)
+{
+    menu.addSeparator();
+    menu.addAction(tr("Toggle selecting group"),
+        [doc, subname]() {
+            auto prop = Base::freecad_dynamic_cast<App::PropertyString>(
+            doc->getPropertyByName("SelectingGroup"));
+            if (prop && prop->getStrValue() == subname) {
+                prop->setValue("");
+                return;
+            }
+            if (!prop)
+                prop = static_cast<App::PropertyString*>(doc->addDynamicProperty(
+                                "App::PropertyString", "SelectingGroup"));
+            prop->setValue(subname);
+        });
 }
 
 void TreeWidget::contextMenuEvent (QContextMenuEvent * e)
@@ -2168,6 +2245,15 @@ bool TreeWidget::_setupObjectMenu(DocumentObjectItem *item, QMenu &menu)
     if (vp->isEditing()) {
         res = true;
         menu.addAction(this->finishEditingAction);
+    }
+    if (vp->getCachedChildren().size()) {
+        if (res)
+            menu.addSeparator();
+        auto sobjT = item->getTreeSubNameT();
+        auto subname = sobjT.getSubNameNoElement(true);
+        App::Document *doc = item->getOwnerDocument()->document()->getDocument();
+        pimpl->setupSelectingGroupAction(menu, doc, std::move(subname));
+        res = true;
     }
     return res;
 }
@@ -4218,6 +4304,8 @@ void TreeWidget::onUpdateStatus(void)
                     boost::bind(&TreeWidget::slotTouchedObject, this, bp::_1));
             docItem->connectPurgeTouchedObject = doc->signalPurgeTouchedObject.connect(
                 boost::bind(&TreeWidget::slotTouchedObject, this, bp::_1));
+            docItem->connSignalChanged = docItem->document()->getDocument()->signalChanged.connect(
+                    boost::bind(&DocumentItem::slotChangedDocument, docItem, bp::_1, bp::_2));
         }
 
         if(doc->testStatus(App::Document::PartialDoc))
@@ -5726,7 +5814,7 @@ void TreeWidget::slotDeleteDocument(const Gui::Document& Doc)
         auto docItem = it->second;
         for(auto &v : docItem->ObjectMap) {
             for(auto item : v.second->items)
-                item->myOwner = 0;
+                item->myOwner = nullptr;
             auto obj = v.second->viewObject->getObject();
             if(obj->getDocument() == Doc.getDocument()) {
                 _slotDeleteObject(*v.second->viewObject, docItem);
@@ -5782,10 +5870,7 @@ void TreeWidget::_slotDeleteObject(const Gui::ViewProviderDocumentObject& view, 
                 // claimed children cache is expected to have been cleared.
                 docItem->populateItem(item, true);
             }
-            if (item->myOwner) {
-                item->myOwner->removeItemOnTop(item);
-                item->myOwner = 0;
-            }
+            item->detachOwner();
             delete item;
         }
         blockConnection(lock);
@@ -6390,6 +6475,40 @@ void DocumentItem::slotOnTopObject(int reason, const App::SubObjectT &objT)
     }
     default:
         break;
+    }
+}
+
+void DocumentItem::slotChangedDocument(const App::Document &doc, const App::Property &prop)
+{
+    if (!prop.getName())
+        return;
+    if (boost::equals(prop.getName(), "SelectingGroup")) {
+        if (auto p = Base::freecad_dynamic_cast<const App::PropertyString>(&prop)) {
+            DocumentObjectItem *item = nullptr;
+            const std::string &value = p->getStrValue();
+            bool selGroup = false;
+            if (value == "*")
+                selGroup = true;
+            else if (value.size()) {
+                auto pos = value.find('.');
+                if (pos != std::string::npos) {
+                    App::SubObjectT sobjT(document()->getDocument()->getObject(
+                                value.substr(0, pos).c_str()), &value[pos+1]);
+                    auto titem = getTree()->findItem(sobjT);
+                    if (titem && titem->type() == TreeWidget::ObjectType)
+                        item = static_cast<DocumentObjectItem*>(titem);
+                }
+            }
+            if (this->selGroupItem != item || selGroup != this->selGroup) {
+                if (this->selGroupItem)
+                    this->selGroupItem->selGroup = false;
+                if (item)
+                    item->selGroup = true;
+                this->selGroupItem = item;
+                this->selGroup = selGroup;
+                getTree()->scheduleDelayedItemsLayout();
+            }
+        }
     }
 }
 
@@ -7050,7 +7169,17 @@ DocumentObjectItem::~DocumentObjectItem()
             myOwner->ObjectMap.erase(object()->getObject());
         if(requiredAtRoot(true,true))
             myOwner->slotNewObject(*object());
+        detachOwner();
+    }
+}
+
+void DocumentObjectItem::detachOwner()
+{
+    if (myOwner) {
+        if (myOwner->selGroupItem == this)
+            myOwner->selGroupItem = nullptr;
         myOwner->removeItemOnTop(this);
+        myOwner = nullptr;
     }
 }
 

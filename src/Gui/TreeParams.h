@@ -92,6 +92,8 @@ public:
        QT_TRANSLATE_NOOP("TreeParams", ""))\
     FC_TREE_PARAM2(TreeEditColor,unsigned long, Unsigned, 0x929200ff, \
        QT_TRANSLATE_NOOP("TreeParams", ""))\
+    FC_TREE_PARAM2(SelectingGroupColor,unsigned long, Unsigned, 0x408081ff, \
+       QT_TRANSLATE_NOOP("TreeParams", ""))\
     FC_TREE_PARAM2(TreeActiveBold,bool, Bool, true, \
        QT_TRANSLATE_NOOP("TreeParams", ""))\
     FC_TREE_PARAM2(TreeActiveItalic,bool, Bool, false, \

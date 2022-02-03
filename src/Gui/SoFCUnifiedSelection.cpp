@@ -111,6 +111,7 @@
 #include "ViewParams.h"
 #include "OverlayWidgets.h"
 #include "SoMouseWheelEvent.h"
+#include "Tree.h"
 
 FC_LOG_LEVEL_INIT("SoFCUnifiedSelection",false,true)
 
@@ -1361,6 +1362,61 @@ SoFCUnifiedSelection::Private::setSelection(const std::vector<PickedInfo> &infos
                 pPath = detailPath;
                 det = detNext;
                 FC_TRACE("select next " << objectName << ", " << subName);
+            }
+        }
+    } else if (this->pcDocument && subName.find('.') != std::string::npos) {
+        if (auto prop = Base::freecad_dynamic_cast<App::PropertyString>(
+                    this->pcDocument->getDocument()->getPropertyByName("SelectingGroup"))) {
+            if (boost::equals(prop->getValue(), "*")) {
+                App::SubObjectT sobjT(vpd->getObject(), "");
+                TreeWidget::findItem(sobjT, nullptr, &sobjT, TreeWidget::TreeSubName);
+                if (sobjT.getSubName().size())
+                    vpd = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(
+                            Application::Instance->getViewProvider(sobjT.getObject()));
+                if (vpd) {
+                    detailPath->truncate(0);
+                    if (useRenderer())
+                        detailPath->append(master);
+                    if(vpd->getDetailPath("", detailPath,true,detNext)) {
+                        if (!subSelected || subSelected[0] != 0) {
+                            subName.clear();
+                            pPath = detailPath;
+                            det = detNext;
+                        }
+                    }
+                }
+            } else if (boost::starts_with(prop->getValue(),
+                        vpd->getObject()->getNameInDocument())) {
+                size_t len = strlen(vpd->getObject()->getNameInDocument());
+
+                App::SubObjectT sobjT(vpd->getObject(), subName.c_str());
+                TreeWidget::findItem(sobjT, nullptr, &sobjT, TreeWidget::TreeSubName);
+                if (sobjT.getSubName().size())
+                    vpd = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(
+                            Application::Instance->getViewProvider(sobjT.getObject()));
+
+                if (vpd && prop->getValue()[len] == '.'
+                        && boost::starts_with(sobjT.getSubName(), prop->getValue()+len+1))
+                {
+                    auto treeSub = sobjT.getSubName();
+                    auto pos = treeSub.find('.', prop->getStrValue().size() - len - 1);
+                    if (pos != std::string::npos) {
+                        const char *s = treeSub.c_str() + pos + 1;
+                        if (Data::ComplexGeoData::findElementName(s) != s) {
+                            std::string sub = treeSub.substr(0, pos + 1);
+                            detailPath->truncate(0);
+                            if (useRenderer())
+                                detailPath->append(master);
+                            if(vpd->getDetailPath(sub.c_str(),detailPath,true,detNext)) {
+                                if (!subSelected || sub != subSelected) {
+                                    subName = sub;
+                                    pPath = detailPath;
+                                    det = detNext;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -804,9 +804,24 @@ void TopoShape::importBrep(std::istream& str, int indicator)
     }
 }
 
-void TopoShape::importBinary(std::istream& str)
+void TopoShape::importBinary(std::istream& _str)
 {
     BinTools_ShapeSet theShapeSet;
+#if OCC_VERSION_HEX >= 0x070600
+    // OCC 7.6 now requires a random seeking input stream to work
+    QByteArray bytes;
+    {
+        char tmp[4096];
+        while (!_str.eof()) {
+            int len = _str.read(tmp, sizeof(tmp)).gcount();
+            bytes.append(tmp, len);
+        }
+    }
+    Base::ByteArrayIStreambuf buf(bytes);
+    std::istream str(&buf);
+#else
+    auto &str = _str;
+#endif
     theShapeSet.Read(str);
     Standard_Integer shapeId=0, locId=0, orient=0;
     BinTools::GetInteger(str, shapeId);
@@ -937,10 +952,24 @@ void TopoShape::exportBinary(std::ostream& out)
         Standard_Integer locId = theShapeSet.Locations().Index(this->_Shape.Location());
         Standard_Integer orient = static_cast<int>(this->_Shape.Orientation());
 
+#if OCC_VERSION_HEX >= 0x070600
+        // OCC 7.6 now requires a random seeking output stream to work
+        QByteArray bytes;
+        {
+            Base::ByteArrayOStreambuf buf(bytes);
+            std::ostream out(&buf);
+            theShapeSet.Write(out);
+            BinTools::PutInteger(out, shapeId);
+            BinTools::PutInteger(out, locId);
+            BinTools::PutInteger(out, orient);
+        }
+        out.write(bytes.constData(), bytes.size());
+#else
         theShapeSet.Write(out);
         BinTools::PutInteger(out, shapeId);
         BinTools::PutInteger(out, locId);
         BinTools::PutInteger(out, orient);
+#endif
     }
 }
 

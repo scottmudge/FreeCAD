@@ -120,12 +120,19 @@ public:
     static void restoreDocumentItem(Gui::Document *gdoc, Base::XMLReader &reader);
     static bool saveDocumentItem(const Gui::Document *gdoc, Base::Writer &writer, const char *key);
     static void synchronizeSelectionCheckBoxes();
+
+    enum FindItemOption {
+        Sync        = 0x01,
+        Select      = 0x02,
+        TreeSubName = 0x04,
+    };
+    Q_DECLARE_FLAGS(FindItemOptions, FindItemOption);
     static QTreeWidgetItem *findItem(const App::SubObjectT &objT,
                                      QTreeWidgetItem *context = nullptr,
                                      App::SubObjectT *resT = nullptr,
-                                     bool sync = false,
-                                     bool select = false);
-   static int iconSize();
+                                     FindItemOptions option = FindItemOptions());
+
+    static int iconSize();
 
     int iconHeight() const;
     void setIconHeight(int height);

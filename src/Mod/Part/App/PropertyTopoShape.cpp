@@ -296,6 +296,11 @@ void PropertyPartShape::Save (Base::Writer &writer) const
     writer.Stream() << " ElementMap=\"" << version << '"';
 
     bool binary = writer.getMode("BinaryBrep");
+#if OCC_VERSION_HEX >= 0x070600
+    // OCC 7.6 binary format is not backward compatible. So do not honor the
+    // option unless being forced.
+    binary = binary && PartParams::ForceSaveBinary();
+#endif
     bool toXML = writer.getFileVersion()>1 && writer.isForceXML()>=(binary?3:2);
     if(!toXML) {
         writer.Stream() << " file=\""

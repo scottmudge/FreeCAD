@@ -84,6 +84,7 @@ void DlgSettingsViewColor::saveSettings()
     ui->SelectionColor->onSave();
     ui->TreeEditColor->onSave();
     ui->TreeActiveColor->onSave();
+    ui->SelectingGroupColor->onSave();
 }
 
 void DlgSettingsViewColor::loadSettings()
@@ -101,6 +102,7 @@ void DlgSettingsViewColor::loadSettings()
     ui->SelectionColor->onRestore();
     ui->TreeEditColor->onRestore();
     ui->TreeActiveColor->onRestore();
+    ui->SelectingGroupColor->onRestore();
 }
 
 /**
