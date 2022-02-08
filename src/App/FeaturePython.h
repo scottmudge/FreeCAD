@@ -90,6 +90,7 @@ public:
     int isElementVisibleEx(const char *, int) const;
 
     void  getElementMapVersion(std::string &ver, const App::Property *prop, bool restored) const;
+    bool editProperty(const char *propName);
 
 private:
     App::DocumentObject* object;
@@ -116,6 +117,7 @@ private:
     FC_PY_ELEMENT(isElementVisibleEx)\
     FC_PY_ELEMENT(setElementVisible)\
     FC_PY_ELEMENT(getElementMapVersion)\
+    FC_PY_ELEMENT(editProperty)\
 
 #define FC_PY_ELEMENT_DEFINE(_name) \
     Py::Object py_##_name;
@@ -328,6 +330,11 @@ public:
         std::string ver = FeatureT::getElementMapVersion(prop, restored);
         imp->getElementMapVersion(ver, prop, restored);
         return ver;
+    }
+
+    virtual void editProperty(const char *propName) override {
+        if (!imp->editProperty(propName))
+            FeatureT::editProperty(propName);
     }
 
     PyObject *getPyObject(void) override {

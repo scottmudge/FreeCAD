@@ -185,7 +185,9 @@ SbVec2s ViewProviderSketch::newCursorPos;
 SbVec2f ViewProviderSketch::prvPickedPoint;
 
 static bool _AllowFaceExternal;
+static double _SnapTolerance;
 static const char *_ParamAllowFaceExternal = "AllowFaceExternalPick";
+static const char *_ParamSnapTolerance = "SnapTolerance";
 
 //**************************************************************************
 // Edit data structure
@@ -251,6 +253,7 @@ struct EditData {
         hSketchGeneral = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/General");
         hSketchGeneral->Attach(master);
         _AllowFaceExternal = hSketchGeneral->GetBool(_ParamAllowFaceExternal, true);
+        _SnapTolerance = hSketchGeneral->GetFloat(_ParamSnapTolerance, 0.2);
 
         timer.setSingleShot(true);
         QObject::connect(&timer, &QTimer::timeout, [master]() {
@@ -671,9 +674,11 @@ bool ViewProviderSketch::keyPressed(bool pressed, int key)
 
 void ViewProviderSketch::snapToGrid(double &x, double &y)
 {
-    if (GridSnap.getValue() && ShowGrid.getValue()) {
+    if (GridSnap.getValue()
+            && !(QApplication::queryKeyboardModifiers() & Qt::ShiftModifier))
+    {
         // Snap Tolerance in pixels
-        const double snapTol = GridSize.getValue() / 5;
+        const double snapTol = GridSize.getValue() * std::clamp(_SnapTolerance, 0.01, 0.5);
 
         double tmpX = x, tmpY = y;
 
@@ -4253,6 +4258,8 @@ void ViewProviderSketch::OnChange(Base::Subject<const char*> &rCaller, const cha
         edit->timer.start(100);
     else if (boost::equals(sReason, _ParamAllowFaceExternal))
         _AllowFaceExternal = edit->hSketchGeneral->GetBool(_ParamAllowFaceExternal, true);
+    else if (boost::equals(sReason, _ParamSnapTolerance))
+        _SnapTolerance = edit->hSketchGeneral->GetFloat(_ParamSnapTolerance, 0.2);
 }
 
 bool ViewProviderSketch::allowFaceExternalPick()

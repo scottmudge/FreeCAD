@@ -96,6 +96,7 @@ void SketcherGeneralWidget::saveSettings()
     ui->showOriginalColor->onSave();
     ui->autoTransparentPick->onSave();
     ui->checkBoxAllowFace->onSave();
+    ui->snapTolerance->onSave();
 
     saveOrderingOrder();
 }
@@ -114,15 +115,16 @@ void SketcherGeneralWidget::saveOrderingOrder()
 
 void SketcherGeneralWidget::loadSettings()
 {
-    ui->checkBoxShowGrid->onRestore();
-    ui->gridSize->onRestore();
+    ui->checkBoxShowGrid->initAutoSave();
+    ui->gridSize->initAutoSave();
     if (ui->gridSize->rawValue() == 0) { ui->gridSize->setValue(10.0); }
-    ui->checkBoxGridSnap->onRestore();
-    ui->checkBoxAutoconstraints->onRestore();
-    ui->checkBoxRedundantAutoconstraints->onRestore();
-    ui->showOriginalColor->onRestore();
-    ui->autoTransparentPick->onRestore();
-    ui->checkBoxAllowFace->onRestore();
+    ui->checkBoxGridSnap->initAutoSave();
+    ui->checkBoxAutoconstraints->initAutoSave();
+    ui->checkBoxRedundantAutoconstraints->initAutoSave();
+    ui->showOriginalColor->initAutoSave();
+    ui->autoTransparentPick->initAutoSave();
+    ui->checkBoxAllowFace->initAutoSave();
+    ui->snapTolerance->initAutoSave();
 
     loadOrderingOrder();
 }
@@ -185,13 +187,6 @@ void SketcherGeneralWidget::checkAvoidRedundant(bool on)
     ui->checkBoxRedundantAutoconstraints->setChecked(on);
 }
 
-void SketcherGeneralWidget::enableGridSettings(bool on)
-{
-    ui->label->setEnabled(on);
-    ui->gridSize->setEnabled(on);
-    ui->checkBoxGridSnap->setEnabled(on);
-}
-
 void SketcherGeneralWidget::enableAvoidRedundant(bool on)
 {
     ui->checkBoxRedundantAutoconstraints->setEnabled(on);
@@ -225,7 +220,6 @@ TaskSketcherGeneral::TaskSketcherGeneral(ViewProviderSketch *sketchView)
             widget->setGridSize(sketchView->GridSize.getValue());
         }
         widget->checkGridSnap(sketchView->GridSnap.getValue());
-        widget->enableGridSettings(sketchView->ShowGrid.getValue());
         widget->checkAutoconstraints(sketchView->Autoconstraints.getValue());
         widget->checkAvoidRedundant(sketchView->AvoidRedundant.getValue());
         widget->enableAvoidRedundant(sketchView->Autoconstraints.getValue());
@@ -281,7 +275,6 @@ void TaskSketcherGeneral::onChangedSketchView(const Gui::ViewProvider& vp,
         if (&sketchView->ShowGrid == &prop) {
             QSignalBlocker block(widget);
             widget->checkGridView(sketchView->ShowGrid.getValue());
-            widget->enableGridSettings(sketchView->ShowGrid.getValue());
             if (sketchView->ShowGrid.getValue()) {
                 sketchView->createGrid();
             }
@@ -310,7 +303,6 @@ void TaskSketcherGeneral::onToggleGridView(bool on)
 {
     Base::ConnectionBlocker block(changedSketchView);
     sketchView->ShowGrid.setValue(on);
-    widget->enableGridSettings(on);
     if (on) sketchView->createGrid();
 }
 

@@ -578,10 +578,10 @@ Feature::getElementFromSource(App::DocumentObject *obj,
     if (!obj || !src)
         return res;
 
-    auto shape = getTopoShape(obj, subname); 
+    auto shape = getTopoShape(obj, subname, false, nullptr, nullptr, true,
+            /*transform = */ false);
     App::DocumentObject *owner = nullptr;
     auto srcShape = getTopoShape(src, srcSub, false, nullptr, &owner);
-
     int tagChanges;
     Data::MappedElement element;
     Data::IndexedName checkingSubname;
@@ -663,12 +663,15 @@ Feature::getElementFromSource(App::DocumentObject *obj,
         return res;
     }
 
+    if (!element.name)
+        return res;
+
     // No shortcut, need to search every element of the same type. This may
     // result in multiple matches, e.g. a compound of array of the same
     // instance.
     const char *shapetype = TopoShape::shapeName(type).c_str();
     for (int i=0, count=shape.countSubShapes(type); i<count; ++i) {
-        checkingSubname = Data::IndexedName::fromConst(shapetype, i);
+        checkingSubname = Data::IndexedName::fromConst(shapetype, i+1);
         auto mapped = shape.getMappedName(checkingSubname);
         tagChanges = 0;
         shape.traceElement(mapped, checkHistory);

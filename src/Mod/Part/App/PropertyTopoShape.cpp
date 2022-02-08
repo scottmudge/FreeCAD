@@ -498,13 +498,13 @@ void PropertyPartShape::SaveDocFile (Base::Writer &writer) const
     //     return;
 
     TopoDS_Shape myShape = _Shape.getShape();
-    if(writer.getMode("BinaryBrep")) {
+    Base::FileInfo finfo(writer.getCurrentFileName());
+    if (finfo.hasExtension("bin")) {
         TopoShape shape;
         shape.setShape(myShape);
         shape.exportBinary(writer.Stream());
     }
     else {
-        static 
         bool direct = App::GetApplication().GetParameterGroupByPath
             ("User parameter:BaseApp/Preferences/Mod/Part/General")->GetBool("DirectAccess", true);
         if (!direct) {

@@ -39,7 +39,23 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
+      <widget class="QCheckBox" name="checkBoxGridAutoScale">
+       <property name="toolTip">
+        <string>Auto change grid size depending on the zoom level of the current view.</string>
+       </property>
+       <property name="text">
+        <string>Grid auto scale</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QLabel" name="label">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="text">
         <string>Grid size:</string>
        </property>
@@ -47,6 +63,18 @@
      </item>
      <item>
       <widget class="Gui::PrefQuantitySpinBox" name="gridSize" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>0</height>
+        </size>
+       </property>
        <property name="toolTip">
         <string>Distance between two subsequent grid lines</string>
        </property>
@@ -87,7 +115,8 @@
        </property>
        <property name="toolTip">
         <string>New points will snap to the nearest grid line.
-Points must be set closer than a fifth of the grid size to a grid line to snap.</string>
+
+You can temporarily disable snapping by holding the 'Shift' key.</string>
        </property>
        <property name="text">
         <string>Grid snap</string>
@@ -101,12 +130,44 @@ Points must be set closer than a fifth of the grid size to a grid line to snap.<
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="checkBoxGridAutoScale">
-       <property name="toolTip">
-        <string>Auto change grid size depending on the zoom level of the current view.</string>
+      <widget class="QLabel" name="label_3">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
        <property name="text">
-        <string>Grid auto scale</string>
+        <string>Snap tolerance:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="Gui::PrefDoubleSpinBox" name="snapTolerance">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>The tolerance multiplying the grid width defines a distance within which the pointer will snap
+to the nearest grid point.</string>
+       </property>
+       <property name="maximum">
+        <double>0.500000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.050000000000000</double>
+       </property>
+       <property name="value">
+        <double>0.200000000000000</double>
+       </property>
+       <property name="prefEntry" stdset="0">
+        <cstring>SnapTolerance</cstring>
+       </property>
+       <property name="prefPath" stdset="0">
+        <cstring>Mod/Sketcher/General</cstring>
        </property>
       </widget>
      </item>
@@ -251,6 +312,11 @@ hidden edges and points on picking external objects.</string>
   <customwidget>
    <class>Gui::PrefQuantitySpinBox</class>
    <extends>QWidget</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::PrefDoubleSpinBox</class>
+   <extends>QDoubleSpinBox</extends>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
  </customwidgets>

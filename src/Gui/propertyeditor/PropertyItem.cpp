@@ -25,6 +25,7 @@
 
 #ifndef _PreComp_
 # include <algorithm>
+# include <memory>
 # include <QComboBox>
 # include <QFontDatabase>
 # include <QLayout>
@@ -35,6 +36,7 @@
 # include <QApplication>
 # include <QPalette>
 # include <QtGlobal>
+# include <QMenu>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -1585,9 +1587,8 @@ void PropertyVectorItem::propertyBound()
 
 // ---------------------------------------------------------------
 
-VectorListWidget::VectorListWidget (int decimals, QWidget * parent)
+PropertyEditorWidget::PropertyEditorWidget (QWidget * parent)
   : QWidget(parent)
-  , decimals(decimals)
 {
     QHBoxLayout *layout = new QHBoxLayout(this);
     layout->setMargin(0);
@@ -1603,18 +1604,51 @@ VectorListWidget::VectorListWidget (int decimals, QWidget * parent)
 #endif
     layout->addWidget(button);
 
-    connect(button, SIGNAL(clicked()), this, SLOT(buttonClicked()));
-    setFocusProxy(lineEdit);
+    connect(button, SIGNAL(clicked()), this, SIGNAL(buttonClick()));
+
+    // QAbstractItemView will call selectAll() if a QLineEdit is the focus
+    // proxy. Since the QLineEdit here is read-only and not meant for editing,
+    // do not set it as focus proxy. Otherwise, the text won't even shown for
+    // most stylesheets (which contain a trick to hide the content of a selected
+    // read-only/disabled editor widgets).
+    //
+    // setFocusProxy(lineEdit);
 }
 
-VectorListWidget::~VectorListWidget()
+PropertyEditorWidget::~PropertyEditorWidget()
 {
 }
 
-void VectorListWidget::resizeEvent(QResizeEvent* e)
+void PropertyEditorWidget::resizeEvent(QResizeEvent* e)
 {
     button->setFixedWidth(e->size().height());
     button->setFixedHeight(e->size().height());
+}
+
+void PropertyEditorWidget::showValue(const QVariant &d)
+{
+    lineEdit->setText(d.toString());
+}
+
+
+QVariant PropertyEditorWidget::value() const
+{
+    return variant;
+}
+
+void PropertyEditorWidget::setValue(const QVariant& val)
+{
+    variant = val;
+    showValue(variant);
+    valueChanged(variant);
+}
+
+// ---------------------------------------------------------------
+
+VectorListWidget::VectorListWidget(int decimals, QWidget *parent)
+    :PropertyEditorWidget(parent), decimals(decimals)
+{
+    connect(button, SIGNAL(clicked()), this, SLOT(buttonClicked()));
 }
 
 void VectorListWidget::buttonClicked()
@@ -1646,19 +1680,6 @@ void VectorListWidget::showValue(const QVariant& d)
     }
     lineEdit->setText(data);
 }
-
-QVariant VectorListWidget::value() const
-{
-    return variant;
-}
-
-void VectorListWidget::setValue(const QVariant& val)
-{
-    variant = val;
-    showValue(variant);
-    valueChanged(variant);
-}
-
 // ---------------------------------------------------------------
 
 PROPERTYITEM_SOURCE(Gui::PropertyEditor::PropertyVectorListItem)
@@ -2921,16 +2942,35 @@ void PropertyEnumItem::setValue(const QVariant& value)
     setPropertyValue(data);
 }
 
-QWidget* PropertyEnumItem::createEditor(QWidget* parent, const QObject* receiver, const char* method) const
+class EnumItems;
+
+struct EnumItem {
+    QString text;
+    QString fullText;
+    std::shared_ptr<EnumItems> children;
+    EnumItem(const QString &t = QString(), const QString &f = QString())
+        :text(t), fullText(f)
+    {}
+    void populate(QMenu *menu);
+};
+
+class EnumItems : public std::vector<EnumItem>
 {
-    QComboBox *cb = new QComboBox(parent);
-    cb->setFrame(false);
-    cb->setDisabled(isReadOnly());
-    QObject::connect(cb, SIGNAL(activated(int)), receiver, method);
-    return cb;
+};
+
+void EnumItem::populate(QMenu *menu)
+{
+    if (!children || children->empty()) {
+        auto action = menu->addAction(text);
+        action->setData(fullText);
+        return;
+    }
+    auto subMenu = menu->addMenu(text);
+    for (auto &item : *children)
+        item.populate(subMenu);
 }
 
-void PropertyEnumItem::setEditorData(QWidget *editor, const QVariant& data) const
+QWidget* PropertyEnumItem::createEditor(QWidget* parent, const QObject* receiver, const char* method) const
 {
     const std::vector<App::Property*>& items = getPropertyData();
 
@@ -2940,7 +2980,7 @@ void PropertyEnumItem::setEditorData(QWidget *editor, const QVariant& data) cons
             App::PropertyEnumeration* prop = static_cast<App::PropertyEnumeration*>(*it);
             if (prop->getEnums() == 0) {
                 commonModes.clear();
-                break;
+                return nullptr;
             }
             const std::vector<std::string>& value = prop->getEnumVector();
             if (it == items.begin()) {
@@ -2959,18 +2999,90 @@ void PropertyEnumItem::setEditorData(QWidget *editor, const QVariant& data) cons
         }
     }
 
-    QComboBox *cb = qobject_cast<QComboBox*>(editor);
-    if (!commonModes.isEmpty()) {
-        cb->clear();
-        cb->addItems(commonModes);
+    if (commonModes.isEmpty())
+        return nullptr;
+
+    int index = -1;
+    std::shared_ptr<EnumItems> enumItems;
+    for (auto &mode : commonModes) {
+        ++index;
+        auto fields = mode.split(QStringLiteral("|"));
+        if (!enumItems && fields.size() <= 1)
+            continue;
+        if (!enumItems) {
+            enumItems = std::make_shared<EnumItems>();
+            for (int i=0; i<index; ++i)
+                enumItems->emplace_back(commonModes[i], mode);
+        }
+        auto children = enumItems;
+        int j = -1;
+        for (auto &field : fields) {
+            ++j;
+            field = field.trimmed();
+            auto it = children->end();
+            if (field.isEmpty()) {
+                if (children->size())
+                    --it;
+                else
+                    continue;
+            } else {
+                it = std::find_if(children->begin(), children->end(),
+                    [&field](const EnumItem &item) {
+                        return item.text == field;
+                    });
+                if (it == children->end())
+                    it = children->emplace(children->end(), field, mode);
+            }
+            if (j + 1 == (int)fields.size())
+                break;
+            if (!it->children)
+                it->children = std::make_shared<EnumItems>();
+            children = it->children;
+        }
+    }
+
+    if (!enumItems) {
+        QComboBox *cb = new QComboBox(parent);
+        cb->setFrame(false);
+        cb->setDisabled(isReadOnly());
+        QObject::connect(cb, SIGNAL(activated(int)), receiver, method);
+        return cb;
+    }
+
+    auto button = new PropertyEnumButton(parent);
+    button->setDisabled(isReadOnly());
+    QMenu *menu = new QMenu(button);
+    for (auto &item : *enumItems)
+        item.populate(menu);
+    button->setMenu(menu);
+    QObject::connect(menu, &QMenu::aboutToShow, this, [=]() {
+        menu->setMinimumWidth(button->width());
+    });
+    QObject::connect(menu, &QMenu::triggered, this, [=](QAction *action) {
+        button->setText(action->data().toString());
+        button->picked();
+    });
+    QObject::connect(button, SIGNAL(picked()), receiver, method);
+    return button;
+}
+
+void PropertyEnumItem::setEditorData(QWidget *editor, const QVariant& data) const
+{
+    if (auto cb = qobject_cast<QComboBox*>(editor)) {
+        cb->setEditable(false);
         cb->setCurrentIndex(cb->findText(data.toString()));
     }
+    else if (auto btn = qobject_cast<QPushButton*>(editor))
+        btn->setText(data.toString());
 }
 
 QVariant PropertyEnumItem::editorData(QWidget *editor) const
 {
-    QComboBox *cb = qobject_cast<QComboBox*>(editor);
-    return QVariant(cb->currentText());
+    if (auto cb = qobject_cast<QComboBox*>(editor))
+        return QVariant(cb->currentText());
+    else if (auto btn = qobject_cast<QPushButton*>(editor))
+        return btn->text();
+    return QVariant();
 }
 
 // ---------------------------------------------------------------

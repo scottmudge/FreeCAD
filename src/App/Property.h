@@ -75,7 +75,7 @@ public:
         Transient = 4, // for property container save
         MaterialEdit = 5, // to turn ON PropertyMaterial edit
         NoMaterialListEdit = 6, // to turn OFF PropertyMaterialList edit
-        Output = 7, // same effect as Prop_Output
+        Output = 8, // same effect as Prop_Output
         LockDynamic = 8, // prevent being removed from dynamic property
         NoModify = 9, // prevent causing Gui::Document::setModified()
         PartialTrigger = 10, // allow change in partial doc
@@ -87,6 +87,7 @@ public:
                             // expression on restore and touch the object on value change.
         Busy = 15, // internal use to avoid recursive signaling
         CopyOnChange = 16, // for Link to copy the linked object on change of the property with this flag
+        UserEdit = 17, // cause property editor to create button for user defined editing
 
         // The following bits are corresponding to PropertyType set when the
         // property added. These types are meant to be static, and cannot be

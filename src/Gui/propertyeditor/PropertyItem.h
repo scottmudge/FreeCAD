@@ -26,6 +26,7 @@
 
 #include <QObject>
 #include <QPointer>
+#include <QPushButton>
 #include <QItemEditorFactory>
 #include <vector>
 
@@ -186,13 +187,14 @@ public:
 
     bool hasAnyExpression() const;
 
+    virtual QVariant toString(const QVariant&) const;
+
 protected:
     PropertyItem();
 
     virtual QVariant displayName() const;
     virtual QVariant decoration(const QVariant&) const;
     virtual QVariant toolTip(const App::Property*) const;
-    virtual QVariant toString(const QVariant&) const;
     virtual QVariant value(const App::Property*) const;
     virtual void setValue(const QVariant&);
     virtual void initialize();
@@ -494,13 +496,13 @@ private:
     PropertyFloatItem* m_z;
 };
 
-class VectorListWidget : public QWidget
+class PropertyEditorWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    VectorListWidget (int decimals, QWidget * parent = nullptr);
-    virtual ~VectorListWidget();
+    PropertyEditorWidget (QWidget * parent = nullptr);
+    virtual ~PropertyEditorWidget();
 
     QVariant value() const;
 
@@ -508,20 +510,34 @@ public Q_SLOTS:
     void setValue(const QVariant&);
 
 protected:
-    void showValue(const QVariant& data);
+    virtual void showValue(const QVariant& data);
     void resizeEvent(QResizeEvent*);
+
+Q_SIGNALS:
+    void buttonClick();
+    void valueChanged(const QVariant &);
+
+protected:
+    QVariant variant;
+    QLineEdit *lineEdit;
+    QPushButton *button;
+};
+
+class VectorListWidget : public PropertyEditorWidget
+{
+    Q_OBJECT
+
+public:
+    VectorListWidget (int decimals, QWidget * parent = nullptr);
+
+protected:
+    virtual void showValue(const QVariant& data) override;
 
 private Q_SLOTS:
     void buttonClicked();
 
-Q_SIGNALS:
-    void valueChanged(const QVariant &);
-
 private:
     int decimals;
-    QVariant variant;
-    QLineEdit *lineEdit;
-    QPushButton *button;
 };
 
 /**
@@ -833,6 +849,18 @@ protected:
 
 private:
     PropertyStringListItem* m_enum;
+};
+
+class PropertyEnumButton : public QPushButton
+{
+    Q_OBJECT
+public:
+    PropertyEnumButton(QWidget *parent = nullptr)
+        :QPushButton(parent)
+    {}
+
+Q_SIGNALS:
+    void picked();
 };
 
 /**

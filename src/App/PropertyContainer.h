@@ -243,6 +243,8 @@ public:
   virtual void Restore(Base::XMLReader &reader);
   virtual void beforeSave() const;
 
+  virtual void editProperty(const char * /*propName*/) {}
+
   const char *getPropertyPrefix() const {
       return _propertyPrefix.c_str();
   }

@@ -2706,18 +2706,19 @@ void TreeWidget::onToolTipTimer()
                    "including link, reorder, or replace depending on dropping site.");
     }
 
-    if (info.isEmpty()) {
-        pimpl->tooltipItem = nullptr;
-        ToolTip::hideText();
-    } else {
-        QPoint pos = this->visualItemRect(item).topLeft();
+    QString tooltip = QStringLiteral("%1\n%2%3%4").arg(
+            QString::fromUtf8(Obj->Label.getValue()),
+            QString::fromLatin1(Obj->getFullName().c_str()),
+            info.size() ? QStringLiteral("\n\n") : QString(),
+            info);
 
-        // Add some margin so that the newly showup tooltop widget won't
-        // immediate trigger another itemEntered() event.
-        pos.setY(pos.y()+10);
-        ToolTip::showText(this->viewport()->mapToGlobal(pos), info, this);
-        pimpl->tooltipItem = item;
-    }
+    QPoint pos = this->visualItemRect(item).topLeft();
+
+    // Add some margin so that the newly showup tooltop widget won't
+    // immediate trigger another itemEntered() event.
+    pos.setY(pos.y()+10);
+    ToolTip::showText(this->viewport()->mapToGlobal(pos), tooltip, this);
+    pimpl->tooltipItem = item;
 }
 
 DocumentObjectItem *TreeWidget::Private::itemHitTest(

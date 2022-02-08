@@ -60,7 +60,6 @@ public:
     void checkGridSnap(bool);
     void checkAutoconstraints(bool);
     void checkAvoidRedundant(bool);
-    void enableGridSettings(bool);
     void enableAvoidRedundant(bool);
 
 Q_SIGNALS:

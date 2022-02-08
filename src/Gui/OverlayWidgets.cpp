@@ -1229,7 +1229,7 @@ public:
                 "QPushButton { background: rgba(250,250,250,80);padding: 2px 4px;}"
                 "QPushButton::hover { background: rgba(250,250,250,200);}"
                 "QPushButton::focus { background: rgba(250,250,250,255);}"
-                "QPushButton::pressed { background: rgba(100,100,100,100);"
+                "QPushButton::pressed { background-color: #5e90fa;"
                                            "border: 1px inset palette(dark) }"
                 "QPushButton::checked { background: rgba(100,100,100,100);"
                                            "border: 1px inset palette(dark) }"
@@ -1240,6 +1240,7 @@ public:
                 "Gui--OverlaySplitterHandle { background-color: rgba(200, 200, 200, 150); }"
                 "QWidget#ClippingScrollAreaContents, "
                 "QScrollArea#ClippingScrollArea { border: none; background-color: #a0e6e6e6; }"
+                "Gui--PropertyEditor--PropertyEditor > QWidget > QPushButton {text-align:left;padding-left:2px;}"
             );
             activeStyleSheet = _default;
         }
