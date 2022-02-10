@@ -75,7 +75,7 @@ public:
         Transient = 4, // for property container save
         MaterialEdit = 5, // to turn ON PropertyMaterial edit
         NoMaterialListEdit = 6, // to turn OFF PropertyMaterialList edit
-        Output = 8, // same effect as Prop_Output
+        Output = 7, // same effect as Prop_Output
         LockDynamic = 8, // prevent being removed from dynamic property
         NoModify = 9, // prevent causing Gui::Document::setModified()
         PartialTrigger = 10, // allow change in partial doc
