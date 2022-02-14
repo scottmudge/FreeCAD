@@ -62,11 +62,21 @@ DlgObjectSelection::DlgObjectSelection(
     init(objs, excludes);
 }
 
-// This function is here for debugging purpose
-static void inline setCheckState(QTreeWidgetItem *item, Qt::CheckState state)
+static bool inline setCheckState(QTreeWidgetItem *item, Qt::CheckState state, bool forced=true)
 {
-    auto objT = qvariant_cast<App::SubObjectT>(item->data(0, Qt::UserRole));
+    if (!forced) {
+        if (item->isSelected()) {
+            if (state == Qt::Unchecked || item->checkState(0) == Qt::Unchecked)
+                return false;
+        }
+        if (item->checkState(0) == state)
+            return false;
+    }
+    // auto objT = qvariant_cast<App::SubObjectT>(item->data(0, Qt::UserRole));
+    // FC_MSG(objT.getObjectFullName() << (state == Qt::Unchecked ? " unchecked" :
+    //             (state == Qt::Checked ? " checked" : " partial")));
     item->setCheckState(0, state);
+    return true;
 }
 
 void DlgObjectSelection::init(const std::vector<App::DocumentObject*> &objs,
@@ -110,6 +120,8 @@ void DlgObjectSelection::init(const std::vector<App::DocumentObject*> &objs,
     ui->treeWidget->headerItem()->setText(0, tr("Selections"));
     ui->treeWidget->header()->setStretchLastSection(false);
 
+    connect(ui->treeWidget, SIGNAL(itemExpanded(QTreeWidgetItem*)),
+            this, SLOT(onItemExpanded(QTreeWidgetItem*)));
 
     allItem = new QTreeWidgetItem(ui->treeWidget);
     allItem->setText(0, QStringLiteral("<%1>").arg(tr("All")));
@@ -129,10 +141,8 @@ void DlgObjectSelection::init(const std::vector<App::DocumentObject*> &objs,
     std::sort(filter.begin(), filter.end());
     for (auto obj : deps) {
         auto it = std::lower_bound(filter.begin(), filter.end(), obj);
-        if (it != filter.end() && *it == obj) {
-            std::set<App::DocumentObject*> set;
-            setItemState(set, obj, Qt::Unchecked);
-        }
+        if (it != filter.end() && *it == obj)
+            setItemState(obj, Qt::Unchecked);
     }
     onItemSelectionChanged();
 
@@ -161,32 +171,68 @@ DlgObjectSelection::~DlgObjectSelection()
     delete ui;
 }
 
-QTreeWidgetItem *DlgObjectSelection::getItem(App::DocumentObject *obj) {
-    auto &item = itemMap[obj];
-    if (item)
-        return item;
-    item = new QTreeWidgetItem(ui->treeWidget);
-    auto vp = Gui::Application::Instance->getViewProvider(obj);
-    if(vp) item->setIcon(0, vp->getIcon());
-    App::SubObjectT objT(obj);
-    item->setText(0, QString::fromUtf8((obj)->Label.getValue()));
-    if (std::binary_search(initSels.begin(), initSels.end(), obj)) {
-        QFont font = item->font(0);
-        font.setBold(true);
-        font.setItalic(true);
-        item->setFont(0, font);
-    }
-    item->setToolTip(0, QString::fromUtf8(objT.getObjectFullName().c_str()));
-    item->setData(0, Qt::UserRole, QVariant::fromValue(objT));
+QTreeWidgetItem *DlgObjectSelection::getItem(App::DocumentObject *obj,
+                                             std::vector<QTreeWidgetItem*> **pitems,
+                                             QTreeWidgetItem *parent)
+{
+    auto &items = itemMap[obj];
+    if (pitems)
+        *pitems = &items;
+    QTreeWidgetItem *item;
+    if (!parent) {
+        if (items.size())
+            return items[0];
+        item = new QTreeWidgetItem(ui->treeWidget);
+        auto vp = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(
+                Gui::Application::Instance->getViewProvider(obj));
+        if (vp) item->setIcon(0, vp->getIcon());
+        App::SubObjectT objT(obj);
+        item->setText(0, QString::fromUtf8((obj)->Label.getValue()));
+        if (std::binary_search(initSels.begin(), initSels.end(), obj)) {
+            QFont font = item->font(0);
+            font.setBold(true);
+            font.setItalic(true);
+            item->setFont(0, font);
+        }
+        item->setToolTip(0, QString::fromUtf8(objT.getObjectFullName().c_str()));
+        item->setData(0, Qt::UserRole, QVariant::fromValue(objT));
+        item->setChildIndicatorPolicy(obj->getOutList().empty() ?
+                QTreeWidgetItem::DontShowIndicator : QTreeWidgetItem::ShowIndicator);
+    } else if (items.size()) {
+        item = new QTreeWidgetItem(parent);
+        item->setIcon(0, items[0]->icon(0));
+        item->setText(0, items[0]->text(0));
+        item->setFont(0, items[0]->font(0));
+        item->setToolTip(0, items[0]->toolTip(0));
+        item->setData(0, Qt::UserRole, items[0]->data(0, Qt::UserRole));
+        item->setChildIndicatorPolicy(items[0]->childIndicatorPolicy());
+        item->setCheckState(0, items[0]->checkState(0));
+    } else
+        return nullptr;
+    items.push_back(item);
     item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled);
     return item;
+}
+
+void DlgObjectSelection::onItemExpanded(QTreeWidgetItem *item)
+{
+    if (item->childCount())
+        return;
+    if (auto obj = qvariant_cast<App::SubObjectT>(item->data(0, Qt::UserRole)).getObject()) {
+        QSignalBlocker blocker(ui->treeWidget);
+        std::set<App::DocumentObject*> set;
+        for (auto child : obj->getOutList()) {
+            if (child && set.insert(child).second)
+                getItem(child, nullptr, item);
+        }
+    }
 }
 
 void DlgObjectSelection::updateAllItemState()
 {
     int count = 0;
     for (auto &v : itemMap) {
-        auto state = v.second->checkState(0);
+        auto state = v.second[0]->checkState(0);
         if (state == Qt::Unchecked) {
             if (count) {
                 allItem->setCheckState(0, Qt::PartiallyChecked);
@@ -204,76 +250,75 @@ void DlgObjectSelection::updateAllItemState()
         allItem->setCheckState(0, Qt::Checked);
 }
 
-void DlgObjectSelection::setItemState(std::set<App::DocumentObject*> &set,
-                                      App::DocumentObject *obj,
+void DlgObjectSelection::setItemState(App::DocumentObject *obj,
                                       Qt::CheckState state,
                                       bool forced)
 {
-    if (!set.insert(obj).second)
+    std::vector<QTreeWidgetItem*> *items = nullptr;
+    auto item = getItem(obj, &items);
+    if (!setCheckState(item, state, forced))
         return;
 
-    auto item = getItem(obj);
+    for (size_t i=1; i<items->size(); ++i)
+        setCheckState(items->at(i), state, true);
 
-    if (!forced) {
-        if (item->isSelected()) {
-            if (state == Qt::Unchecked || item->checkState(0) == Qt::Unchecked)
-                return;
-        }
-        if (item->checkState(0) == state)
-            return;
-    }
-    setCheckState(item, state);
+    std::vector<App::DocumentObject*> objs = {obj};
 
-    if (!ui->checkBoxAutoDeps->isChecked())
-        return;
+    if (ui->checkBoxAutoDeps->isChecked() && state == Qt::Checked) {
+        // If an object is newly checked, check all its dependencies
+        for (auto o : obj->getOutListRecursive()) {
+            if (!depSet.count(o) || itemChanged.count(o))
+                continue;
+            auto itItem = itemMap.find(o);
+            if (itItem == itemMap.end() || itItem->second[0]->checkState(0) == state)
+                continue;
 
-    auto itDep = depMap.find(obj);
-    if (itDep != depMap.end())
-        setCheckState(itDep->second, state);
-
-    if (state != Qt::PartiallyChecked) {
-        for (auto o : obj->getOutList()) {
-            if (depSet.count(o))
-                setItemState(set, o, state);
+            for (auto i : itItem->second)
+                setCheckState(i, state, true);
+            objs.push_back(o);
         }
     }
 
-    auto it = inMap.find(obj);
-    if (it != inMap.end())
-        setCheckState(it->second, state);
+    for(auto obj : objs) {
+        auto it = inMap.find(obj);
+        if (it != inMap.end())
+            setCheckState(it->second, state);
 
-    // If an object toggles state, we need to revisit all its in list object
-    for (auto o : obj->getInList())
-        set.erase(o);
+        auto itDep = depMap.find(obj);
+        if (itDep != depMap.end())
+            setCheckState(itDep->second, state);
 
-    for (auto o : obj->getInList()) {
-        if (!depSet.count(o) || set.count(o) || itemChanged.count(o))
-            continue;
-        int count = 0;
-        int selcount = 0;
-        for (auto sibling : o->getOutList()) {
-            if (!depSet.count(sibling))
+        // If an object toggles state, we need to revisit all its in-list
+        // object to update the partial/full checked state.
+        for (auto o : obj->getInList()) {
+            if (!depSet.count(o) ||itemChanged.count(o))
                 continue;
-            ++count;
-            auto it = itemMap.find(sibling);
-            if (it == itemMap.end())
+            auto it = itemMap.find(o);
+            if (it == itemMap.end() || it->second[0]->checkState(0) == state)
                 continue;
-            auto s = it->second->checkState(0);
-            if (s == Qt::Unchecked)
-                continue;
-            if (it->second->checkState(0) == Qt::PartiallyChecked) {
-                selcount = -1;
-                break;
+            int count = 0;
+            int selcount = 0;
+            for (auto sibling : o->getOutList()) {
+                if (!depSet.count(sibling))
+                    continue;
+                ++count;
+                auto it = itemMap.find(sibling);
+                if (it == itemMap.end())
+                    continue;
+                auto s = it->second[0]->checkState(0);
+                if (s == Qt::Unchecked)
+                    continue;
+                if (it->second[0]->checkState(0) == Qt::PartiallyChecked) {
+                    selcount = -1;
+                    break;
+                }
+                ++selcount;
             }
-            ++selcount;
-        }
-        auto it = itemMap.find(o);
-        if (it != itemMap.end()) {
-            auto state = it->second->checkState(0);
+            auto state = it->second[0]->checkState(0);
             if (state == Qt::Checked && selcount != count)
-                setItemState(set, o, Qt::PartiallyChecked);
+                setItemState(o, Qt::PartiallyChecked, true);
             else if (state == Qt::PartiallyChecked && selcount == count)
-                setItemState(set, o, Qt::Checked);
+                setItemState(o, Qt::Checked, true);
         }
     }
 }
@@ -282,7 +327,7 @@ std::vector<App::DocumentObject*> DlgObjectSelection::getSelections(bool invert,
     std::vector<App::DocumentObject*> res;
     if (!invert) {
         for (auto &v : itemMap) {
-            if (v.second->checkState(0) == Qt::Unchecked)
+            if (v.second[0]->checkState(0) == Qt::Unchecked)
                 continue;
             if (auto obj = v.first.getObject())
                 res.push_back(obj);
@@ -290,7 +335,7 @@ std::vector<App::DocumentObject*> DlgObjectSelection::getSelections(bool invert,
     } else {
         for (auto obj : deps) {
             auto it = itemMap.find(obj);
-            if (it == itemMap.end() || it->second->checkState(0) == Qt::Unchecked)
+            if (it == itemMap.end() || it->second[0]->checkState(0) == Qt::Unchecked)
                 res.push_back(obj);
         }
     }
@@ -312,7 +357,8 @@ void DlgObjectSelection::onDepItemChanged(QTreeWidgetItem * depItem, int column)
             if (it == itemMap.end())
                 continue;
             setCheckState(item, state);
-            setCheckState(it->second, state);
+            for (auto i : it->second)
+                setCheckState(i, state);
             itemChanged[objT] = state;
         }
     } else {
@@ -320,7 +366,8 @@ void DlgObjectSelection::onDepItemChanged(QTreeWidgetItem * depItem, int column)
         auto it = itemMap.find(objT);
         if (it != itemMap.end()) {
             itemChanged[objT] = state;
-            setCheckState(it->second, state);
+            for (auto i : it->second)
+                setCheckState(i, state);
         }
     }
     timer.start(10);
@@ -341,7 +388,8 @@ void DlgObjectSelection::onObjItemChanged(QTreeWidgetItem * objItem, int column)
         onItemSelectionChanged();
         if (state == Qt::Unchecked) {
             for (auto &v : itemMap) {
-                setCheckState(v.second, Qt::Unchecked);
+                for (auto i : v.second)
+                    setCheckState(i, Qt::Unchecked);
                 auto it = depMap.find(v.first);
                 if (it != depMap.end())
                     setCheckState(it->second, Qt::Unchecked);
@@ -383,20 +431,74 @@ void DlgObjectSelection::onObjItemChanged(QTreeWidgetItem * objItem, int column)
     timer.start(10);
 }
 
+
+static bool getOutList(App::DocumentObject *obj,
+                       std::set<App::DocumentObject*> &visited,
+                       std::vector<App::DocumentObject*> &result)
+{
+    if (!visited.insert(obj).second)
+        return false;
+
+    for (auto o : obj->getOutList()) {
+        if (getOutList(o, visited, result))
+            result.push_back(o);
+    }
+    return true;
+}
+
 void DlgObjectSelection::checkItemChanged() {
 
     QSignalBlocker blocker(ui->depList);
     QSignalBlocker blocker2(ui->inList);
     QSignalBlocker blocker3(ui->treeWidget);
 
+    std::set<App::DocumentObject*> unchecked;
+
     for (auto &v : itemChanged) {
         const auto &objT = v.first;
         Qt::CheckState state = v.second;
         if (auto obj = objT.getObject()) {
-            std::set<App::DocumentObject*> set;
-            setItemState(set, obj, state, true);
+            if (state == Qt::Unchecked) {
+                // We'll deal with unchecked item later
+                if (ui->checkBoxAutoDeps->isChecked())
+                    unchecked.insert(obj);
+            } else {
+                // For checked item, setItemState will auto select its
+                // dependency
+                setItemState(obj, state, true);
+            }
         }
     }
+
+    if (unchecked.size()) {
+        // When some item is unchecked by the user, we need to re-check the
+        // recursive outlist of the initially selected object, excluding all
+        // currently unchecked object. And then uncheck any item that does not
+        // appear in the returned outlist.
+
+        for (auto &v : itemMap) {
+            auto item = v.second[0];
+            if (item->checkState(0) == Qt::Unchecked) {
+                if (auto obj = qvariant_cast<App::SubObjectT>(item->data(0, Qt::UserRole)).getObject())
+                    unchecked.insert(obj);
+            }
+        }
+
+        auto outlist = initSels;
+        for (auto obj : initSels)
+            getOutList(obj, unchecked, outlist);
+        std::sort(outlist.begin(), outlist.end());
+
+        for (auto &v : itemMap) {
+            if (v.second[0]->checkState(0) == Qt::Unchecked)
+                continue;
+            if (auto obj = v.first.getObject()) {
+                if (!std::binary_search(outlist.begin(), outlist.end(), obj))
+                    setItemState(obj, Qt::Unchecked, true);
+            }
+        }
+    }
+
     itemChanged.clear();
     updateAllItemState();
 }
@@ -425,7 +527,7 @@ QTreeWidgetItem *DlgObjectSelection::createDepItem(QTreeWidget *parent, App::Doc
     item->setFlags(Qt::ItemIsSelectable|Qt::ItemIsUserCheckable|Qt::ItemIsEnabled);
     auto it = itemMap.find(obj);
     if (it != itemMap.end())
-        setCheckState(item, it->second->checkState(0));
+        setCheckState(item, it->second[0]->checkState(0));
     return item;
 }
 
@@ -465,8 +567,9 @@ void DlgObjectSelection::onItemSelectionChanged() {
 
     {
         QSignalBlocker blocker(ui->depList);
-        for (auto obj : sels.size() ? _deps : deps)
-            createDepItem(ui->depList, obj);
+        auto &objs = sels.size() ? _deps : deps;
+        for (auto it = objs.rbegin(); it != objs.rend(); ++it)
+            createDepItem(ui->depList, *it);
     }
 
     std::set<App::DocumentObject*> inlist;
@@ -517,7 +620,7 @@ void DlgObjectSelection::onAutoDeps(bool checked)
         auto it = itemMap.find(obj);
         if (it == itemMap.end())
             continue;
-        auto item = it->second;
+        auto item = it->second[0];
         if (item->checkState(0) == Qt::Unchecked)
             continue;
         Qt::CheckState state = Qt::Checked;
@@ -525,12 +628,13 @@ void DlgObjectSelection::onAutoDeps(bool checked)
             auto it = itemMap.find(o);
             if (it == itemMap.end())
                 continue;
-            if (it->second->checkState(0) != Qt::Checked) {
+            if (it->second[0]->checkState(0) != Qt::Checked) {
                 state = Qt::PartiallyChecked;
                 break;
             }
         }
-        setCheckState(item, state);
+        for (auto i : it->second)
+            setCheckState(i, state);
     }
     onItemSelectionChanged();
 }

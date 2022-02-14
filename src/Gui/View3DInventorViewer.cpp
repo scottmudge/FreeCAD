@@ -1221,7 +1221,7 @@ void View3DInventorViewer::checkGroupOnTop(const SelectionChanges &Reason, bool 
         return;
 
     std::string element = Reason.Object.getOldElementName();
-    auto objT = Reason.Object.normalized(true); // do not include sub-element
+    auto objT = Reason.Object.normalized(App::SubObjectT::NoElement);
     if (alt && Reason.Type == SelectionChanges::RmvSelection) {
         _pimpl->objectsOnTop.erase(objT);
         guiDocument->signalOnTopObject(Reason.Type, objT);

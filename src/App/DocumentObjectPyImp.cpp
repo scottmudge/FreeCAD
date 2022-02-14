@@ -22,10 +22,13 @@
 
 #include "PreCompiled.h"
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <Base/GeometryPyCXX.h>
 #include <Base/MatrixPy.h>
 #include "DocumentObject.h"
 #include "Document.h"
+#include "DocumentObserver.h"
 #include "ExpressionParser.h"
 #include "GeoFeature.h"
 #include "GroupExtension.h"
@@ -661,13 +664,63 @@ PyObject*  DocumentObjectPy::getSubObject(PyObject *args, PyObject *keywds)
 
 PyObject*  DocumentObjectPy::getSubObjectList(PyObject *args) {
     const char *subname;
-    if (!PyArg_ParseTuple(args, "s", &subname))
+    PyObject *flatten = Py_False;
+    if (!PyArg_ParseTuple(args, "s|O", &subname, &flatten))
         return NULL;
     Py::List res;
     PY_TRY {
-        for(auto o : getDocumentObjectPtr()->getSubObjectList(subname))
+        for(auto o : getDocumentObjectPtr()->getSubObjectList(
+                            subname, nullptr, PyObject_IsTrue(flatten))) {
             res.append(Py::asObject(o->getPyObject()));
+        }
         return Py::new_reference_to(res);
+    }PY_CATCH
+}
+
+PyObject*  DocumentObjectPy::normalizeSubName(PyObject *args) {
+    const char *subname;
+    PyObject *options = nullptr;
+    if (!PyArg_ParseTuple(args, "s|O", &subname, &options))
+        return NULL;
+    PY_TRY {
+        SubObjectT::NormalizeOptions ops;
+        auto checkOption = [&](const Py::Object &pyitem) {
+            if (!pyitem.isString()) {
+                PyErr_SetString(PyExc_TypeError, "expect argument 'options' to be of type string or list of strings");
+                return false;
+            }
+            auto option = pyitem.as_string();
+            if (boost::iequals(option, "NoElement"))
+                ops |= SubObjectT::NoElement;
+            else if (boost::iequals(option, "NoFlatten"))
+                ops |= SubObjectT::NoFlatten;
+            else if (boost::iequals(option, "KeepSubName"))
+                ops |= SubObjectT::KeepSubName;
+            else {
+                PyErr_Format(PyExc_ValueError, "unknown option %s", option.c_str());
+                return false;
+            }
+            return true;
+        };
+        if (options) {
+            Py::Object pyobj(options);
+            if (!pyobj.isString() && pyobj.isSequence()) {
+                Py::Sequence seq(options);
+                for (auto it = seq.begin(); it != seq.end(); ++it) {
+                    if (!checkOption(*it))
+                        return nullptr;
+                }
+            } else if (!checkOption(pyobj))
+                return nullptr;
+        }
+        SubObjectT sobjT(getDocumentObjectPtr(), subname);
+        sobjT.normalize(ops);
+        auto obj = sobjT.getObject();
+        if (!obj)
+            PyErr_SetString(PyExc_RuntimeError, "failed to normalize subname path");
+        return Py::new_reference_to(
+                Py::TupleN(Py::asObject(obj->getPyObject()),
+                           Py::String(sobjT.getSubName())));
     }PY_CATCH
 }
 

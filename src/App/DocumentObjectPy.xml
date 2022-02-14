@@ -136,9 +136,18 @@ referencing subobject.
         <Methode Name="getSubObjectList">
             <Documentation>
                 <UserDocu>
-getSubObjectList(subname)
+getSubObjectList(subname: str, flatten: bool = False) -> list[DocumentObject]
 
 Return a list of objects referenced by a given subname including this object
+
+Args:
+  subname: dot separated sub-object path
+  flatten: whether to flatten the object hierarchies that belong to the same
+           geo feature group before resolving. For example,
+           Part.Fusion.Box. -> Part.Box.
+
+Returns:
+  A list of document objects along the path, with first one being this object
                 </UserDocu>
             </Documentation>
         </Methode>
@@ -153,6 +162,35 @@ Return a list of objects referenced by a given subname including this object
 expandSubObjectNames(subname='', reason=0, checkVisibility=True) -- list(string)
 
 Recursively calling getSubObjects() to expand the full path of all sub-objects
+                </UserDocu>
+            </Documentation>
+        </Methode>
+        <Methode Name="normalizeSubName">
+            <Documentation>
+                <UserDocu>
+normalizeSubName(subname: str, options: str | list[str] = '') -> tuple[DocumentObject, str]
+
+Normalize the object path to make it comparable with other normalized path.
+
+Args:
+  subname: dot separated sub-object path.
+  options: a string or list of string options. Supported options (case insensitive) are,
+    'NoElement': do not include sub-element (e.g. Face, Edge, Vertex) in the output
+    'NoFlatten': do not flatten the path. If not specified, the output path will to
+                 flatten to exclude intermediate objects that belong to the same geo
+                 feature group before resolving. For example,
+                 Part.Fusion.Box. -> Part.Box.
+    'KeepSubName': do not change the sub-object component inside the path. Each component
+                   of the subname object path can be either the object internal name, the
+                   label of the object if starts with '$', or an integer index. If this
+                   option is not specified, each component will be converted to object
+                   internal name, except for integer index.
+
+Returns:
+  A tuple of the top level object and a subname path. The top level object will be this
+  object, unless flatten is enabled and this object belongs to the same geo feature group
+  of the next sub-object, in which case the last consequtive sub-object in the same group
+  will be returned.
                 </UserDocu>
             </Documentation>
         </Methode>

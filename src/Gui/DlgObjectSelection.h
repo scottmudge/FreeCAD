@@ -59,21 +59,19 @@ private Q_SLOTS:
     void onItemSelectionChanged();
     void checkItemChanged();
     void onAutoDeps(bool);
+    void onItemExpanded(QTreeWidgetItem *item);
 
 private:
-    QTreeWidgetItem *getItem(App::DocumentObject *obj);
+    QTreeWidgetItem *getItem(App::DocumentObject *obj,
+                             std::vector<QTreeWidgetItem*> **items = nullptr,
+                             QTreeWidgetItem *parent = nullptr);
+
     QTreeWidgetItem *createDepItem(QTreeWidget *parent, App::DocumentObject *obj);
 
     void init(const std::vector<App::DocumentObject*> &objs,
               const std::vector<App::DocumentObject*> &excludes);
 
-    void setItemState(std::set<App::DocumentObject*> &set,
-                      App::DocumentObject *obj,
-                      Qt::CheckState state,
-                      bool forced = false);
-    bool checkItemState(std::map<App::DocumentObject*, Qt::CheckState> &visited,
-                        App::DocumentObject *obj,
-                        Qt::CheckState &s);
+    void setItemState(App::DocumentObject *obj, Qt::CheckState state, bool forced = false);
     void updateAllItemState();
 
 private:
@@ -81,7 +79,7 @@ private:
     std::vector<App::DocumentObject*> initSels;
     std::vector<App::DocumentObject*> deps;
     std::set<App::DocumentObject*> depSet;
-    std::map<App::SubObjectT, QTreeWidgetItem*> itemMap;
+    std::map<App::SubObjectT, std::vector<QTreeWidgetItem*>> itemMap;
     std::map<App::SubObjectT, QTreeWidgetItem*> depMap;
     std::map<App::SubObjectT, QTreeWidgetItem*> inMap;
     std::map<App::SubObjectT, Qt::CheckState> itemChanged;

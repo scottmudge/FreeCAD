@@ -22,6 +22,8 @@
  ***************************************************************************/
 
 
+#include "GeoFeature.h"
+#include "Link.h"
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -915,29 +917,51 @@ DocumentObject::getSubObjectList(const char *subname,
     auto element = Data::ComplexGeoData::findElementName(subname);
     std::string sub(subname,element-subname);
     App::DocumentObject *container = nullptr;
+
     bool lastChild = false;
+    if (flatten) {
+        auto linked = getLinkedObject();
+        if (linked->getExtensionByType<App::GeoFeatureGroupExtension>(true))
+            container = const_cast<DocumentObject*>(this);
+        else if (auto grp = App::GeoFeatureGroupExtension::getGroupOfObject(linked)) {
+            container = grp;
+            lastChild = true;
+        }
+    }
     for(auto pos=sub.find('.');pos!=std::string::npos;pos=sub.find('.',pos+1)) {
         char c = sub[pos+1];
         sub[pos+1] = 0;
         auto sobj = getSubObject(sub.c_str());
         if(!sobj || !sobj->getNameInDocument())
             continue;
+
         if (flatten) {
-            if (auto linked = sobj->getLinkedObject()) {
+            auto linked = sobj->getLinkedObject();
+            if (container) {
                 auto grp = App::GeoFeatureGroupExtension::getGroupOfObject(linked);
-                if (!grp) {
+                if (grp != container)
                     container = nullptr;
-                    lastChild = false;
-                }
                 else {
-                    if (grp == container && lastChild && res.size()) {
+                    if (lastChild && res.size()) {
                         res.pop_back();
                         if (sublist)
                             sublist->pop_back();
                     }
                     lastChild = true;
-                    container = grp;
                 }
+            }
+            if (linked->getExtensionByType<App::GeoFeatureGroupExtension>(true)) {
+                container = linked;
+                lastChild = false;
+            }
+            else if (linked != sobj || sobj->hasChildElement()) {
+                // Check for Link or LinkGroup
+                container = nullptr;
+            }
+            else if (auto ext = sobj->getExtensionByType<App::LinkBaseExtension>(true)) {
+                // check for Link array
+                if (ext->getElementCountValue())
+                    container = nullptr;
             }
         }
         res.push_back(sobj);

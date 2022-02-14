@@ -803,6 +803,7 @@ void SubShapeBinder::collapseGeoChildren()
 
     std::vector<App::DocumentObject*> removes;
     std::map<App::DocumentObject*, std::vector<std::string> > newVals;
+    std::ostringstream ss;
     for(auto &l : Support.getSubListValues()) {
         auto obj = l.getValue();
         if(!obj || !obj->getNameInDocument())
@@ -813,38 +814,13 @@ void SubShapeBinder::collapseGeoChildren()
         bool touched = false;
         for (auto itSub=subvals.begin(); itSub!=subvals.end();) {
             auto &sub = *itSub;
-            bool changed = false;
-            auto objs = obj->getSubObjectList(sub.c_str());
-            for (auto it=objs.begin(); it+1!=objs.end();) {
-                auto group = App::GeoFeatureGroupExtension::getGroupOfObject(*it);
-                if (!group || (*it)->hasExtension(
-                            App::GeoFeatureGroupExtension::getExtensionClassTypeId())) {
-                    ++it;
-                    continue;
-                }
-                if (it==objs.begin()) {
-                    changed = true;
-                    it = objs.erase(it);
-                    continue;
-                }
-                auto next = *(it+1);
-                auto prev = *(it-1);
-                std::string subname(next->getNameInDocument());
-                subname += ".";
-                if (prev->getLinkedObject(true) == group
-                        && prev->getSubObject(subname.c_str()) == next) {
-                    it = objs.erase(it);
-                    changed = true;
-                } else
-                    ++it;
-            }
-            if  (changed) {
+            App::SubObjectT sobjT(obj, sub.c_str());
+            if (sobjT.normalize(App::SubObjectT::KeepSubName)) {
                 touched = true;
-                const char *element = Data::ComplexGeoData::findElementName(sub.c_str());
-                App::SubObjectT sobjT(objs, element);
+                auto newobj = sobjT.getObject();
                 sub = sobjT.getSubName();
-                if (objs.front() != obj) {
-                    newVals[objs.front()].push_back(std::move(sub));
+                if (newobj != obj) {
+                    newVals[newobj].push_back(std::move(sub));
                     itSub = subvals.erase(itSub);
                     continue;
                 }
@@ -863,6 +839,9 @@ void SubShapeBinder::collapseGeoChildren()
                                 std::make_move_iterator(subvals.end()));
         }
     }
+
+    if (removes.size() || newVals.size())
+        guard2.aboutToChange();
     for (auto obj : removes)
         Support.removeValue(obj);
     if (newVals.size())

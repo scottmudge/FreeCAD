@@ -434,32 +434,59 @@ bool SubObjectT::isVisible() const
     return sobj && sobj->Visibility.getValue();
 }
 
-bool SubObjectT::normalize(bool noElement, bool flatten)
+bool SubObjectT::normalize(NormalizeOptions options)
 {
+    bool noElement = options & NoElement;
+    bool flatten = !(options & NoFlatten);
+    bool keepSub = options & KeepSubName;
+
     std::ostringstream ss;
-    auto objs = getSubObjectList(flatten);
+    std::vector<int> subs;
+    auto obj = getObject();
+    if(!obj)
+        return false;
+    auto objs = obj->getSubObjectList(subname.c_str(), &subs, flatten);
     if (objs.empty())
         return false;
-    for (unsigned i=1; i<objs.size(); ++i)
-        ss << objs[i]->getNameInDocument() << ".";
-    if (objs.front()->getSubObject(ss.str().c_str()) != objs.back()) {
+    for (unsigned i=1; i<objs.size(); ++i) {
+        // Keep digit only subname, as it maybe an index to an array, which does
+        // not expand its elements as objects.
+        const char *end = subname.c_str() + subs[i];
+        const char *sub = end - 2;
+        for(;;--sub) {
+            if (sub < subname.c_str()) {
+                sub = subname.c_str();
+                break;
+            }
+            if (*sub == '.') {
+                ++sub;
+                break;
+            }
+        }
+        if (keepSub || std::isdigit(sub[0]))
+            ss << std::string(sub, end);
+        else
+            ss << objs[i]->getNameInDocument() << ".";
+    }
+    if (objs.size() > 1 && objs.front()->getSubObject(ss.str().c_str()) != objs.back()) {
         // something went wrong
         return false;
     }
     if (!noElement)
         ss << getOldElementName();
     std::string sub = ss.str();
-    if (subname != sub) {
+    if (objs.front() != obj || subname != sub) {
+        *this = objs.front();
         subname = std::move(sub);
         return true;
     }
     return false;
 }
 
-SubObjectT App::SubObjectT::normalized(bool noElement, bool flatten) const
+SubObjectT App::SubObjectT::normalized(NormalizeOptions options) const
 {
     SubObjectT res(*this);
-    res.normalize(noElement, flatten);
+    res.normalize(options);
     return res;
 }
 

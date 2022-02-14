@@ -24,6 +24,7 @@
 #ifndef APP_DOCUMENTOBSERVER_H
 #define APP_DOCUMENTOBSERVER_H
 
+#include <QFlags>
 #include <Base/BaseClass.h>
 #include <boost_signals2.hpp>
 #include <set>
@@ -267,13 +268,33 @@ public:
      */
     std::string getSubObjectPython(bool force=true) const;
 
+    /// Options used by normalize()
+    enum NormalizeOption {
+        /// Do not include sub-element reference in the output path
+        NoElement    = 0x01,
+        /** Do not flatten the output path. If not specified, the output path
+         * will to flatten to exclude intermediate objects that belong to the
+         * same geo feature group before resolving. For example,
+         *      Part.Fusion.Box. -> Part.Box.
+         */
+        NoFlatten    = 0x02,
+        /** Do not change the sub-object component inside the path. Each
+         * component of the subname object path can be either the object
+         * internal name, the label of the object if starts with '$', or an
+         * integer index. If this option is not specified, each component will
+         * be converted to object internal name, except for integer index.
+         */
+        KeepSubName  = 0x04,
+    };
+    Q_DECLARE_FLAGS(NormalizeOptions, NormalizeOption);
+
     /** Normalize the subname path to use only the object internal name and old style element name
      * @return Return whether the subname has been changed
      */
-    bool normalize(bool noElement=false, bool flatten=true);
+    bool normalize(NormalizeOptions options = NormalizeOptions());
 
     /// Return a normalize copy of itself
-    SubObjectT normalized(bool noElement=false, bool flattern=true) const;
+    SubObjectT normalized(NormalizeOptions options = NormalizeOptions()) const;
 
     /// Return the parent object
     SubObjectT getParent() const;

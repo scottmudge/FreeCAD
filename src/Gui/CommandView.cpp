@@ -936,11 +936,12 @@ void StdCmdToggleShowOnTop::activated(int iMsg)
 
     std::vector<App::SubObjectT> sels;
     for(auto sel : Selection().getSelectionT(gdoc->getDocument()->getName(),0)) {
-        objs.insert(sel.normalized(/*noElement=*/true)).second;
+        objs.insert(sel.normalized(App::SubObjectT::NoElement)).second;
     }
 
     if (Selection().hasPreselection()) {
-        auto presel = Selection().getPreselection().Object.normalized(/*noElement=*/true);
+        auto presel = Selection().getPreselection().Object.normalized(
+                App::SubObjectT::NoElement);
         if (!objs.count(presel)) {
             objs.clear();
             objs.insert(presel);

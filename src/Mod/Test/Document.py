@@ -1045,6 +1045,73 @@ class DocumentGroupCases(unittest.TestCase):
     self.Doc.removeObject("Label_2")
     self.Doc.removeObject("Label_3")
 
+  def testSubNameNormalize(self):
+    grp = self.Doc.addObject("App::DocumentObjectGroup","Group")
+    linkgrp = self.Doc.addObject("App::LinkGroup", "LinkGroup")
+    link = self.Doc.addObject('App::Link', 'Link')
+    linkarray = self.Doc.addObject('App::Link', 'LinkArray')
+    part2 = self.Doc.addObject("App::Part", "Part2")
+    part = self.Doc.addObject("App::Part", "Part")
+    obj1 = self.Doc.addObject("App::FeatureTest","obj1")
+    obj1.Label = 'Object1'
+    obj2 = self.Doc.addObject("App::FeatureTest","obj2")
+    obj2.Label = 'Object2'
+    obj3 = self.Doc.addObject("App::FeatureTest","obj3")
+    obj3.Label = 'Object3'
+    obj1.Link = obj2
+    obj2.Link = obj3
+
+    grp.addObject(obj1)
+
+    path = 'obj1.obj2.obj3.'
+    self.assertEqual(grp.normalizeSubName(path+'Face'), (grp, path+'Face'))
+    self.assertEqual(grp.normalizeSubName(path+'Face', 'NoElement'), (grp, path))
+
+    path2 = '$Object1.$Object2.obj3.'
+    self.assertEqual(grp.normalizeSubName(path2), (grp, path))
+    self.assertEqual(grp.normalizeSubName(path2+'Face', 'KeepSubName'), (grp, path2+'Face'))
+    self.assertEqual(grp.normalizeSubName(path2+'Face', ['KeepSubName','NoElement']),
+                                          (grp, path2))
+
+    link.LinkedObject = grp
+    linkgrp.ElementList = [link]
+    linkarray.LinkedObject = linkgrp
+    linkarray.ElementCount = 2
+
+    path = '1.0.obj1.obj2.obj3.'
+    self.assertEqual(linkarray.normalizeSubName(path), (linkarray, path))
+
+    path2 = '1.0.$Object1.obj2.obj3.'
+    self.assertEqual(linkarray.normalizeSubName(path2), (linkarray, path))
+
+    part.addObjects([grp, obj1, obj2, obj3])
+
+    path = 'obj1.obj2.obj3.'
+    self.assertEqual(grp.normalizeSubName(path), (obj3, ''))
+
+    path = 'Group.obj1.obj2.obj3.'
+    path2 = 'obj3.'
+    self.assertEqual(part.normalizeSubName(path), (part, path2))
+
+    part2.addObject(part)
+
+    self.assertEqual(part.normalizeSubName(path), (part, path2))
+
+    path = 'Part.Group.obj1.obj2.obj3.'
+    path2 = 'Part.obj3.'
+    self.assertEqual(part2.normalizeSubName(path), (part2, path2))
+
+    part.addObjects([link, linkgrp, linkarray])
+
+    path = 'Link.obj1.obj2.obj3.'
+    self.assertEqual(part.normalizeSubName(path), (part, path))
+
+    path = 'LinkArray.1.0.obj1.obj2.obj3.'
+    self.assertEqual(part.normalizeSubName(path), (part, path))
+
+    path = 'LinkGroup.0.obj1.obj2.obj3.'
+    self.assertEqual(part.normalizeSubName(path), (part, path))
+
   def testGroupAndGeoFeatureGroup(self):
 
     # an object can only be in one group at once, that must be enforced
