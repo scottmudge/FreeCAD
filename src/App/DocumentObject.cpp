@@ -22,8 +22,6 @@
  ***************************************************************************/
 
 
-#include "GeoFeature.h"
-#include "Link.h"
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -49,6 +47,8 @@
 #include "DocumentObjectExtension.h"
 #include "GeoFeatureGroupExtension.h"
 #include "ComplexGeoData.h"
+#include "GeoFeature.h"
+#include "Link.h"
 #include <App/DocumentObjectPy.h>
 #include <boost/bind/bind.hpp>
 
