@@ -796,7 +796,7 @@ bool SheetTableView::event(QEvent* event)
         case Qt::Key_Down: [[fallthrough]];
         case Qt::Key_Tab: [[fallthrough]];
         case Qt::Key_Backtab:
-            finishEditWithMove(kevent->key(), kevent->modifiers(), true);
+            finishEditWithMove(kevent->key(), kevent->modifiers());
             return true;
         // Also handle the delete key here:
         case Qt::Key_Delete:
@@ -1026,10 +1026,8 @@ void SheetTableView::_pasteClipboard(const char *name, int type)
     clearSelection();
 }
 
-void SheetTableView::finishEditWithMove(int keyPressed, Qt::KeyboardModifiers modifiers, bool handleTabMotion)
+void SheetTableView::finishEditWithMove(int keyPressed, Qt::KeyboardModifiers modifiers)
 {
-    (void)handleTabMotion;
-
     // A utility lambda for finding the beginning and ending of data regions
     auto scanForRegionBoundary = [this](int& r, int& c, int dr, int dc) {
         auto startAddress = CellAddress(r, c);
@@ -1163,13 +1161,11 @@ void SheetTableView::finishEditWithMove(int keyPressed, Qt::KeyboardModifiers mo
     case Qt::Key_Tab:
         if (modifiers == Qt::NoModifier) {
             tabCounter++;
-            // if (handleTabMotion)
-                targetColumn += colSpan;
+            targetColumn += colSpan;
         }
         else if (modifiers == Qt::ShiftModifier) {
             tabCounter = 0;
-            // if (handleTabMotion)
-                targetColumn--;
+            targetColumn--;
         }
         break;
     case Qt::Key_Backtab:

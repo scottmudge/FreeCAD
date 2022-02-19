@@ -375,7 +375,7 @@ Clipping::Clipping(Gui::View3DInventor* view, QWidget* parent)
         }
     }
 
-    d->ui.checkBoxFill->setChecked(ViewParams::getSectionFill() && ViewParams::isUsingRenderer());
+    d->ui.checkBoxFill->setChecked(ViewParams::SectionFill() && ViewParams::isUsingRenderer());
     d->ui.checkBoxInvert->initAutoSave();
     d->ui.checkBoxConcave->initAutoSave();
     d->ui.checkBoxInvert->initAutoSave();
@@ -389,10 +389,10 @@ Clipping::Clipping(Gui::View3DInventor* view, QWidget* parent)
     d->ui.checkBoxShowPlane->initAutoSave();
     d->ui.spinBoxPlaneSize->initAutoSave();
     d->ui.editHatchTexture->setFileName(
-            QString::fromUtf8(ViewParams::getSectionHatchTexture().c_str()));
+            QString::fromUtf8(ViewParams::SectionHatchTexture().c_str()));
 
-    d->ui.checkBoxOnTop->setDisabled(ViewParams::getSectionConcave());
-    d->ui.checkBoxGroupRendering->setDisabled(ViewParams::getSectionConcave());
+    d->ui.checkBoxOnTop->setDisabled(ViewParams::SectionConcave());
+    d->ui.checkBoxGroupRendering->setDisabled(ViewParams::SectionConcave());
 
     if (!d->ui.checkBoxFill->isChecked()) {
         d->ui.checkBoxInvert->setDisabled(true);

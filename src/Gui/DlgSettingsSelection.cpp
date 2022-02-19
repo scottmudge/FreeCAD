@@ -79,19 +79,19 @@ void DlgSettingsSelection::loadSettings()
     ui->checkBoxRecord->setChecked(TreeParams::RecordSelection());
     ui->checkBoxSelectionCheckBoxes->setChecked(TreeParams::CheckBoxesSelection());
 
-    ui->checkBoxSelectionOnTop->setChecked(ViewParams::getShowSelectionOnTop());
-    ui->checkBoxPreSelectionOnTop->setChecked(ViewParams::getShowPreSelectedFaceOnTop());
-    ui->checkBoxShowBoundBox->setChecked(ViewParams::getShowSelectionBoundingBox());
-    ui->checkBoxHiddenLineSelect->setChecked(ViewParams::getHiddenLineSelectionOnTop());
-    ui->checkBoxSelectElementOnTop->setChecked(ViewParams::getSelectElementOnTop());
+    ui->checkBoxSelectionOnTop->setChecked(ViewParams::ShowSelectionOnTop());
+    ui->checkBoxPreSelectionOnTop->setChecked(ViewParams::ShowPreSelectedFaceOnTop());
+    ui->checkBoxShowBoundBox->setChecked(ViewParams::ShowSelectionBoundingBox());
+    ui->checkBoxHiddenLineSelect->setChecked(ViewParams::HiddenLineSelectionOnTop());
+    ui->checkBoxSelectElementOnTop->setChecked(ViewParams::SelectElementOnTop());
 
-    ui->comboBoxToolTipCorner->setCurrentIndex(ViewParams::getPreselectionToolTipCorner());
-    ui->spinBoxToolTipOffsetX->setValue(ViewParams::getPreselectionToolTipOffsetX());
-    ui->spinBoxToolTipOffsetY->setValue(ViewParams::getPreselectionToolTipOffsetY());
-    ui->spinBoxToolTipFontSize->setValue(ViewParams::getPreselectionToolTipFontSize());
+    ui->comboBoxToolTipCorner->setCurrentIndex(ViewParams::PreselectionToolTipCorner());
+    ui->spinBoxToolTipOffsetX->setValue(ViewParams::PreselectionToolTipOffsetX());
+    ui->spinBoxToolTipOffsetY->setValue(ViewParams::PreselectionToolTipOffsetY());
+    ui->spinBoxToolTipFontSize->setValue(ViewParams::PreselectionToolTipFontSize());
 
-    ui->spinBoxColorDiff->setValue(ViewParams::getSelectionColorDifference());
-    ui->spinBoxSelectionBBoxThreshold->setValue(ViewParams::getShowSelectionBoundingBoxThreshold());
+    ui->spinBoxColorDiff->setValue(ViewParams::SelectionColorDifference());
+    ui->spinBoxSelectionBBoxThreshold->setValue(ViewParams::ShowSelectionBoundingBoxThreshold());
 }
 
 void DlgSettingsSelection::changeEvent(QEvent *e)

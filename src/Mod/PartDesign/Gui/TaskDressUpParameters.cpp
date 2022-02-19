@@ -79,9 +79,9 @@ TaskDressUpParameters::TaskDressUpParameters(ViewProviderDressUp *DressUpView, b
 
     selectionMode = none;
 
-    onTopEnabled = Gui::ViewParams::instance()->getShowSelectionOnTop();
+    onTopEnabled = Gui::ViewParams::ShowSelectionOnTop();
     if(!onTopEnabled)
-        Gui::ViewParams::instance()->setShowSelectionOnTop(true);
+        Gui::ViewParams::setShowSelectionOnTop(true);
 
     connUndo = App::GetApplication().signalUndo.connect(boost::bind(&TaskDressUpParameters::refresh, this));
     connRedo = App::GetApplication().signalRedo.connect(boost::bind(&TaskDressUpParameters::refresh, this));
@@ -103,7 +103,7 @@ TaskDressUpParameters::~TaskDressUpParameters()
     Gui::Selection().rmvSelectionGate();
 
     if(!onTopEnabled)
-        Gui::ViewParams::instance()->setShowSelectionOnTop(false);
+        Gui::ViewParams::setShowSelectionOnTop(false);
 
     clearButtons(none);
     exitSelectionMode();

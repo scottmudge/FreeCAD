@@ -83,7 +83,7 @@ public Q_SLOTS:
     void pasteFormat();
     void pasteFormula();
     void pasteValueFormat();
-    void finishEditWithMove(int keyPressed, Qt::KeyboardModifiers modifiers, bool handleTabMotion = false);
+    void finishEditWithMove(int keyPressed, Qt::KeyboardModifiers modifiers);
     void ModifyBlockSelection(int targetRow, int targetColumn);
 
 protected Q_SLOTS:

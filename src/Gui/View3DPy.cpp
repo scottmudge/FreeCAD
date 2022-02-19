@@ -749,7 +749,7 @@ Py::Object View3DInventorPy::viewDefaultOrientation(const Py::Tuple& args)
         cam->orientation = rot;
 
         if (scale < 0.0){
-            scale = ViewParams::instance()->getNewDocumentCameraScale();
+            scale = ViewParams::NewDocumentCameraScale();
         }
         if (scale > 1e-7) {
             double f = 0.0; //focal dist

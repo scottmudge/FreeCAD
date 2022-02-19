@@ -147,7 +147,7 @@ bool OverlayProxyWidget::hitTest(QPoint pt, bool delay)
     pt = mapFromGlobal(pt);
     int hit = 0;
     QSize s = this->size();
-    int hintSize = ViewParams::getDockOverlayHintTriggerSize();
+    int hintSize = ViewParams::DockOverlayHintTriggerSize();
     // if (owner->getState() == OverlayTabWidget::State_HintHidden)
     //     hintSize *= 2;
     switch(dockArea) {
@@ -183,7 +183,7 @@ bool OverlayProxyWidget::hitTest(QPoint pt, bool delay)
             timer.stop();
         else if (delay) {
             if (!timer.isActive())
-                timer.start(ViewParams::getDockOverlayHintDelay());
+                timer.start(ViewParams::DockOverlayHintDelay());
             return true;
         } else {
             timer.stop();
@@ -191,7 +191,7 @@ bool OverlayProxyWidget::hitTest(QPoint pt, bool delay)
             drawLine = true;
             update();
         }
-        if(hit > 1 && ViewParams::getDockOverlayActivateOnHover()) {
+        if(hit > 1 && ViewParams::DockOverlayActivateOnHover()) {
             if (owner->isVisible() && owner->tabBar()->isVisible()) {
                 QSize size = owner->tabBar()->size();
                 QPoint pt = owner->tabBar()->mapToGlobal(
@@ -220,7 +220,7 @@ bool OverlayProxyWidget::hitTest(QPoint pt, bool delay)
         timer.stop();
     else if (delay) {
         if (!timer.isActive())
-            timer.start(ViewParams::getDockOverlayHintDelay());
+            timer.start(ViewParams::DockOverlayHintDelay());
     } else {
         timer.stop();
         owner->setState(OverlayTabWidget::State_Normal);
@@ -242,7 +242,7 @@ void OverlayProxyWidget::enterEvent(QEvent *)
 
     if (!drawLine) {
         if (!timer.isActive())
-            timer.start(ViewParams::getDockOverlayHintDelay());
+            timer.start(ViewParams::DockOverlayHintDelay());
     }
 }
 
@@ -523,13 +523,13 @@ void OverlayTabWidget::startShow()
 {
     if (isVisible() || _state > State_Normal)
         return;
-    int duration = ViewParams::getDockOverlayAnimationDuration();
+    int duration = ViewParams::DockOverlayAnimationDuration();
     bool setmode = _state != State_Showing;
     if (duration) {
         _animator->setStartValue(1.0);
         _animator->setEndValue(0.0);
         _animator->setDuration(duration);
-        _animator->setEasingCurve((QEasingCurve::Type)ViewParams::getDockOverlayAnimationCurve());
+        _animator->setEasingCurve((QEasingCurve::Type)ViewParams::DockOverlayAnimationCurve());
         _animator->start();
     }
     else if (_state == State_Showing)
@@ -548,14 +548,14 @@ void OverlayTabWidget::startHide()
             || (_animator->state() == QAbstractAnimation::Running
                 && _animator->startValue().toReal() == 0.0))
         return;
-    int duration = ViewParams::getDockOverlayAnimationDuration();
+    int duration = ViewParams::DockOverlayAnimationDuration();
     if (!duration)
         hide();
     else {
         _animator->setStartValue(0.0);
         _animator->setEndValue(1.0);
         _animator->setDuration(duration);
-        _animator->setEasingCurve((QEasingCurve::Type)ViewParams::getDockOverlayAnimationCurve());
+        _animator->setEasingCurve((QEasingCurve::Type)ViewParams::DockOverlayAnimationCurve());
         _animator->start();
     }
 }
@@ -619,7 +619,7 @@ int OverlayTabWidget::testAlpha(const QPoint &_pos, int radiusScale)
     }
 
     int res = qAlpha(_image.pixel(pos*_imageScale));
-    int radius = ViewParams::getDockOverlayAlphaRadius() * radiusScale;
+    int radius = ViewParams::DockOverlayAlphaRadius() * radiusScale;
     if (res || radius<=0 )
         return res;
 
@@ -983,7 +983,7 @@ void OverlayTabWidget::setState(State state)
         if (_state == State_HintHidden)
             break;
         _state = state;
-        if (this->count() && ViewParams::getDockOverlayHintTabBar()) {
+        if (this->count() && ViewParams::DockOverlayHintTabBar()) {
             tabBar()->setToolTip(proxyWidget->toolTip());
             tabBar()->show();
             titleBar->hide();
@@ -1015,7 +1015,7 @@ bool OverlayTabWidget::checkAutoHide() const
     if(autoMode == AutoHide)
         return true;
 
-    if(ViewParams::getDockOverlayAutoView()) {
+    if(ViewParams::DockOverlayAutoView()) {
         auto view = getMainWindow()->activeWindow();
         if(!view || !view->onHasMsg("CanPan"))
             return true;
@@ -1110,7 +1110,7 @@ public:
         QString name;
 
         onStyleSheet.clear();
-        if(ViewParams::getDockOverlayExtraState()) {
+        if(ViewParams::DockOverlayExtraState()) {
             name = QString::fromUtf8(handle->GetASCII("OverlayOnStyleSheet").c_str());
             if(name.isEmpty() && !prefix.isEmpty())
                 name = prefix + QLatin1String("-on.qss");
@@ -1282,7 +1282,7 @@ void OverlayTabWidget::_setOverlayMode(QWidget *widget, int enable)
             if (qobject_cast<PropertyEditor::PropertyEditor*>(parent)) {
                 auto scrollArea = static_cast<QAbstractScrollArea*>(parent);
                 if (scrollArea->verticalScrollBar() == widget) {
-                    if (!ViewParams::getDockOverlayHidePropertyViewScrollBar() || enable==0)
+                    if (!ViewParams::DockOverlayHidePropertyViewScrollBar() || enable==0)
                         widget->setStyleSheet(QString());
                     else {
                         static QString _style = QLatin1String("*{width:0}");
@@ -1356,7 +1356,7 @@ void OverlayTabWidget::setOverlayMode(QWidget *widget, int enable)
         return;
 
     if(widget != tabBar()) {
-        if(ViewParams::getDockOverlayAutoMouseThrough() && enable == -1) {
+        if(ViewParams::DockOverlayAutoMouseThrough() && enable == -1) {
             widget->setMouseTracking(true);
         }
     }
@@ -1388,7 +1388,7 @@ bool OverlayTabWidget::isTransparent() const
 {
     if (!actTransparent.isChecked())
         return false;
-    if(ViewParams::getDockOverlayAutoView()) {
+    if(ViewParams::DockOverlayAutoView()) {
         auto view = getMainWindow()->activeWindow();
         if(!view || !view->onHasMsg("CanPan"))
             return false;
@@ -1511,10 +1511,10 @@ void OverlayTabWidget::setOverlayMode(bool enable)
 
     _graphicsEffect->setEnabled(effectEnabled() && (enable || isTransparent()));
 
-    if (_state == State_Hint && ViewParams::getDockOverlayHintTabBar()) {
+    if (_state == State_Hint && ViewParams::DockOverlayHintTabBar()) {
         tabBar()->setToolTip(proxyWidget->toolTip());
         tabBar()->show();
-    } else if (ViewParams::getDockOverlayHideTabBar() || count()==1) {
+    } else if (ViewParams::DockOverlayHideTabBar() || count()==1) {
         tabBar()->hide();
     } else {
         tabBar()->setToolTip(QString());
@@ -1532,7 +1532,7 @@ const QRect &OverlayTabWidget::getRect()
 bool OverlayTabWidget::getAutoHideRect(QRect &rect) const
 {
     rect = rectOverlay;
-    int hintWidth = ViewParams::getDockOverlayHintSize();
+    int hintWidth = ViewParams::DockOverlayHintSize();
     switch(dockArea) {
     case Qt::LeftDockWidgetArea:
     case Qt::RightDockWidgetArea:
@@ -1632,7 +1632,7 @@ void OverlayTabWidget::setRect(QRect rect)
         QRect rectHint = rect;
         if (_state != State_Hint)
             startHide();
-        else if (count() && ViewParams::getDockOverlayHintTabBar()) {
+        else if (count() && ViewParams::DockOverlayHintTabBar()) {
             switch(dockArea) {
             case Qt::LeftDockWidgetArea: 
             case Qt::RightDockWidgetArea: 
@@ -2326,9 +2326,9 @@ void OverlaySplitterHandle::onTimer()
 
 void OverlaySplitterHandle::showEvent(QShowEvent *ev)
 {
-    if (ViewParams::getDockOverlaySplitterHandleTimeout() > 0
+    if (ViewParams::DockOverlaySplitterHandleTimeout() > 0
             && qApp->widgetAt(QCursor::pos()) != this)
-        timer.start(ViewParams::getDockOverlaySplitterHandleTimeout());
+        timer.start(ViewParams::DockOverlaySplitterHandleTimeout());
     QSplitterHandle::showEvent(ev);
 }
 
@@ -2340,8 +2340,8 @@ void OverlaySplitterHandle::enterEvent(QEvent *ev)
 
 void OverlaySplitterHandle::leaveEvent(QEvent *ev)
 {
-    if (ViewParams::getDockOverlaySplitterHandleTimeout() > 0)
-        timer.start(ViewParams::getDockOverlaySplitterHandleTimeout());
+    if (ViewParams::DockOverlaySplitterHandleTimeout() > 0)
+        timer.start(ViewParams::DockOverlaySplitterHandleTimeout());
     QSplitterHandle::leaveEvent(ev);
 }
 
@@ -2410,9 +2410,9 @@ void OverlaySplitterHandle::showTitle(bool enable)
     else {
         setCursor(this->orientation() == Qt::Horizontal
                 ?  Qt::SizeHorCursor : Qt::SizeVerCursor);
-        if (ViewParams::getDockOverlaySplitterHandleTimeout() > 0
+        if (ViewParams::DockOverlaySplitterHandleTimeout() > 0
                 && qApp->widgetAt(QCursor::pos()) != this)
-            timer.start(ViewParams::getDockOverlaySplitterHandleTimeout());
+            timer.start(ViewParams::DockOverlaySplitterHandleTimeout());
     }
     _showTitle = enable;
     for (auto child : findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly))
@@ -3051,7 +3051,7 @@ public:
                 }
             }
         }
-        _timer.start(ViewParams::getDockOverlayDelay());
+        _timer.start(ViewParams::DockOverlayDelay());
     }
 
     void save()
@@ -3147,8 +3147,8 @@ public:
             h -= tabbar->height();
 
         int naviCubeSize = NaviCube::getNaviCubeSize();
-        int naviCorner = ViewParams::getDockOverlayCheckNaviCube() ?
-            ViewParams::getCornerNaviCube() : -1;
+        int naviCorner = ViewParams::DockOverlayCheckNaviCube() ?
+            ViewParams::CornerNaviCube() : -1;
 
         QRect rect;
         QRect rectBottom(0,0,0,0);
@@ -3430,7 +3430,7 @@ public:
         }
         if (checked)
             tabWidget->setRevealTime(QTime::currentTime().addMSecs(
-                    ViewParams::getDockOverlayRevealDelay()));
+                    ViewParams::DockOverlayRevealDelay()));
         refresh();
     }
 
@@ -3954,7 +3954,7 @@ public:
                     dst->saveTabs();
                 }
                 dst->setRevealTime(QTime::currentTime().addMSecs(
-                            ViewParams::getDockOverlayRevealDelay()));
+                            ViewParams::DockOverlayRevealDelay()));
             }
         }
 
@@ -4263,7 +4263,7 @@ bool OverlayManager::eventFilter(QObject *o, QEvent *ev)
     // case QEvent::NativeGesture:
     case QEvent::MouseButtonDblClick:
     case QEvent::Wheel:
-        if (!ViewParams::getDockOverlayWheelPassThrough())
+        if (!ViewParams::DockOverlayWheelPassThrough())
             return false;
         // fall through
     case QEvent::MouseButtonRelease:
@@ -4320,7 +4320,7 @@ bool OverlayManager::eventFilter(QObject *o, QEvent *ev)
         OverlayTabWidget *activeTabWidget = nullptr;
         int hit = 0;
         QPoint pos = QCursor::pos();
-        if (ViewParams::getDockOverlayAutoMouseThrough()
+        if (ViewParams::DockOverlayAutoMouseThrough()
                     && ev->type() != QEvent::Wheel
                     && pos == d->_lastPos)
         {
@@ -4330,7 +4330,7 @@ bool OverlayManager::eventFilter(QObject *o, QEvent *ev)
                 && (isNear(pos, d->wheelPos) || d->wheelDelay > QTime::currentTime()))
         {
             d->wheelDelay = QTime::currentTime().addMSecs(
-                    ViewParams::getDockOverlayWheelDelay());
+                    ViewParams::DockOverlayWheelDelay());
             d->wheelPos = pos;
             return false;
         } else {
@@ -4359,7 +4359,7 @@ bool OverlayManager::eventFilter(QObject *o, QEvent *ev)
                 }
             }
             if (activeTabWidget) {
-                hit = ViewParams::getDockOverlayAutoMouseThrough();
+                hit = ViewParams::DockOverlayAutoMouseThrough();
                 d->_lastPos = pos;
             }
         }
@@ -4373,7 +4373,7 @@ bool OverlayManager::eventFilter(QObject *o, QEvent *ev)
             d->_3dviews.clear();
 
             if (ev->type() == QEvent::Wheel) {
-                d->wheelDelay = QTime::currentTime().addMSecs(ViewParams::getDockOverlayWheelDelay());
+                d->wheelDelay = QTime::currentTime().addMSecs(ViewParams::DockOverlayWheelDelay());
                 d->wheelPos = pos;
             }
             return false;
@@ -4460,7 +4460,7 @@ bool OverlayManager::isMouseTransparent() const
 bool OverlayManager::isUnderOverlay() const
 {
 #ifdef FC_HAS_DOCK_OVERLAY
-    return ViewParams::getDockOverlayAutoMouseThrough()
+    return ViewParams::DockOverlayAutoMouseThrough()
         && findTabWidget(qApp->widgetAt(QCursor::pos()), true);
 #else
     return false;

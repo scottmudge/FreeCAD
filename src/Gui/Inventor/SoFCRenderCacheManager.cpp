@@ -556,8 +556,8 @@ SoFCRenderCacheManager::setHighlight(SoPath * path,
   PRIVATE(this)->highlightpath = path;
 
   RenderCachePtr cache;
-  if (PRIVATE(this)->nosectionontop != ViewParams::getNoSectionOnTop()) {
-    PRIVATE(this)->nosectionontop = ViewParams::getNoSectionOnTop();
+  if (PRIVATE(this)->nosectionontop != ViewParams::NoSectionOnTop()) {
+    PRIVATE(this)->nosectionontop = ViewParams::NoSectionOnTop();
     PRIVATE(this)->pathcachetable.clear();
   }
   auto it = PRIVATE(this)->pathcachetable.find(path);

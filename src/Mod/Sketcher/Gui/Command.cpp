@@ -41,6 +41,7 @@
 #include <Gui/MainWindow.h>
 #include <Gui/DlgEditFileIncludePropertyExternal.h>
 #include <Gui/SelectionFilter.h>
+#include <Gui/Action.h>
 
 #include <Mod/Sketcher/App/SketchObjectSF.h>
 #include <Mod/Sketcher/App/SketchObject.h>
@@ -693,6 +694,7 @@ void CmdSketcherViewSketch::activated(int iMsg)
     Gui::Document *doc = getActiveGuiDocument();
     SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
     if (vp) {
+        vp->setViewBottomOnEdit(false);
         runCommand(Gui,"Gui.ActiveDocument.ActiveView.setCameraOrientation("
                 "Gui.editDocument().EditingTransform.getTransform()[1].Q)");
     }
@@ -710,35 +712,36 @@ bool CmdSketcherViewSketch::isActive(void)
     return false;
 }
 
-DEF_STD_CMD_A(CmdSketcherViewSketchOther)
+DEF_STD_CMD_A(CmdSketcherViewSketchBottom)
 
-CmdSketcherViewSketchOther::CmdSketcherViewSketchOther()
-    : Command("Sketcher_ViewSketchOther")
+CmdSketcherViewSketchBottom::CmdSketcherViewSketchBottom()
+    : Command("Sketcher_ViewSketchBottom")
 {
     sAppModule      = "Sketcher";
     sGroup          = "Sketcher";
-    sMenuText       = QT_TR_NOOP("View sketch other");
+    sMenuText       = QT_TR_NOOP("View sketch bottom");
     sToolTipText    = QT_TR_NOOP("When in edit mode, "
                                  "set the camera orientation perpendicular to the oppsite side of sketch plane.");
-    sWhatsThis      = "Sketcher_ViewSketchOther";
+    sWhatsThis      = "Sketcher_ViewSketchBottom";
     sStatusTip      = sToolTipText;
-    sPixmap         = "Sketcher_ViewSketchOther";
+    sPixmap         = "Sketcher_ViewSketchBottom";
     sAccel          = "Q, R";
     eType           = 0;
 }
 
-void CmdSketcherViewSketchOther::activated(int iMsg)
+void CmdSketcherViewSketchBottom::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
     Gui::Document *doc = getActiveGuiDocument();
     SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
     if (vp) {
+        vp->setViewBottomOnEdit(true);
         runCommand(Gui,"Gui.ActiveDocument.ActiveView.setCameraOrientation("
-                "(Gui.editDocument().EditingTransform.getTransform()[1] * App.Rotation(App.Vector(1,0,0), 180)).Q)");
+                "(Gui.editDocument().EditingTransform.getTransform()[1] * App.Rotation(App.Vector(0,1,0), 180)).Q)");
     }
 }
 
-bool CmdSketcherViewSketchOther::isActive(void)
+bool CmdSketcherViewSketchBottom::isActive(void)
 {
     Gui::Document *doc = getActiveGuiDocument();
     if (doc) {
@@ -767,10 +770,20 @@ public:
         bCanLog       = false;
 
         addCommand(new CmdSketcherViewSketch);
-        addCommand(new CmdSketcherViewSketchOther);
+        addCommand(new CmdSketcherViewSketchBottom);
     }
 
-    virtual const char* className() const {return "CmdSketcherViewSketch";}
+    virtual Gui::Action * createAction(void) override
+    {
+        auto action = GroupCommand::createAction();
+        if (action && ViewProviderSketch::viewBottomOnEdit()) {
+            action->setProperty("defaultAction", QVariant((int)1));
+            setup(action);
+        }
+        return action;
+    }
+
+    virtual const char* className() const override {return "CmdSketcherViewSketch";}
 };
 
 DEF_STD_CMD_A(CmdSketcherValidateSketch)

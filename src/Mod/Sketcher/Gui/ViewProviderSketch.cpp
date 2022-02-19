@@ -131,6 +131,10 @@
 
 FC_LOG_LEVEL_INIT("Sketch",true,true)
 
+#ifndef M_PI
+#define M_PI       3.14159265358979323846
+#endif
+
 // The first is used to point at a SoDatumLabel for some
 // constraints, and at a SoMaterial for others...
 #define CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL 0
@@ -184,10 +188,12 @@ SbVec2s ViewProviderSketch::prvCursorPos;
 SbVec2s ViewProviderSketch::newCursorPos;
 SbVec2f ViewProviderSketch::prvPickedPoint;
 
-static bool _AllowFaceExternal;
+static bool _AllowFaceExternal = true;
 static double _SnapTolerance;
+static bool _ViewBottomOnEdit;
 static const char *_ParamAllowFaceExternal = "AllowFaceExternalPick";
 static const char *_ParamSnapTolerance = "SnapTolerance";
+static const char *_ParamViewBottomOnEdit = "ViewBottomOnEdit";
 
 //**************************************************************************
 // Edit data structure
@@ -254,6 +260,7 @@ struct EditData {
         hSketchGeneral->Attach(master);
         _AllowFaceExternal = hSketchGeneral->GetBool(_ParamAllowFaceExternal, true);
         _SnapTolerance = hSketchGeneral->GetFloat(_ParamSnapTolerance, 0.2);
+        _ViewBottomOnEdit = hSketchGeneral->GetBool(_ParamViewBottomOnEdit, false);
 
         timer.setSingleShot(true);
         QObject::connect(&timer, &QTimer::timeout, [master]() {
@@ -2070,7 +2077,7 @@ std::set<int> ViewProviderSketch::detectPreselectionConstr(const SoPickedPoint *
 
     SoPath *path = Point->getPath();
     SoNode *tail = path->getTail();
-    int r = static_cast<int>(Gui::ViewParams::getPickRadius());
+    int r = static_cast<int>(Gui::ViewParams::PickRadius());
 
     for (int i=1; i<path->getLength(); ++i) {
         SoNode * tailFather = path->getNodeFromTail(i);
@@ -4260,11 +4267,24 @@ void ViewProviderSketch::OnChange(Base::Subject<const char*> &rCaller, const cha
         _AllowFaceExternal = edit->hSketchGeneral->GetBool(_ParamAllowFaceExternal, true);
     else if (boost::equals(sReason, _ParamSnapTolerance))
         _SnapTolerance = edit->hSketchGeneral->GetFloat(_ParamSnapTolerance, 0.2);
+    else if (boost::equals(sReason, _ParamViewBottomOnEdit))
+        _ViewBottomOnEdit = edit->hSketchGeneral->GetBool(_ParamViewBottomOnEdit, false);
 }
 
 bool ViewProviderSketch::allowFaceExternalPick()
 {
     return _AllowFaceExternal;
+}
+
+bool ViewProviderSketch::viewBottomOnEdit()
+{
+    return _ViewBottomOnEdit;
+}
+
+void ViewProviderSketch::setViewBottomOnEdit(bool enable)
+{
+    if (_ViewBottomOnEdit != enable && edit)
+        edit->hSketchGeneral->SetBool(_ParamViewBottomOnEdit, enable);
 }
 
 void ViewProviderSketch::updateInventorNodeSizes()
@@ -7550,6 +7570,8 @@ void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int Mo
     Base::Rotation r, so;
     transform.getTransform(t, r, s, so);
     SbRotation rot((float)r[0],(float)r[1],(float)r[2],(float)r[3]);
+    if (viewBottomOnEdit())
+        rot *= SbRotation(SbVec3f(0,1,0), M_PI);
     viewer->setCameraOrientation(rot);
 
     viewer->setEditing(true);
@@ -8039,8 +8061,9 @@ bool ViewProviderSketchExport::doubleClicked(void) {
     if(transform) {
         auto doc = Gui::Application::Instance->editDocument();
         if(doc) {
-            doc->setEditingTransform(mat);
-            auto cmd = Gui::Application::Instance->commandManager().getCommandByName("Sketcher_ViewSketch");
+            auto cmd = Gui::Application::Instance->commandManager().getCommandByName(
+                    ViewProviderSketch::viewBottomOnEdit() ? 
+                    "Sketcher_ViewSketchBottom" : "Sketcher_ViewSketch");
             if (cmd) cmd->invoke(0);
         }
     }

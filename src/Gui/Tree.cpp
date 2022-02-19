@@ -4780,7 +4780,7 @@ void TreeWidget::onItemSelectionChanged ()
         if(selItems.size()) {
             if(selItems.front()->type() == ObjectType) {
                 item = static_cast<DocumentObjectItem*>(selItems.front());
-                if(!ViewParams::instance()->getShowSelectionOnTop()) {
+                if(!ViewParams::ShowSelectionOnTop()) {
                     std::ostringstream ss;
                     App::DocumentObject *topParent = 0;
                     App::DocumentObject *obj = item->object()->getObject();
@@ -6969,7 +6969,7 @@ void DocumentItem::selectItems(SelectionReason reason) {
     const auto &sels = Selection().getSelection(pDocument->getDocument()->getName(),0);
 
     bool sync;
-    if (ViewParams::instance()->getMaxOnTopSelections()<(int)sels.size() || reason==SR_SELECT)
+    if (ViewParams::MaxOnTopSelections()<(int)sels.size() || reason==SR_SELECT)
         sync = false;
     else
         sync = true;
@@ -7575,7 +7575,7 @@ enum GroupType {
 };
 
 int DocumentObjectItem::isGroup() const {
-    if(ViewParams::instance()->getMapChildrenPlacement())
+    if(ViewParams::MapChildrenPlacement())
         return SuperGroup;
 
     auto obj = object()->getObject();

@@ -127,9 +127,6 @@ View3DInventor::View3DInventor(Gui::Document* pcDocument, QWidget* parent,
     // accept drops on the window, get handled in dropEvent, dragEnterEvent
     setAcceptDrops(true);
 
-    // Make sure ViewParams receives parameter notification before us
-    ViewParams::instance();
-
     // attach parameter Observer
     hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/View");
     hGrp->Attach(this);
@@ -326,17 +323,17 @@ void View3DInventor::OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::M
         _viewer->getBacklight()->intensity.setValue((float)value/100.0f);
     }
     else if (strcmp(Reason,"EnablePreselection") == 0) {
-        SoFCEnableHighlightAction cAct(ViewParams::instance()->getEnablePreselection());
+        SoFCEnableHighlightAction cAct(ViewParams::EnablePreselection());
         cAct.apply(_viewer->getSceneGraph());
     }
     else if (strcmp(Reason,"EnableSelection") == 0) {
-        SoFCEnableSelectionAction cAct(ViewParams::instance()->getEnableSelection());
+        SoFCEnableSelectionAction cAct(ViewParams::EnableSelection());
         cAct.apply(_viewer->getSceneGraph());
     }
     else if (strcmp(Reason,"HighlightColor") == 0) {
         SbColor color;
         float trans;
-        color.setPackedValue(ViewParams::instance()->getHighlightColor(),trans);
+        color.setPackedValue(ViewParams::HighlightColor(),trans);
         SoSFColor col; col.setValue(color);
         SoFCHighlightColorAction cAct(col);
         cAct.apply(_viewer->getSceneGraph());
@@ -344,7 +341,7 @@ void View3DInventor::OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::M
     else if (strcmp(Reason,"SelectionColor") == 0) {
         SbColor color;
         float trans;
-        color.setPackedValue(ViewParams::instance()->getSelectionColor(),trans);
+        color.setPackedValue(ViewParams::SelectionColor(),trans);
         SoSFColor col; col.setValue(color);
         SoFCSelectionColorAction cAct(col);
         cAct.apply(_viewer->getSceneGraph());
@@ -457,7 +454,7 @@ void View3DInventor::OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::M
         }
     }
     else if (strcmp(Reason, "TransparencyOnTop") == 0) {
-        _viewer->setTransparencyOnTop(ViewParams::getTransparencyOnTop());
+        _viewer->setTransparencyOnTop(ViewParams::TransparencyOnTop());
     }
     else {
         unsigned long col1 = rGrp.GetUnsigned("BackgroundColor",3940932863UL);

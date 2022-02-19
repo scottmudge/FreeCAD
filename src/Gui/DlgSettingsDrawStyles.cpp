@@ -91,7 +91,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     }
     ui->comboLinePattern->setEditable(true);
     
-    int pattern = ViewParams::getSelectionLinePattern();
+    int pattern = ViewParams::SelectionLinePattern();
     bool found = false;
     int i=-1;
     for(auto &v : _LinePatterns) {
@@ -179,15 +179,15 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
 
 #undef FC_DRAW_STYLE_PARAM
 #define FC_DRAW_STYLE_PARAM(_name, _getter, _setter) \
-    ui->_name->_setter(ViewParams::get##_name());\
+    ui->_name->_setter(ViewParams::_name());\
 
 #undef FC_DRAW_STYLE_PARAM2
 #define FC_DRAW_STYLE_PARAM2(_name, _getter, _setter) \
-    ui->_name->_setter(App::Color((uint32_t)ViewParams::get##_name()).asValue<QColor>());\
+    ui->_name->_setter(App::Color((uint32_t)ViewParams::_name()).asValue<QColor>());\
 
 #undef FC_DRAW_STYLE_PARAM3
 #define FC_DRAW_STYLE_PARAM3(_name, _getter, _setter) \
-    ui->_name->_setter(QString::fromUtf8(ViewParams::get##_name().c_str()));\
+    ui->_name->_setter(QString::fromUtf8(ViewParams::_name().c_str()));\
 
     FC_DRAW_STYLE_PARAMS;
 
@@ -207,7 +207,7 @@ DlgSettingsDrawStyles::~DlgSettingsDrawStyles()
 
 void DlgSettingsDrawStyles::loadSettings()
 {
-    int pattern = ViewParams::getSelectionLinePattern();
+    int pattern = ViewParams::SelectionLinePattern();
     bool found = false;
     int i=-1;
     for(auto &v : _LinePatterns) {

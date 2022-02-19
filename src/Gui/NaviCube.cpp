@@ -1417,7 +1417,7 @@ bool NaviCubeImplementation::mouseReleased(short x, short y) {
 		float tilt = 90 - Base::toDegrees(atan(sqrt(2.0)));
 		int pick = pickFace(x, y);
 
-		long step = Base::clamp(ViewParams::NaviStepByTurn(), 4, 36);
+		long step = Base::clamp(ViewParams::NaviStepByTurn(), (long)4, (long)36);
 		float rotStepAngle = 360.0f / step;
 		bool toNearest = ViewParams::NaviRotateToNearest();
 

@@ -3925,8 +3925,12 @@ int Document::recompute(const std::vector<App::DocumentObject*> &objs, bool forc
                     // Note that We don't call enforceRecompute() here in order
                     // to enable recomputation optimization (see
                     // _recomputeFeature())
-                    for (auto inObjIt : obj->getInList())
-                        inObjIt->touch(false);
+                    for (auto inObjIt : obj->getInList()) {
+                        inObjIt->StatusBits.set(ObjectStatus::Enforce);
+                        inObjIt->StatusBits.set(ObjectStatus::Touch);
+                        if (obj->getDocument())
+                            obj->getDocument()->signalTouchedObject(*obj);
+                    }
 
                     // give the object a chance to revert the above touching,
                     // because for example, new objects are created with

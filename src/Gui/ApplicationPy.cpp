@@ -964,10 +964,11 @@ public:
         sName = _cmdName.c_str();
         eType = NoTransaction;
 
-        std::ostringstream str;
-        str << static_cast<const void *>(pyObj.ptr()) << std::ends;
-        _pixmap = str.str();
+        _pixmap = std::string("Icon_") + wb;
         sPixmap = _pixmap.c_str();
+        // sPixmap stores the key to the icon cache. Calling workbenchIcon()
+        // below to make sure the cache is populated
+        Application::Instance->workbenchIcon(QString::fromUtf8(workbenchName()));
 
         try {
             Py::Object member = pyObj.getAttr(std::string("MenuText"));

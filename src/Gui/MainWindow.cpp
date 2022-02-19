@@ -2369,7 +2369,7 @@ void MainWindow::showMessage(const QString& message, int timeout) {
     }
     d->actionLabel->setText(message.simplified());
     if(timeout == 0)
-        timeout = ViewParams::getStatusMessageTimeout();
+        timeout = ViewParams::StatusMessageTimeout();
     if(timeout > 0) {
         d->actionTimer->setSingleShot(true);
         d->actionTimer->start(timeout);

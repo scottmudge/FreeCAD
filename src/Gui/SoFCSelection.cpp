@@ -129,7 +129,7 @@ SoFCSelection::SoFCSelection()
 
     selected = NOTSELECTED;
 
-    useNewSelection = ViewParams::instance()->getUseNewSelection();
+    useNewSelection = ViewParams::UseNewSelection();
     selContext = std::make_shared<SelContext>();
     selContext2 = std::make_shared<SelContext>();
 }
@@ -873,7 +873,7 @@ void SoFCSelection::glRender(SoGLRenderAction *action, bool inpath)
 
     if (!action->isRenderingDelayedPaths()) {
         if (mystyle == SoFCSelection::BOX
-                    || ViewParams::instance()->getShowSelectionBoundingBox())
+                    || ViewParams::ShowSelectionBoundingBox())
         {
             if (inpath)
                 inherited::GLRenderInPath(action);
@@ -881,13 +881,13 @@ void SoFCSelection::glRender(SoGLRenderAction *action, bool inpath)
                 inherited::GLRender(action);
         }
 
-        if (preselected || !ViewParams::getShowSelectionOnTop())
+        if (preselected || !ViewParams::ShowSelectionOnTop())
             action->addDelayedPath(action->getCurPath()->copy());
         return;
     }
 
     Gui::FCDepthFunc guard;
-    if (!ViewParams::getShowSelectionOnTop())
+    if (!ViewParams::ShowSelectionOnTop())
         guard.set(GL_LEQUAL);
 
     // uniqueId is returned by SoNode::getNodeId(). It is used to notify change
@@ -897,7 +897,7 @@ void SoFCSelection::glRender(SoGLRenderAction *action, bool inpath)
     auto oldId = this->uniqueId;
     this->uniqueId ^= std::hash<void*>()(ctx.get()) + 0x9e3779b9 + (oldId << 6) + (oldId >> 2);
 
-    if(mystyle == SoFCSelection::BOX || ViewParams::instance()->getShowSelectionBoundingBox()) {
+    if(mystyle == SoFCSelection::BOX || ViewParams::ShowSelectionBoundingBox()) {
         if (action->isRenderingDelayedPaths())
             guard.set(GL_ALWAYS);
         SoFCSelectionRoot::renderBBox(action,this,
@@ -987,15 +987,15 @@ SoFCSelection::isHighlighted(SoAction *action)
 
 void SoFCSelection::applySettings ()
 {
-    this->highlightMode = ViewParams::instance()->getEnablePreselection()?SEL_ON:SEL_OFF;
-    this->selectionMode = ViewParams::instance()->getEnableSelection()?SEL_ON:SEL_OFF;
+    this->highlightMode = ViewParams::EnablePreselection()?SEL_ON:SEL_OFF;
+    this->selectionMode = ViewParams::EnableSelection()?SEL_ON:SEL_OFF;
 
     float trans;
     SbColor color;
-    color.setPackedValue(ViewParams::instance()->getHighlightColor(),trans);
+    color.setPackedValue(ViewParams::HighlightColor(),trans);
     this->colorHighlight = color;
 
-    color.setPackedValue(ViewParams::instance()->getSelectionColor(),trans);
+    color.setPackedValue(ViewParams::SelectionColor(),trans);
     this->colorSelection = color;
 }
 

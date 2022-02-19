@@ -150,7 +150,7 @@ public:
         else if (restore && !restoreOnTop)
             return;
         else if (!restore) {
-            if (ViewParams::getColorOnTop()) {
+            if (ViewParams::ColorOnTop()) {
                 if (restoreOnTop)
                     return;
             } else if (!restoreOnTop)
@@ -472,8 +472,8 @@ ElementColors::ElementColors(ViewProviderDocumentObject* vp, bool noHide)
     if(noHide)
         d->ui->hideSelection->setVisible(false);
 
-    d->ui->recompute->setChecked(ViewParams::getColorRecompute());
-    d->ui->onTop->setChecked(ViewParams::getColorOnTop());
+    d->ui->recompute->setChecked(ViewParams::ColorRecompute());
+    d->ui->onTop->setChecked(ViewParams::ColorOnTop());
 
     Selection().addSelectionGate(d,0);
 

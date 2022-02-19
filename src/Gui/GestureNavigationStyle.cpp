@@ -418,7 +418,7 @@ public:
 
         if (long_click && ev.mbstate() == NS::Event::BUTTON1DOWN) {
             bool alt = ev.modifiers & NS::Event::ALTDOWN;
-            if (ViewParams::getGestureLongPressRotationCenter() != alt) {
+            if (ViewParams::GestureLongPressRotationCenter() != alt) {
                 ns.onSetRotationCenter(ev.inventor_event->getPosition());
                 return transit<NS::AwaitingReleaseState>();
             }
@@ -429,7 +429,7 @@ public:
             if (long_click){
                 //emulate RMB-click
                 bool alt = ev.modifiers & NS::Event::ALTDOWN;
-                if (ViewParams::getGestureLongPressRotationCenter() != alt)
+                if (ViewParams::GestureLongPressRotationCenter() != alt)
                     ns.onSetRotationCenter(ev.inventor_event->getPosition());
                 else
                     ns.openPopupMenu(ev.inventor_event->getPosition());

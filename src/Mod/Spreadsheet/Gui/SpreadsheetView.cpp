@@ -99,7 +99,7 @@ SheetView::SheetView(Gui::Document *pcDocument, App::DocumentObject *docObj, QWi
     connect(ui->cells->verticalHeader(), SIGNAL(sectionResized ( int, int, int ) ),
             this, SLOT(rowResized(int, int, int)));
 
-    connect(delegate, &SpreadsheetDelegate::finishedWithKey, this, &SheetView::editingFinishedWithKey);
+    connect(delegate, &SpreadsheetDelegate::finishedWithKey, ui->cells, &SheetTableView::finishEditWithMove);
     connect(ui->cellContent, &LineEdit::finishedWithKey, this, &SheetView::editingFinishedWithKey);
     connect(ui->cellContent, &LineEdit::returnPressed, this, [this]() {confirmContentChanged(ui->cellContent->text()); });
     connect(ui->cellAlias, &LineEdit::finishedWithKey, this, &SheetView::editingFinishedWithKey);

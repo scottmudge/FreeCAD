@@ -543,9 +543,9 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
         // But if we have partial rendering (ctx2), then edges and points are
         // not rendered, so we have to proceed as normal
         if(!action->isRenderingDelayedPaths()) {
-            if(!Gui::ViewParams::getShowHighlightEdgeOnly())
+            if(!Gui::ViewParams::ShowHighlightEdgeOnly())
                 return;
-        } else if(Gui::ViewParams::getShowHighlightEdgeOnly())
+        } else if(Gui::ViewParams::ShowHighlightEdgeOnly())
             return;
     }
 
@@ -558,7 +558,7 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
             selected = 2;
     } else if ((!ctx2 || ctx2->isSelectAll())
                 && (ViewParams::highlightPick() 
-                    || (Gui::ViewParams::getShowSelectionOnTop()
+                    || (Gui::ViewParams::ShowSelectionOnTop()
                         && !Gui::SoFCUnifiedSelection::getShowSelectionBoundingBox())))
     {
         // Check the sibling selection state
@@ -582,7 +582,7 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
     // If 'ShowSelectionOnTop' is enabled, and this node is selected, and we
     // are NOT rendering on top (!isRenderingDelayedPath), and we are not
     // partial rendering.
-    if(Gui::ViewParams::getShowSelectionOnTop()
+    if(Gui::ViewParams::ShowSelectionOnTop()
             && !Gui::SoFCUnifiedSelection::getShowSelectionBoundingBox()
             && (!ctx2||ctx2->isSelectAll()) 
             && selected == 1
@@ -687,7 +687,7 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
 
     // If 'ShowSelectionOnTop' is enabled, and we ARE rendering on top
     // (isRenderingDelayedPath), and we are not partial rendering (!ctx2).
-    if(Gui::ViewParams::getShowSelectionOnTop()
+    if(Gui::ViewParams::ShowSelectionOnTop()
             && !Gui::SoFCUnifiedSelection::getShowSelectionBoundingBox()
             && (!ctx2 || ctx2->isSelectAll())
             && (!ctx || (!isHighlightAll(ctx) && (!isSelectAll(ctx)||!ctx->hasSelectionColor())))
@@ -732,7 +732,7 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
         renderHighlight(action,ctx);
     }
 
-    if(Gui::ViewParams::getSelectionFaceWire()
+    if(Gui::ViewParams::SelectionFaceWire()
             && ctx && ctx->isSelected() && !ctx->isSelectAll()) 
     {
         // If SelectionFaceWire is enabled, draw the hidden lines of each face
@@ -1056,15 +1056,15 @@ int SoBrepFaceSet::overrideMaterialBinding(
             hasTransparency = true;
             if(trans0 < overrideTransparency) 
                 trans0 = overrideTransparency;
-            if(trans0 < Gui::ViewParams::getSelectionTransparency())
-                trans0 = Gui::ViewParams::getSelectionTransparency();
+            if(trans0 < Gui::ViewParams::SelectionTransparency())
+                trans0 = Gui::ViewParams::SelectionTransparency();
             trans_size = 1;
             if(ctx2)
                 ctx2->trans0 = trans0;
         }else if(ctx2)
             ctx2->trans0 = 0.0;
 
-        float selectionTransparency = Gui::ViewParams::getSelectionTransparency();
+        float selectionTransparency = Gui::ViewParams::SelectionTransparency();
         if (selectionTransparency > trans0)
             selectionTransparency = trans0;
 
@@ -1774,8 +1774,8 @@ void SoBrepFaceSet::renderSelection(SoGLRenderAction *action,
     if (action->isRenderingDelayedPaths()
             && push
             && checkOnTop
-            && Gui::ViewParams::getShowSelectionOnTop()
-            && Gui::ViewParams::getShowSelectionBoundingBox())
+            && Gui::ViewParams::ShowSelectionOnTop()
+            && Gui::ViewParams::ShowSelectionBoundingBox())
         pushType = 2;
 
     _renderSelection(action, color, pushType);
@@ -1792,7 +1792,7 @@ void SoBrepFaceSet::_renderSelection(SoGLRenderAction *action, SbColor color, in
 
         if (pushType > 1) {
             guard.set(GL_ALWAYS);
-            highlightTransparency = Gui::ViewParams::getSelectionTransparency();
+            highlightTransparency = Gui::ViewParams::SelectionTransparency();
             SoLazyElement::setTransparency(state,this,1,&highlightTransparency,&packer);
             SoOverrideElement::setTransparencyOverride(state, this, true);
             SoLazyElement::setTwosideLighting(state, TRUE);

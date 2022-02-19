@@ -1779,11 +1779,11 @@ SoFCRenderCache::buildHighlightCache(SbFCMap<int, VertexCachePtr> &sharedcache,
       material.depthfunc = SoDepthBuffer::LEQUAL;
 
       if (color && (material.selectstyle == Material::Box
-                    || (ViewParams::getShowSelectionBoundingBox()
+                    || (ViewParams::ShowSelectionBoundingBox()
                         && (!detail || !preselect))
-                    || (ViewParams::getShowSelectionBoundingBoxThreshold()
-                        && ViewParams::getShowSelectionOnTop()
-                        && PRIVATE(this)->facecount > ViewParams::getShowSelectionBoundingBoxThreshold())))
+                    || (ViewParams::ShowSelectionBoundingBoxThreshold()
+                        && ViewParams::ShowSelectionOnTop()
+                        && PRIVATE(this)->facecount > ViewParams::ShowSelectionBoundingBoxThreshold())))
       {
         if (!bboxinited) {
           bboxinited = true;
@@ -2040,7 +2040,7 @@ SoFCRenderCache::buildHighlightCache(SbFCMap<int, VertexCachePtr> &sharedcache,
         if (color && newentry.partidx >= 0) {
           uint32_t col = newentry.cache->getFaceColor(newentry.partidx);
           if ((col & 0xff) != 0xff && alpha == 0xff) {
-            uint32_t a = static_cast<uint32_t>(ViewParams::getSelectionTransparency() * 255);
+            uint32_t a = static_cast<uint32_t>(ViewParams::SelectionTransparency() * 255);
             material.diffuse = (material.diffuse & ~0xff) | std::max(a, col&0xff);
           }
           makeDistinctColor(material.diffuse, material.diffuse, col);
@@ -2111,7 +2111,7 @@ SoFCRenderCache::buildHighlightCache(SbFCMap<int, VertexCachePtr> &sharedcache,
 
     bboxmaterial.type = cache->getNumLineIndices() ? Material::Line : Material::Point;
     bboxmaterial.diffuse = color | 0xff;
-    bboxmaterial.linewidth = ViewParams::instance()->getSelectionBBoxLineWidth();
+    bboxmaterial.linewidth = ViewParams::SelectionBBoxLineWidth();
     bboxmaterial.pointsize = bboxmaterial.linewidth * 2;
     bboxmaterial.depthclamp = true;
     bboxmaterial.overrideflags.set(Material::FLAG_NO_TEXTURE);

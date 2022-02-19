@@ -50,6 +50,7 @@ using namespace Gui::Dialog;
 class DlgSettingsUI::Private
 {
 public:
+
 #define FC_GENERAL_PARAMS \
     FC_UI_SPINBOX(ViewParams, TextCursorWidth, "Text cursor width", 1, 100, 1) \
 
@@ -258,7 +259,7 @@ DlgSettingsUI::DlgSettingsUI(QWidget* parent)
 
 #undef FC_UI_PARAM
 #define FC_UI_PARAM(_params, _name, _label, _type, _getter, _setter) \
-    ui->_name->_setter(_params::get##_name());\
+    ui->_name->_setter(_params::_name());\
 
 #undef FC_UI_SPINBOX
 #define FC_UI_SPINBOX(_params, _name, _label, _min, _max, _step) \

@@ -71,7 +71,7 @@ ViewProvider::ViewProvider()
     PartGui::ViewProviderAttachExtension::initExtension(this);
     ADD_PROPERTY(IconColor,((long)0));
 
-    if (Gui::ViewParams::instance()->getRandomColor()){
+    if (Gui::ViewParams::RandomColor()){
         MapFaceColor.setValue(false);
         MapLineColor.setValue(false);
         MapPointColor.setValue(false);
@@ -493,7 +493,7 @@ void ViewProvider::onChanged(const App::Property* prop) {
             }
 
             if (IconColor.getValue().getPackedValue()
-                    && Gui::ViewParams::getRandomColor())
+                    && Gui::ViewParams::RandomColor())
             {
                 if (siblings.size() && siblings.front() == feature)
                     MapFaceColor.setValue(false);

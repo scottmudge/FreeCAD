@@ -2544,9 +2544,9 @@ SoFCVertexCache::merge(bool allownewmerge,
   SbFCVector<SbFCUniqueId> mergeids;
   mergecount = 0;
   int i = idx + entries[idx].mergecount + 1;
-  int maxcount = ViewParams::getRenderCacheMergeCountMax();
-  if (maxcount && maxcount < ViewParams::getRenderCacheMergeCount())
-    maxcount = ViewParams::getRenderCacheMergeCount();
+  int maxcount = ViewParams::RenderCacheMergeCountMax();
+  if (maxcount && maxcount < ViewParams::RenderCacheMergeCount())
+    maxcount = ViewParams::RenderCacheMergeCount();
 
   int mcount = 1;
   for (int c=(int)entries.size(); i<c; ++i) {

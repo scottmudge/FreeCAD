@@ -1619,7 +1619,7 @@ void SoFCRayPickAction::doPick(SoNode *node)
     SoState *state = getState();
     bool pushed = false;
     bool pickall = isPickAll();
-    if (resetclipplane || ViewParams::getSectionConcave()) {
+    if (resetclipplane || ViewParams::SectionConcave()) {
         auto element = static_cast<SoClipPlaneElement*>(
                 state->getElementNoPush(SoClipPlaneElement::getClassStackIndex()));
         if (element && element->getNum()) {

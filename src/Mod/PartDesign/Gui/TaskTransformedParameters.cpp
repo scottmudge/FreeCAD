@@ -96,9 +96,9 @@ TaskTransformedParameters::TaskTransformedParameters(ViewProviderTransformed *Tr
         this->attachDocument(doc);
     }
 
-    onTopEnabled = Gui::ViewParams::instance()->getShowSelectionOnTop();
+    onTopEnabled = Gui::ViewParams::ShowSelectionOnTop();
     if(!onTopEnabled)
-        Gui::ViewParams::instance()->setShowSelectionOnTop(true);
+        Gui::ViewParams::setShowSelectionOnTop(true);
     // remember initial transaction ID
     App::GetApplication().getActiveTransaction(&transactionID);
 }
@@ -120,7 +120,7 @@ TaskTransformedParameters::~TaskTransformedParameters()
     Gui::Selection().rmvSelectionGate();
 
     if(!onTopEnabled)
-        Gui::ViewParams::instance()->setShowSelectionOnTop(false);
+        Gui::ViewParams::setShowSelectionOnTop(false);
 }
 
 void TaskTransformedParameters::slotDeletedObject(const Gui::ViewProviderDocumentObject& Obj)

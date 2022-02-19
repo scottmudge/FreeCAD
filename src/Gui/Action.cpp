@@ -669,7 +669,7 @@ void WorkbenchComboBox::populate()
 {
     clear();
     auto actions = group->actions();
-    if (ViewParams::getAutoSortWBList()) {
+    if (ViewParams::AutoSortWBList()) {
         std::sort(actions.begin(), actions.end(),
             [](const QAction *a, const QAction *b) {
                 return a->text().compare(b->text(), Qt::CaseInsensitive) < 0;
@@ -1162,7 +1162,7 @@ void WorkbenchGroup::onShowMenu()
 {
     _menu->clear();
     auto actions = _group->actions();
-    if (ViewParams::getAutoSortWBList()) {
+    if (ViewParams::AutoSortWBList()) {
         std::sort(actions.begin(), actions.end(),
             [](const QAction *a, const QAction *b) {
                 return a->text().compare(b->text(), Qt::CaseInsensitive) < 0;
@@ -2352,7 +2352,7 @@ void CmdHistoryAction::onInvokeCommand(const char *name, bool force)
         _RecentCommands.erase(res.first->second);
     res.first->second = ++_RecentCommandID;
     _RecentCommands[_RecentCommandID] = res.first->first.c_str();
-    if (ViewParams::getCommandHistorySize() < (int)_RecentCommandMap.size()) {
+    if (ViewParams::CommandHistorySize() < (int)_RecentCommandMap.size()) {
         auto it = _RecentCommands.end();
         --it;
         _RecentCommandMap.erase(it->second);

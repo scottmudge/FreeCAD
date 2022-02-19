@@ -118,7 +118,7 @@ void DlgSettingsNavigation::saveSettings()
 
 void DlgSettingsNavigation::loadSettings()
 {
-    ui->checkBoxRotationCenter->setChecked(ViewParams::getGestureLongPressRotationCenter());
+    ui->checkBoxRotationCenter->setChecked(ViewParams::GestureLongPressRotationCenter());
     ui->checkBoxZoomAtCursor->onRestore();
     ui->checkBoxInvertZoom->onRestore();
     ui->checkBoxDisableTilt->onRestore();

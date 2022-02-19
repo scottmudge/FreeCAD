@@ -413,8 +413,8 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
 
   auto clippers = next.clippers;
   if (this->shadowmapping
-      || ((ViewParams::getNoSectionOnTop()
-          || (ViewParams::getSectionConcave() && clippers.getNum() > 1))
+      || ((ViewParams::NoSectionOnTop()
+          || (ViewParams::SectionConcave() && clippers.getNum() > 1))
           && next.isOnTop()))
     clippers.clear();
 
@@ -484,15 +484,15 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
   if ((pass & RenderPassLineMask) == RenderPassLinePattern) {
     if (pass == RenderPassLinePattern) {
       transp = true;
-      uint32_t alpha = (uint32_t)(ViewParams::getTransparencyOnTop() * 255);
+      uint32_t alpha = (uint32_t)(ViewParams::TransparencyOnTop() * 255);
       if (alpha < (col & 0xff))
         col = (col & 0xffffff00) | alpha;
       overrideflags.set(Material::FLAG_TRANSPARENCY);
     }
     depthtest = false;
-    uint32_t sellinepattern = ViewParams::getSelectionLinePattern();
-    if (sellinepattern && ViewParams::getSelectionLinePatternScale() > 1)
-      sellinepattern |= ViewParams::getSelectionLinePatternScale() << 16;
+    uint32_t sellinepattern = ViewParams::SelectionLinePattern();
+    if (sellinepattern && ViewParams::SelectionLinePatternScale() > 1)
+      sellinepattern |= ViewParams::SelectionLinePatternScale() << 16;
 
     if (sellinepattern && !next.hasLinePattern())
       linepattern  = sellinepattern;
@@ -504,20 +504,20 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
   }
 
   if (pass & RenderPassHighlight) {
-    float scale = ViewParams::getSelectionLineThicken();
+    float scale = ViewParams::SelectionLineThicken();
     if (scale < 1.0)
       scale = 1.0;
     float w = linewidth * scale;
-    if (ViewParams::getSelectionLineMaxWidth() > 1.0)
-      w = std::min<float>(w, std::max<float>(linewidth, ViewParams::getSelectionLineMaxWidth()));
+    if (ViewParams::SelectionLineMaxWidth() > 1.0)
+      w = std::min<float>(w, std::max<float>(linewidth, ViewParams::SelectionLineMaxWidth()));
     linewidth = w;
 
-    float pscale = ViewParams::getSelectionPointScale();
+    float pscale = ViewParams::SelectionPointScale();
     if (pscale < 1.0)
       pscale = scale;
     w = pointsize * pscale;
-    if (ViewParams::getSelectionPointMaxSize() > 1.0)
-      w = std::min<float>(w, std::max<float>(pointsize, ViewParams::getSelectionPointMaxSize()));
+    if (ViewParams::SelectionPointMaxSize() > 1.0)
+      w = std::min<float>(w, std::max<float>(pointsize, ViewParams::SelectionPointMaxSize()));
     pointsize = w;
   }
 
@@ -1180,7 +1180,7 @@ SoFCRendererP::renderLines(SoState *state, int array, DrawEntry &draw_entry)
 {
   if (this->depthwriteonly || this->shadowmapping)
     return;
-  bool noseam = ViewParams::getHiddenLineHideSeam()
+  bool noseam = ViewParams::HiddenLineHideSeam()
     && draw_entry.ventry->partidx < 0
     && draw_entry.material->outline;
   pauseShadowRender(state, true);
@@ -1193,7 +1193,7 @@ SoFCRendererP::renderPoints(SoGLRenderAction *action, int array, DrawEntry &draw
 {
   if (this->depthwriteonly || this->shadowmapping)
     return;
-  if (!ViewParams::getHiddenLineHideVertex()
+  if (!ViewParams::HiddenLineHideVertex()
       || draw_entry.ventry->partidx >= 0
       || !draw_entry.material->outline) {
     pauseShadowRender(action->getState(), true);
@@ -1212,7 +1212,7 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
       || this->depthwriteonly
       || draw_entry.material->type != Material::Triangle
       || (!draw_entry.material->outline
-          && (!ViewParams::getShowPreSelectedFaceOutline()
+          && (!ViewParams::ShowPreSelectedFaceOutline()
               || !highlight
               || draw_entry.ventry->partidx < 0)))
     return;
@@ -1269,9 +1269,9 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
 
       if (highlight) {
         glDisable(GL_BLEND);
-        float w = linewidth * std::max(1.0, ViewParams::getSelectionLineThicken());
-        if (ViewParams::getSelectionLineMaxWidth() > 1.0)
-          w = std::min<float>(w, std::max<float>(linewidth, ViewParams::getSelectionLineMaxWidth()));
+        float w = linewidth * std::max(1.0, ViewParams::SelectionLineThicken());
+        if (ViewParams::SelectionLineMaxWidth() > 1.0)
+          w = std::min<float>(w, std::max<float>(linewidth, ViewParams::SelectionLineMaxWidth()));
         linewidth = w;
       }
       glLineWidth(linewidth*1.5f);
@@ -1319,12 +1319,12 @@ SoFCRendererP::renderSection(SoGLRenderAction *action,
   int curpass = pass++;
 
   int numclip = this->material.clippers.getNum();
-  bool concave = ViewParams::getSectionConcave() && numclip > 1;
+  bool concave = ViewParams::SectionConcave() && numclip > 1;
 
   if (this->depthwriteonly
       || curpass >= numclip
       || draw_entry.ventry->partidx >= 0
-      || (!ViewParams::getSectionFill() && !concave))
+      || (!ViewParams::SectionFill() && !concave))
     return curpass == 0;
 
   if (draw_entry.material->type != Material::Triangle) {
@@ -1415,7 +1415,7 @@ SoFCRendererP::_renderSection(SoGLRenderAction *action,
   }
 
   int numclip = this->material.clippers.getNum();
-  bool concave = ViewParams::getSectionConcave() && numclip > 1;
+  bool concave = ViewParams::SectionConcave() && numclip > 1;
 
   if (curpass == 0 && concave) {
     if (this->material.depthfunc != SoDepthBuffer::LESS)
@@ -1533,7 +1533,7 @@ SoFCRendererP::_renderSection(SoGLRenderAction *action,
     matrix.multVecMatrix(v4, v4);
   }
 
-  if (ViewParams::getSectionFillInvert()) {
+  if (ViewParams::SectionFillInvert()) {
     auto col = this->material.diffuse;
     unsigned char r = (col >> 24) & 0xff;
     unsigned char g = (col >> 16) & 0xff;
@@ -1547,10 +1547,10 @@ SoFCRendererP::_renderSection(SoGLRenderAction *action,
     glColor4ub(r, g, b, a);
   }
 
-  float hatchscale = std::max(1e-4f, 0.3f * ViewParams::getSectionHatchTextureScale());
+  float hatchscale = std::max(1e-4, 0.3 * ViewParams::SectionHatchTextureScale());
 
   auto hatch = this->hatchtexture;
-  if (!ViewParams::getSectionHatchTextureEnable())
+  if (!ViewParams::SectionHatchTextureEnable())
     hatch = nullptr;
   if (hatch) {
     pauseShadowRender(action->getState(), true);
@@ -1610,7 +1610,7 @@ SoFCRendererP::_renderSection(SoGLRenderAction *action,
 
   glPopAttrib();
 
-  if (ViewParams::getSectionFillInvert()) {
+  if (ViewParams::SectionFillInvert()) {
     auto col = this->material.diffuse;
     unsigned char r = (col >> 24) & 0xff;
     unsigned char g = (col >> 16) & 0xff;
@@ -1658,7 +1658,7 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
     auto & draw_entry = draw_entries[idx];
     if (draw_entry.skip > 0
         && !this->shadowmapping
-        && ((!ViewParams::getSectionConcave() && !ViewParams::getNoSectionOnTop())
+        && ((!ViewParams::SectionConcave() && !ViewParams::NoSectionOnTop())
             || !draw_entry.material->clippers.getNum()))
       continue;
     if (this->recheckmaterial 
@@ -1690,7 +1690,7 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
     int n = 0;
     bool pushed = false;
     while (renderSection(action, draw_entry, n, pushed, false)) {
-      if (!ViewParams::getSectionConcave()
+      if (!ViewParams::SectionConcave()
           && this->material.clippers.getNum() > 0
           && SoCullElement::cullTest(state, draw_entry.bbox, FALSE))
       {
@@ -1701,7 +1701,7 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
         if (&draw_entries != &this->slentries
             && &draw_entries != &this->hlentries
             && draw_entry.material->outline
-            && ViewParams::getHiddenLineHideFace())
+            && ViewParams::HiddenLineHideFace())
           continue;
 
         pauseShadowRender(state, pauseshadow
@@ -1767,7 +1767,7 @@ SoFCRendererP::renderTransparency(SoGLRenderAction * action,
   if (&draw_entries != &this->slentries
       && &draw_entries != &this->hlentries
       && SoFCDisplayModeElement::showHiddenLines(state)
-      && ViewParams::getHiddenLineHideFace())
+      && ViewParams::HiddenLineHideFace())
   {
     notriangle = true;
   }
@@ -1834,7 +1834,7 @@ SoFCRendererP::renderTransparency(SoGLRenderAction * action,
         bool pushed = false;
         int n = 0;
         while (renderSection(action, draw_entry, n, pushed, true)) {
-          if (!ViewParams::getSectionConcave()
+          if (!ViewParams::SectionConcave()
               && this->material.clippers.getNum() > 0
               && SoCullElement::cullTest(state, draw_entry.bbox, FALSE))
           {

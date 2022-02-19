@@ -94,11 +94,11 @@ public:
     Private(PieMenu &master, QMenu *menu, const char *_param)
         :master(master), menu(menu), param(_param?_param:"")
     {
-        fontSize = ViewParams::getPieMenuFontSize();
-        iconSize = ViewParams::getPieMenuIconSize();
-        radius = ViewParams::getPieMenuRadius();
-        duration = ViewParams::getPieMenuAnimationDuration();
-        triggerRadius = radius - ViewParams::getPieMenuTriggerRadius();
+        fontSize = ViewParams::PieMenuFontSize();
+        iconSize = ViewParams::PieMenuIconSize();
+        radius = ViewParams::PieMenuRadius();
+        duration = ViewParams::PieMenuAnimationDuration();
+        triggerRadius = radius - ViewParams::PieMenuTriggerRadius();
         if (triggerRadius < 0)
             triggerRadius = 0;
         else
@@ -378,7 +378,7 @@ public:
             offset = endOffset;
             updateVisuals();
         }
-        animator->setEasingCurve((QEasingCurve::Type)ViewParams::getPieMenuAnimationCurve());
+        animator->setEasingCurve((QEasingCurve::Type)ViewParams::PieMenuAnimationCurve());
         animator->setStartValue(offset);
         animator->setEndValue(endOffset);
         animator->start();
@@ -397,11 +397,11 @@ public:
         hoverIndex = index;
         master.update(master.width()/2-radius, master.height()/2-radius, radius*2, radius*2);
 
-        if (ViewParams::getPieMenuTriggerDelay() > 0) {
+        if (ViewParams::PieMenuTriggerDelay() > 0) {
             if (hoverIndex < 0)
                 timer.stop();
             else
-                timer.start(ViewParams::getPieMenuTriggerDelay());
+                timer.start(ViewParams::PieMenuTriggerDelay());
         }
     }
 
@@ -623,9 +623,9 @@ public:
         painter.setOpacity(0.6);
         painter.setRenderHint(QPainter::Antialiasing, true);
 
-        if (ViewParams::getPieMenuCenterRadius()) {
+        if (ViewParams::PieMenuCenterRadius()) {
             painter.setPen(QPen(Qt::black, 4));
-            qreal r = ViewParams::getPieMenuCenterRadius();
+            qreal r = ViewParams::PieMenuCenterRadius();
             painter.drawEllipse(QPointF(master.width()*0.5, master.height()*0.5), r, r);
         }
 

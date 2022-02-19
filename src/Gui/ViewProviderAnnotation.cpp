@@ -71,7 +71,7 @@ PROPERTY_SOURCE(Gui::ViewProviderAnnotation, Gui::ViewProviderDocumentObject)
 
 ViewProviderAnnotation::ViewProviderAnnotation()
 {
-    unsigned long col = ViewParams::instance()->getAnnotationTextColor();
+    unsigned long col = ViewParams::AnnotationTextColor();
     float r,g,b;
     r = ((col >> 24) & 0xff) / 255.0; g = ((col >> 16) & 0xff) / 255.0; b = ((col >> 8) & 0xff) / 255.0;
     ADD_PROPERTY(TextColor,(r,g,b));

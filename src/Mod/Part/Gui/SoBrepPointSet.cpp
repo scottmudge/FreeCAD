@@ -166,7 +166,7 @@ void SoBrepPointSet::glRender(SoGLRenderAction *action, bool inpath)
 
     Gui::FCDepthFunc depthGuard;
     if(!inpath && !delayrendering) {
-        if (ctx && ((!Gui::ViewParams::getShowSelectionOnTop() && ctx->isSelected())
+        if (ctx && ((!Gui::ViewParams::ShowSelectionOnTop() && ctx->isSelected())
                     || ctx->isHighlighted())) {
             if (ctx->isHighlightAll() || ctx->isSelectAll()) {
                 action->addDelayedPath(action->getCurPath()->copy());
@@ -192,7 +192,7 @@ void SoBrepPointSet::glRender(SoGLRenderAction *action, bool inpath)
         return;
     }
 
-    if(Gui::ViewParams::getShowSelectionOnTop()
+    if(Gui::ViewParams::ShowSelectionOnTop()
             && !Gui::SoFCUnifiedSelection::getShowSelectionBoundingBox()
             && !delayrendering
             && !ctx2 
@@ -299,12 +299,12 @@ static inline void setupRendering(
         SoState *state, SoNode *node, const uint32_t *color) 
 {
     float ps = SoPointSizeElement::get(state);
-    float pscale = Gui::ViewParams::getSelectionPointScale();
+    float pscale = Gui::ViewParams::SelectionPointScale();
     if (pscale < 1.0)
-      pscale = Gui::ViewParams::getSelectionLineThicken();
+      pscale = Gui::ViewParams::SelectionLineThicken();
     float w = ps * pscale;
-    if (Gui::ViewParams::getSelectionPointMaxSize() > 1.0)
-      w = std::min<float>(w, std::max<float>(ps, Gui::ViewParams::getSelectionPointMaxSize()));
+    if (Gui::ViewParams::SelectionPointMaxSize() > 1.0)
+      w = std::min<float>(w, std::max<float>(ps, Gui::ViewParams::SelectionPointMaxSize()));
     if (ps != w)
         SoPointSizeElement::set(state, node, w);
 

@@ -3007,8 +3007,8 @@ static void selectionCallback(void * ud, SoEventCallback * cb)
                 Gui::Selection().clearSelection(doc->getName());
         }
 
-        bool currentSelection = (ViewParams::getShowSelectionOnTop() 
-                                 && ViewParams::getSelectElementOnTop()
+        bool currentSelection = (ViewParams::ShowSelectionOnTop() 
+                                 && ViewParams::SelectElementOnTop()
                                  && selectElement);
 
         auto picked = view->getPickedList(points, center, selectElement, backFaceCull,
@@ -3997,10 +3997,10 @@ public:\
     { return "StdCmd" #_name; }\
 protected: \
     virtual void setOption(bool checked) {\
-        ViewParams::instance()->set##_option(checked);\
+        ViewParams::set##_option(checked);\
     }\
     virtual bool getOption(void) const {\
-        return ViewParams::instance()->get##_option();\
+        return ViewParams::_option();\
     }\
 };\
 StdCmd##_name::StdCmd##_name():StdCmdCheckableOption("Std_" #_name)
