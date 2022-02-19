@@ -46,6 +46,8 @@ public:
     App::PropertyLength MinimumWidth;
 
     virtual void onChanged(const App::Property *prop);
+    virtual void onDocumentRestored();
+
     const char* getViewProviderName(void) const {
         return "PartDesignGui::ViewProviderDatumPlane";
     }
@@ -54,6 +56,8 @@ public:
         PyObject **pyObj, Base::Matrix4D *pmat, bool transform, int depth) const;
 
     Base::Vector3d getNormal();
+
+    void makeShape();
 
 protected:
     virtual void Restore(Base::XMLReader& reader);

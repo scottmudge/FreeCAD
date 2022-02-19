@@ -1127,3 +1127,11 @@ bool ViewProviderBody::shouldCheckExport(App::DocumentObject *) const
 {
     return true;
 }
+
+std::map<std::string,App::Color> ViewProviderBody::getElementColors(const char *element) const
+{
+    auto body = Base::freecad_dynamic_cast<PartDesign::Body>(getObject());
+    if (body && body->getSubObjects().size())
+        return {};
+    return inherited::getElementColors(element);
+}

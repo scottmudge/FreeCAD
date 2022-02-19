@@ -44,7 +44,8 @@ public:
     App::PropertyLength Length;
     App::PropertyLength MinimumLength;
     virtual void onChanged(const App::Property *prop);
-    
+    virtual void onDocumentRestored();
+
     const char* getViewProviderName(void) const {
         return "PartDesignGui::ViewProviderDatumLine";
     }
@@ -54,6 +55,8 @@ public:
 
     Base::Vector3d getDirection() const;
     
+    void makeShape();
+
 private:
     static const char* ResizeModeEnums[];
 };

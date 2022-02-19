@@ -84,7 +84,7 @@ struct SoFCAllocator : std::allocator<T> {
 };
 
 template<class KeyT, class ValueT>
-using SbFCMap = std::map<KeyT, ValueT, std::less<KeyT>, SoFCAllocator<std::pair<KeyT,ValueT>>>;
+using SbFCMap = std::map<KeyT, ValueT, std::less<KeyT>, SoFCAllocator<std::pair<const KeyT,ValueT>>>;
 
 template<class ValueT>
 using SbFCSet = std::set<ValueT, std::less<ValueT>, SoFCAllocator<ValueT>>;

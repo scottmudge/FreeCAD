@@ -261,8 +261,6 @@ void PropertyPartShape::getPaths(std::vector<App::ObjectIdentifier> &paths) cons
     //                 << App::ObjectIdentifier::Component::SimpleComponent(App::ObjectIdentifier::String("Volume")));
 }
 
-static void BRepTools_Write(const TopoDS_Shape& Sh, Standard_OStream& S);
-
 void PropertyPartShape::beforeSave() const
 {
     _HasherIndex = 0;
@@ -296,11 +294,6 @@ void PropertyPartShape::Save (Base::Writer &writer) const
     writer.Stream() << " ElementMap=\"" << version << '"';
 
     bool binary = writer.getMode("BinaryBrep");
-#if OCC_VERSION_HEX >= 0x070600
-    // OCC 7.6 binary format is not backward compatible. So do not honor the
-    // option unless being forced.
-    binary = binary && PartParams::ForceSaveBinary();
-#endif
     bool toXML = writer.getFileVersion()>1 && writer.isForceXML()>=(binary?3:2);
     if(!toXML) {
         writer.Stream() << " file=\""
@@ -314,7 +307,7 @@ void PropertyPartShape::Save (Base::Writer &writer) const
         writer.endCharStream() <<  writer.ind() << "</Part>\n";
     } else {
         writer.Stream() << " brep=\"1\">\n";
-        BRepTools_Write(_Shape.getShape(), writer.beginCharStream(false)<<'\n');
+        _Shape.exportBrep(writer.beginCharStream(false)<<'\n');
         writer.endCharStream() << '\n' << writer.ind() << "</Part>\n";
     }
 
@@ -430,30 +423,9 @@ void PropertyPartShape::Restore(Base::XMLReader &reader)
     }
 }
 
-// The following two functions are copied from OCCT BRepTools.cxx and modified
+// The following function is copied from OCCT BRepTools.cxx and modified
 // to disable saving of triangulation
 //
-static void BRepTools_Write(const TopoDS_Shape& Sh, Standard_OStream& S) {
-  BRepTools_ShapeSet SS(Standard_False);
-  // SS.SetProgress(PR);
-#if OCC_VERSION_HEX >= 0x070600
-  TopTools_FormatVersion theVersion;
-  switch(PartParams::BRepSaveFormat()) {
-  case 2:
-    theVersion = TopTools_FormatVersion_VERSION_2;
-    break;
-  case 3:
-    theVersion = TopTools_FormatVersion_VERSION_3;
-    break;
-  default:
-    theVersion = TopTools_FormatVersion_VERSION_1;
-  }
-  SS.SetFormatNb(theVersion);
-#endif
-  SS.Add(Sh);
-  SS.Write(S);
-  SS.Write(Sh,S);
-}
 
 static Standard_Boolean  BRepTools_Write(const TopoDS_Shape& Sh, const Standard_CString File)
 {
@@ -469,7 +441,15 @@ static Standard_Boolean  BRepTools_Write(const TopoDS_Shape& Sh, const Standard_
   if(!isGood)
     return isGood;
 
+  // See TopTools_FormatVersion of OCCT 7.6
+  enum {
+      VERSION_1 = 1,
+      VERSION_2 = 2,
+      VERSION_3 = 3
+  };
+
   BRepTools_ShapeSet SS(Standard_False);
+  SS.SetFormatNb(VERSION_1);
   // SS.SetProgress(PR);
   SS.Add(Sh);
 
@@ -535,19 +515,7 @@ void PropertyPartShape::SaveDocFile (Base::Writer &writer) const
 
             Base::ifstream file(fi, std::ios::in | std::ios::binary);
             if (file) {
-                //unsigned long ulSize = 0;
                 std::streambuf* buf = file.rdbuf();
-                //if (buf) {
-                //    unsigned long ulCurr;
-                //    ulCurr = buf->pubseekoff(0, std::ios::cur, std::ios::in);
-                //    ulSize = buf->pubseekoff(0, std::ios::end, std::ios::in);
-                //    buf->pubseekoff(ulCurr, std::ios::beg, std::ios::in);
-                //}
-
-                // read in the ASCII file and write back to the stream
-                //std::strstreambuf sbuf(ulSize);
-                //file >> &sbuf;
-                //writer.Stream() << &sbuf;
                 writer.Stream() << buf;
             }
 
@@ -556,7 +524,9 @@ void PropertyPartShape::SaveDocFile (Base::Writer &writer) const
             fi.deleteFile();
         }
         else {
-            BRepTools_Write(myShape, writer.Stream());
+            TopoShape shape;
+            shape.setShape(myShape);
+            shape.exportBrep(writer.Stream());
         }
     }
 }

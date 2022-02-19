@@ -59,6 +59,19 @@ Plane::Plane()
     Width.setReadOnly(true);
 
     this->setAttacher(new AttachEnginePlane);
+
+    makeShape();
+}
+
+Plane::~Plane()
+{
+}
+
+void Plane::makeShape()
+{
+    if (!Shape.getShape().isNull())
+        return;
+
     // Create a shape, which will be used by the Sketcher. Them main function is to avoid a dependency of
     // Sketcher on the PartDesign module
     BRepBuilderAPI_MakeFace builder(gp_Pln(gp_Pnt(0,0,0), gp_Dir(0,0,1)));
@@ -66,11 +79,16 @@ Plane::Plane()
         return;
     TopoDS_Shape myShape = builder.Shape();
     myShape.Infinite(Standard_True);
-    Shape.setValue(myShape);
+    Part::TopoShape ts(myShape);
+    ts.setPlacement(Placement.getValue());
+    Shape.setValue(ts);
 }
 
-Plane::~Plane()
+void Plane::onDocumentRestored()
 {
+    // Just in case the document is restored without any BRep shape
+    this->makeShape();
+    Datum::onDocumentRestored();
 }
 
 Base::Vector3d Plane::getNormal()

@@ -804,24 +804,9 @@ void TopoShape::importBrep(std::istream& str, int indicator)
     }
 }
 
-void TopoShape::importBinary(std::istream& _str)
+void TopoShape::importBinary(std::istream& str)
 {
     BinTools_ShapeSet theShapeSet;
-#if OCC_VERSION_HEX >= 0x070600
-    // OCC 7.6 now requires a random seeking input stream to work
-    QByteArray bytes;
-    {
-        char tmp[4096];
-        while (!_str.eof()) {
-            int len = _str.read(tmp, sizeof(tmp)).gcount();
-            bytes.append(tmp, len);
-        }
-    }
-    Base::ByteArrayIStreambuf buf(bytes);
-    std::istream str(&buf);
-#else
-    auto &str = _str;
-#endif
     theShapeSet.Read(str);
     Standard_Integer shapeId=0, locId=0, orient=0;
     BinTools::GetInteger(str, shapeId);
@@ -927,19 +912,43 @@ void TopoShape::exportStep(const char *filename) const
 
 void TopoShape::exportBrep(const char *filename) const
 {
+#if OCC_VERSION_HEX >= 0x070600
+    if (!BRepTools::Write(this->_Shape,encodeFilename(filename).c_str(), Standard_False, Standard_False, TopTools_FormatVersion_VERSION_1))
+        throw Base::FileException("Writing of BREP failed");
+#else
     if (!BRepTools::Write(this->_Shape,encodeFilename(filename).c_str()))
         throw Base::FileException("Writing of BREP failed");
+#endif
 }
 
 void TopoShape::exportBrep(std::ostream& out) const
 {
-    BRepTools::Write(this->_Shape, out);
+    // See TopTools_FormatVersion of OCCT 7.6
+    enum {
+        VERSION_1 = 1,
+        VERSION_2 = 2,
+        VERSION_3 = 3
+    };
+    BRepTools_ShapeSet SS(Standard_False);
+    SS.SetFormatNb(VERSION_1);
+    SS.Add(this->_Shape);
+    SS.Write(out);
+    SS.Write(this->_Shape, out);
 }
 
 void TopoShape::exportBinary(std::ostream& out)
 {
+    // See BinTools_FormatVersion of OCCT 7.6
+    enum {
+        VERSION_1 = 1,
+        VERSION_2 = 2,
+        VERSION_3 = 3,
+        VERSION_4 = 4
+    };
+
     // An example how to use BinTools_ShapeSet can be found in BinMNaming_NamedShapeDriver.cxx
     BinTools_ShapeSet theShapeSet;
+    theShapeSet.SetFormatNb(VERSION_3);
     if (this->_Shape.IsNull()) {
         theShapeSet.Add(this->_Shape);
         theShapeSet.Write(out);
@@ -952,24 +961,10 @@ void TopoShape::exportBinary(std::ostream& out)
         Standard_Integer locId = theShapeSet.Locations().Index(this->_Shape.Location());
         Standard_Integer orient = static_cast<int>(this->_Shape.Orientation());
 
-#if OCC_VERSION_HEX >= 0x070600
-        // OCC 7.6 now requires a random seeking output stream to work
-        QByteArray bytes;
-        {
-            Base::ByteArrayOStreambuf buf(bytes);
-            std::ostream out(&buf);
-            theShapeSet.Write(out);
-            BinTools::PutInteger(out, shapeId);
-            BinTools::PutInteger(out, locId);
-            BinTools::PutInteger(out, orient);
-        }
-        out.write(bytes.constData(), bytes.size());
-#else
         theShapeSet.Write(out);
         BinTools::PutInteger(out, shapeId);
         BinTools::PutInteger(out, locId);
         BinTools::PutInteger(out, orient);
-#endif
     }
 }
 

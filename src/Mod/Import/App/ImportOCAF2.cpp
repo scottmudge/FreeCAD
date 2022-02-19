@@ -1459,6 +1459,10 @@ TDF_Label ExportOCAF2::exportObject(App::DocumentObject* parentObj,
     if (groupLinks.size() && groupLinks.back()==obj)
         groupLinks.pop_back();
 
+#if OCC_VERSION_HEX >= 0x070200
+    aShapeTool->UpdateAssemblies();
+#endif
+
     // Finished adding components. Now retrieve the computed non-located shape
     auto baseShape = shape;
     baseShape.setShape(aShapeTool->GetShape(label),false);

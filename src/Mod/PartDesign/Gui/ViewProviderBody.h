@@ -114,6 +114,8 @@ public:
     void groupSiblings(PartDesign::Feature *feat, bool collapse, bool all);
     bool checkSiblings();
 
+    std::map<std::string,App::Color> getElementColors(const char *element) const;
+
 protected:
     /// Copy over all visual properties to the child features
     void unifyVisualProperty(const App::Property* prop);

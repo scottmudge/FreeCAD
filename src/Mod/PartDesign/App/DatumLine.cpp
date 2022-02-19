@@ -56,6 +56,21 @@ Line::Line()
     Length.setReadOnly(true);
 
     this->setAttacher(new AttachEngineLine);
+
+    makeShape();
+
+    Support.touch();
+}
+
+Line::~Line()
+{
+}
+
+void Line::makeShape()
+{
+    if (!Shape.getShape().isNull())
+        return;
+
     // Create a shape, which will be used by the Sketcher. Them main function is to avoid a dependency of
     // Sketcher on the PartDesign module
     BRepBuilderAPI_MakeEdge builder(gp_Lin(gp_Pnt(0,0,0), gp_Dir(0,0,1)));
@@ -63,13 +78,16 @@ Line::Line()
         return;
     TopoDS_Shape myShape = builder.Shape();
     myShape.Infinite(Standard_True);
-    Shape.setValue(myShape);
-
-    Support.touch();
+    Part::TopoShape tshape(myShape);
+    tshape.setPlacement(Placement.getValue());
+    Shape.setValue(tshape);
 }
 
-Line::~Line()
+void Line::onDocumentRestored()
 {
+    // Just in case the document is restored without any BRep shape
+    this->makeShape();
+    Datum::onDocumentRestored();
 }
 
 Base::Vector3d Line::getDirection() const
