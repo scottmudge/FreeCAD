@@ -1,15 +1,18 @@
 import cog
 
-def declare_begin(module):
+def declare_begin(module, header=True):
     class_name = module.ClassName
     namespace = module.NameSpace
     params = module.Params
     param_path = module.ParamPath
     class_doc = module.ClassDoc
 
-    cog.out(f'''
+    if header:
+        cog.out(f'''
 #include <Base/Parameter.h>
+''')
 
+    cog.out(f'''
 namespace {namespace} {{
 /** {class_doc}
 
@@ -62,28 +65,31 @@ public:
 
 def declare_end(module):
     namespace = module.NameSpace
-    cog.out('''
-};
+    cog.out(f'''
+}};
 
-} // namespace {namespace}
+}} // namespace {namespace}
 ''')
 
 
-def define(module):
+def define(module, header=True):
     class_name = module.ClassName
     namespace = module.NameSpace
     params = module.Params
     param_path = module.ParamPath
     class_doc = module.ClassDoc
 
-    cog.out(f'''
+    if header:
+        cog.out(f'''
 #include <unordered_map>
 #include <App/Application.h>
 #include <App/DynamicProperty.h>
 #include "{class_name}.h"
 
 using namespace {namespace};
+''')
 
+    cog.out(f'''
 class {class_name}P: public ParameterGrp::ObserverType {{
 public:
     ParameterGrp::handle handle;

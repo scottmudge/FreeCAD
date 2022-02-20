@@ -396,7 +396,7 @@ public:\
     { return "StdCmdLink" #_name; }\
 protected: \
     virtual void setOption(bool checked) {\
-        App::LinkParams::set_##_name(checked);\
+        App::LinkParams::set##_name(checked);\
     }\
     virtual bool getOption(void) const {\
         return App::LinkParams::_name();\
