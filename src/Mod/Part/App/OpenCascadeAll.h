@@ -484,6 +484,7 @@
 #include <ShapeFix_Wire.hxx>
 #include <ShapeUpgrade_ShellSewing.hxx>
 #include <ShapeUpgrade_RemoveInternalWires.hxx>
+#include <ShapeUpgrade_ShapeDivideClosed.hxx> 
 
 // Import
 #include <APIHeaderSection_MakeHeader.hxx>
