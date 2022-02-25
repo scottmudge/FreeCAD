@@ -79,6 +79,26 @@ DlgCustomKeyboardImp::DlgCustomKeyboardImp( QWidget* parent  )
     auto completer = new CommandCompleter(ui->editCommand, this);
     connect(completer, SIGNAL(commandActivated(QByteArray)), this, SLOT(onCommandActivated(QByteArray)));
 
+    QStringList labels;
+    labels << tr("Icon") << tr("Command");
+    ui->commandTreeWidget->setHeaderLabels(labels);
+    ui->commandTreeWidget->header()->hide();
+    ui->commandTreeWidget->setIconSize(QSize(32, 32));
+    ui->commandTreeWidget->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+
+    ui->assignedTreeWidget->setHeaderLabels(labels);
+    ui->assignedTreeWidget->header()->hide();
+
+    populateCategories();
+}
+
+/** Destroys the object and frees any allocated resources */
+DlgCustomKeyboardImp::~DlgCustomKeyboardImp()
+{
+}
+
+void DlgCustomKeyboardImp::populateCategories()
+{
     CommandManager & cCmdMgr = Application::Instance->commandManager();
     std::map<std::string,Command*> sCommands = cCmdMgr.getCommands();
 
@@ -106,26 +126,12 @@ DlgCustomKeyboardImp::DlgCustomKeyboardImp( QWidget* parent  )
         }
     }
 
-    int index = 0;
-    for (GroupMap::iterator it = groupMap.begin(); it != groupMap.end(); ++it, ++index) {
-        ui->categoryBox->addItem(it->second);
-        ui->categoryBox->setItemData(index, QVariant(it->first), Qt::UserRole);
+    for (GroupMap::iterator it = groupMap.begin(); it != groupMap.end(); ++it) {
+        if (ui->categoryBox->findData(it->first) < 0) {
+            ui->categoryBox->addItem(it->second);
+            ui->categoryBox->setItemData(ui->categoryBox->count()-1, QVariant(it->first), Qt::UserRole);
+        }
     }
-
-    QStringList labels;
-    labels << tr("Icon") << tr("Command");
-    ui->commandTreeWidget->setHeaderLabels(labels);
-    ui->commandTreeWidget->header()->hide();
-    ui->commandTreeWidget->setIconSize(QSize(32, 32));
-    ui->commandTreeWidget->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-
-    ui->assignedTreeWidget->setHeaderLabels(labels);
-    ui->assignedTreeWidget->header()->hide();
-}
-
-/** Destroys the object and frees any allocated resources */
-DlgCustomKeyboardImp::~DlgCustomKeyboardImp()
-{
 }
 
 void DlgCustomKeyboardImp::showEvent(QShowEvent* e)
@@ -147,20 +153,33 @@ void DlgCustomKeyboardImp::onCommandActivated(const QByteArray &name)
         return;
 
     QString group = QString::fromLatin1(cmd->getGroupName());
-    int index = ui->categoryBox->findText(group);
-    if (index < 0)
-        return;
+    int index = ui->categoryBox->findData(group);
+    if (index < 0) {
+        populateCategories();
+        index = ui->categoryBox->findData(group);
+        if (index < 0)
+            return;
+    }
+    int retry = 0;
     if (index != ui->categoryBox->currentIndex()) {
         ui->categoryBox->setCurrentIndex(index);
         on_categoryBox_activated(index);
+        retry = 1;
     }
-    for (int i=0 ; i<ui->commandTreeWidget->topLevelItemCount(); ++i) {
-        QTreeWidgetItem *item = ui->commandTreeWidget->topLevelItem(i);
-        if (item->data(1, Qt::UserRole).toByteArray() == name) {
-            item->setSelected(true);
-            ui->commandTreeWidget->scrollToItem(item);
-            break;
+    for (;retry < 2; ++retry) {
+        for (int i=0 ; i<ui->commandTreeWidget->topLevelItemCount(); ++i) {
+            QTreeWidgetItem *item = ui->commandTreeWidget->topLevelItem(i);
+            if (item->data(1, Qt::UserRole).toByteArray() == name) {
+                item->setSelected(true);
+                ui->commandTreeWidget->setCurrentItem(item);
+                return;
+            }
         }
+        // Since the 'Customize...' dialog is now modaless, the user may
+        // activate some new workbench, thus adding new commands. Try to
+        // refresh the command list under the current category if haven't done
+        // so.
+        on_categoryBox_activated(index);
     }
 }
 

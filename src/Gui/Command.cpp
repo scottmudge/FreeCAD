@@ -1931,7 +1931,7 @@ public:
     CmdMacroPreselectCommands()
         : Command("Std_MacroPreselectionCommands")
     {
-        sGroup      = "Macro Preselection";
+        sGroup      = "Macros Preselection";
         eType       = NoHistory;
         bCanLog     = false;
         sMenuText     = QT_TR_NOOP("Preselection Macros");

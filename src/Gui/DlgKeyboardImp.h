@@ -70,6 +70,7 @@ protected Q_SLOTS:
 protected:
     void changeEvent(QEvent *e);
     void setShortcutOfCurrentAction(const QString&);
+    void populateCategories();
 
 private:
     std::unique_ptr<Ui_DlgCustomKeyboard> ui;
