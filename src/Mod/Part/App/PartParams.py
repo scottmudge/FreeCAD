@@ -70,6 +70,7 @@ Params = [
     ParamBool("AutoCorrectLink", False),
     ParamBool("RefineModel", False),
     ParamBool("AuxGroupUniqueLabel", False),
+    ParamBool("AutoAuxGrouping", True),
     ParamBool("SplitEllipsoid", True),
     ParamInt("ParallelRunThreshold", 100),
     _MinimumDeviation,

@@ -159,6 +159,19 @@ it only applies to auto created group with their original labels.</string>
         </property>
        </widget>
       </item>
+      <item row="8" column="0"> 
+       <widget class="Gui::PrefCheckBox" name="checkAutoAuxiliaryGrouping"> 
+        <property name="text"> 
+         <string>Automatic auxiliary grouping for new Bodies</string> 
+        </property> 
+        <property name="prefPath" stdset="0"> 
+         <cstring>Mod/Part</cstring> 
+        </property> 
+        <property name="prefEntry" stdset="0"> 
+         <cstring>AutoAuxGrouping</cstring> 
+        </property> 
+       </widget> 
+      </item> 
      </layout>
     </widget>
    </item>
