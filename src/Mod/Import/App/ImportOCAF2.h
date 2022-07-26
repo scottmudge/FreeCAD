@@ -168,6 +168,13 @@ private:
         DocumentInfo(App::Document *d, std::vector<App::DocumentObject*> &objs)
             :doc(d), children(objs)
         {}
+
+        // Needed for MSVC
+        DocumentInfo& operator=(const DocumentInfo& in) {
+            doc = in.doc;
+            children = in.children;
+            return *this;
+        }
     };
     std::vector<DocumentInfo> myDocumentStack;
     std::vector<App::Document*> myNewDocuments;
