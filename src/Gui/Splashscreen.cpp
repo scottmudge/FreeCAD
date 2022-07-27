@@ -247,6 +247,7 @@ QLabel *loadSplashGif(QWidget *parent, const char *key, const char *alignmentKey
         gifLabel->setAlignment(Qt::AlignmentFlag(align));
     else
         gifLabel->setAlignment(Qt::AlignTop | Qt::AlignRight);
+    gifLabel->setAttribute(Qt::WA_TranslucentBackground, true);
     return gifLabel;
 }
 } // anonymous namespace
