@@ -30,6 +30,7 @@
 #include <Base/Console.h>
 #include <Base/Tools.h>
 #include <App/Document.h>
+#include <App/Application.h>
 #include "Origin.h"
 
 #include "GeoFeature.h"
@@ -136,6 +137,10 @@ void OriginGroupExtension::onExtendedSetupObject () {
     App::Document *doc = getExtendedObject()->getDocument ();
 
     App::DocumentObject *originObj = doc->addObject ( "App::Origin", "Origin" );
+
+    auto partParamsGroup = App::GetApplication().GetUserParameter().GetGroup("BaseApp/Preferences/Mod/Part");
+    if (partParamsGroup && partParamsGroup->GetBool("AutoHideOrigins", false))
+        originObj->setStatus(HideInTree, true);
 
     assert ( originObj && originObj->isDerivedFrom ( App::Origin::getClassTypeId () ) );
     Origin.setValue (originObj);

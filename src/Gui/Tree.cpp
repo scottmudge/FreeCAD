@@ -8586,6 +8586,11 @@ bool DocumentItem::showItem(DocumentObjectItem *item, bool select, bool force) {
 void DocumentItem::updateItemsVisibility(QTreeWidgetItem *item, bool show) {
     if(item->type() == TreeWidget::ObjectType) {
         auto objitem = static_cast<DocumentObjectItem*>(item);
+        ViewProviderDocumentObject& obj = *objitem->object();
+        if (obj.getObject()->testStatus(App::HideInTree)) {
+            obj.ShowInTree.setValue(false);
+            obj.getObject()->setStatus(App::HideInTree, false);
+        }
         objitem->setHidden(!show && !objitem->object()->showInTree());
     }
     for(int i=0;i<item->childCount();++i)

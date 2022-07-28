@@ -56,6 +56,7 @@ public:
     bool RefineModel;
     bool AuxGroupUniqueLabel;
     bool AutoAuxGrouping;
+    bool AutoHideOrigins;
     bool SplitEllipsoid;
     long ParallelRunThreshold;
     double MinimumDeviation;
@@ -98,6 +99,8 @@ public:
         funcs["AuxGroupUniqueLabel"] = &PartParamsP::updateAuxGroupUniqueLabel;
         AutoAuxGrouping = handle->GetBool("AutoAuxGrouping", true);
         funcs["AutoAuxGrouping"] = &PartParamsP::updateAutoAuxGrouping;
+        AutoHideOrigins = handle->GetBool("AutoHideOrigins", true);
+        funcs["AutoHideOrigins"] = &PartParamsP::updateAutoHideOrigins;
         SplitEllipsoid = handle->GetBool("SplitEllipsoid", true);
         funcs["SplitEllipsoid"] = &PartParamsP::updateSplitEllipsoid;
         ParallelRunThreshold = handle->GetInt("ParallelRunThreshold", 100);
@@ -187,6 +190,10 @@ public:
     // Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:238)
     static void updateAutoAuxGrouping(PartParamsP *self) {
         self->AutoAuxGrouping = self->handle->GetBool("AutoAuxGrouping", true);
+    }
+    // Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:238)
+    static void updateAutoHideOrigins(PartParamsP *self) {
+        self->AutoHideOrigins = self->handle->GetBool("AutoHideOrigins", true);
     }
     // Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:238)
     static void updateSplitEllipsoid(PartParamsP *self) {
@@ -630,6 +637,33 @@ void PartParams::setAutoAuxGrouping(const bool &v) {
 // Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:314)
 void PartParams::removeAutoAuxGrouping() {
     instance()->handle->RemoveBool("AutoAuxGrouping");
+}
+
+// Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:288)
+const char *PartParams::docAutoHideOrigins() {
+    return "";
+}
+
+// Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:294)
+const bool & PartParams::getAutoHideOrigins() {
+    return instance()->AutoHideOrigins;
+}
+
+// Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:300)
+const bool & PartParams::defaultAutoHideOrigins() {
+    const static bool def = true;
+    return def;
+}
+
+// Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:307)
+void PartParams::setAutoHideOrigins(const bool &v) {
+    instance()->handle->SetBool("AutoHideOrigins",v);
+    instance()->AutoHideOrigins = v;
+}
+
+// Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:314)
+void PartParams::removeAutoHideOrigins() {
+    instance()->handle->RemoveBool("AutoHideOrigins");
 }
 
 // Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:288)

@@ -69,6 +69,7 @@ enum ObjectStatus {
     RecomputeExtension = 19, // mark the object to recompute its extensions
     ViewProviderAttached = 20, // indicate if a view provider is attached to this object
     ObjEditing = 21, // indicate the object is current being edited
+    HideInTree = 22, // indicates the object is hidden in tree view, set as property to allow other functions to change visibility
 };
 
 /** Return object for feature execution

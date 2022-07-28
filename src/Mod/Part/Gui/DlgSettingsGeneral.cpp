@@ -126,6 +126,7 @@ void DlgSettingsGeneral::saveSettings()
     ui->checkBoxAuxGroup->onSave();
     ui->checkSplitEllipsoid->onSave();
     ui->checkAutoAuxiliaryGrouping->onSave();
+    ui->checkAutoHideOrigins->onSave();
 }
 
 void DlgSettingsGeneral::loadSettings()
@@ -142,6 +143,7 @@ void DlgSettingsGeneral::loadSettings()
     ui->checkBoxAuxGroup->onRestore();
     ui->checkSplitEllipsoid->onRestore();
     ui->checkAutoAuxiliaryGrouping->onRestore();
+    ui->checkAutoHideOrigins->onRestore();
 }
 
 /**

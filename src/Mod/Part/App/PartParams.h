@@ -220,6 +220,16 @@ public:
 
     // Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:122)
     //@{
+    /// Accessor for parameter AutoHideOrigins
+    static const bool & getAutoHideOrigins();
+    static const bool & defaultAutoHideOrigins();
+    static void removeAutoHideOrigins();
+    static void setAutoHideOrigins(const bool &v);
+    static const char *docAutoHideOrigins();
+    //@}
+
+    // Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:122)
+    //@{
     /// Accessor for parameter SplitEllipsoid
     static const bool & getSplitEllipsoid();
     static const bool & defaultSplitEllipsoid();
