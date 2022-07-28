@@ -44,6 +44,7 @@
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <QScreen>
 # include <QMovie>
@@ -65,20 +66,25 @@ using namespace Gui::Dialog;
 
 static inline int parseAlignment(const std::string &text)
 {
-    int align=0;
-    if (boost::starts_with(text, "VCenter"))
-        align = Qt::AlignVCenter;
-    else if (boost::starts_with(text, "Top"))
-        align = Qt::AlignTop;
-    else if (boost::starts_with(text, "Bottom"))
-        align = Qt::AlignBottom;
+    std::vector<std::string> alignment_keys;
+    boost::split(alignment_keys, text, boost::is_any_of("|"));
 
-    if (boost::starts_with(text, "HCenter"))
-        align += Qt::AlignHCenter;
-    else if (boost::starts_with(text, "Right"))
-        align += Qt::AlignRight;
-    else if (boost::starts_with(text, "Left"))
-        align += Qt::AlignLeft;
+    int align=0;
+    for (const auto& align_key : alignment_keys) {
+        if (boost::starts_with(align_key, "VCenter"))
+            align |= Qt::AlignVCenter;
+        else if (boost::starts_with(align_key, "Top"))
+            align |= Qt::AlignTop;
+        else if (boost::starts_with(align_key, "Bottom"))
+            align |= Qt::AlignBottom;
+
+        if (boost::starts_with(align_key, "HCenter"))
+            align |= Qt::AlignHCenter;
+        else if (boost::starts_with(align_key, "Right"))
+            align |= Qt::AlignRight;
+        else if (boost::starts_with(align_key, "Left"))
+            align |= Qt::AlignLeft;
+    }
     return align;
 }
 
@@ -148,7 +154,13 @@ public:
                 return;
         }
 
-        splash->showMessage(msg.replace(QStringLiteral("\n"), QString()), alignment, textColor);
+        // Strip out initial newlines.
+        msg = msg.replace(QStringLiteral("\n"), QString());
+        // Add one to buffer from bottom alignment, and shift to right.
+        msg.prepend(QStringLiteral("     "));
+        msg.append(QStringLiteral("\n"));
+
+        splash->showMessage(msg, alignment, textColor);
         QMutex mutex;
         QMutexLocker ml(&mutex);
         QWaitCondition().wait(&mutex, 50);
