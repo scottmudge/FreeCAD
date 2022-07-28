@@ -1146,6 +1146,34 @@ protected: \
     virtual Gui::Action * createAction(void);\
 };
 
+ /** The Command Macro Standard + isActive() + createAction()
+  *  + languageChange() + getMenuText() + getToolTipText() + getStatusTip()
+  *  + getWhatsThis()
+  *  This macro makes it easier to define a new command.
+  *  The parameters are the class name
+  *  This is mainly used for commands where the internal action
+  *  eventually overrides the standard text (e.g., StdCmdAbout)
+  *  @author Werner Mayer + Scott Mudge
+  */
+#define DEF_STD_CMD_ACL_TXT(X) class X : public Gui::Command \
+{\
+public:\
+    X();\
+    virtual ~X(){}\
+    virtual void languageChange(); \
+    virtual const char* className() const\
+    { return #X; }\
+protected: \
+    virtual void activated(int iMsg);\
+    virtual bool isActive(void);\
+    virtual Gui::Action * createAction(void);\
+    virtual const char* getMenuText(void) const;  \
+    virtual const char* getToolTipText(void) const; \
+    virtual const char* getStatusTip(void) const; \
+    virtual const char* getWhatsThis(void) const; \
+};
+
+
 /** The Command Macro Standard + isActive() + createAction()
  *  + languageChange() + updateAction()
  *  This macro makes it easier to define a new command.

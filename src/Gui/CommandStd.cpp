@@ -238,7 +238,7 @@ Action * StdCmdRecentMacros::createAction(void)
 // Std_About
 //===========================================================================
 
-DEF_STD_CMD_ACL(StdCmdAbout)
+DEF_STD_CMD_ACL_TXT(StdCmdAbout)
 
 StdCmdAbout::StdCmdAbout()
   :Command("Std_About")
@@ -258,17 +258,34 @@ Action * StdCmdAbout::createAction(void)
     QString exe = qApp->applicationName();
     pcAction = new Action(this,getMainWindow());
     pcAction->setText(QCoreApplication::translate(
-        this->className(), getMenuText()).arg(exe));
+        this->className(), sMenuText).arg(exe));
     pcAction->setToolTip(QCoreApplication::translate(
-        this->className(), getToolTipText()).arg(exe));
+        this->className(), sToolTipText).arg(exe));
     pcAction->setStatusTip(QCoreApplication::translate(
-        this->className(), getStatusTip()).arg(exe));
-    pcAction->setWhatsThis(QString::fromUtf8(getWhatsThis()));
+        this->className(), sStatusTip).arg(exe));
+    pcAction->setWhatsThis(QString::fromUtf8(sWhatsThis));
     pcAction->setIcon(QApplication::windowIcon());
     pcAction->setShortcut(QString::fromUtf8(getAccel()));
     // Needs to have AboutRole set to avoid duplicates if adding the about action more than once on macOS
     pcAction->setMenuRole(QAction::AboutRole);
+
     return pcAction;
+}
+
+const char* StdCmdAbout::getMenuText(void) const {
+    return (_pcAction ? _pcAction->text().toUtf8() : sMenuText);
+}
+
+const char* StdCmdAbout::getToolTipText(void) const {
+    return (_pcAction ? _pcAction->toolTip().toUtf8() : sToolTipText);
+}
+
+const char* StdCmdAbout::getStatusTip(void) const {
+    return (_pcAction ? _pcAction->statusTip().toUtf8() : sStatusTip);
+}
+
+const char* StdCmdAbout::getWhatsThis(void) const {
+    return (_pcAction ? _pcAction->whatsThis().toUtf8() : sWhatsThis);
 }
 
 bool StdCmdAbout::isActive()
