@@ -273,19 +273,19 @@ Action * StdCmdAbout::createAction(void)
 }
 
 const char* StdCmdAbout::getMenuText(void) const {
-    return (_pcAction ? _pcAction->text().toUtf8() : sMenuText);
+    return (_pcAction ? _pcAction->text().toUtf8().constData() : sMenuText);
 }
 
 const char* StdCmdAbout::getToolTipText(void) const {
-    return (_pcAction ? _pcAction->toolTip().toUtf8() : sToolTipText);
+    return (_pcAction ? _pcAction->toolTip().toUtf8().constData() : sToolTipText);
 }
 
 const char* StdCmdAbout::getStatusTip(void) const {
-    return (_pcAction ? _pcAction->statusTip().toUtf8() : sStatusTip);
+    return (_pcAction ? _pcAction->statusTip().toUtf8().constData() : sStatusTip);
 }
 
 const char* StdCmdAbout::getWhatsThis(void) const {
-    return (_pcAction ? _pcAction->whatsThis().toUtf8() : sWhatsThis);
+    return (_pcAction ? _pcAction->whatsThis().toUtf8().constData() : sWhatsThis);
 }
 
 bool StdCmdAbout::isActive()
