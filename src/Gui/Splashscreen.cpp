@@ -95,8 +95,8 @@ namespace Gui {
 class SplashObserver : public Base::ILogger
 {
 public:
-    SplashObserver(QSplashScreen* splasher=0)
-      : splash(splasher), alignment(Qt::AlignBottom|Qt::AlignLeft), textColor(Qt::black)
+    SplashObserver(QSplashScreen* splasher=0, const bool is_wayland=false)
+      : splash(splasher), alignment(Qt::AlignBottom|Qt::AlignLeft), textColor(Qt::black), isWayland(is_wayland)
     {
         Base::Console().AttachObserver(this);
 
@@ -156,9 +156,14 @@ public:
 
         // Strip out initial newlines.
         msg = msg.replace(QStringLiteral("\n"), QString());
-        // Add one to buffer from bottom alignment, and shift to right.
-        msg.prepend(QStringLiteral("     "));
-        msg.append(QStringLiteral("\n"));
+        if (isWayland){
+            msg.prepend(QStringLiteral("\n\n\n\n\n\n\n\n\n"));
+        }
+        else{
+            // Add one to buffer from bottom alignment, and shift to right.
+            msg.prepend(QStringLiteral("     "));
+            msg.append(QStringLiteral("\n"));
+        }
 
         splash->showMessage(msg, alignment, textColor);
         QMutex mutex;
@@ -170,6 +175,7 @@ private:
     QSplashScreen* splash;
     int alignment;
     QColor textColor;
+    bool isWayland;
 };
 } // namespace Gui
 
@@ -267,11 +273,11 @@ QLabel *loadSplashGif(QWidget *parent, const char *key, const char *alignmentKey
 /**
  * Constructs a splash screen that will display the pixmap.
  */
-SplashScreen::SplashScreen(  const QPixmap & pixmap , Qt::WindowFlags f )
+SplashScreen::SplashScreen(  const QPixmap & pixmap , Qt::WindowFlags f, const bool is_wayland )
     : QSplashScreen(pixmap, f)
 {
     // write the messages to splasher
-    messages = new SplashObserver(this);
+    messages = new SplashObserver(this, is_wayland);
     loadSplashGif(this, "SplashGif", "SplashGifAlignment");
 }
 
