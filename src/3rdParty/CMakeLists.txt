@@ -18,3 +18,4 @@ if (BUILD_DILIGENT)
 endif()
 
 add_subdirectory(lazy_loader)
+

@@ -38,6 +38,7 @@
 #include <QWindow>
 
 
+#include <Base/Exception.h>
 #include "ProgressBar.h"
 #include "ProgressDialog.h"
 #include "MainWindow.h"
@@ -184,7 +185,7 @@ void SequencerBar::checkAbort()
 
     // force to abort the operation
     if ( ok ) {
-        abort();
+        throw Base::AbortException();
     } else {
         rejectCancel();
     }

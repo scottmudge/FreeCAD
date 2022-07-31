@@ -219,7 +219,7 @@ struct DocumentP
 #ifndef FC_DEBUG
         static std::random_device _RD;
         static std::mt19937 _RGEN(_RD());
-        static std::uniform_int_distribution<> _RDIST(0,5000);
+        static std::uniform_int_distribution<> _RDIST(10,5000);
         // Set some random offset to reduce likelihood of ID collision when
         // copying shape from other document. It is probably better to randomize
         // on each object ID.

@@ -152,6 +152,9 @@ public:
         return owner && owner->isDerivedFrom(getClassTypeId());
     }
 
+    static void disableElementMapping(App::PropertyContainer *container, bool disable=true);
+    static bool isElementMappingDisabled(App::PropertyContainer *container);
+
     virtual const std::vector<std::string>& searchElementCache(const std::string &element,
                                                                bool checkGeometry = true,
                                                                double tol = 1e-7,

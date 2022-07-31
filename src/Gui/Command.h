@@ -335,7 +335,7 @@ protected:
     /// Called before invoking
     virtual void onInvoke(int iMsg);
     /// Applies the menu text, tool and status tip to the passed action object
-    void applyCommandData(const char* context, Action* );
+    virtual void applyCommandData(const char* context, Action* );
     const char* keySequenceToAccel(int) const;
     void printConflictingAccelerators() const;
     //@}

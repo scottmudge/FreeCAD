@@ -76,6 +76,7 @@
 #include "TopoShapeShellPy.h"
 #include "TopoShapeCompSolidPy.h"
 #include "TopoShapeCompoundPy.h"
+#include "PartFeature.h"
 #include "PartParams.h"
 
 namespace bp = boost::placeholders;
@@ -135,9 +136,10 @@ TopoShape PropertyPartShape::getShape() const
 {
     _Shape.initCache(-1);
     auto res = _Shape;
-    if(!res.Tag) {
-        auto parent = Base::freecad_dynamic_cast<App::DocumentObject>(getContainer());
-        if(parent)
+    if (Feature::isElementMappingDisabled(getContainer()))
+        res.Tag = -1;
+    else if (!res.Tag) {
+        if (auto parent = Base::freecad_dynamic_cast<App::DocumentObject>(getContainer()))
             res.Tag = parent->getID();
     }
     return res;
@@ -184,7 +186,7 @@ void PropertyPartShape::transformGeometry(const Base::Matrix4D &rclTrf)
 
 PyObject *PropertyPartShape::getPyObject(void)
 {
-    Base::PyObjectBase* prop = static_cast<Base::PyObjectBase*>(_Shape.getPyObject());
+    Base::PyObjectBase* prop = static_cast<Base::PyObjectBase*>(getShape().getPyObject());
     if (prop)
         prop->setConst();
     return prop;

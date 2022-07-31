@@ -1681,6 +1681,44 @@ void Feature::mergeShapeContents()
     expandShapeContents();
 }
 
+static inline App::PropertyBool *propDisableMapping(App::PropertyContainer *container, bool forced)
+{
+    const char *name = "Part_NoElementMap";
+    auto prop = Base::freecad_dynamic_cast<App::PropertyBool>(container->getPropertyByName(name));
+    if (!prop || prop->getContainer() != container) {
+        if (!forced)
+            return nullptr;
+        prop = static_cast<App::PropertyBool*>(
+                container->addDynamicProperty("App::PropertyBool", name, "Part"));
+    }
+    return prop;
+}
+
+void Feature::disableElementMapping(App::PropertyContainer *container, bool disable)
+{
+    if (!container)
+        return;
+    auto prop = propDisableMapping(container, disable); // only force create if disable
+    if (prop)
+        prop->setValue(disable);
+}
+
+bool Feature::isElementMappingDisabled(App::PropertyContainer *container)
+{
+    if (!container)
+        return false;
+    auto prop = propDisableMapping(container, /*forced*/false);
+    if (prop && prop->getValue())
+        return true;
+    if (auto obj = Base::freecad_dynamic_cast<App::DocumentObject>(container)) {
+        if (auto doc = obj->getDocument()) {
+            if (auto prop = propDisableMapping(doc, /*forced*/false))
+                return prop->getValue();
+        }
+    }
+    return false;
+}
+
 // ---------------------------------------------------------
 
 PROPERTY_SOURCE(Part::FilletBase, Part::Feature)

@@ -555,6 +555,14 @@ public:
             "             referenced sub-element."
             "noSubObject: if True, then create import if there is any sub-object reference."
         );
+        add_varargs_method("disableElementMapping",&Module::disableElementMapping,
+            "disableElementMapping(obj : Document | DocumentObject, disable=True)\n\n"
+            "Disable (or Enable) new topological element mapping for an object or document"
+        );
+        add_varargs_method("isElementMappingDisabled",&Module::isElementMappingDisabled,
+            "isElementMappingDisabled(obj : Document | DocumentObject) -> Bool\n\n"
+            "Check if new topological element mapping is disable for an object or document"
+        );
         initialize("This is a module working with shapes."); // register with Python
 
         PyModule_AddObject(m_module, "BRepFeat", brepFeat.module().ptr());
@@ -2594,6 +2602,29 @@ private:
                                               false,
                                               PyObject_IsTrue(nosobj));
             return Py::asObject(res.getPyObject());
+        } _PY_CATCH_OCC(throw Py::Exception())
+    }
+
+    Py::Object disableElementMapping(const Py::Tuple& args) {
+        PyObject *pyobj;
+        PyObject *disable = Py_True;
+        if (!PyArg_ParseTuple(args.ptr(), "O!|O",&App::PropertyContainerPy::Type,&pyobj,&disable))
+            throw Py::Exception();
+        try {
+            Feature::disableElementMapping(
+                    static_cast<App::PropertyContainerPy*>(pyobj)->getPropertyContainerPtr(),
+                    PyObject_IsTrue(disable));
+            return Py::Object();
+        } _PY_CATCH_OCC(throw Py::Exception())
+    }
+
+    Py::Object isElementMappingDisabled(const Py::Tuple& args) {
+        PyObject *pyobj;
+        if (!PyArg_ParseTuple(args.ptr(), "O!",&App::PropertyContainerPy::Type, &pyobj))
+            throw Py::Exception();
+        try {
+            return Py::Boolean(Feature::isElementMappingDisabled(
+                            static_cast<App::PropertyContainerPy*>(pyobj)->getPropertyContainerPtr()));
         } _PY_CATCH_OCC(throw Py::Exception())
     }
 };

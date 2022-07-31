@@ -1086,11 +1086,15 @@ void Command::refreshIcon()
         }
     }
     setup(_pcAction);
+    languageChange();
 }
 
 void Command::languageChange()
 {
-    setup(_pcAction);
+    if (_pcAction) {
+        setup(_pcAction);
+        applyCommandData(this->className(), _pcAction);
+    }
 }
 
 void Command::setActionIcon(Action *action, const QIcon &icon)
@@ -1123,7 +1127,6 @@ void Command::setup(Action *pcAction) {
     }
     if (auto pixmap = getPixmap())
         setActionIcon(pcAction, Gui::BitmapFactory().iconFromTheme(pixmap));
-    applyCommandData(this->className(), pcAction);
 }
 
 void Command::updateAction(int mode)
@@ -1137,6 +1140,7 @@ void Command::updateAction(int mode)
         }
     }
     setup(_pcAction);
+    languageChange();
 }
 
 
@@ -1226,6 +1230,7 @@ Action * GroupCommand::createAction(void) {
         pcAction->setChecked(cmds[idx].first->getAction()->isChecked(),true);
     }
     setup(pcAction);
+    applyCommandData(this->className(), pcAction);
     return pcAction;
 }
 
@@ -1235,7 +1240,7 @@ void GroupCommand::OnChange(Base::Subject<const char*> &, const char* sReason)
         int idx = _hParam->GetInt(sReason, _defaultAction);
         if (_pcAction->property("defaultAction").toInt() != idx) {
             _pcAction->setProperty("defaultAction", idx);
-            setup(_pcAction);
+            languageChange();
         }
     }
 }

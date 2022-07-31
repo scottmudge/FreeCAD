@@ -923,7 +923,7 @@ std::vector<TopoDS_Shape> TopoShape::findAncestorsShapes(
 }
 
 bool TopoShape::canMapElement(const TopoShape &other) const {
-    if(isNull() || other.isNull() || this == &other)
+    if(isNull() || other.isNull() || this == &other || other.Tag == -1 || Tag == -1)
         return false;
     if(!other.Tag
             && !other.elementMap(false)
