@@ -22,8 +22,14 @@
 
 #include <boost/config.hpp>
 
-#if defined(BOOST_NO_CXX14_CONSTEXPR)
+// Compat for libpack on Windows
+#if defined(_MSC_VER) && defined(BOOST_NO_CXX14_CONSTEXPR)
+#undef BOOST_NO_CXX14_CONSTEXPR
+#define BOOST_CXX14_CONSTEXPR constexpr
+#else
+#if defined(defined(BOOST_NO_CXX14_CONSTEXPR))
 #error "Use C++14 or higher to compile Boost.Geometry, or use Boost 1.72 or lower."
+#endif
 #endif
 
 // Shortcut to include all header files
