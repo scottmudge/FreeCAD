@@ -58,7 +58,19 @@
 #include <Python.h>
 
 // Boost
-#include <boost_geometry.hpp>
+#include <boost/version.hpp>
+#include <boost/config.hpp>
+#if defined(BOOST_MSVC) && (BOOST_VERSION == 105500)
+// for fixing issue https://svn.boost.org/trac/boost/ticket/9332
+#   include "boost_fix/intrusive/detail/memory_util.hpp"
+#   include "boost_fix/container/detail/memory_util.hpp"
+#endif
+#include <boost/geometry.hpp>
+#include <boost/geometry/index/rtree.hpp>
+#include <boost/geometry/geometries/geometries.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
+#include <boost/range/adaptor/indexed.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -108,6 +120,7 @@
 #include <ShapeFix_ShapeTolerance.hxx>
 #include <ShapeExtend_WireData.hxx>
 #include <ShapeFix_Wire.hxx>
+#include <ShapeFix_Wireframe.hxx>
 #include <ShapeAnalysis_FreeBounds.hxx>
 #include <TopTools_HSequenceOfShape.hxx>
 
