@@ -44,11 +44,12 @@
 #include <Base/Parameter.h>
 #include <App/Application.h>
 
-#include "WaitCursor.h"
 #include "FileDialog.h"
-#include "MainWindow.h"
 #include "BitmapFactory.h"
+#include "MainWindow.h"
+#include "PrefWidgets.h"
 #include "Tools.h"
+#include "WaitCursor.h"
 
 using namespace Gui;
 
@@ -109,6 +110,7 @@ FileDialog::FileDialog(QWidget * parent)
 {
     connect(this, SIGNAL(filterSelected(const QString&)),
             this, SLOT(onSelectedFilter(const QString&)));
+    new PrefWidgetStates(this, true, "FileDialog", this);
 }
 
 FileDialog::~FileDialog()
@@ -304,11 +306,25 @@ QString FileDialog::getSaveFileName (QWidget * parent, const QString & caption, 
         return QDir::fromNativeSeparators(file);
     }
     else {
-        file = QFileDialog::getSaveFileName(parent, windowTitle, dirName, filter, selectedFilter, options);
-        file = QDir::fromNativeSeparators(file);
+        QFileDialog dialog(parent, windowTitle, dirName, filter);
+        new PrefWidgetStates(&dialog, true, "FileDialog", &dialog);
+        dialog.setFileMode(QFileDialog::AnyFile);
+        dialog.setOptions(options);
+        if (hasFilename)
+            dialog.selectFile(dirName);
+        dialog.setSupportedSchemes(QStringList(QStringLiteral("file")));
+        dialog.setAcceptMode(QFileDialog::AcceptSave);
+        if (selectedFilter && !selectedFilter->isEmpty())
+            dialog.selectNameFilter(*selectedFilter);
+        if (dialog.exec() == QDialog::Accepted) {
+            if (selectedFilter)
+                *selectedFilter = dialog.selectedNameFilter();
+            file = dialog.selectedFiles().front();
+        }
     }
 
     if (!file.isEmpty()) {
+        file = QDir::fromNativeSeparators(file);
         setWorkingDirectory(checkDocumentXML(file));
         return file;
     } else {
@@ -324,13 +340,20 @@ QString FileDialog::getExistingDirectory( QWidget * parent, const QString & capt
     WaitCursorRestorer waitCursorRestore;
     if (dontUseNativeDialog())
         options |= QFileDialog::DontUseNativeDialog;
-    QString path = QFileDialog::getExistingDirectory(parent, caption, dir, options);
-    // valid path was selected
-    if ( !path.isEmpty() ) {
-        QDir d(path);
-        path = d.path(); // get path in Qt manner
-    }
 
+    QFileDialog dialog(parent, caption, dir);
+    new PrefWidgetStates(&dialog, true, "FileDialog", &dialog);
+    dialog.setFileMode((options & ShowDirsOnly) ? DirectoryOnly : Directory);
+    dialog.setOptions(options);
+    dialog.setSupportedSchemes(QStringList(QStringLiteral("file")));
+    QString path;
+    if (dialog.exec() == QDialog::Accepted) {
+        path = dialog.selectedFiles().front();
+        if ( !path.isEmpty() ) {
+            QDir d(path);
+            path = d.path(); // get path in Qt manner
+        }
+    }
     return path;
 }
 
@@ -392,11 +415,22 @@ QString FileDialog::getOpenFileName(QWidget * parent, const QString & caption, c
         return QDir::fromNativeSeparators(file);
     }
     else {
-        file = QFileDialog::getOpenFileName(parent, windowTitle, dirName, filter, selectedFilter, options);
-        file = QDir::fromNativeSeparators(file);
+        QFileDialog dialog(parent, windowTitle, dirName, filter);
+        new PrefWidgetStates(&dialog, true, "FileDialog", &dialog);
+        dialog.setFileMode(QFileDialog::ExistingFile);
+        dialog.setOptions(options);
+        dialog.setSupportedSchemes(QStringList(QStringLiteral("file")));
+        if (selectedFilter && !selectedFilter->isEmpty())
+            dialog.selectNameFilter(*selectedFilter);
+        if (dialog.exec() == QDialog::Accepted) {
+            if (selectedFilter)
+                *selectedFilter = dialog.selectedNameFilter();
+            file = dialog.selectedFiles().front();
+        }
     }
 
     if (!file.isEmpty()) {
+        file = QDir::fromNativeSeparators(file);
         setWorkingDirectory(checkDocumentXML(file));
         return file;
     } else {
@@ -457,14 +491,24 @@ QStringList FileDialog::getOpenFileNames (QWidget * parent, const QString & capt
         }
     }
     else {
-        files = QFileDialog::getOpenFileNames(parent, windowTitle, dirName, filter, selectedFilter, options);
-        for (QStringList::iterator it = files.begin(); it != files.end(); ++it) {
-            *it = QDir::fromNativeSeparators(*it);
+        QFileDialog dialog(parent, windowTitle, dirName, filter);
+        new PrefWidgetStates(&dialog, true, "FileDialog", &dialog);
+        dialog.setFileMode(QFileDialog::ExistingFiles);
+        dialog.setOptions(options);
+        dialog.setSupportedSchemes(QStringList(QStringLiteral("file")));
+        if (selectedFilter && !selectedFilter->isEmpty())
+            dialog.selectNameFilter(*selectedFilter);
+        if (dialog.exec() == QDialog::Accepted) {
+            if (selectedFilter)
+                *selectedFilter = dialog.selectedNameFilter();
+            files = dialog.selectedFiles();
         }
     }
 
-    for(auto &f : files)
+    for(auto &f : files) {
+        f = QDir::fromNativeSeparators(f);
         checkDocumentXML(f);
+    }
 
     if (!files.isEmpty()) {
         setWorkingDirectory(files.front());

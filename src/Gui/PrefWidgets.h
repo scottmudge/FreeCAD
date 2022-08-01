@@ -222,7 +222,10 @@ class GuiExport PrefWidgetStates : public QObject
 {
   Q_OBJECT
 public:
-  PrefWidgetStates(QWidget *widget, bool manageSize=true, const char *name = nullptr);
+  PrefWidgetStates(QWidget *widget,
+                   bool manageSize=true,
+                   const char *name = nullptr,
+                   QObject *parent = nullptr);
   virtual ~PrefWidgetStates();
   void addSplitter(QSplitter *, const char *name = nullptr);
 

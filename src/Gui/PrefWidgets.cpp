@@ -489,8 +489,9 @@ void PrefWidget::failedToRestore(const QString& name) const
 
 // --------------------------------------------------------------------
 
-PrefWidgetStates::PrefWidgetStates(QWidget *widget, bool manageSize, const char *name)
-  : manageSize(manageSize)
+PrefWidgetStates::PrefWidgetStates(QWidget *widget, bool manageSize, const char *name, QObject *parent)
+  : QObject(parent)
+  , manageSize(manageSize)
   , widget(widget)
 {
   if (!name)
@@ -498,7 +499,7 @@ PrefWidgetStates::PrefWidgetStates(QWidget *widget, bool manageSize, const char 
   hParam = App::GetApplication().GetParameterGroupByPath(
       "User parameter:BaseApp/Preferences/General/Widgets")->GetGroup(name);
   widget->installEventFilter(this);
-};
+}
 
 PrefWidgetStates::~PrefWidgetStates()
 {
