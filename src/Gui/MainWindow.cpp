@@ -1883,7 +1883,6 @@ void MainWindow::startSplasher(void)
         // first search for an external image file
         if (hGrp->GetBool("ShowSplasher", true)) {
             d->splashscreen = new SplashScreen(this->splashImage(is_wayland), Qt::WindowFlags(), is_wayland);
-            d->splashscreen->setGeometry(QApplication::desktop()->availableGeometry());
             d->splashscreen->show();
             d->screen = QApplication::desktop()->screenNumber(d->splashscreen);
         }

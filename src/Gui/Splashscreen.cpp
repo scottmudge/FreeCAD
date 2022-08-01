@@ -279,6 +279,8 @@ SplashScreen::SplashScreen(  const QPixmap & pixmap , Qt::WindowFlags f, const b
     // write the messages to splasher
     messages = new SplashObserver(this, is_wayland);
     loadSplashGif(this, "SplashGif", "SplashGifAlignment");
+    // Fix splash screen centering on wayland
+    if (is_wayland) this->setGeometry(QApplication::desktop()->availableGeometry());
 }
 
 /** Destruction. */
