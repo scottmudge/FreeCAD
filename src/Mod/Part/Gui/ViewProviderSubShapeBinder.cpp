@@ -528,15 +528,21 @@ QString ViewProviderSubShapeBinder::getToolTip(const QByteArray &tag) const
             if(!obj || !obj->getNameInDocument())
                 continue;
             const auto &subs = link.getSubValues();
-            if (++count > limit) {
-                ss << "\n...";
-                break;
-            }
             if(subs.size()) {
-                for (auto &sub : subs)
+                for (auto &sub : subs) {
+                    if (++count > limit) {
+                        ss << "\n...";
+                        break;
+                    }
                     ss << "\n" << App::SubObjectT(obj, sub.c_str()).getSubObjectFullName(doc);
-            } else
+                }
+            } else {
+                if (++count > limit) {
+                    ss << "\n...";
+                    break;
+                }
                 ss << "\n" << App::SubObjectT(obj, "").getObjectFullName(doc);
+            }
         }
     }
 

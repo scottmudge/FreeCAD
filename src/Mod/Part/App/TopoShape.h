@@ -42,6 +42,9 @@
 #include <QVector>
 
 class BRepBuilderAPI_MakeShape;
+class BRepTools_History;
+class BRepTools_ReShape;
+class ShapeFix_Root;
 class BRepBuilderAPI_Sewing;
 class BRepOffsetAPI_ThruSections;
 class BRepFeat_MakePrism;
@@ -63,6 +66,10 @@ class Color;
 
 namespace Part
 {
+
+struct ShapeHasher;
+class TopoShape;
+typedef std::unordered_map<TopoShape, TopoShape, ShapeHasher, ShapeHasher> TopoShapeMap;
 
 /* A special sub-class to indicate null shapes
  */
@@ -97,10 +104,16 @@ class PartExport TopoShape : public Data::ComplexGeoData
     TYPESYSTEM_HEADER();
 
 public:
-    explicit TopoShape(long Tag=0, App::StringHasherRef hasher=App::StringHasherRef(), 
-            const TopoDS_Shape &shape=TopoDS_Shape());
-    TopoShape(const TopoDS_Shape&);
+    explicit TopoShape(long Tag=0,
+                       App::StringHasherRef hasher=App::StringHasherRef(), 
+                       const TopoDS_Shape &shape=TopoDS_Shape());
+
+    TopoShape(const TopoDS_Shape&,
+              long Tag=0,
+              App::StringHasherRef hasher=App::StringHasherRef());
+
     TopoShape(const TopoShape&);
+
     ~TopoShape();
 
     void setShape(const TopoDS_Shape& shape, bool resetElementMap=true);
@@ -172,6 +185,8 @@ public:
     TopoShape getSubTopoShape(TopAbs_ShapeEnum type, int idx, bool silent=false) const;
     std::vector<TopoShape> getSubTopoShapes(TopAbs_ShapeEnum type=TopAbs_SHAPE, TopAbs_ShapeEnum avoid=TopAbs_SHAPE) const;
     std::vector<TopoDS_Shape> getSubShapes(TopAbs_ShapeEnum type=TopAbs_SHAPE, TopAbs_ShapeEnum avoid=TopAbs_SHAPE) const;
+    std::vector<TopoShape> getOrderedEdges(bool mapElement=true) const;
+    std::vector<TopoShape> getOrderedVertexes(bool mapElement=true) const;
     unsigned long countSubShapes(const char* Type) const;
     unsigned long countSubShapes(TopAbs_ShapeEnum type) const;
     bool hasSubShape(const char *Type) const;
@@ -426,6 +441,10 @@ public:
      *             if two edges are connected
      * @param shared: if true, then only connect edges if they shared the same
      *                vertex, or else use \c tol to check for connection.
+     * @param output: optional output mapping from wire edges to input edge.
+     *                Note that edges may be modified after adding to the wire,
+     *                so the output edges may not be the same as the input
+     *                ones.
      *
      * @return The function produces either a wire or a compound of wires. The
      *         original content of this TopoShape is discarded and replaced
@@ -435,9 +454,9 @@ public:
      */
     TopoShape &makEWires(const std::vector<TopoShape> &shapes,
                          const char *op=nullptr,
-                         bool keepOrder=false,
                          double tol=0.0,
-                         bool shared=false);
+                         bool shared=false,
+                         TopoShapeMap *output=nullptr);
 
     /** Make a compound of wires by connecting input edges 
      *
@@ -450,6 +469,10 @@ public:
      *             if two edges are connected
      * @param shared: if true, then only connect edges if they shared the same
      *                vertex, or else use \c tol to check for connection.
+     * @param output: optional output mapping from wire edges to input edge.
+     *                Note that edges may be modified after adding to the wire,
+     *                so the output edges may not be the same as the input
+     *                ones.
      *
      * @return The function produces either a wire or a compound of wires. The
      *         original content of this TopoShape is discarded and replaced
@@ -459,9 +482,34 @@ public:
      */
     TopoShape &makEWires(const TopoShape &shape,
                          const char *op=nullptr,
-                         bool keepOrder=false,
                          double tol=0.0,
-                         bool shared=false);
+                         bool shared=false,
+                         TopoShapeMap *output=nullptr);
+
+    /** Make a compound of wires by connecting input edges in the given order
+     *
+     * @param shapes: input shapes. Can be any type of shape. Edges will be
+     *                extracted for building wires.
+     * @param op: optional string to be encoded into topo naming for indicating
+     *            the operation
+     * @param tol: tolerance for checking the distance of two vertex to decide
+     *             if two edges are connected
+     * @param output: optional output mapping from wire edges to input edge.
+     *                Note that edges may be modified after adding to the wire,
+     *                so the output edges may not be the same as the input
+     *                ones.
+     *
+     * @return Same as makEWires() but respects the order of the input edges.
+     *         The function produces either a wire or a compound of wires. The
+     *         original content of this TopoShape is discarded and replaced
+     *         with the new shape. The function returns the TopoShape itself as
+     *         a reference so that multiple operations can be carried out for
+     *         the same shape in the same line of code.
+     */
+    TopoShape &makEOrderedWires(const std::vector<TopoShape> &shapes,
+                                const char *op=nullptr,
+                                double tol=0.0,
+                                TopoShapeMap *output=nullptr);
 
     /** Make a wire or compound of wires with the edges inside the this shape 
      *
@@ -472,16 +520,21 @@ public:
      *             if two edges are connected
      * @param shared: if true, then only connect edges if they shared the same
      *                vertex, or else use \c tol to check for connection.
+     * @param output: optional output mapping from wire edges to input edge.
+     *                Note that edges may be modified after adding to the wire,
+     *                so the output edges may not be the same as the input
+     *                ones.
+     *
      *
      * @return The function returns a new shape of either a single wire or a
      *         compound of wires. The shape itself is not modified.
      */
     TopoShape makEWires(const char *op=nullptr,
-                        bool keepOrder=false,
                         double tol=0.0,
-                        bool shared=false) const
+                        bool shared=false,
+                        TopoShapeMap *output=nullptr) const
     {
-        return TopoShape(0,Hasher).makEWires(*this,op,keepOrder,tol,shared);
+        return TopoShape(0,Hasher).makEWires(*this,op,tol,shared,output);
     }
 
     /** Make a planar face with the input wires or edges 
@@ -615,33 +668,33 @@ public:
      *  Cooresponds to OCCT type GeomAbs_Shape
      */
     enum class Continuity {
-    /// Only geometric continuity
-    C0,
-    /** for each point on the curve, the tangent vectors 'on the right' and 'on
-     *  the left' are collinear with the same orientation.
-     */
-    G1, 
-    /** Continuity of the first derivative. The 'C1' curve is also 'G1' but, in
-     *  addition, the tangent vectors 'on the right' and 'on the left' are equal.
-     */
-    C1,
+        /// Only geometric continuity
+        C0,
+        /** for each point on the curve, the tangent vectors 'on the right' and 'on
+        *  the left' are collinear with the same orientation.
+        */
+        G1, 
+        /** Continuity of the first derivative. The 'C1' curve is also 'G1' but, in
+        *  addition, the tangent vectors 'on the right' and 'on the left' are equal.
+        */
+        C1,
 
-    /** For each point on the curve, the normalized normal vectors 'on the
-     *  right' and 'on the left' are equal.
-     */
-    G2,
+        /** For each point on the curve, the normalized normal vectors 'on the
+        *  right' and 'on the left' are equal.
+        */
+        G2,
 
-    /// Continuity of the second derivative.
-    C2,
+        /// Continuity of the second derivative.
+        C2,
 
-    /// Continuity of the third derivative.
-    C3,
+        /// Continuity of the third derivative.
+        C3,
 
-    /** Continuity of the N-th derivative, whatever is the value given for N
-     * (infinite order of continuity). Also provides information about the
-     * continuity of a surface.
-     */
-    CN,
+        /** Continuity of the N-th derivative, whatever is the value given for N
+        * (infinite order of continuity). Also provides information about the
+        * continuity of a surface.
+        */
+        CN,
     };
 
     /** Make a non-planar filled face with boundary and/or constraint edge/wire 
@@ -2371,6 +2424,33 @@ struct ShapeHasher {
     inline bool operator()(const TopoDS_Shape &a, const TopoDS_Shape &b) const {
         return a.IsSame(b);
     }
+    template <class T>
+    static inline void hash_combine(std::size_t& seed, const T& v)
+    {
+        // copied from boost::hash_combine
+        std::hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+    }
+    inline size_t operator()(const std::pair<TopoShape, TopoShape> &s) const {
+        size_t res = s.first.getShape().HashCode(INT_MAX);
+        hash_combine(res, s.second.getShape().HashCode(INT_MAX));
+        return res;
+    }
+    inline size_t operator()(const std::pair<TopoDS_Shape, TopoDS_Shape> &s) const {
+        size_t res = s.first.HashCode(INT_MAX);
+        hash_combine(res, s.second.HashCode(INT_MAX));
+        return res;
+    }
+    inline bool operator()(const std::pair<TopoShape, TopoShape> &a,
+                           const std::pair<TopoShape, TopoShape> &b) const {
+        return a.first.getShape().IsSame(b.first.getShape())
+            && a.second.getShape().IsSame(b.second.getShape());
+    }
+    inline bool operator()(const std::pair<TopoDS_Shape, TopoDS_Shape> &a,
+                           const std::pair<TopoDS_Shape, TopoDS_Shape> &b) const {
+        return a.first.IsSame(b.first)
+            && a.second.IsSame(b.second);
+    }
 };
 
 /** Shape mapper for generic BRepBuilderAPI_MakeShape derived class
@@ -2383,6 +2463,20 @@ struct PartExport MapperMaker: TopoShape::Mapper {
     MapperMaker(BRepBuilderAPI_MakeShape &maker)
         :maker(maker)
     {}
+    virtual const std::vector<TopoDS_Shape> &modified(const TopoDS_Shape &s) const override;
+    virtual const std::vector<TopoDS_Shape> &generated(const TopoDS_Shape &s) const override;
+};
+
+/** Shape mapper for BRepTools_History
+ *
+ * Uses BRepTools_History::Modified/Generated() function to extract
+ * shape history for generating mapped element names
+ */
+struct PartExport MapperHistory: TopoShape::Mapper {
+    Handle(BRepTools_History) history;
+    MapperHistory(const Handle(BRepTools_History) &history);
+    MapperHistory(const Handle(BRepTools_ReShape) &reshape);
+    MapperHistory(ShapeFix_Root &fix);
     virtual const std::vector<TopoDS_Shape> &modified(const TopoDS_Shape &s) const override;
     virtual const std::vector<TopoDS_Shape> &generated(const TopoDS_Shape &s) const override;
 };
@@ -2526,6 +2620,10 @@ struct PartExport TopoShape::BRepFillingParams {
     std::unordered_map<TopoDS_Shape, TopoShape::Continuity, ShapeHasher, ShapeHasher> orders;
     /// Optional map from input shape to face used as support
     std::unordered_map<TopoDS_Shape, TopoDS_Shape, ShapeHasher, ShapeHasher> supports;
+    /// Optional begin index to the input shapes to be used as the boundary of the filled face.
+    int boundary_begin = -1;
+    /// Optional end index (last index + 1) to the input shapes to be used as the boundary of the filled face.
+    int boundary_end = -1;
     /// The energe minimizing criterion degree;
     unsigned int degree = 3;
     /// The number of points on the curve NbPntsOnCur

@@ -85,7 +85,7 @@ def _ftostr(v):
     if _Decimals:
         res = '%.*f' % (_Decimals, v)
     else:
-        res = '%g' % v
+        res = '%.16g' % v
     if len(res) > 128: # probably infinite shape
         res = '?'
     return res
@@ -197,6 +197,7 @@ def showPreselectInfo():
     if tol is not None:
         txt += '\nTolerance: %g' % tol
     if shape.ShapeType == 'Vertex':
+        txt += '\nPoint: %s' % _vec_tostr(shape.Point)
         FreeCADGui.Selection.setPreselectionText(txt)
         return
 

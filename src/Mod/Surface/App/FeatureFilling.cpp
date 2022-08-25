@@ -337,11 +337,8 @@ App::DocumentObjectExecReturn *Filling::execute(void)
                        BoundaryFaces.getSubValues(),
                        BoundaryOrder.getValues(),
                        TopAbs_EDGE);
-        if (shapes.size() != 1 && shapes[0].shapeType(true) != TopAbs_WIRE) {
-            shapes = Part::TopoShape(0, getDocument()->getStringHasher()).makEWires(shapes).getSubTopoShapes(TopAbs_WIRE);
-            if (shapes.empty())
-                Standard_Failure::Raise("No boundary edges");
-        }
+        params.boundary_begin = 0;
+        params.boundary_end = (int)shapes.size();
         populateParams(UnboundEdges.getValues(),
                        UnboundEdges.getSubValues(),
                        UnboundFaces.getValues(),

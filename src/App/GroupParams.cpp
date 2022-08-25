@@ -272,7 +272,8 @@ void GroupParams::removeGeoGroupAllowCrossLink() {
 // Auto generated code (Tools/params_utils.py:288)
 const char *GroupParams::docCreateGroupInGroup() {
     return QT_TRANSLATE_NOOP("GroupParams",
-"This option only applies to creating a new group when there is a singleselected object that is also a group (either plain or App::Part).\n"
+"This option only applies to creating a new group when there is a single\n"
+"selected object that is also a group (either plain or App::Part).\n"
 "\n"
 "If the option is enabled, then the new group will be created inside the\n"
 "selected group. If disabled, then the selected group will be moved into\n"

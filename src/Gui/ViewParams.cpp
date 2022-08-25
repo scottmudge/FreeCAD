@@ -336,7 +336,7 @@ public:
         funcs["SelectionFaceWire"] = &ViewParamsP::updateSelectionFaceWire;
         NewDocumentCameraScale = handle->GetFloat("NewDocumentCameraScale", 100.0);
         funcs["NewDocumentCameraScale"] = &ViewParamsP::updateNewDocumentCameraScale;
-        MaxOnTopSelections = handle->GetInt("MaxOnTopSelections", 20);
+        MaxOnTopSelections = handle->GetInt("MaxOnTopSelections", 100);
         funcs["MaxOnTopSelections"] = &ViewParamsP::updateMaxOnTopSelections;
         MaxViewSelections = handle->GetInt("MaxViewSelections", 100);
         funcs["MaxViewSelections"] = &ViewParamsP::updateMaxViewSelections;

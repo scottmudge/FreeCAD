@@ -1145,6 +1145,70 @@ std::vector<TopoShape> TopoShape::getSubTopoShapes(TopAbs_ShapeEnum type, TopAbs
     return res;
 }
 
+std::vector<TopoShape> TopoShape::getOrderedEdges(bool mapElement) const
+{
+    if(isNull())
+        return std::vector<TopoShape>();
+
+    std::vector<TopoShape> shapes;
+    if (shapeType() == TopAbs_WIRE) {
+        BRepTools_WireExplorer xp(TopoDS::Wire(getShape()));
+        while (xp.More()) {
+            shapes.push_back(TopoShape(xp.Current()));
+            xp.Next();
+        }
+    }
+    else {
+        INIT_SHAPE_CACHE();
+        for (const auto &w : getSubShapes(TopAbs_WIRE)) {
+            BRepTools_WireExplorer xp(TopoDS::Wire(w));
+            while (xp.More()) {
+                shapes.push_back(TopoShape(xp.Current()));
+                xp.Next();
+            }
+        }
+    }
+    if (mapElement)
+        mapSubElementsTo(shapes);
+    return shapes;
+}
+
+std::vector<TopoShape> TopoShape::getOrderedVertexes(bool mapElement) const
+{
+    if(isNull())
+        return std::vector<TopoShape>();
+
+    std::vector<TopoShape> shapes;
+
+    auto collect = [&](const TopoDS_Shape &s) {
+        auto wire = TopoDS::Wire(s);
+        BRepTools_WireExplorer xp(wire);
+        while (xp.More()) {
+            shapes.push_back(TopoShape(xp.CurrentVertex()));
+            xp.Next();
+        }
+        // special treatment for open wires
+        TopoDS_Vertex Vfirst, Vlast;
+        TopExp::Vertices(wire, Vfirst, Vlast);
+        if (!Vfirst.IsNull() && !Vlast.IsNull()) {
+            if (!Vfirst.IsSame(Vlast)) {
+                shapes.push_back(TopoShape(Vlast));
+            }
+        }
+    };
+
+    if (shapeType() == TopAbs_WIRE)
+        collect(getShape());
+    else {
+        INIT_SHAPE_CACHE();
+        for (const auto &s : getSubShapes(TopAbs_WIRE))
+            collect(s);
+    }
+    if (mapElement)
+        mapSubElementsTo(shapes);
+    return shapes;
+}
+
 std::pair<TopAbs_ShapeEnum,int>
 TopoShape::shapeTypeAndIndex(const Data::IndexedName & element)
 {
@@ -1581,12 +1645,24 @@ TopoShape &TopoShape::makEEvolve(const TopoShape &spine,
             FC_THROWM(Base::CADKernelError, "Expect the the profile to be a planar wire or face or a line");
         }
     }
-    BRepOffsetAPI_MakeEvolved maker(spineShape, TopoDS::Wire(profileShape), joinType,
-            axeProf ? Standard_True : Standard_False,
-            solid ? Standard_True : Standard_False,
-            profOnSpine ? Standard_True : Standard_False,
-            tol);
-    return makEShape(maker, {spine, profile}, op);
+    if (spineShape.ShapeType() == TopAbs_FACE) {
+        BRepOffsetAPI_MakeEvolved maker(TopoDS::Face(spineShape),
+                TopoDS::Wire(profileShape), joinType,
+                axeProf ? Standard_True : Standard_False,
+                solid ? Standard_True : Standard_False,
+                profOnSpine ? Standard_True : Standard_False,
+                tol);
+        return makEShape(maker, {spine, profile}, op);
+    }
+    else {
+        BRepOffsetAPI_MakeEvolved maker(TopoDS::Wire(spineShape),
+                TopoDS::Wire(profileShape), joinType,
+                axeProf ? Standard_True : Standard_False,
+                solid ? Standard_True : Standard_False,
+                profOnSpine ? Standard_True : Standard_False,
+                tol);
+        return makEShape(maker, {spine, profile}, op);
+    }
 }
 
 TopoShape &TopoShape::makERuledSurface(const std::vector<TopoShape> &shapes,
@@ -1746,6 +1822,56 @@ MapperMaker::generated(const TopoDS_Shape &s) const
         TopTools_ListIteratorOfListOfShape it;
         for (it.Initialize(maker.Generated(s)); it.More(); it.Next())
             _res.push_back(it.Value());
+    } catch (const Standard_Failure & e) {
+        if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+            FC_WARN("Exception on shape mapper: " << e.GetMessageString());
+    }
+    return _res;
+}
+
+MapperHistory::MapperHistory(const Handle(BRepTools_History) &history)
+    :history(history)
+{}
+
+MapperHistory::MapperHistory(const Handle(BRepTools_ReShape) &reshape)
+{
+    if (reshape)
+        history = reshape->History();
+}
+
+MapperHistory::MapperHistory(ShapeFix_Root &fix)
+{
+    if (fix.Context())
+        history = fix.Context()->History();
+}
+    
+const std::vector<TopoDS_Shape> &
+MapperHistory::modified(const TopoDS_Shape &s) const
+{
+    _res.clear();
+    try {
+        if (history) {
+            TopTools_ListIteratorOfListOfShape it;
+            for (it.Initialize(history->Modified(s)); it.More(); it.Next())
+                _res.push_back(it.Value());
+        }
+    } catch (const Standard_Failure & e) {
+        if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+            FC_WARN("Exception on shape mapper: " << e.GetMessageString());
+    }
+    return _res;
+}
+
+const std::vector<TopoDS_Shape> &
+MapperHistory::generated(const TopoDS_Shape &s) const
+{
+    _res.clear();
+    try {
+        if (history) {
+            TopTools_ListIteratorOfListOfShape it;
+            for (it.Initialize(history->Generated(s)); it.More(); it.Next())
+                _res.push_back(it.Value());
+        }
     } catch (const Standard_Failure & e) {
         if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
             FC_WARN("Exception on shape mapper: " << e.GetMessageString());
@@ -2652,15 +2778,15 @@ TopoShape &TopoShape::makEThickSolid(const TopoShape &shape,
 
 TopoShape &TopoShape::makEWires(const std::vector<TopoShape> &shapes,
                                 const char *op,
-                                bool keepOrder,
                                 double tol,
-                                bool shared)
+                                bool shared,
+                                TopoShapeMap *output)
 {
     if(shapes.empty())
         HANDLE_NULL_SHAPE;
     if(shapes.size() == 1)
-        return makEWires(shapes[0],op,keepOrder,tol,shared);
-    return makEWires(TopoShape(Tag).makECompound(shapes),op,keepOrder,tol,shared);
+        return makEWires(shapes[0],op,tol,shared,output);
+    return makEWires(TopoShape(Tag).makECompound(shapes),op,tol,shared,output);
 }
 
 struct EdgePoints {
@@ -2797,12 +2923,45 @@ TopoShape::sortEdges(std::list<TopoShape>& edges, bool keepOrder, double tol)
     return sorted;
 }
 
+TopoShape &TopoShape::makEOrderedWires(const std::vector<TopoShape> &shapes,
+                                       const char *op,
+                                       double tol,
+                                       TopoShapeMap *output)
+{
+    if(!op) op = Part::OpCodes::Wire;
+    if(tol<Precision::Confusion()) tol = Precision::Confusion();
+
+    std::vector<TopoShape> wires;
+    std::list<TopoShape> edge_list;
+
+    auto shape = TopoShape().makECompound(shapes, "", false);
+    for(auto &e : shape.getSubTopoShapes(TopAbs_EDGE))
+        edge_list.push_back(e);
+
+    while(edge_list.size()) {
+        BRepBuilderAPI_MakeWire mkWire;
+        std::vector<TopoShape> edges;
+        for (auto &edge : sortEdges(edge_list, true, tol)) {
+            edges.push_back(edge);
+            mkWire.Add(TopoDS::Edge(edge.getShape()));
+            // MakeWire will replace vertex of connected edge, which
+            // effectively creat a new edge. So we need to update the shape
+            // in order to preserve element mapping.
+            edges.back().setShape(mkWire.Edge(), false);
+            if (output)
+                (*output)[edges.back()] = edge;
+        }
+        wires.push_back(mkWire.Wire());
+        wires.back().mapSubElement(edges,op);
+    }
+    return makECompound(wires,0,false);
+}
 
 TopoShape &TopoShape::makEWires(const TopoShape &shape,
                                 const char *op,
-                                bool keepOrder,
                                 double tol,
-                                bool shared)
+                                bool shared,
+                                TopoShapeMap *output)
 {
     if(!op) op = Part::OpCodes::Wire;
     if(tol<Precision::Confusion()) tol = Precision::Confusion();
@@ -2834,18 +2993,7 @@ TopoShape &TopoShape::makEWires(const TopoShape &shape,
     std::list<TopoShape> edge_list;
 
     for(auto &e : shape.getSubTopoShapes(TopAbs_EDGE))
-        edge_list.push_back(e);
-
-    if (keepOrder) {
-        while(edge_list.size()) {
-            BRepBuilderAPI_MakeWire mkWire;
-            for (auto &edge : sortEdges(edge_list, keepOrder, tol))
-                mkWire.Add(TopoDS::Edge(edge.getShape()));
-            wires.push_back(mkWire.Wire());
-            wires.back().mapSubElement(shape,op);
-        }
-        return makECompound(wires,0,false);
-    }
+        edge_list.emplace_back(e);
 
     std::vector<TopoShape> edges;
     edges.reserve(edge_list.size());
@@ -2857,9 +3005,11 @@ TopoShape &TopoShape::makEWires(const TopoShape &shape,
         // add and erase first edge
         edges.clear();
         edges.push_back(edge_list.front());
-        edge_list.pop_front();
         mkWire.Add(TopoDS::Edge(edges.back().getShape()));
         edges.back().setShape(mkWire.Edge(),false);
+        if (output)
+            (*output)[edges.back()] = edge_list.front();
+        edge_list.pop_front();
 
         TopoDS_Wire new_wire = mkWire.Wire(); // current new wire
 
@@ -2873,7 +3023,12 @@ TopoShape &TopoShape::makEWires(const TopoShape &shape,
                     // edge added ==> remove it from list
                     found = true;
                     edges.push_back(*it);
+                    // MakeWire will replace vertex of connected edge, which
+                    // effectively creat a new edge. So we need to update the
+                    // shape in order to preserve element mapping.
                     edges.back().setShape(mkWire.Edge(),false);
+                    if (output)
+                        (*output)[edges.back()] = *it;
                     edge_list.erase(it);
                     new_wire = mkWire.Wire();
                     break;
@@ -4177,8 +4332,14 @@ TopoShape &TopoShape::makEFilledFace(const std::vector<TopoShape> &_shapes,
     for(auto &s : _shapes)
         expandCompound(s,shapes);
 
+    TopoShapeMap output;
     auto getOrder = [&](const TopoDS_Shape &s) {
         auto it = params.orders.find(s);
+        if (it == params.orders.end()) {
+            auto iter = output.find(s);
+            if (iter != output.end())
+                it = params.orders.find(iter->second.getShape());
+        }
         if (it != params.orders.end())
             return static_cast<GeomAbs_Shape>(it->second);
         return GeomAbs_C0;
@@ -4187,6 +4348,11 @@ TopoShape &TopoShape::makEFilledFace(const std::vector<TopoShape> &_shapes,
     auto getSupport = [&](const TopoDS_Shape &s) {
         TopoDS_Face support;
         auto it = params.supports.find(s);
+        if (it == params.supports.end()) {
+            auto iter = output.find(s);
+            if (iter != output.end())
+                it = params.supports.find(iter->second.getShape());
+        }
         if (it != params.supports.end()) {
             if (!it->second.IsNull() && it->second.ShapeType() == TopAbs_FACE)
                 support = TopoDS::Face(it->second);
@@ -4216,29 +4382,49 @@ TopoShape &TopoShape::makEFilledFace(const std::vector<TopoShape> &_shapes,
         return TopoShape();
     };
 
-    TopoShape bound = findBoundary(shapes);
-    if (bound.isNull()) {
-        // If no boundry is found, then try build one.
-        std::vector<TopoShape> edges;
-        for(auto it=shapes.begin(); it!=shapes.end();) {
-            if (it->shapeType(true) == TopAbs_EDGE) {
-                edges.push_back(*it);
-                it = shapes.erase(it);
-            } else
-                ++it;
+    TopoShape bound;
+    std::vector<TopoShape> wires;
+    if (params.boundary_begin >= 0
+            && params.boundary_end > params.boundary_begin
+            && params.boundary_end <= (int)shapes.size())
+    {
+        if (params.boundary_end-1 != params.boundary_begin
+                || shapes[params.boundary_begin].shapeType() != TopAbs_WIRE)
+        {
+            std::vector<TopoShape> edges;
+            edges.insert(edges.end(),
+                    shapes.begin()+params.boundary_begin,
+                    shapes.begin()+params.boundary_end);
+            wires = TopoShape(0, Hasher).makEWires(edges,"",0.0,false,&output).getSubTopoShapes(TopAbs_WIRE);
+            shapes.erase(shapes.begin()+params.boundary_begin,
+                         shapes.begin()+params.boundary_end);
         }
-        std::vector<TopoShape> wires;
-        if(edges.size()) {
-            wires = TopoShape(0, Hasher).makEWires(edges).getSubTopoShapes(TopAbs_WIRE);
-            bound = findBoundary(wires);
+    } else {
+        bound = findBoundary(shapes);
+        if (bound.isNull()) {
+            // If no boundry is found, then try to build one.
+            std::vector<TopoShape> edges;
+            for(auto it=shapes.begin(); it!=shapes.end();) {
+                if (it->shapeType(true) == TopAbs_EDGE) {
+                    edges.push_back(*it);
+                    it = shapes.erase(it);
+                } else
+                    ++it;
+            }
+            if(edges.size())
+                wires = TopoShape(0, Hasher).makEWires(edges,"",0.0,false,&output).getSubTopoShapes(TopAbs_WIRE);
         }
-        if (bound.isNull())
-            FC_THROWM(Base::CADKernelError,"No boundary wire");
-
-        // Since we've only selected one wire for boundary, return all the
-        // other edges to shapes to be added as non boundary constraints
-        shapes.insert(shapes.end(), wires.begin(), wires.end());
     }
+
+    if (bound.isNull())
+        bound = findBoundary(wires);
+
+    if (bound.isNull())
+        FC_THROWM(Base::CADKernelError,"No boundary wire");
+
+    // Since we've only selected one wire for boundary, return all the
+    // other edges in shapes to be added as non boundary constraints
+    shapes.insert(shapes.end(), wires.begin(), wires.end());
 
     // Must fix wire connection to avoid OCC crash in BRepFill_Filling.cxx WireFromList()
     // https://github.com/Open-Cascade-SAS/OCCT/blob/1c96596ae7ba120a678021db882857e289c73947/src/BRepFill/BRepFill_Filling.cxx#L133
@@ -4248,11 +4434,12 @@ TopoShape &TopoShape::makEFilledFace(const std::vector<TopoShape> &_shapes,
               Precision::Confusion(),
               Precision::Confusion());
 
-    for (BRepTools_WireExplorer xp(TopoDS::Wire(bound.getShape())); xp.More(); xp.Next())
-        maker.Add(TopoDS::Edge(xp.Current()),
-                  getSupport(xp.Current()),
-                  getOrder(xp.Current()),
+    for (const auto &e : bound.getOrderedEdges()) {
+        maker.Add(TopoDS::Edge(e.getShape()),
+                  getSupport(e.getShape()),
+                  getOrder(e.getShape()),
                   /*IsBound*/Standard_True);
+    }
 
     for(const auto &s : shapes) {
         if(s.isNull())

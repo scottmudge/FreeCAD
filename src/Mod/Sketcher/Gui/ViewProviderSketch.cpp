@@ -4779,6 +4779,10 @@ void ViewProviderSketch::draw(bool temp /*=false*/, bool rebuildinformationlayer
                 std::swap(startangle, endangle);
 
             double range = endangle-startangle;
+            if (range < Precision::Confusion()) {
+                range = 2 * M_PI;
+                endangle = startangle + range;
+            }
             int countSegments = std::max(6, int(stdcountsegments * range / (2 * M_PI)));
             double segment = range / countSegments;
 

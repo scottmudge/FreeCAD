@@ -139,7 +139,7 @@ PyObject* TopoShapeCompoundPy::connectEdgesToWires(PyObject *args)
     PY_TRY {
 #ifndef FC_NO_ELEMENT_MAP
         return Py::new_reference_to(shape2pyshape(
-                    getTopoShapePtr()->makEWires("", false, tol, PyObject_IsTrue(shared))));
+                    getTopoShapePtr()->makEWires("", tol, PyObject_IsTrue(shared))));
 #else
         const TopoDS_Shape& s = getTopoShapePtr()->getShape();
 

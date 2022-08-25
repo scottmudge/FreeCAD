@@ -4148,7 +4148,8 @@ void TreeWidget::onToolTipTimer()
         if (ViewParams::getToolTipIconSize())
             iconSize = ViewParams::getToolTipIconSize();
         pixmap = item->object()->getIcon().pixmap(iconSize);
-    }
+    } else if (tooltip == item->text(0))
+        return;
     ToolTip::showText(this->viewport()->mapToGlobal(pos), tooltip, pixmap, this);
     pimpl->tooltipItem = item;
 }
@@ -6402,6 +6403,7 @@ TreePanel::TreePanel(const char *name, QWidget* parent)
     pLayout->addWidget(this->searchBox);
     this->searchBox->hide();
     this->searchBox->installEventFilter(this);
+    this->treeWidget->installEventFilter(this);
     this->searchBox->setPlaceholderText(tr("Search"));
     connect(this->searchBox, SIGNAL(returnPressed()),
             this, SLOT(accept()));
@@ -6423,24 +6425,25 @@ void TreePanel::accept()
 
 bool TreePanel::eventFilter(QObject *obj, QEvent *ev)
 {
-    if (obj != this->searchBox)
-        return false;
-
-    if (ev->type() == QEvent::KeyPress) {
-        bool consumed = false;
+    if (this->searchBox->isVisible()
+            && ev->type() == QEvent::KeyPress)
+    {
         int key = static_cast<QKeyEvent*>(ev)->key();
         switch (key) {
         case Qt::Key_Escape:
             hideEditor();
-            consumed = true;
             treeWidget->setFocus();
+            return true;
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+            if (obj == searchBox)  {
+                QApplication::sendEvent(treeWidget, ev);
+                return true;
+            }
             break;
-
         default:
             break;
         }
-
-        return consumed;
     }
 
     return false;

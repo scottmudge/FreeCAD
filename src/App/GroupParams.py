@@ -60,7 +60,7 @@ Params = [
               "WARNING! Disabling this option may produce an invalid group after changing its children."),
     ParamBool('CreateGroupInGroup', True,
         title = 'Create new group inside current selected group',
-        doc = 'This option only applies to creating a new group when there is a single'
+        doc = 'This option only applies to creating a new group when there is a single\n'
               'selected object that is also a group (either plain or App::Part).\n\n'
               'If the option is enabled, then the new group will be created inside the\n'
               'selected group. If disabled, then the selected group will be moved into\n'

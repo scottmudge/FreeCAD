@@ -268,7 +268,7 @@ void PropertyPartShape::beforeSave() const
     _HasherIndex = 0;
     _SaveHasher = false;
     auto owner = Base::freecad_dynamic_cast<App::DocumentObject>(getContainer());
-    if(owner && !_Shape.isNull()) {
+    if(owner && !_Shape.isNull() && _Shape.getElementMapSize()>0) {
         auto ret = owner->getDocument()->addStringHasher(_Shape.Hasher);
         _HasherIndex = ret.second;
         _SaveHasher = ret.first;
@@ -281,7 +281,9 @@ void PropertyPartShape::Save (Base::Writer &writer) const
     //See SaveDocFile(), RestoreDocFile()
     writer.Stream() << writer.ind() << "<Part";
     auto owner = dynamic_cast<App::DocumentObject*>(getContainer());
-    if(owner && !_Shape.isNull() && !_Shape.Hasher.isNull()) {
+    if(owner && !_Shape.isNull()
+             && _Shape.getElementMapSize()>0
+             && !_Shape.Hasher.isNull()) {
         writer.Stream() << " HasherIndex=\"" << _HasherIndex << '"';
         if(_SaveHasher)
             writer.Stream() << " SaveHasher=\"1\"";
@@ -436,6 +438,8 @@ void PropertyPartShape::afterRestore()
         // order to try to regenerate the element map
         _Ver = "?"; 
     }
+    else if (_Shape.getElementMapSize() == 0)
+        _Shape.Hasher.reset();
     PropertyComplexGeoData::afterRestore();
 }
 

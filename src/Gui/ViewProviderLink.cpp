@@ -1340,7 +1340,7 @@ void LinkView::setChildren(const std::vector<App::DocumentObject*> &children,
         else if (children.size() == nodeArray.size() + 1) {
             // Adding an object
             int i = -1;
-            int idx = -1;
+            int idx = (int)children.size()-1;
             for (const auto &pinfo : nodeArray) {
                 auto &info = *pinfo;
                 if (!info.isLinked()) {

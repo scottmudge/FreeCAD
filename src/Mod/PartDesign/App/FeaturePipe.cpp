@@ -497,7 +497,10 @@ TopoShape Pipe::buildPipePath(const App::PropertyLinkSub &link, const TopLoc_Loc
                 return result;
         }
     }
-    result.makEWires(shapes, nullptr, _ProfileBasedVersion.getValue() >= 2);
+    if (_ProfileBasedVersion.getValue() >= 2)
+        result.makEOrderedWires(shapes);
+    else
+        result.makEWires(shapes);
     if(result.countSubShapes(TopAbs_WIRE)>1)
         FC_WARN("Sweep path contain more than one wire");
     result = result.getSubTopoShape(TopAbs_WIRE,1);

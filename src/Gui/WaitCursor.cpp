@@ -24,6 +24,7 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <atomic>
 # include <QApplication>
 # include <QDateTime>
 # include <QMessageBox>
@@ -143,7 +144,7 @@ bool WaitCursorP::eventFilter(QObject* o, QEvent* e)
     return false;
 }
 
-static int WaitCursorInstances = 0;
+static std::atomic<int> WaitCursorInstances = 0;
 
 /**
  * Constructs this object and shows the wait cursor immediately. If you need to open a dialog as
@@ -192,7 +193,7 @@ void WaitCursor::setIgnoreEvents(FilterEventsFlags flags)
     WaitCursorP::getInstance()->setIgnoreEvents(flags);
 }
 
-static int RestoreInstance;
+static std::atomic<int> RestoreInstance;
 
 WaitCursorRestorer::WaitCursorRestorer()
 {

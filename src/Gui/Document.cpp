@@ -214,7 +214,7 @@ Document::Document(App::Document* pcDocument,Application * app)
 
     // Setup the connections
     d->connectNewObject = pcDocument->signalNewObject.connect
-        (boost::bind(&Gui::Document::slotNewObject, this, bp::_1));
+        (boost::bind(&Gui::Document::slotNewObject, this, bp::_1), boost::signals2::at_front);
     d->connectDelObject = pcDocument->signalDeletedObject.connect
         (boost::bind(&Gui::Document::slotDeletedObject, this, bp::_1));
     d->connectCngObject = pcDocument->signalChangedObject.connect

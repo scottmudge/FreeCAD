@@ -139,7 +139,13 @@ SelectionView::SelectionView(Gui::Document* pcDocument, QWidget *parent)
 
     connect(clearButton, SIGNAL(clicked()), searchBox, SLOT(clear()));
     connect(searchBox, SIGNAL(textChanged(QString)), this, SLOT(search(QString)));
-    connect(searchBox, SIGNAL(editingFinished()), this, SLOT(validateSearch()));
+
+    // editingFinished() will fire on lost of focus, which may cause undesired
+    // effect. Use returnPressed() instead for clearer user intention.
+    //
+    // connect(searchBox, SIGNAL(editingFinished()), this, SLOT(validateSearch()));
+    connect(searchBox, SIGNAL(returnPressed()), this, SLOT(validateSearch()));
+
     connect(selectionView, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), this, SLOT(toggleSelect(QTreeWidgetItem*)));
     connect(selectionView, SIGNAL(itemEntered(QTreeWidgetItem*, int)), this, SLOT(preselect(QTreeWidgetItem*)));
     connect(pickList, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), this, SLOT(toggleSelect(QTreeWidgetItem*)));
@@ -147,6 +153,11 @@ SelectionView::SelectionView(Gui::Document* pcDocument, QWidget *parent)
     connect(selectionView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onItemContextMenu(QPoint)));
     connect(enablePickList, SIGNAL(stateChanged(int)), this, SLOT(onEnablePickList()));
 
+    QObject::connect(selectionView, &QTreeWidget::currentItemChanged,
+        [&](QTreeWidgetItem *current, QTreeWidgetItem*) {
+            if (current)
+                preselect(current);
+        });
 }
 
 SelectionView::~SelectionView()
@@ -253,17 +264,17 @@ void SelectionView::onSelectionChanged(const SelectionChanges &Reason)
 
 void SelectionView::search(const QString& text)
 {
+    searchList.clear();
+    selectionView->clear();
     if (!text.isEmpty()) {
-        searchList.clear();
         App::Document* doc = App::GetApplication().getActiveDocument();
         std::vector<App::DocumentObject*> objects;
         if (doc) {
             objects = doc->getObjects();
-            selectionView->clear();
             for (std::vector<App::DocumentObject*>::iterator it = objects.begin(); it != objects.end(); ++it) {
                 QString label = QString::fromUtf8((*it)->Label.getValue());
                 if (label.contains(text,Qt::CaseInsensitive)) {
-                    searchList.push_back(*it);
+                    searchList.emplace_back(*it);
                     addItem(selectionView, App::SubObjectT(*it, ""));
                 }
             }
@@ -277,10 +288,9 @@ void SelectionView::validateSearch(void)
     if (!searchList.empty()) {
         App::Document* doc = App::GetApplication().getActiveDocument();
         if (doc) {
+            selectionView->clear();
             Gui::Selection().clearSelection();
-            for (std::vector<App::DocumentObject*>::iterator it = searchList.begin(); it != searchList.end(); ++it) {
-                Gui::Selection().addSelection(doc->getName(),(*it)->getNameInDocument(),0);
-            }
+            Gui::Selection().addSelections(searchList);
         }
     }
 }

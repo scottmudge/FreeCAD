@@ -202,7 +202,7 @@ Params = [
     ParamBool('SelectionFaceWire', False,
         "Show hidden tirangulation wires for selected face"),
     ParamFloat('NewDocumentCameraScale', 100.0),
-    ParamInt('MaxOnTopSelections', 20),
+    ParamInt('MaxOnTopSelections', 100),
     ParamInt('MaxViewSelections', 100),
     ParamInt('MaxSelectionNotification', 100),
     ParamBool('MapChildrenPlacement', False, on_change=True, doc=

@@ -160,8 +160,10 @@ void SequencerBar::startStep()
         d->progressTime.start();
         d->checkAbortTime.start();
         d->measureTime.start();
-        d->waitCursor = new Gui::WaitCursor;
+        if (!d->waitCursor)
+            d->waitCursor = new Gui::WaitCursor;
         d->bar->enterControlEvents(d->guiThread);
+        showRemainingTime();
         d->bar->aboutToShow();
     }
 }
@@ -310,6 +312,7 @@ void SequencerBar::showRemainingTime()
             }
             else {
                 getMainWindow()->showMessage(status);
+                d->bar->setToolTip(status);
             }
         }
     }
@@ -482,6 +485,7 @@ void ProgressBar::delayedShow()
 void ProgressBar::aboutToHide()
 {
     hide();
+    setToolTip(QString());
 #ifdef QT_WINEXTRAS_LIB
     setupTaskBarProgress();
     m_taskbarProgress->hide();
