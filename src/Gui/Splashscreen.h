@@ -44,7 +44,7 @@ class SplashScreen : public QSplashScreen
     Q_OBJECT
 
 public:
-    SplashScreen(  const QPixmap & pixmap = QPixmap ( ), Qt::WindowFlags f = Qt::WindowFlags(), const bool is_wayland = false );
+    SplashScreen(  const QPixmap & pixmap = QPixmap ( ), Qt::WindowFlags f = Qt::WindowFlags() );
     ~SplashScreen();
 
 protected:

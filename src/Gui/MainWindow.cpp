@@ -1873,7 +1873,6 @@ void MainWindow::saveWindowSettings(bool canDelay)
 
 void MainWindow::startSplasher(void)
 {
-    const bool is_wayland = std::getenv("WAYLAND_DISPLAY") != nullptr;
     // startup splasher
     // when running in verbose mode no splasher
     if (!(App::Application::Config()["Verbose"] == "Strict") &&
@@ -1882,7 +1881,7 @@ void MainWindow::startSplasher(void)
             GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("General");
         // first search for an external image file
         if (hGrp->GetBool("ShowSplasher", true)) {
-            d->splashscreen = new SplashScreen(this->splashImage(is_wayland), Qt::WindowFlags(), is_wayland);
+            d->splashscreen = new SplashScreen(this->splashImage());
             d->splashscreen->show();
             d->screen = QApplication::desktop()->screenNumber(d->splashscreen);
         }
@@ -1926,7 +1925,7 @@ QPixmap MainWindow::aboutImage() const
     return about_image;
 }
 
-QPixmap MainWindow::splashImage(const bool is_wayland) const
+QPixmap MainWindow::splashImage() const
 {
     // search in the UserAppData dir as very first
     QPixmap splash_image;
@@ -2024,17 +2023,6 @@ QPixmap MainWindow::splashImage(const bool is_wayland) const
             painter.drawText(x + (l + 5), y, version);
             painter.end();
         }
-    }
-
-    if (is_wayland) {
-        const QRect screensize = QApplication::desktop()->availableGeometry();
-        QPixmap out_image(screensize.width(), screensize.height());
-
-        QPainter bigpainter(&out_image);
-        bigpainter.drawPixmap(screensize.width()/2 - splash_image.width()/2,
-                            screensize.height()/2 - splash_image.height()/2,
-                            splash_image);
-        return out_image;
     }
 
     return splash_image;

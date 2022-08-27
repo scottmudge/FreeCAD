@@ -156,7 +156,7 @@ public:
     /* The image of the About dialog, it might be empty. */
     QPixmap aboutImage() const;
     /* The image of the splash screen of the application. */
-    QPixmap splashImage(const bool wayland_compat=false) const;
+    QPixmap splashImage() const;
     /** Shows the online documentation. */
     void showDocumentation(const QString& help);
     //@}
