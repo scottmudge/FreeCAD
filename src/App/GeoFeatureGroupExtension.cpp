@@ -312,7 +312,7 @@ void GeoFeatureGroupExtension::extensionOnChanged(const Property* p) {
                         auto iter = objMap.find(link);
                         if(iter == objMap.end() || !iter->second) {
                             const char *action;
-                            if (GroupParams::getGeoGroupAllowCrossLink())
+                            if (GroupParams::getGeoGroupAllowCrossLink() || !canRemoveChild(obj))
                                 action = "Invalid child ";
                             else {
                                 action = "Remove ";

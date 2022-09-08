@@ -158,7 +158,7 @@ Properties = [
 
     Property('ElementList', PropLinkList, "The link element object list"),
 
-    Property('ShowElement', PropBool, "Enable link element list"),
+    Property('ShowElement', PropBool, "Enable link element list", default='true'),
 
     Property('AutoLinkLabel', PropBool, "Enable link auto label according to linked object", prop_flags='App::Prop_Hidden'),
 

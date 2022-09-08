@@ -6879,27 +6879,6 @@ void ViewProviderSketch::updateData(const App::Property *prop)
 
     auto sketch = getSketchObject();
 
-    // In the case of an undo/redo transaction, updateData is triggered by SketchObject::onUndoRedoFinished() in the solve()
-    //
-    // (Amendment: class App::TransactionGuard makes sure to only notify
-    // property changes after all changes (to all affect propertied of all
-    // objects) have been applied. So there will be no intermediate state to
-    // watch for. On the other hand, performing a recomputation (done in
-    // onUndoRedoFinished()) is not a good idea, as it may affects multiple
-    // objects and causing an inconsistent undo/redo state, which is why
-    // recomputation is now forbidden during undo/redo by the core.)
-#if 0
-    if (edit && !sketch->getDocument()->isPerformingTransaction()
-             && !sketch->isPerformingInternalTransaction()
-#else
-    // In the case of an internal transaction, touching the geometry results in a call to updateData.
-    if (edit && !sketch->isPerformingInternalTransaction()
-#endif
-             && (prop == &(sketch->Geometry) ||
-                 prop == &(sketch->ExternalGeo))) {
-        signalElementsChanged();
-    }
-
     if (prop == &sketch->FullyConstrained || prop == &sketch->Geometry) {
         const char *pixmap;
         if (sketch->Geometry.getSize() && sketch->FullyConstrained.getValue())

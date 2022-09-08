@@ -3517,20 +3517,44 @@ std::vector<App::DocumentObject*> Document::getDependencyList(
             for(size_t i=0;i<c.size();++i)
                 components[c[i]].push_back(i);
 
-            FC_ERR("Dependency cycles: ");
             std::ostringstream ss;
-            ss << '\n';
+            ss << "\nDependency cycles:";
+            std::vector<Property*> props;
+            std::vector<ObjectIdentifier> identifiers;
+            auto findProperty = [&](DocumentObject *obj, DocumentObject *link) {
+                props.clear();
+                obj->getPropertyList(props);
+                bool first = true;
+                for (const auto *prop : props) {
+                    if (!prop->getName() || prop->getContainer() != obj)
+                        continue;
+                    if (auto propLink = Base::freecad_dynamic_cast<PropertyLinkBase>(prop)) {
+                        identifiers.clear();
+                        propLink->getLinksTo(identifiers, link);
+                        for (const auto &path : identifiers) {
+                            ss << ", ";
+                            if (first) {
+                                first = false;
+                                ss << "Property: ";
+                            }
+                            ss << path.canonicalPath().toString();
+                        }
+                    }
+                }
+            };
             for(auto &v : components) {
                 if(v.second.size()==1) {
                     // For components with only one member, we still need to
-                    // check if there it is self looping.
+                    // check if there is self looping.
                     auto it = vertexMap.find(v.second[0]);
                     if(it==vertexMap.end())
                         continue;
                     // Try search the object in its own out list
                     for(auto obj : it->second->getOutList()) {
                         if(obj == it->second) {
-                            ss << '\n' << it->second->getFullName() << '\n';
+                            ss << '\n' << it->second->getFullName();
+                            findProperty(obj, obj);
+                            ss << '\n';
                             break;
                         }
                     }
@@ -3538,12 +3562,22 @@ std::vector<App::DocumentObject*> Document::getDependencyList(
                 }
                 // For components with more than one member, they form a loop together
                 ss << '\n';
+                DocumentObject *first = nullptr;
+                DocumentObject *prev = nullptr;
                 for(size_t i=0;i<v.second.size();++i) {
                     auto it = vertexMap.find(v.second[i]);
                     if(it==vertexMap.end())
                         continue;
-                    ss << App::SubObjectT(it->second, "").getObjectFullName() << '\n';
+                    if (prev) {
+                        findProperty(prev, it->second);
+                        ss << '\n';
+                    } else
+                        first = it->second;
+                    ss << App::SubObjectT(it->second, "").getObjectFullName();
+                    prev = it->second;
                 }
+                if (first != prev)
+                    findProperty(prev, first);
                 ss << '\n';
             }
             FC_ERR(ss.str());

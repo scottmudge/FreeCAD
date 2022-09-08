@@ -274,14 +274,6 @@ App::DocumentObjectExecReturn *RuledSurface::execute(void)
         }
         TopoShape res(0, getDocument()->getStringHasher());
         res.makERuledSurface(shapes, Orientation.getValue());
-        if (_Version.getValue() > 0) {
-            if (!res.getShape().Location().IsIdentity()) {
-                // wrap the result into a compound to preserve its placement, and
-                // not disturb the object's user defined placement
-                res.makECompound({res});
-            }
-        } else 
-            Placement.setValue(res.getPlacement());
         this->Shape.setValue(res);
 
 #endif

@@ -120,6 +120,8 @@ public:
     
     bool checkBBox(const Bnd_Box &box)
     {
+        if (box.IsVoid())
+            return false;
         Standard_Real xMin, yMin, zMin, xMax, yMax, zMax;
         box.Get(xMin, yMin, zMin, xMax, yMax, zMax);
         return zMax - zMin <= myTol;

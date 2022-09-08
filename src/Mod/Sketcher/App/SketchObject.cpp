@@ -1195,6 +1195,7 @@ void SketchObject::acceptGeometry()
 {
     Constraints.acceptGeometry(getCompleteGeometry());
     rebuildVertexIndex();
+    signalElementsChanged();
 }
 
 bool SketchObject::isSupportedGeometry(const Part::Geometry *geo) const
@@ -6645,7 +6646,7 @@ int SketchObject::addExternal(App::DocumentObject *Obj, const char* SubName, boo
        return -1;
 
     auto wholeShape = Part::Feature::getTopoShape(Obj);
-    auto shape = wholeShape.getSubTopoShape(SubName);
+    auto shape = wholeShape.getSubTopoShape(SubName, /*silent*/true);
     TopAbs_ShapeEnum shapeType = TopAbs_SHAPE;
     if (shape.shapeType(/*silent*/true) != TopAbs_FACE) {
         if (shape.hasSubShape(TopAbs_FACE))
@@ -7589,8 +7590,7 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                 const TopoDS_Edge& edge = TopoDS::Edge(refSubShape);
                 BRepAdaptor_Curve curve(edge);
                 Handle(Geom_Curve) origCurve = curve.Curve().Curve();
-                gp_Pnt firstPoint = BRep_Tool::Pnt(TopExp::FirstVertex(edge));
-                gp_Pnt lastPoint = BRep_Tool::Pnt(TopExp::LastVertex(edge));
+                gp_Pnt firstPoint, lastPoint;
 
                 bool done = false;
 
@@ -7598,7 +7598,15 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                     done = true;
                     geos.emplace_back(projectLine(curve, gPlane, invPlm));
                 }
-                else if (curve.GetType() == GeomAbs_Circle) {
+                else {
+                    // TopExp::First/LastVertex() may throw on infinite edge, so
+                    // we don't do it for linear edge, which does not require
+                    // end points for projection
+                    firstPoint = BRep_Tool::Pnt(TopExp::FirstVertex(edge));
+                    lastPoint = BRep_Tool::Pnt(TopExp::LastVertex(edge));
+                }
+
+                if (curve.GetType() == GeomAbs_Circle) {
                     done = true;
                     gp_Dir vec1 = sketchPlane.Axis().Direction();
                     gp_Dir vec2 = curve.Circle().Axis().Direction();

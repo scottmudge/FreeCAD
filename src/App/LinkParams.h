@@ -28,11 +28,11 @@ import LinkParams
 LinkParams.declare()
 ]]]*/
 
-// Auto generated code (Tools/params_utils.py:68)
+// Auto generated code (Tools/params_utils.py:72)
 #include <Base/Parameter.h>
 
 
-// Auto generated code (Tools/params_utils.py:74)
+// Auto generated code (Tools/params_utils.py:78)
 namespace App {
 /** Convenient class to obtain App::Link related parameters
 
@@ -68,7 +68,7 @@ class AppExport LinkParams {
 public:
     static ParameterGrp::handle getHandle();
 
-    // Auto generated code (Tools/params_utils.py:118)
+    // Auto generated code (Tools/params_utils.py:122)
     //@{
     /// Accessor for parameter HideScaleVector
     static const bool & getHideScaleVector();
@@ -78,7 +78,7 @@ public:
     static const char *docHideScaleVector();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:118)
+    // Auto generated code (Tools/params_utils.py:122)
     //@{
     /// Accessor for parameter CreateInPlace
     static const bool & getCreateInPlace();
@@ -88,7 +88,7 @@ public:
     static const char *docCreateInPlace();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:118)
+    // Auto generated code (Tools/params_utils.py:122)
     //@{
     /// Accessor for parameter CreateInContainer
     static const bool & getCreateInContainer();
@@ -98,7 +98,7 @@ public:
     static const char *docCreateInContainer();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:118)
+    // Auto generated code (Tools/params_utils.py:122)
     //@{
     /// Accessor for parameter ActiveContainerKey
     static const std::string & getActiveContainerKey();
@@ -108,7 +108,7 @@ public:
     static const char *docActiveContainerKey();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:118)
+    // Auto generated code (Tools/params_utils.py:122)
     //@{
     /// Accessor for parameter CopyOnChangeApplyToAll
     static const bool & getCopyOnChangeApplyToAll();
@@ -118,7 +118,21 @@ public:
     static const char *docCopyOnChangeApplyToAll();
     //@}
 
-// Auto generated code (Tools/params_utils.py:146)
+    // Auto generated code (Tools/params_utils.py:122)
+    //@{
+    /// Accessor for parameter ShowElement
+    ///
+    /// Default value of the "ShowElement" property in an App::Link object,
+    /// which specifies whether to show the link array element as individual
+    /// object in the tree view.
+    static const bool & getShowElement();
+    static const bool & defaultShowElement();
+    static void removeShowElement();
+    static void setShowElement(const bool &v);
+    static const char *docShowElement();
+    //@}
+
+// Auto generated code (Tools/params_utils.py:150)
 }; // class LinkParams
 } // namespace App
 //[[[end]]]

@@ -109,6 +109,7 @@ SelectionView::SelectionView(Gui::Document* pcDocument, QWidget *parent)
     selectionView->headerItem()->setText(LabelIndex, tr("Label"));
     selectionView->headerItem()->setText(ElementIndex, tr("Element"));
     selectionView->headerItem()->setText(PathIndex, tr("Path"));
+    selectionView->header()->setStretchLastSection(false);
 
     selectionView->setContextMenuPolicy(Qt::CustomContextMenu);
     vLayout->addWidget( selectionView );
@@ -124,6 +125,7 @@ SelectionView::SelectionView(Gui::Document* pcDocument, QWidget *parent)
     pickList->headerItem()->setText(LabelIndex, tr("Label"));
     pickList->headerItem()->setText(ElementIndex, tr("Element"));
     pickList->headerItem()->setText(PathIndex, tr("Path"));
+    pickList->header()->setStretchLastSection(false);
     pickList->setVisible(false);
     vLayout->addWidget(pickList);
 

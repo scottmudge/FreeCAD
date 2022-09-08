@@ -188,6 +188,19 @@ public:
     virtual void getLinks(std::vector<App::DocumentObject *> &objs,
             bool all=false, std::vector<std::string> *subs=0, bool newStyle=true) const = 0;
 
+    /** Obtain identifiers from this link property that link to a give object
+     * @param identifiers: holds the returned identifier to reference the given object
+     * @param obj: the referenced object
+     * @param subname: optional subname reference
+     * @param all: if true, then return all the references regardless of
+     *             this LinkScope. If false, then return only if the LinkScope
+     *             is not hidden.
+     */
+    virtual void getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                            App::DocumentObject *obj,
+                            const char *subname=nullptr,
+                            bool all=false) const = 0;
+
     /** Called to reset this link property
      *
      * @param obj: reset link property if it is linked to this object
@@ -647,6 +660,11 @@ public:
     virtual void getLinks(std::vector<App::DocumentObject *> &objs,
             bool all=false, std::vector<std::string> *subs=0, bool newStyle=true) const override;
 
+    virtual void getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                            App::DocumentObject *obj,
+                            const char *subname=nullptr,
+                            bool all=false) const override;
+
     virtual void breakLink(App::DocumentObject *obj, bool clear) override;
 
     virtual bool adjustLink(const std::set<App::DocumentObject *> &inList) override;
@@ -742,6 +760,11 @@ public:
 
     virtual void getLinks(std::vector<App::DocumentObject *> &objs,
             bool all=false, std::vector<std::string> *subs=0, bool newStyle=true) const override;
+
+    virtual void getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                            App::DocumentObject *obj,
+                            const char *subname=nullptr,
+                            bool all=false) const override;
 
     virtual void breakLink(App::DocumentObject *obj, bool clear) override;
 
@@ -884,6 +907,11 @@ public:
 
     virtual void getLinks(std::vector<App::DocumentObject *> &objs,
             bool all=false, std::vector<std::string> *subs=0, bool newStyle=true) const override;
+
+    virtual void getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                            App::DocumentObject *obj,
+                            const char *subname=nullptr,
+                            bool all=false) const override;
 
     virtual void breakLink(App::DocumentObject *obj, bool clear) override;
 
@@ -1037,6 +1065,11 @@ public:
     virtual void getLinks(std::vector<App::DocumentObject *> &objs,
             bool all=false, std::vector<std::string> *subs=0, bool newStyle=true) const override;
 
+    virtual void getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                            App::DocumentObject *obj,
+                            const char *subname=nullptr,
+                            bool all=false) const override;
+
     virtual void breakLink(App::DocumentObject *obj, bool clear) override;
 
     virtual bool adjustLink(const std::set<App::DocumentObject *> &inList) override;
@@ -1164,6 +1197,11 @@ public:
 
     virtual void getLinks(std::vector<App::DocumentObject *> &objs,
             bool all=false, std::vector<std::string> *subs=0, bool newStyle=true) const override;
+
+    virtual void getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                            App::DocumentObject *obj,
+                            const char *subname=nullptr,
+                            bool all=false) const override;
 
     virtual bool adjustLink(const std::set<App::DocumentObject *> &inList) override;
 
@@ -1333,6 +1371,11 @@ public:
 
     virtual void getLinks(std::vector<App::DocumentObject *> &objs,
             bool all=false, std::vector<std::string> *subs=0, bool newStyle=true) const override;
+
+    virtual void getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                            App::DocumentObject *obj,
+                            const char *subname=nullptr,
+                            bool all=false) const override;
 
     virtual void breakLink(App::DocumentObject *obj, bool clear) override;
 

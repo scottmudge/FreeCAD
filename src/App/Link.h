@@ -450,7 +450,7 @@ public:
     bool getShowElementValue() const {
         if (auto prop = this->props[PropIndex::PropShowElement])
             return static_cast<const App::PropertyBool *>(prop)->getValue();
-        return false;
+        return true;
     }
     const App::PropertyBool *getShowElementProperty() const {
         return static_cast<const App::PropertyBool *>(this->props[PropIndex::PropShowElement]);

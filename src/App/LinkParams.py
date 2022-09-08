@@ -41,6 +41,11 @@ Params = [
     ParamBool('CreateInContainer', bool, False),
     ParamString('ActiveContainerKey', ""),
     ParamBool('CopyOnChangeApplyToAll', True),
+    ParamBool('ShowElement', True,
+        title = 'Show array element in Link array',
+        doc = 'Default value of the "ShowElement" property in an App::Link object,\n'
+              'which specifies whether to show the link array element as individual\n'
+              'object in the tree view.'),
 ]
 
 def declare():
@@ -49,3 +54,5 @@ def declare():
 
 def define():
     params_utils.define(sys.modules[__name__])
+
+params_utils.init_params(Params, NameSpace, ClassName, ParamPath)

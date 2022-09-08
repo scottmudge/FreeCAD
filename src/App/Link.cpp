@@ -1489,8 +1489,14 @@ bool LinkBaseExtension::extensionGetLinkedObject(DocumentObject *&ret,
 
 void LinkBaseExtension::extensionOnChanged(const Property *prop) {
     auto parent = getContainer();
-    if(parent && !parent->isRestoring() && prop && !prop->testStatus(Property::User3))
-        update(parent,prop);
+    if(parent && !parent->isRestoring() && prop && !prop->testStatus(Property::User3)) {
+        if (!parent->getDocument() || !parent->getDocument()->isPerformingTransaction())
+            update(parent,prop);
+        else {
+            Base::StateLocker guard(pauseCopyOnChange);
+            update(parent,prop);
+        }
+    }
     inherited::extensionOnChanged(prop);
 }
 
@@ -1579,7 +1585,8 @@ void LinkBaseExtension::updateGroupVisibility() {
 }
 
 void LinkBaseExtension::update(App::DocumentObject *parent, const Property *prop) {
-    if(!prop) return;
+    if(!prop)
+        return;
 
     if(prop == getLinkPlacementProperty() || prop == getPlacementProperty()) {
         auto src = getLinkPlacementProperty();
@@ -2558,7 +2565,7 @@ Link::Link()
     ADD_PROPERTY_TYPE(LinkTransform, (false), " Link", App::Prop_None, getPropertyInfo()[PropIndex::PropLinkTransform].doc);
     ADD_PROPERTY_TYPE(LinkPlacement, (Base::Placement{}), " Link", App::Prop_None, getPropertyInfo()[PropIndex::PropLinkPlacement].doc);
     ADD_PROPERTY_TYPE(Placement, (Base::Placement{}), " Link", App::Prop_None, getPropertyInfo()[PropIndex::PropPlacement].doc);
-    ADD_PROPERTY_TYPE(ShowElement, (false), " Link", App::Prop_None, getPropertyInfo()[PropIndex::PropShowElement].doc);
+    ADD_PROPERTY_TYPE(ShowElement, (true), " Link", App::Prop_None, getPropertyInfo()[PropIndex::PropShowElement].doc);
     ADD_PROPERTY_TYPE(SyncGroupVisibility, (false), " Link", App::Prop_None, getPropertyInfo()[PropIndex::PropSyncGroupVisibility].doc);
     ADD_PROPERTY_TYPE(ElementCount, (0), " Link", App::Prop_None, getPropertyInfo()[PropIndex::PropElementCount].doc);
     {// Auto generated code (App/Link.py:99)
@@ -2608,6 +2615,7 @@ void Link::setupObject()
 {
     inherited::setupObject();
     AutoLinkLabel.setValue(true);
+    ShowElement.setValue(LinkParams::getShowElement());
 }
 
 bool Link::canLinkProperties() const {

@@ -278,8 +278,6 @@ public:
     boost::signals2::signal<void ()> signalConstraintsChanged;
     /// signals if the sketch has been set up
     boost::signals2::signal<void (const QString &state, const QString &msg, const QString &url, const QString &linkText)> signalSetUp;
-    /// signals if the elements list has changed
-    boost::signals2::signal<void ()> signalElementsChanged;
         
     virtual std::vector<App::DocumentObject*> claimChildren(void) const;
     void selectElement(const char *element, bool preselect=false) const;

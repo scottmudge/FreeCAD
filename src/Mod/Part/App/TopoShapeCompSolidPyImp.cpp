@@ -98,7 +98,7 @@ int TopoShapeCompSolidPy::PyInit(PyObject* args, PyObject* /*kwd*/)
 PyObject*  TopoShapeCompSolidPy::add(PyObject *args)
 {
     PyObject *obj;
-    if (!PyArg_ParseTuple(args, "O!", &(Part::TopoShapeSolidPy::Type), &obj))
+    if (!PyArg_ParseTuple(args, "O", &obj))
         return NULL;
 
     BRep_Builder builder;

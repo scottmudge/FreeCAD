@@ -1207,6 +1207,10 @@ void ViewProviderPartExt::reload()
         pcLineStyle->lineWidth = linewidth;
         update = true;
     }
+    if (NormalsFromUV != PartParams::getNormalsFromUVNodes()) {
+        update = true;
+        NormalsFromUV = !NormalsFromUV;
+    }
 
     tessRange.LowerBound = PartParams::getMinimumDeviation();
     angDeflectionRange.LowerBound = PartParams::getMinimumAngularDeflection();

@@ -159,7 +159,6 @@ PyObject* TopoShapeCompoundPy::connectEdgesToWires(PyObject *args)
             builder.Add(comp, hWires->Value(i));
         }
 
-        getTopoShapePtr()->setShape(comp);
         return new TopoShapeCompoundPy(new TopoShape(comp));
 #endif
     } PY_CATCH_OCC

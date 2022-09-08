@@ -602,6 +602,7 @@ public:
 
     // Signaled when solver has done update
     boost::signals2::signal<void ()> signalSolverUpdate;
+    boost::signals2::signal<void ()> signalElementsChanged;
 
 public: // geometry extension functionalities for single element sketch object user convenience
     int setGeometryId(int GeoId, long id);

@@ -290,7 +290,7 @@ void TaskDressUpParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
                 continue;
 
             char type = pcDressUp->Shape.getShape().elementType(hist.element);
-            if ((!allowFaces && type == 'F') || (!allowEdges && type == 'E'))
+            if ((!allowFaces && (type == 'F' || type == 'W')) || (!allowEdges && type == 'E'))
                 continue;
             if(element) {
                 showMessage("Ambiguous selection");
@@ -455,7 +455,8 @@ bool TaskDressUpParameters::syncItems(const std::vector<App::SubObjectT> &sels, 
             if(subset.count(element))
                 continue;
             if((allowEdges && boost::starts_with(element,"Edge"))
-                    || (allowFaces && boost::starts_with(element,"Face")))
+                    || (allowFaces && (boost::starts_with(element,"Face")
+                                       || boost::starts_with(element, "Wire"))))
             {
                 subset.insert(element);
                 auto item = new QListWidgetItem(QString::fromUtf8(element.c_str()), listWidget);
