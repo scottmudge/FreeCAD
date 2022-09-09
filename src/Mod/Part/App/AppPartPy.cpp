@@ -2678,9 +2678,10 @@ private:
         PyObject *outline = Py_False;
         PyObject *keep_open = Py_False;
         double tol = 1e-6;
-        static char* kwd_list[] = {"shape", "split", "merge", "tighten", "outline", "keep_open", "tol", 0};
-        if(!PyArg_ParseTupleAndKeywords(args.ptr(), kwds.ptr(), "O|OOOOOd", kwd_list,
-                &pyshape, &split, &merge, &tighten, &outline, &keep_open, &tol))
+        const char *op = "";
+        static char* kwd_list[] = {"shape", "split", "merge", "tighten", "outline", "keep_open", "tol", "op", 0};
+        if(!PyArg_ParseTupleAndKeywords(args.ptr(), kwds.ptr(), "O|OOOOOds", kwd_list,
+                &pyshape, &split, &merge, &tighten, &outline, &keep_open, &tol, &op))
             throw Py::Exception();
 
         PY_TRY {
@@ -2693,10 +2694,12 @@ private:
             joiner.setSplitEdges(PyObject_IsTrue(split));
             joiner.addShape(shapes);
             TopoShape result;
-            result.makEShape(joiner, shapes);
+            result.makEShape(joiner, shapes, op);
             if (!PyObject_IsTrue(keep_open))
                 return shape2pyshape(result);
-            return Py::TupleN(shape2pyshape(result), shape2pyshape(joiner.getOpenWires()));
+            TopoShape openWires;
+            joiner.getOpenWires(openWires, op);
+            return Py::TupleN(shape2pyshape(result), shape2pyshape(openWires));
         } _PY_CATCH_OCC(throw Py::Exception())
     }
 };

@@ -3834,9 +3834,11 @@ TopoShape &TopoShape::makESHAPE(const TopoDS_Shape &shape, const Mapper &mapper,
                         // This warning occurs in makERevolve. It generates
                         // some shape from a vertex that never made into the
                         // final shape. There may be other cases there.
-                        if(FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                        if(FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_TRACE))
                             FC_WARN("Cannot find " << op << " modified " <<
-                                newInfo.shapetype << " from " << info.shapetype << i);
+                                newInfo.shapetype << " " << newShape.TShape().get()
+                                << " from " << info.shapetype << i << " "
+                                << otherElement.TShape().get());
                         continue;
                     }
 

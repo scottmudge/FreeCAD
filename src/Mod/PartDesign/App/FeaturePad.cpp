@@ -394,9 +394,14 @@ App::DocumentObjectExecReturn *Pad::_execute(bool makeface, bool fuse)
             solRes = refineShapeIfActive(solRes);
             this->Shape.setValue(getSolid(solRes));
         } else if (prism.hasSubShape(TopAbs_SOLID)) {
-           this->Shape.setValue(getSolid(prism));
-        } else
-           this->Shape.setValue(prism);
+            if (prism.countSubShapes(TopAbs_SOLID) > 1)
+                prism.makEFuse(prism.getSubTopoShapes(TopAbs_SOLID));
+            prism = refineShapeIfActive(prism);
+            this->Shape.setValue(getSolid(prism));
+        } else {
+            prism = refineShapeIfActive(prism);
+            this->Shape.setValue(prism);
+        }
 
         return App::DocumentObject::StdReturn;
     }

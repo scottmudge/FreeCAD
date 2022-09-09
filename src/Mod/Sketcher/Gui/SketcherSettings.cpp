@@ -72,6 +72,7 @@ void SketcherSettings::saveSettings()
     ui->checkBoxEnableEscape->onSave();
     ui->checkBoxNotifyConstraintSubstitutions->onSave();
     ui->checkBoxAutoRemoveRedundants->onSave();
+    ui->checkBoxMakeInternals->onSave();
     form->saveSettings();
 }
 
@@ -83,6 +84,7 @@ void SketcherSettings::loadSettings()
     ui->checkBoxEnableEscape->onRestore();
     ui->checkBoxNotifyConstraintSubstitutions->onRestore();
     ui->checkBoxAutoRemoveRedundants->onRestore();
+    ui->checkBoxMakeInternals->onRestore();
     form->loadSettings();
 }
 
@@ -275,6 +277,8 @@ void SketcherSettingsColors::saveSettings()
     ui->DetachedColor->onSave();
     ui->MissingColor->onSave();
 
+    ui->InternalFaceColor->onSave();
+
     ui->ConstrainedColor->onSave();
     ui->NonDrivingConstraintColor->onSave();
     ui->DatumColor->onSave();
@@ -306,6 +310,9 @@ void SketcherSettingsColors::loadSettings()
     ui->FrozenColor->onRestore();
     ui->DetachedColor->onRestore();
     ui->MissingColor->onRestore();
+
+    ui->InternalFaceColor->setAllowTransparency(true);
+    ui->InternalFaceColor->onRestore();
 
     ui->ConstrainedColor->onRestore();
     ui->NonDrivingConstraintColor->onRestore();

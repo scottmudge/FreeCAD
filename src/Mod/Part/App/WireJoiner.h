@@ -44,7 +44,8 @@ public:
     void setMergeEdges(bool enable=true);
     void setTolerance(double tolerance, double angularTol=0.0);
 
-    TopoShape getOpenWires();
+    bool getOpenWires(TopoShape &shape, const char *op="");
+    bool getResultWires(TopoShape &shape, const char *op="");
 
 #if OCC_VERSION_HEX < 0x070600
     void Build() override;

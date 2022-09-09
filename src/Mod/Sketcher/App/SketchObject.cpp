@@ -99,6 +99,7 @@
 #include <Mod/Part/App/PartParams.h>
 #include <Mod/Part/App/PartPyCXX.h>
 #include <Mod/Part/App/TopoShapeOpCode.h>
+#include <Mod/Part/App/WireJoiner.h>
 
 #include <Mod/Part/App/GeometryMigrationExtension.h>
 
@@ -145,6 +146,10 @@ SketchObject::SketchObject()
     ADD_PROPERTY_TYPE(ExternalBSplineMaxDegree, (0), "Sketch", (App::Prop_None), "Maximum degree of imported external BSpline. Zero to disable simplification");
     ADD_PROPERTY_TYPE(ExternalBSplineTolerance, (0.0), "Sketch", (App::Prop_None), "Tolerance for simplifying imported external BSpline");
     geoLastId = 0;
+
+    ADD_PROPERTY(InternalShape, (Part::TopoShape()));
+    ADD_PROPERTY_TYPE(MakeInternals, (false), "Internal Geometry", App::Prop_None, "Make internal geometry, e.g. split intersecting edges, face of closed wires.");
+    ADD_PROPERTY_TYPE(InternalTolerance, (1e-6), "Internal Geometry", App::Prop_None, "Tolerance used check vertex conincidents when making internal geometry");
 
     ParameterGrp::handle hGrpp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher");
     geoHistoryLevel = hGrpp->GetInt("GeometryHistoryLevel",1);
@@ -193,6 +198,7 @@ void SketchObject::setupObject()
     ArcFitTolerance.setValue(hGrpp->GetFloat("ArcFitTolerance", Precision::Confusion()*10.0));
     ExternalBSplineMaxDegree.setValue(hGrpp->GetInt("ExternalBSplineMaxDegree", 5));
     ExternalBSplineTolerance.setValue(hGrpp->GetFloat("ExternalBSplineTolerance", 1e-4));
+    MakeInternals.setValue(hGrpp->GetBool("MakeInternals", false));
     inherited::setupObject();
 }
 
@@ -305,9 +311,11 @@ void SketchObject::buildShape() {
         shapes.push_back(getEdge(geo, convertSubName(
                         Data::IndexedName::fromConst("ExternalEdge", i-1), false).c_str()));
     }
-    if(shapes.empty() && vertices.empty())
+    if(shapes.empty() && vertices.empty()) {
         Shape.setValue(Part::TopoShape());
-    else if (vertices.empty()) {
+        return;
+    }
+    if (vertices.empty()) {
         // Notice here we supply op code Part::OpCodes::Sketch to makEWires().
         Shape.setValue(Part::TopoShape().makEWires(shapes,Part::OpCodes::Sketch));
     } else {
@@ -329,6 +337,40 @@ void SketchObject::buildShape() {
         results.insert(results.end(), vertices.begin(), vertices.end());
         Shape.setValue(Part::TopoShape().makECompound(results, Part::OpCodes::Sketch));
     }
+
+    InternalShape.setValue(buildInternals(Shape.getShape()));
+}
+
+Part::TopoShape SketchObject::buildInternals(const Part::TopoShape &edges) const
+{
+    if (!MakeInternals.getValue())
+        return Part::TopoShape();
+
+    try {
+        Part::WireJoiner joiner;
+        joiner.setTolerance(InternalTolerance.getValue());
+        joiner.setTightBound(true);
+        joiner.setMergeEdges(true);
+        joiner.addShape(edges);
+        Part::TopoShape result(getID(), getDocument()->getStringHasher());
+        if (!joiner.Shape().IsNull()) {
+            joiner.getResultWires(result, "SKF");
+            result = result.makEFace(result.getSubTopoShapes(TopAbs_WIRE), 
+                                     /*op*/"",  /*maker*/"Part::FaceMakerRing");
+        }
+        Part::TopoShape openWires(getID(), getDocument()->getStringHasher());
+        joiner.getOpenWires(openWires, "SKF");
+        if (openWires.isNull())
+            return result;
+        if (result.isNull())
+            return openWires;
+        return result.makECompound({result, openWires});
+    } catch (Base::Exception &e) {
+        FC_WARN("Failed to make face for sketch: " << e.what());
+    } catch (Standard_Failure &e) {
+        FC_WARN("Failed to make face for sketch: " << e.GetMessageString());
+    }
+    return Part::TopoShape();
 }
 
 static const char *hasSketchMarker(const char *name) {
@@ -9772,61 +9814,70 @@ App::DocumentObject *SketchObject::getSubObject(
         if(!child)
             return 0;
         return child->getSubObject(dot+1,pyObj,pmat,true,depth+1);
-    } else if (!pyObj || !mapped) {
-        if (!pyObj || Part::TopoShape::shapeTypeAndIndex(subname).second > 0)
-            return Part2DObject::getSubObject(subname,pyObj,pmat,transform,depth);
-    } else {
-        auto subshape = Shape.getShape().getSubTopoShape(subname, true);
-        if (!subshape.isNull())
-            return Part2DObject::getSubObject(subname,pyObj,pmat,transform,depth);
-
-        const char * pos = mapped;
-        for (; *pos; ++pos) {
-            if (!std::isalnum((int)*pos))
-                break;
-        }
-        sub = std::string(subname, pos-subname);
-        subname = sub.c_str();
     }
+
     Data::IndexedName indexedName = checkSubName(subname);
     int index = indexedName.getIndex();
     const char * shapetype = indexedName.getType();
     const Part::Geometry *geo = 0;
+    Part::TopoShape subshape;
     Base::Vector3d point;
-    if (boost::equals(shapetype,"Edge") ||
-        boost::equals(shapetype,"edge")) {
-        geo = getGeometry(index - 1);
-        if (!geo) return 0;
-    } else if (boost::equals(shapetype,"ExternalEdge")) {
-        int GeoId = index - 1;
-        GeoId = -GeoId - 3;
-        geo = getGeometry(GeoId);
-        if(!geo) return 0;
-    } else if (boost::equals(shapetype,"Vertex") ||
-               boost::equals(shapetype,"vertex")) {
-        int VtId = index- 1;
-        int GeoId;
-        PointPos PosId;
-        getGeoVertexIndex(VtId,GeoId,PosId);
-        if (PosId==none) return 0;
-        point = getPoint(GeoId,PosId);
+
+    if (auto realType = convertInternalName(indexedName.getType())) {
+        auto shapeType = Part::TopoShape::shapeType(realType, true);
+        if (shapeType != TopAbs_SHAPE)
+            subshape = InternalShape.getShape().getSubTopoShape(shapeType, indexedName.getIndex(), true);
+        if (subshape.isNull())
+            return nullptr;
     }
-    else if (boost::equals(shapetype,"RootPoint"))
-        point = getPoint(Sketcher::GeoEnum::RtPnt,start);
-    else if (boost::equals(shapetype,"H_Axis"))
-        geo = getGeometry(Sketcher::GeoEnum::HAxis);
-    else if (boost::equals(shapetype,"V_Axis"))
-        geo = getGeometry(Sketcher::GeoEnum::VAxis);
-    else if (boost::equals(shapetype,"Constraint")) {
-        int ConstrId = PropertyConstraintList::getIndexFromConstraintName(shapetype);
-        const std::vector< Constraint * > &vals = this->Constraints.getValues();
-        if (ConstrId < 0 || ConstrId >= int(vals.size()))
-            return 0;
-        if(pyObj)
-            *pyObj = vals[ConstrId]->getPyObject();
-        return const_cast<SketchObject*>(this);
-    }else
-        return 0;
+    else if (!pyObj || !mapped) {
+        if (!pyObj || index > 0)
+            return Part2DObject::getSubObject(subname,pyObj,pmat,transform,depth);
+    } else {
+        subshape = Shape.getShape().getSubTopoShape(subname, true);
+        if (!subshape.isNull())
+            return Part2DObject::getSubObject(subname,pyObj,pmat,transform,depth);
+    }
+
+    if (subshape.isNull()) {
+        if (boost::equals(shapetype,"Edge") ||
+            boost::equals(shapetype,"edge")) {
+            geo = getGeometry(index - 1);
+            if (!geo)
+                return nullptr;
+        } else if (boost::equals(shapetype,"ExternalEdge")) {
+            int GeoId = index - 1;
+            GeoId = -GeoId - 3;
+            geo = getGeometry(GeoId);
+            if(!geo)
+                return nullptr;
+        } else if (boost::equals(shapetype,"Vertex") ||
+                boost::equals(shapetype,"vertex")) {
+            int VtId = index- 1;
+            int GeoId;
+            PointPos PosId;
+            getGeoVertexIndex(VtId,GeoId,PosId);
+            if (PosId==none)
+                return nullptr;
+            point = getPoint(GeoId,PosId);
+        }
+        else if (boost::equals(shapetype,"RootPoint"))
+            point = getPoint(Sketcher::GeoEnum::RtPnt,start);
+        else if (boost::equals(shapetype,"H_Axis"))
+            geo = getGeometry(Sketcher::GeoEnum::HAxis);
+        else if (boost::equals(shapetype,"V_Axis"))
+            geo = getGeometry(Sketcher::GeoEnum::VAxis);
+        else if (boost::equals(shapetype,"Constraint")) {
+            int ConstrId = PropertyConstraintList::getIndexFromConstraintName(shapetype);
+            const std::vector< Constraint * > &vals = this->Constraints.getValues();
+            if (ConstrId < 0 || ConstrId >= int(vals.size()))
+                return nullptr;
+            if(pyObj)
+                *pyObj = vals[ConstrId]->getPyObject();
+            return const_cast<SketchObject*>(this);
+        } else
+            return nullptr;
+    }
 
     if (pmat && transform)
         *pmat *= Placement.getValue().toMatrix();
@@ -9838,7 +9889,11 @@ App::DocumentObject *SketchObject::getSubObject(
             shape = getEdge(geo,name.c_str());
             if(pmat && !shape.isNull())
                 shape.transformShape(*pmat,false,true);
-        }else {
+        } else if (!subshape.isNull()) {
+            shape = subshape;
+            if (pmat)
+                shape.transformShape(*pmat,false,true);
+        } else {
             if(pmat)
                 point = (*pmat)*point;
             shape = BRepBuilderAPI_MakeVertex(gp_Pnt(point.x,point.y,point.z)).Vertex();
@@ -9874,7 +9929,22 @@ SketchObject::getHigherElements(const char *element, bool silent) const
         }
         return res;
     }
-    return Part::Part2DObject::getHigherElements(element, silent);
+    bool internal = boost::starts_with(element, internalPrefix());
+    const auto &shape = internal ? InternalShape.getShape() : Shape.getShape();
+    auto res = shape.getHigherElements(element+(internal?internalPrefix().size():0), silent);
+    for (auto it=res.begin(); it!=res.end();) {
+        auto &indexedName = *it;
+        if (boost::equals(indexedName.getType(), "Face")
+                || boost::equals(indexedName.getType(), "Edge")
+                || boost::equals(indexedName.getType(), "Wire")) {
+            if (internal)
+                indexedName = Data::IndexedName((internalPrefix() + indexedName.getType()).c_str(), indexedName.getIndex());
+            ++it;
+        }
+        else
+            it = res.erase(it);
+    }
+    return res;
 }
 
 const std::vector<const char *>& SketchObject::getElementTypes(bool all) const
@@ -9886,10 +9956,26 @@ const std::vector<const char *>& SketchObject::getElementTypes(bool all) const
         res = { Part::TopoShape::shapeName(TopAbs_VERTEX).c_str(),
                 Part::TopoShape::shapeName(TopAbs_EDGE).c_str(),
                 "ExternalEdge",
-                "Constraint"
+                "Constraint",
+                "InternalEdge",
+                "InternalFace",
+                "InternalVertex",
               };
     }
     return res;
+}
+
+const std::string &SketchObject::internalPrefix()
+{
+    static std::string _prefix("Internal");
+    return _prefix;
+}
+
+const char *SketchObject::convertInternalName(const char *name)
+{
+    if (name && boost::starts_with(name, internalPrefix()))
+        return name + internalPrefix().size();
+    return nullptr;
 }
 
 std::pair<std::string,std::string> SketchObject::getElementName(
@@ -9903,6 +9989,16 @@ std::pair<std::string,std::string> SketchObject::getElementName(
 
     const char *mapped = Data::ComplexGeoData::isMappedElement(name);
     if(!mapped) {
+        if (auto realName = convertInternalName(name)) {
+            ret = _getElementName(realName, InternalShape.getShape().getElementName(realName));
+            if (ret.first.size() >= ret.second.size()) {
+                ret.first.resize(ret.first.size() - ret.second.size());
+                ret.first += name;
+            }
+            ret.second = name;
+            return ret;
+        }
+
         auto occindex = Part::TopoShape::shapeTypeAndIndex(name);
         if (occindex.second)
             return Part2DObject::getElementName(name,type);
@@ -9978,6 +10074,9 @@ Data::IndexedName SketchObject::checkSubName(const char *sub) const{
         "H_Axis",
         "V_Axis",
         "Constraint",
+        "InternalEdge",
+        "InternalFace",
+        "InternalVertex",
     };
 
     if(!sub) return Data::IndexedName();
@@ -10124,6 +10223,17 @@ std::string SketchObject::convertSubName(const char *subname, bool postfix) cons
 
 std::string SketchObject::convertSubName(const Data::IndexedName & indexedName, bool postfix) const{
     std::ostringstream ss;
+    if (auto realType = convertInternalName(indexedName.getType())) {
+        auto mapped = InternalShape.getShape().getMappedName(
+                Data::IndexedName::fromConst(realType, indexedName.getIndex()));
+        if (!mapped)
+            ss << indexedName;
+        if (postfix)
+            ss << Data::ComplexGeoData::elementMapPrefix() << mapped << '.' << indexedName;
+        else
+            ss << mapped;
+        return ss.str();
+    }
     int geoId;
     PointPos posId;
     if(!geoIdFromShapeType(indexedName,geoId,posId)) {

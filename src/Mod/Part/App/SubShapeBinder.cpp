@@ -87,6 +87,7 @@ SubShapeBinder::SubShapeBinder()
     ADD_PROPERTY_TYPE(Fuse, (false), "Base",App::Prop_None,"Fuse solids from bound shapes");
     ADD_PROPERTY_TYPE(Refine, (true),"Base",(App::PropertyType)(App::Prop_None),"Refine shape (clean up redundant edges)");
     ADD_PROPERTY_TYPE(MakeFace, (true), "Base",App::Prop_None,"Create face using wires from bound shapes");
+    ADD_PROPERTY_TYPE(FaceMaker, (""), "Base",App::Prop_None,"Face maker class name. Default to Part::FaceMakerBullseye.");
     ADD_PROPERTY_TYPE(FillStyle, (static_cast<long>(0)), "Base",App::Prop_None,
             "Face filling type when making curved face.\n\n"
             "Stretch: the style with the flattest patches.\n"
@@ -585,7 +586,7 @@ void SubShapeBinder::buildShape(TopoShape &result)
         joiner.setOutline(Outline.getValue());
         joiner.setSplitEdges(SplitEdges.getValue());
         joiner.addShape(result);
-        result.makEShape(joiner, {result});
+        joiner.getResultWires(result);
         makeWire = false;
     }
 
@@ -681,7 +682,7 @@ void SubShapeBinder::buildShape(TopoShape &result)
             }
             if (!done) {
                 try {
-                    result = result.makEFace(0);
+                    result = result.makEFace(nullptr, FaceMaker.getValue());
                     done = true;
                 } catch(Base::Exception & e) {
                     FC_LOG(getFullName() << " Failed to make face: " << e.what());

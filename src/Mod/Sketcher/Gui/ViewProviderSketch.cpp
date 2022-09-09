@@ -109,6 +109,7 @@
 #include <Gui/SoFCBoundingBox.h>
 #include <Gui/SoFCUnifiedSelection.h>
 #include <Gui/Inventor/MarkerBitmaps.h>
+#include <Gui/Inventor/SoFCSwitch.h>
 #include <Gui/Inventor/SmSwitchboard.h>
 #include <Gui/InventorBase.h>
 #include <Gui/PieMenu.h>
@@ -451,6 +452,14 @@ ViewProviderSketch::ViewProviderSketch()
         this->Autoconstraints.setValue(hGrp->GetBool("AutoConstraints", true));
         this->AvoidRedundant.setValue(hGrp->GetBool("AvoidRedundantAutoconstraints", true));
         this->GridAutoSize.setValue(false); //Grid size is managed by this class
+
+        unsigned long shcol = hGrp->GetUnsigned("FaceColor", 0x54abff80);
+        float r = ((shcol >> 24) & 0xff) / 255.0;
+        float g = ((shcol >> 16) & 0xff) / 255.0;
+        float b = ((shcol >> 8) & 0xff) / 255.0;
+        int t = 100 * (shcol & 0xff) / 255;
+        this->ShapeColor.setValue(App::Color(r, g, b));
+        this->Transparency.setValue(t);
     }
 
     sPixmap = "Sketcher_Sketch";
@@ -624,7 +633,7 @@ void ViewProviderSketch::setAxisPickStyle(bool on)
 bool ViewProviderSketch::keyPressed(bool pressed, int key)
 {
     if (!edit)
-        return ViewProvider2DObjectGrid::keyPressed(pressed, key);
+        return inherited::keyPressed(pressed, key);
 
     switch (key)
     {
@@ -783,7 +792,7 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                                             const Gui::View3DInventorViewer *viewer)
 {
     if (!edit)
-        return ViewProvider2DObjectGrid::mouseButtonPressed(
+        return inherited::mouseButtonPressed(
                 Button, pressed, cursorPos, viewer);
 
     assert(edit);
@@ -1323,6 +1332,11 @@ void ViewProviderSketch::editDoubleClicked(void)
     }
 }
 
+const char* ViewProviderSketch::getDefaultDisplayMode() const
+{
+    return "Flat Lines";
+}
+
 bool ViewProviderSketch::getElementPicked(const SoPickedPoint *pp, std::string &subname) const
 {
     if (edit && edit->viewer) {
@@ -1353,13 +1367,50 @@ bool ViewProviderSketch::getElementPicked(const SoPickedPoint *pp, std::string &
         }
         return true;
     }
-    return PartGui::ViewProvider2DObjectGrid::getElementPicked(pp, subname);
+    if (pInternalView && pp->getPath()->containsNode(pInternalView->getRoot())) {
+        if(pInternalView->getElementPicked(pp, subname)) {
+            if (edit) {
+                subname.clear();
+                return false;
+            }
+            subname = SketchObject::internalPrefix() + subname;
+            return true;
+        }
+    }
+    return inherited::getElementPicked(pp, subname);
+}
+
+bool ViewProviderSketch::getDetailPath(
+        const char *subname, SoFullPath *pPath, bool append, SoDetail *&det) const
+{
+    if (!edit && pInternalView && subname) {
+        const char *realName = strrchr(subname, '.');
+        if (realName)
+            ++realName;
+        else
+            realName = subname;
+        realName = SketchObject::convertInternalName(realName);
+        if (realName) {
+            auto len = pPath->getLength();
+            if(append) {
+                pPath->append(pcRoot);
+                pPath->append(pcModeSwitch);
+            }
+            pPath->append(pFaceRoot);
+            if (!pInternalView->getDetailPath(realName, pPath, true, det)) {
+                pPath->truncate(len);
+                return false;
+            }
+            return true;
+        }
+    }
+    return inherited::getDetailPath(subname, pPath, append, det);
 }
 
 bool ViewProviderSketch::mouseMove(const SbVec2s &cursorPos, Gui::View3DInventorViewer *viewer)
 {
     if (!edit)
-        return ViewProvider2DObjectGrid::mouseMove(cursorPos, viewer);
+        return inherited::mouseMove(cursorPos, viewer);
     // maximum radius for mouse moves when selecting a geometry before switching to drag mode
     const int dragIgnoredDistance = 3;
 
@@ -1902,7 +1953,7 @@ bool ViewProviderSketch::isSelectable(void) const
         // return false;
         return true;
     } else
-        return PartGui::ViewProvider2DObjectGrid::isSelectable();
+        return inherited::isSelectable();
 }
 
 void ViewProviderSketch::onSelectionChanged(const Gui::SelectionChanges& msg)
@@ -6875,7 +6926,7 @@ void ViewProviderSketch::drawEditMarkers(const std::vector<Base::Vector2d> &Edit
 
 void ViewProviderSketch::updateData(const App::Property *prop)
 {
-    ViewProvider2DObjectGrid::updateData(prop);
+    inherited::updateData(prop);
 
     auto sketch = getSketchObject();
 
@@ -6890,6 +6941,18 @@ void ViewProviderSketch::updateData(const App::Property *prop)
             signalChangeIcon();
         }
     }
+    else if (prop == &sketch->InternalShape) {
+        if (pInternalView)
+            pInternalView->updateVisual();
+    }
+}
+
+void ViewProviderSketch::finishRestoring()
+{
+    inherited::finishRestoring();
+    auto sketch = getSketchObject();
+    if (pInternalView && sketch->MakeInternals.getValue())
+        pInternalView->updateVisual();
 }
 
 void ViewProviderSketch::slotSolverUpdate()
@@ -6920,12 +6983,56 @@ void ViewProviderSketch::slotSolverUpdate()
 void ViewProviderSketch::onChanged(const App::Property *prop)
 {
     // call father
-    PartGui::ViewProvider2DObjectGrid::onChanged(prop);
+    inherited::onChanged(prop);
+    if (pInternalView) {
+        if (prop == &ShapeColor)
+            pInternalView->ShapeColor.setValue(ShapeColor.getValue());
+        else if (prop == &Transparency)
+            pInternalView->Transparency.setValue(Transparency.getValue());
+        else if (prop == &ShapeMaterial)
+            pInternalView->ShapeMaterial.setValue(ShapeMaterial.getValue());
+    }
 }
 
 void ViewProviderSketch::attach(App::DocumentObject *pcFeat)
 {
-    ViewProviderPart::attach(pcFeat);
+    inherited::attach(pcFeat);
+
+    if (pFaceRoot) {
+        pInternalView.reset(new PartGui::ViewProviderPart);
+        pInternalView->setShapePropertyName("InternalShape");
+        pInternalView->forceUpdate();
+        pInternalView->MapFaceColor.setValue(false);    
+        pInternalView->MapLineColor.setValue(false);    
+        pInternalView->MapPointColor.setValue(false);    
+        pInternalView->MapTransparency.setValue(false);    
+        pInternalView->ForceMapColors.setValue(false);
+        pInternalView->ShapeColor.setValue(ShapeColor.getValue());
+        pInternalView->Transparency.setValue(Transparency.getValue());
+        pInternalView->Lighting.setValue(1);
+        pInternalView->enableFullSelectionHighlight(false, false, false);
+        pInternalView->setStatus(Gui::SecondaryView,true);
+        pInternalView->attach(getObject());
+        pInternalView->setDefaultMode(1);
+        if(pInternalView->getModeSwitch()->isOfType(SoFCSwitch::getClassTypeId()))
+            static_cast<SoFCSwitch*>(pInternalView->getModeSwitch())->defaultChild = 0;
+        pInternalView->show();
+        pFaceRoot->addChild(pInternalView->getRoot());
+    }
+}
+
+void ViewProviderSketch::beforeDelete()
+{
+    inherited::beforeDelete();
+    if (pInternalView)
+        pInternalView->beforeDelete();
+}
+
+void ViewProviderSketch::reattach(App::DocumentObject *obj)
+{
+    inherited::reattach(obj);
+    if (pInternalView)
+        pInternalView->reattach(obj);
 }
 
 void ViewProviderSketch::setupContextMenu(QMenu *menu, QObject *receiver, const char *member)
@@ -6934,13 +7041,13 @@ void ViewProviderSketch::setupContextMenu(QMenu *menu, QObject *receiver, const 
     QAction *act = menu->addAction(tr("Edit sketch"), receiver, member);
     func->trigger(act, boost::bind(&ViewProviderSketch::doubleClicked, this));
 
-    PartGui::ViewProvider2DObjectGrid::setupContextMenu(menu, receiver, member);
+    inherited::setupContextMenu(menu, receiver, member);
 }
 
 bool ViewProviderSketch::setEdit(int ModNum)
 {
     if (ModNum == Transform || ModNum == TransformAt)
-        return ViewProvider2DObjectGrid::setEdit(ModNum);
+        return inherited::setEdit(ModNum);
 
     // When double-clicking on the item for this sketch the
     // object unsets and sets its edit mode without closing
@@ -7035,7 +7142,7 @@ bool ViewProviderSketch::setEdit(int ModNum)
 
     TightGrid.setValue(false);
 
-    ViewProvider2DObjectGrid::setEdit(ModNum); // notify to handle grid according to edit mode property
+    inherited::setEdit(ModNum); // notify to handle grid according to edit mode property
 
     // start the edit dialog
     if (sketchDlg)
@@ -7451,7 +7558,7 @@ void ViewProviderSketch::showGeometry(bool visible) {
 void ViewProviderSketch::unsetEdit(int ModNum)
 {
     if (ModNum == Transform || ModNum == TransformAt)
-        return ViewProvider2DObjectGrid::unsetEdit(ModNum);
+        return inherited::unsetEdit(ModNum);
 
     TightGrid.setValue(true);
 
@@ -7513,13 +7620,13 @@ void ViewProviderSketch::unsetEdit(int ModNum)
         e.ReportException();
     }
 
-    ViewProvider2DObjectGrid::unsetEdit(ModNum); // notify grid that edit mode is being left
+    inherited::unsetEdit(ModNum); // notify grid that edit mode is being left
 }
 
 void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int ModNum)
 {
     if (ModNum == Transform || ModNum == TransformAt)
-        return ViewProvider2DObjectGrid::setEditViewer(viewer, ModNum);
+        return inherited::setEditViewer(viewer, ModNum);
 
     //visibility automation: save camera
     if (! this->TempoVis.getValue().isNone()){
@@ -7620,7 +7727,7 @@ void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int Mo
     // with the solver information, including solver extensions, and triggers a draw(true) via ViewProvider::UpdateData.
     getSketchObject()->solve(true);
 
-    ViewProvider2DObjectGrid::setEditViewer(viewer, ModNum);
+    inherited::setEditViewer(viewer, ModNum);
 }
 
 void ViewProviderSketch::unsetEditViewer(Gui::View3DInventorViewer* viewer)
@@ -7633,7 +7740,7 @@ void ViewProviderSketch::unsetEditViewer(Gui::View3DInventorViewer* viewer)
         edit->viewer = nullptr;
     }
 
-    ViewProvider2DObjectGrid::unsetEditViewer(viewer);
+    inherited::unsetEditViewer(viewer);
 }
 
 void ViewProviderSketch::setPositionText(const Base::Vector2d &Pos, const SbString &text)
@@ -7963,7 +8070,7 @@ bool ViewProviderSketch::onDelete(const std::vector<std::string> &subList)
         return false;
     }
     // if not in edit delete the whole object
-    return PartGui::ViewProviderPart::onDelete(subList);
+    return inherited::onDelete(subList);
 }
 
 void ViewProviderSketch::showRestoreInformationLayer() {
@@ -8120,6 +8227,6 @@ void ViewProviderSketchExport::updateData(const App::Property *prop)
             }
         }
     }
-    ViewProvider2DObject::updateData(prop);
+    inherited::updateData(prop);
 }
 

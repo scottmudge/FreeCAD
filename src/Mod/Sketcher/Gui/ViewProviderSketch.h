@@ -90,6 +90,8 @@ class SketcherGuiExport ViewProviderSketch : public PartGui::ViewProvider2DObjec
                                             , public Gui::SelectionObserver
                                             , public ParameterGrp::ObserverType
 {
+    typedef PartGui::ViewProvider2DObjectGrid inherited;
+
     Q_DECLARE_TR_FUNCTIONS(SketcherGui::ViewProviderSketch)
     /// generates a warning message about constraint conflicts and appends it to the given message
     static QString appendConflictMsg(const std::vector<int> &conflicting);
@@ -283,6 +285,13 @@ public:
     void selectElement(const char *element, bool preselect=false) const;
 
     virtual bool getElementPicked(const SoPickedPoint *pp, std::string &subname) const;
+    virtual bool getDetailPath(const char *subname, SoFullPath *pPath, bool append, SoDetail *&det) const;
+    virtual const char* getDefaultDisplayMode() const;
+
+    virtual void reattach(App::DocumentObject *);
+    virtual void beforeDelete();
+    virtual void finishRestoring();
+
     virtual bool isEditingPickExclusive() const;
 
     /// check if allow to pick external object (e.g. from a different body)
@@ -508,6 +517,8 @@ protected:
 
     // Virtual space variables
     bool isShownVirtualSpace; // indicates whether the present virtual space view is the Real Space or the Virtual Space (virtual space 1 or 2)
+
+    std::unique_ptr<PartGui::ViewProviderPart> pInternalView;
 
     ShortcutListener* listener;
 };
