@@ -104,13 +104,14 @@ protected:
         };
 
         /**
-         * @brief hitTest: returns True if point is on the face
-         * @param point
+         * @brief hitTest: returns True if a shape is on the face
+         * @param shape
          */
-        HitTest hitTest(const gp_Pnt& point) const;
+        HitTest hitTest(const TopoShape &shape) const;
 
         void addHole(TopoDS_Wire w);
         void addHole(const WireInfo &info, std::vector<TopoShape> &sources);
+        void copyFaceBound(TopoDS_Face &f, TopoShape &tf, const TopoShape &source);
 
         const TopoDS_Face& Face() const {return myFace;}
     public:
@@ -125,6 +126,8 @@ protected:
         gp_Pln myPlane;
         TopoDS_Face myFace;
         TopoDS_Face myFaceBound;
+        TopoShape myTopoFace;
+        TopoShape myTopoFaceBound;
         std::vector<WireInfo> myHoles;
         Handle(Geom_Surface) myHPlane;
         std::unique_ptr<WireJoiner> myJoiner;
