@@ -39,6 +39,7 @@
 # include <BRepTools_WireExplorer.hxx>
 # include <GeomLProp_CLProps.hxx>
 # include <GProp_GProps.hxx>
+# include <ShapeAnalysis_Wire.hxx>
 # include <ShapeFix_ShapeTolerance.hxx>
 # include <ShapeExtend_WireData.hxx>
 # include <ShapeFix_Wire.hxx>
@@ -180,18 +181,24 @@ public:
         std::shared_ptr<WireInfo> wireInfo;
         std::shared_ptr<WireInfo> wireInfo2; // an edge can be shared by at most two tight bound wires.
         std::unique_ptr<Geometry> geo;
+        Standard_Real firstParam;
+        Standard_Real lastParam;
+        Handle_Geom_Curve curve;
+        GeomAbs_CurveType type;
+        bool isLinear;
 
         EdgeInfo(const TopoDS_Edge &e,
                  const gp_Pnt &pt1,
                  const gp_Pnt &pt2,
                  const Box &bound,
-                 bool bbox)
-            :edge(e),p1(pt1),p2(pt2),box(bound),queryBBox(bbox)
+                 bool bbox,
+                 bool isLinear)
+            :edge(e),p1(pt1),p2(pt2),box(bound),queryBBox(bbox),isLinear(isLinear)
         {
-
-            Standard_Real first,last;
-            Handle_Geom_Curve curve = BRep_Tool::Curve(e, first, last);
-            GeomLProp_CLProps prop(curve,(first+last)/2,0,Precision::Confusion());
+            curve = BRep_Tool::Curve(e, firstParam, lastParam);
+            type = GeomAdaptor_Curve(curve).GetType();
+            assertCheck(!curve.IsNull());
+            GeomLProp_CLProps prop(curve,(firstParam+lastParam)*0.5,0,Precision::Confusion());
             mid = prop.Value();
 
             iteration = 0;
@@ -639,6 +646,9 @@ public:
         double tol = myTol2;
         // search for duplicate edges
         showShape(e, "addcheck");
+        bool isLinear = TopoShape(e).isLinearEdge();
+        std::unique_ptr<Geometry> geo;
+
         for (auto vit=vmap.qbegin(bgi::nearest(p1,INT_MAX));vit!=vmap.qend();++vit) {
             auto &vinfo = *vit;
             if (canShowShape())
@@ -656,19 +666,19 @@ public:
                     ev2 = vinfo.edge();
                     v2 = vinfo.otherVertex();
                 }
-                auto g1 = Geometry::fromShape(e);
-                auto g2 = vinfo.edgeInfo()->geometry();
-                if (static_cast<GeomCurve*>(g1.get())->isLinear()
-                            && static_cast<GeomCurve*>(g2)->isLinear())
-                {
+                if (isLinear && vinfo.edgeInfo()->isLinear) {
                     showShape(e, "duplicate");
                     aHistory->Remove(e);
                     return false;
                 }
-                else if (g1->isSame(*g2, myTol, myAngularTol)) {
-                    showShape(e, "duplicate");
-                    aHistory->Remove(e);
-                    return false;
+                else {
+                    if (!geo)
+                        geo = Geometry::fromShape(e);
+                    if (geo->isSame(*vinfo.edgeInfo()->geometry(), myTol, myAngularTol)) {
+                        showShape(e, "duplicate");
+                        aHistory->Remove(e);
+                        return false;
+                    }
                 }
             }
         }
@@ -727,7 +737,7 @@ public:
             getEndPoints(edge,p1,p2);
             // Shall we also update bbox?
         }
-        it = edges.emplace(it,edge,p1,p2,bbox,queryBBox);
+        it = edges.emplace(it,edge,p1,p2,bbox,queryBBox,isLinear);
         add(it);
         return true;
     }
@@ -801,49 +811,150 @@ public:
     }
 
     struct IntersectInfo {
-        TopoDS_Shape support;
+        double param;
+        TopoDS_Shape intersectShape;
         gp_Pnt point;
-        IntersectInfo()
+        IntersectInfo(double p, const gp_Pnt &pt, const TopoDS_Shape &s)
+            :param(p), intersectShape(s), point(pt)
         {}
-        IntersectInfo(const TopoDS_Shape &s, const gp_Pnt &p)
-            :support(s), point(p)
-        {}
+        bool operator<(const IntersectInfo &other) const {
+            return param < other.param;
+        }
     };
 
-    void pushIntersection(std::map<double, IntersectInfo> &params,
-                          BRepExtrema_DistShapeShape &extss,
-                          int idx,
-                          bool other = false)
+    void checkSelfIntersection(const EdgeInfo &info, std::set<IntersectInfo> &params)
     {
-        Standard_Real p;
-        IntersectInfo info;
-        info.support = other ? extss.SupportOnShape2(idx) : extss.SupportOnShape1(idx);
-        if (info.support.ShapeType() == TopAbs_EDGE) {
-            if (other) {
-                info.point = extss.PointOnShape2(idx);
-                extss.ParOnEdgeS2(idx, p);
-            } else {
-                info.point = extss.PointOnShape1(idx);
-                extss.ParOnEdgeS1(idx, p);
-            }
-            params.emplace(p, info);
+        // Early return if checking for self intersection (only for non linear spline curves)
+        if (info.type <= GeomAbs_Parabola || info.isLinear)
+            return;
+        IntRes2d_SequenceOfIntersectionPoint points2d;
+        TColgp_SequenceOfPnt points3d;
+        TColStd_SequenceOfReal errors;
+        TopoDS_Wire wire;
+        BRepBuilderAPI_MakeWire mkWire(info.edge);
+        mkWire.Add(BRepBuilderAPI_MakeEdge(info.p1, info.p2).Edge());
+        wire = mkWire;
+        BRepBuilderAPI_MakeFace mkFace(wire);
+        if (!mkFace.IsDone())
+            return;
+        TopoDS_Face face = mkFace.Face();
+        ShapeAnalysis_Wire analysis(wire, face, myTol);
+        analysis.CheckSelfIntersectingEdge(1, points2d, points3d);
+        assertCheck(points2d.Length() == points3d.Length());
+        for (int i=1; i<=points2d.Length(); ++i) {
+            params.emplace(points2d(i).ParamOnFirst(), points3d(i), info.edge);
+            params.emplace(points2d(i).ParamOnSecond(), points3d(i), info.edge);
         }
+    }
+
+    void checkIntersection(const EdgeInfo &info,
+                           const EdgeInfo &other,
+                           std::set<IntersectInfo> &params1,
+                           std::set<IntersectInfo> &params2)
+    {
+        gp_Pln pln;
+        bool planar = TopoShape(info.edge).findPlane(pln);
+        if (!planar) {
+            TopoDS_Compound comp;
+            builder.MakeCompound(comp);
+            builder.Add(comp, info.edge);
+            builder.Add(comp, other.edge);
+            planar = TopoShape(comp).findPlane(pln);
+            if (!planar) {
+                BRepExtrema_DistShapeShape extss(info.edge, other.edge);
+                extss.Perform();
+                if (extss.IsDone() && extss.NbSolution() > 0)
+                if (!extss.IsDone() || extss.NbSolution()<=0 || extss.Value()>=myTol)
+                    return;
+                for (int i=1; i<=extss.NbSolution(); ++i) {
+                    Standard_Real p;
+                    auto s1 = extss.SupportOnShape1(i);
+                    auto s2 = extss.SupportOnShape2(i);
+                    if (s1.ShapeType() == TopAbs_EDGE) {
+                        extss.ParOnEdgeS1(i,p);
+                        pushIntersection(params1, p, extss.PointOnShape1(i), other.edge);
+                    }
+                    if (s2.ShapeType() == TopAbs_EDGE) {
+                        extss.ParOnEdgeS2(i,p);
+                        pushIntersection(params2, p, extss.PointOnShape2(i), info.edge);
+                    }
+                }
+                return;
+            }
+        }
+        // BRepExtrema_DistShapeShape has trouble finding all solutions for a
+        // spline curve. ShapeAnalysis_Wire is better. Besides, it can check
+        // for self intersection. It's slightly troublesome to use, as it
+        // requires to build a face for the wire, so we only use it for planar
+        // cases.
+
+        IntRes2d_SequenceOfIntersectionPoint points2d;
+        TColgp_SequenceOfPnt points3d;
+        TColStd_SequenceOfReal errors;
+        TopoDS_Wire wire;
+        int idx;
+        BRepBuilderAPI_MakeWire mkWire(info.edge);
+        mkWire.Add(other.edge);
+        if (mkWire.IsDone())
+            idx = 2;
+        else if (mkWire.Error() == BRepBuilderAPI_DisconnectedWire) {
+            idx = 3;
+            mkWire.Add(BRepBuilderAPI_MakeEdge(info.p1, other.p1).Edge());
+            mkWire.Add(other.edge);
+        }
+        else {
+            if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                FC_WARN("Failed to build wire for checking intersection");
+            return;
+        }
+        wire = mkWire;
+        if (!BRep_Tool::IsClosed(wire)) {
+            gp_Pnt p1, p2;
+            getEndPoints(wire, p1, p2);
+            mkWire.Add(BRepBuilderAPI_MakeEdge(p1, p2).Edge());
+        }
+
+        BRepBuilderAPI_MakeFace mkFace(wire);
+        if (!mkFace.IsDone())
+            return;
+        TopoDS_Face face = mkFace.Face();
+        ShapeAnalysis_Wire analysis(wire, face, myTol);
+        analysis.CheckIntersectingEdges(1, idx, points2d, points3d, errors);
+        assertCheck(points2d.Length() == points3d.Length());
+        for (int i=1; i<=points2d.Length(); ++i) {
+            pushIntersection(params1, points2d(i).ParamOnFirst(), points3d(i), other.edge);
+            pushIntersection(params2, points2d(i).ParamOnSecond(), points3d(i), info.edge);
+        }
+    }
+
+    void pushIntersection(std::set<IntersectInfo> &params, double param, const gp_Pnt &pt, const TopoDS_Shape &shape)
+    {
+        IntersectInfo info(param, pt, shape);
+        auto it = params.upper_bound(info);
+        if (it != params.end()) {
+            if (it->point.SquareDistance(pt) < myTol2)
+                return;
+        }
+        if (it != params.begin()) {
+            auto itPrev = it;
+            --itPrev;
+            if (itPrev->point.SquareDistance(pt) < myTol2)
+                return;
+        }
+        params.insert(it, info);
+        return;
     }
 
     struct SplitInfo {
         TopoDS_Edge edge;
-        TopoDS_Shape support;
+        TopoDS_Shape intersectShape;
         Box bbox; 
     };
 
     // Try splitting any edges that intersects other edge
     void splitEdges()
     {
-        BRepExtrema_DistShapeShape extss;
-#if OCC_VERSION_HEX >= 0x070600
-        extss.SetMultiThread(Standard_True);
-#endif
-        std::unordered_map<const EdgeInfo*, std::map<double, IntersectInfo>> intersects;
+        std::unordered_map<const EdgeInfo*, std::set<IntersectInfo>> intersects;
 
         int i=0;
         for (auto &info : edges)
@@ -857,30 +968,16 @@ public:
             seq->next(true);
             ++i;
             auto &info = *it;
-            extss.LoadS1(info.edge);
+            auto &params = intersects[&info];
+            checkSelfIntersection(info, params);
+
             for (auto vit=boxMap.qbegin(bgi::intersects(info.box)); vit!=boxMap.qend(); ++vit) {
                 const auto &other = *(*vit);
                 if (other.iteration <= i) {
                     // means the edge is before us, and we've already checked intersection
                     continue;
                 }
-
-                extss.LoadS2(other.edge);
-                extss.Perform();
-                if (!extss.IsDone() || extss.NbSolution()<=0)
-                    continue;
-                if (extss.Value() >= myTol) {
-                    // showShape(info.edge, "nsectA");
-                    // showShape(other.edge, "nsectB");
-                    continue;
-                }
-
-                auto &params = intersects[&info];
-                auto &otherParams = intersects[&other];
-                for (int i=1; i<=extss.NbSolution(); ++i) {
-                    pushIntersection(params, extss, i);
-                    pushIntersection(otherParams, extss, i, true);
-                }
+                checkIntersection(info, other, params, intersects[&other]);
             }
         }
 
@@ -900,17 +997,15 @@ public:
                 continue;
             }
 
-            Standard_Real first,last;
-            Handle_Geom_Curve curve = BRep_Tool::Curve(info.edge, first, last);
             auto itParam = params.begin();
-            if (itParam->second.point.SquareDistance(info.p1) < myTol2)
+            if (itParam->point.SquareDistance(info.p1) < myTol2)
                 params.erase(itParam);
-            params[first] = IntersectInfo(TopoDS_Shape(), info.p1);
+            params.emplace(info.firstParam, info.p1, TopoDS_Shape());
             itParam = params.end();
             --itParam;
-            if (itParam->second.point.SquareDistance(info.p2) < myTol2)
+            if (itParam->point.SquareDistance(info.p2) < myTol2)
                 params.erase(itParam);
-            params[last] = IntersectInfo(TopoDS_Shape(), info.p2);
+            params.emplace(info.lastParam, info.p2, TopoDS_Shape());
 
             if (params.size() <= 2) {
                 ++it;
@@ -920,25 +1015,25 @@ public:
             splitted.clear();
             itParam = params.begin();
             for (auto itPrevParam=itParam++; itParam!=params.end(); ++itParam) {
-                const auto &e = itParam->second.support.IsNull()
-                    ? itPrevParam->second.support : itParam->second.support;
-                if (e.IsNull())
+                const auto &intersectShape = itParam->intersectShape.IsNull()
+                    ? itPrevParam->intersectShape : itParam->intersectShape;
+                if (intersectShape.IsNull())
                     break;
 
                 // Using points cause MakeEdge failure for some reason. Using
                 // parameters is better.
                 //
-                const auto &p1 = itPrevParam->second.point;
-                const auto &p2 = itParam->second.point;
-                const auto &param1 = itPrevParam->first;
-                const auto &param2 = itParam->first;
+                const gp_Pnt &p1 = itPrevParam->point;
+                const gp_Pnt &p2 = itParam->point;
+                const Standard_Real &param1 = itPrevParam->param;
+                const Standard_Real &param2 = itParam->param;
 
-                BRepBuilderAPI_MakeEdge mkEdge(curve, param1, param2);
+                BRepBuilderAPI_MakeEdge mkEdge(info.curve, param1, param2);
                 if (mkEdge.IsDone()) {
                     splitted.emplace_back();
                     auto &entry = splitted.back();
                     entry.edge = mkEdge.Edge();
-                    entry.support = e;
+                    entry.intersectShape = intersectShape;
                     if (getBBox(entry.edge, entry.bbox))
                         itPrevParam = itParam;
                     else
@@ -963,8 +1058,8 @@ public:
                 if (!add(v.edge, false, v.bbox, it))
                     continue;
                 auto &newInfo = *it++;
-                aHistory->AddModified(v.support, newInfo.edge);
-                if (v.support != removedEdge)
+                aHistory->AddModified(v.intersectShape, newInfo.edge);
+                if (v.intersectShape != removedEdge)
                     aHistory->AddModified(removedEdge, newInfo.edge);
                 showShape(newInfo.edge, "split");
             }

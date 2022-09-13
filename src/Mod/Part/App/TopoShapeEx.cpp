@@ -5654,7 +5654,9 @@ bool TopoShape::isLinearEdge(Base::Vector3d *dir, Base::Vector3d *base) const
     if (isNull() || getShape().ShapeType() != TopAbs_EDGE)
         return false;
 
-    if (!GeomCurve::isLinear(BRepAdaptor_Curve(TopoDS::Edge(getShape())).Curve().Curve(), dir, base))
+    Standard_Real p1, p2;
+    Handle_Geom_Curve curve = BRep_Tool::Curve(TopoDS::Edge(getShape()), p1, p2);
+    if (!GeomCurve::isLinear(curve, dir, base))
         return false;
     if (dir || base) {
         auto pla = getPlacement();
@@ -5675,8 +5677,9 @@ bool TopoShape::isPlanarFace(double tol) const
     if (isNull() || getShape().ShapeType() != TopAbs_FACE)
         return false;
 
-    return GeomSurface::isPlanar(
-            BRepAdaptor_Surface(TopoDS::Face(getShape())).Surface().Surface(), nullptr, tol);
+    TopLoc_Location loc;
+    Handle(Geom_Surface) surf = BRep_Tool::Surface(TopoDS::Face(getShape()), loc);
+    return GeomSurface::isPlanar(surf, nullptr, tol);
 }
 
 bool TopoShape::linearize(bool face, bool edge)
@@ -5688,8 +5691,7 @@ bool TopoShape::linearize(bool face, bool edge)
     if (edge) {
         for (auto & edge : getSubTopoShapes(TopAbs_EDGE)) {
             TopoDS_Edge e = TopoDS::Edge(edge.getShape());
-            BRepAdaptor_Curve curve(e);
-            if (curve.GetType() == GeomAbs_Line || !edge.isLinearEdge())
+            if (!edge.isLinearEdge())
                 continue;
             std::unique_ptr<Geometry> geo(
                     Geometry::fromShape(e.Located(TopLoc_Location()).Oriented(TopAbs_FORWARD)));
@@ -5706,8 +5708,7 @@ bool TopoShape::linearize(bool face, bool edge)
     if (face) {
         for (auto & face : getSubTopoShapes(TopAbs_FACE)) {
             TopoDS_Face f = TopoDS::Face(face.getShape());
-            BRepAdaptor_Surface surf(f);
-            if (surf.GetType() == GeomAbs_Plane || !face.isPlanarFace())
+            if (!face.isPlanarFace())
                 continue;
             std::unique_ptr<Geometry> geo(
                     Geometry::fromShape(f.Located(TopLoc_Location()).Oriented(TopAbs_FORWARD)));
