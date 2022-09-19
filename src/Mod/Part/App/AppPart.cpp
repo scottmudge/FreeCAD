@@ -331,6 +331,7 @@ PyMOD_INIT_FUNC(Part)
     Part::PropertyGeometryList  ::init();
     Part::PropertyShapeHistory  ::init();
     Part::PropertyFilletEdges   ::init();
+    Part::PropertyFilletSegments::init();
     Part::PropertyShapeCache    ::init();
 
     Part::FaceMaker             ::init();

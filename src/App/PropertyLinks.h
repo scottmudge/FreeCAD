@@ -582,6 +582,8 @@ public:
 
     void setSilentRestore(bool enable);
 
+    boost::signals2::signal<void(const std::string &, const std::string &)> signalUpdateElementReference;
+
 protected:
     virtual void hasSetValue() override;
 

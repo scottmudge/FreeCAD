@@ -29,6 +29,7 @@
 
 #include "ui_TaskFilletParameters.h"
 #include "TaskFilletParameters.h"
+#include "Utils.h"
 #include <Base/UnitsApi.h>
 #include <App/Application.h>
 #include <App/Document.h>
@@ -50,6 +51,47 @@ using namespace Gui;
 
 /* TRANSLATOR PartDesignGui::TaskFilletParameters */
 
+FilletSegmentDelegate::FilletSegmentDelegate(QObject *parent) : QItemDelegate(parent)
+{
+}
+
+QWidget *FilletSegmentDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &/* option */,
+                                             const QModelIndex & index) const
+{
+    if (index.column() < 1 || index.column() > 3)
+        return nullptr;
+    Gui::QuantitySpinBox *editor = new Gui::QuantitySpinBox(parent);
+    if (index.column() != 2)
+        editor->setUnit(Base::Unit::Length);
+    editor->setMinimum(0.0);
+    editor->setMaximum(INT_MAX);
+    editor->setSingleStep(0.1);
+    if (auto owner = qobject_cast<TaskFilletParameters*>(this->parent()))
+        owner->setBinding(editor, index);
+    return editor;
+}
+
+void FilletSegmentDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
+{
+    auto value = index.model()->data(index, Qt::UserRole).toDouble();
+
+    Gui::QuantitySpinBox *spinBox = static_cast<Gui::QuantitySpinBox*>(editor);
+    spinBox->setValue(value);
+}
+
+void FilletSegmentDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
+                                        const QModelIndex &index) const
+{
+    Gui::QuantitySpinBox *spinBox = static_cast<Gui::QuantitySpinBox*>(editor);
+    spinBox->interpretText();
+    Base::Quantity value = spinBox->value();
+    model->setData(index, value.getUserString(), Qt::DisplayRole);
+    model->setData(index, value.getValue(), Qt::UserRole);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////
+static const char *_ParamPath = "User parameter:BaseApp/Preferences/General/Widgets/TaskFilletParameters";
+
 TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWidget *parent)
     : TaskDressUpParameters(DressUpView, true, true, parent)
     , ui(new Ui_TaskFilletParameters)
@@ -61,10 +103,8 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
     this->groupLayout()->addWidget(proxy);
 
     PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
-    double r = pcFillet->Radius.getValue();
 
     ui->filletRadius->setUnit(Base::Unit::Length);
-    ui->filletRadius->setValue(r);
     ui->filletRadius->setMinimum(0);
     ui->filletRadius->selectNumber();
     ui->filletRadius->bind(pcFillet->Radius);
@@ -75,7 +115,65 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
     connect(ui->filletRadius, SIGNAL(valueChanged(double)),
             this, SLOT(onLengthChanged(double)));
 
-    setup(ui->message, ui->listWidgetReferences, ui->buttonRefAdd);
+    setup(ui->message, ui->treeWidgetReferences, ui->buttonRefAdd);
+
+    ui->treeWidgetReferences->setItemDelegate(new FilletSegmentDelegate(this));
+
+    QObject::connect(ui->btnClear, &QPushButton::clicked, [this](){clearSegments();});
+    QObject::connect(ui->btnAdd, &QPushButton::clicked, [this](){newSegment();});
+    QObject::connect(ui->btnRemove, &QPushButton::clicked, [this](){removeSegments();});
+
+    QObject::connect(ui->treeWidgetReferences, &QTreeWidget::itemChanged,
+        [this](QTreeWidgetItem *item, int column) { updateSegment(item, column); });
+
+    ui->treeWidgetReferences->header()->setToolTip(tr(
+"Click '+' key to add new segment for various radius fillet.\n"
+"You can use 'Parameter' (0 ~ 1) as an ratio to the Edge\n"
+"length from to specify a point to morph from one radius\n"
+"value to another. Or, you can use 'Length' to specify the\n"
+"point with absolute distance along the edge."));
+
+    auto hParam = App::GetApplication().GetParameterGroupByPath(_ParamPath);
+    for (int i=0; i<ui->treeWidgetReferences->header()->count(); ++i) {
+        std::string key("ColumnSize");
+        key += std::to_string(i+1);
+        if (auto size = hParam->GetUnsigned(key.c_str(),0))
+            ui->treeWidgetReferences->header()->resizeSection(i, size);
+    }
+
+    QObject::connect(ui->treeWidgetReferences->header(), &QHeaderView::sectionResized,
+        [hParam](int idx, int, int newSize) {
+            std::string key("ColumnSize");
+            key += std::to_string(idx+1);
+            hParam->SetUnsigned(key.c_str(), newSize);
+        });
+      
+    refresh();
+}
+
+void TaskFilletParameters::onRefDeleted() {
+    Base::StateLocker guard(busy);
+    removeSegments();
+}
+
+void TaskFilletParameters::setBinding(Gui::ExpressionBinding *binding,
+                                      const QModelIndex &index)
+{
+    if (!DressUpView || !index.isValid())
+        return;
+    auto item = static_cast<QTreeWidgetItem*>(index.internalPointer());
+    if (!item)
+        return;
+    auto parent = item->parent();
+    if (!parent)
+        return;
+    PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
+    App::ObjectIdentifier path(pcFillet->Segments);
+    path << App::ObjectIdentifier::MapComponent(std::string(getGeometryItemText(parent).constData()))
+         << App::ObjectIdentifier::ArrayComponent(index.row())
+         << App::ObjectIdentifier::SimpleComponent(index.column()==1 ? "Radius" : 
+                                                   (index.column()==3 ? "Length" : "Param"));
+    binding->bind(path);
 }
 
 void TaskFilletParameters::refresh()
@@ -90,6 +188,156 @@ void TaskFilletParameters::refresh()
         QSignalBlocker blocker(ui->filletRadius);
         ui->filletRadius->setValue(r);
     }
+    QSignalBlocker blocker(ui->treeWidgetReferences);
+    for (int i=0; i<ui->treeWidgetReferences->topLevelItemCount(); ++i) {
+        auto item = ui->treeWidgetReferences->topLevelItem(i);
+        int j = 0;
+        for (const auto &segment : pcFillet->Segments.getValue(getGeometryItemText(item).constData())) {
+            setSegment(j<item->childCount() ? item->child(j) : new QTreeWidgetItem(item),
+                   segment.param, segment.radius, segment.length);
+            ++j;
+        }
+        while (j > item->childCount())
+            delete item->child(item->childCount()-1);
+    }
+}
+
+void TaskFilletParameters::updateSegment(QTreeWidgetItem *item, int column)
+{
+    if (column<1 || column>3)
+        return;
+    QSignalBlocker blocker(ui->treeWidgetReferences);
+    double param = item->data(2, Qt::UserRole).toDouble();
+    double radius = item->data(1, Qt::UserRole).toDouble();
+    double length = item->data(3, Qt::UserRole).toDouble();
+    if (column == 3 && length > 0.0) {
+        if (param != 0.0) {
+            param = 0.0;
+            QSignalBlocker block(ui->treeWidgetReferences);
+            item->setData(2, Qt::UserRole, 0.0);
+        }
+    } else if (column == 2 && param > 0.0) {
+        if (length != 0.0) {
+            length = 0.0;
+            QSignalBlocker block(ui->treeWidgetReferences);
+            item->setData(3, Qt::UserRole, 0.0);
+        }
+    }
+    setSegment(item, param, radius, length);
+    updateSegments(item);
+}
+
+void TaskFilletParameters::updateSegments(QTreeWidgetItem *item)
+{
+    if(!DressUpView)
+        return;
+    setupTransaction();
+    PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
+    Part::PropertyFilletSegments::Segments segments;
+    auto parent = item->parent();
+    if (!parent)
+        return;
+    for (int i=0; i<parent->childCount(); ++i) {
+        auto child = parent->child(i);
+        segments.emplace_back(child->data(2, Qt::UserRole).toDouble(),
+                              child->data(1, Qt::UserRole).toDouble(),
+                              child->data(3, Qt::UserRole).toDouble());
+    }
+    pcFillet->Segments.setValue(getGeometryItemText(parent).constData(), std::move(segments));
+    recompute();
+}
+
+void TaskFilletParameters::clearSegments()
+{
+    if(!DressUpView)
+        return;
+    std::set<QTreeWidgetItem*> items;
+    for (auto item : ui->treeWidgetReferences->selectedItems()) {
+        if (auto parent = item->parent())
+            item = parent;
+        items.insert(item);
+    }
+    setupTransaction();
+    PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
+    for (auto item : items) {
+        for (auto child : item->takeChildren())
+            delete child;
+        pcFillet->Segments.removeValue(getGeometryItemText(item).constData());
+    }
+    recompute();
+}
+
+void TaskFilletParameters::removeSegments()
+{
+    if(!DressUpView)
+        return;
+    setupTransaction();
+    PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
+    for (auto item : ui->treeWidgetReferences->selectedItems()) {
+        auto parent = item->parent();
+        if (!parent)
+            continue;
+        pcFillet->Segments.removeValue(getGeometryItemText(parent).constData(),
+                                       parent->indexOfChild(item));
+        delete item;
+    }
+    TaskDressUpParameters::onRefDeleted();
+    recompute();
+}
+
+void TaskFilletParameters::setSegment(QTreeWidgetItem *item, double param, double radius, double length)
+{
+    if (!DressUpView)
+        return;
+    PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
+    QSignalBlocker blocker(ui->treeWidgetReferences);
+
+    item->setFlags(item->flags() | Qt::ItemIsEditable);
+
+    auto parent = item->parent();
+    App::ObjectIdentifier path(pcFillet->Segments);
+    path << App::ObjectIdentifier::MapComponent(std::string(getGeometryItemText(parent).constData()))
+         << App::ObjectIdentifier::ArrayComponent(parent->indexOfChild(item));
+    auto linkColor = QVariant::fromValue(QApplication::palette().color(QPalette::Link));
+
+    auto setupItem = [&](const char *key, int index, const Base::Quantity &q, bool noText) {
+        if (auto expr = pcFillet->getExpression(App::ObjectIdentifier(path)
+                    << App::ObjectIdentifier::SimpleComponent(key)).expression) {
+            item->setData(index, Qt::ToolTipRole, QString::fromUtf8(expr->toString().c_str()));
+            item->setData(index, Qt::ForegroundRole, linkColor);
+        }
+        else {
+            item->setData(index, Qt::ForegroundRole, QVariant());
+            item->setData(index, Qt::ToolTipRole, QVariant());
+        }
+        item->setData(index, Qt::UserRole, q.getValue());
+        item->setText(index, noText ? QString() : q.getUserString());
+    };
+    setupItem("Radius", 1, Base::Quantity(radius, Base::Unit::Length), false);
+    setupItem("Param", 2, Base::Quantity(param), length>0.0);
+    setupItem("Length", 3, Base::Quantity(length, Base::Unit::Length), length==0.0);
+}
+
+void TaskFilletParameters::newSegment()
+{
+    auto current = getCurrentItem();
+    if (!current)
+        return;
+    auto parent = current->parent();
+    QSignalBlocker blocker(ui->treeWidgetReferences);
+    double param = 0.0;
+    auto item = new QTreeWidgetItem;
+    if (!parent) {
+        current->addChild(item);
+        if (current->childCount() != 0)
+            param = 1.0;
+    } else {
+        parent->insertChild(parent->indexOfChild(current), item);
+        param = item->data(2, Qt::UserRole).toDouble();
+    }
+    setSegment(item, param, getRadius());
+    updateSegments(parent ? parent : current);
+    ui->treeWidgetReferences->setCurrentItem(item);
 }
 
 void TaskFilletParameters::onLengthChanged(double len)
@@ -104,7 +352,7 @@ void TaskFilletParameters::onLengthChanged(double len)
     recompute();
 }
 
-double TaskFilletParameters::getLength(void) const
+double TaskFilletParameters::getRadius() const
 {
     return ui->filletRadius->value().getValue();
 }

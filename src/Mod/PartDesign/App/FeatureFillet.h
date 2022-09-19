@@ -40,6 +40,7 @@ public:
     Fillet();
 
     App::PropertyQuantityConstraint Radius;
+    Part::PropertyFilletSegments Segments;
 
     /** @name methods override feature */
     //@{
@@ -54,6 +55,9 @@ public:
 
 protected:
     void handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, App::Property * prop);
+
+private:
+    std::vector<int> edgeIndices;
 };
 
 } //namespace Part

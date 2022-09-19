@@ -63,7 +63,7 @@
    <item>
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="standard"/>
      <widget class="QWidget" name="fixed"/>
@@ -157,7 +157,7 @@
            </layout>
           </item>
           <item>
-           <widget class="QListWidget" name="listWidgetReferences">
+           <widget class="QTreeWidget" name="treeWidgetReferences">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
               <horstretch>0</horstretch>
@@ -179,6 +179,14 @@
             <property name="selectionMode">
              <enum>QAbstractItemView::ExtendedSelection</enum>
             </property>
+            <attribute name="headerVisible">
+             <bool>false</bool>
+            </attribute>
+            <column>
+             <property name="text">
+              <string notr="true">1</string>
+             </property>
+            </column>
            </widget>
           </item>
          </layout>

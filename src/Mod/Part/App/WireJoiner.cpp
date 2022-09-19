@@ -1394,6 +1394,8 @@ public:
             auto &r = stack.back();
             showShape(currentInfo, "check", iteration);
 
+            bool proceed = true;
+
             // The loop below is to find all edges connected to pend, and save them into stack.back()
             auto size = vertexStack.size();
             for (int i=currentInfo->iStart[currentIdx];i<currentInfo->iEnd[currentIdx];++i) {
@@ -1431,6 +1433,38 @@ public:
                 info.iteration = iteration;
 
                 if (wireInfo) {
+                    // We may be called by findTightBound() with an existing wire
+                    // to try to find a new wire by splitting the current one. So
+                    // check if we've iterated to some edge in the existing wire.
+                    if (int idx = wireInfo->find(vinfo)) {
+                        vertexStack.push_back(adjacentList[i]);
+                        r.iCurrent = r.iEnd++;
+                        --idx;
+                        proceed = false;
+                        if (idxVertex)
+                            *idxVertex = idx;
+                        if (stackPos)
+                            *stackPos = (int)stack.size()-2;
+
+                        auto info = wireInfo->vertices[idx].edgeInfo();
+                        showShape(info, "merge", iteration);
+
+                        if (info != &beginInfo) {
+                            while (true) {
+                                if (++idx == (int)wireInfo->vertices.size())
+                                    idx = 0;
+                                info = wireInfo->vertices[idx].edgeInfo();
+                                if (info == &beginInfo)
+                                    break;
+                                stack.emplace_back(vertexStack.size());
+                                vertexStack.push_back(wireInfo->vertices[idx]);
+                                ++stack.back().iEnd;
+                                checkStack();
+                            }
+                        }
+                        break;
+                    }
+
                     if (wireInfo->find(VertexInfo(vinfo.it, !vinfo.start))) {
                         showShape(&info, "rintersect", iteration);
                         // Only used when exhausting tight bound.
@@ -1448,70 +1482,38 @@ public:
             }
             checkStack();
 
-            while (true) {
-                auto &r = stack.back();
-                if (r.iCurrent<r.iEnd) {
-                    // now pick one edge from stack.back(), connect it to
-                    // pend, then extend pend
-                    currentVertex = vertexStack[r.iCurrent];
-                    pend = currentVertex.ptOther();
-                    // update current edge info
-                    currentInfo = currentVertex.edgeInfo();
-                    showShape(currentInfo, "iterate", iteration);
-                    currentIdx = currentVertex.start?1:0;
-                    edgeSet.insert(currentInfo);
-                    if (!wireSet.empty())
-                        wireSet.insert(currentInfo->wireInfo.get());
-                    break;
-                }
-                vertexStack.erase(vertexStack.begin()+r.iStart,vertexStack.end());
-
-                stack.pop_back();
-                if (stack.size() == stackEnd) {
-                    // If stack reaches the end, it means this wire is open.
-                    return TopoDS_Wire();
-                }
-
-                auto &lastInfo = *vertexStack[stack.back().iCurrent].it;
-                edgeSet.erase(&lastInfo);
-                wireSet.erase(lastInfo.wireInfo.get());
-                showShape(&lastInfo, "pop", iteration);
-                ++stack.back().iCurrent;
-            }
-
-            bool checkDistance = true;
-            if (wireInfo) {
-                // We may be called by findTightBound() with an existing wire
-                // to try to find a new wire by splitting the current one. So
-                // check if we've iterated to some edge in the existing wire.
-                if (int idx = wireInfo->find(currentVertex)) {
-                    --idx;
-                    checkDistance = false;
-                    if (idxVertex)
-                        *idxVertex = idx;
-                    if (stackPos)
-                        *stackPos = (int)stack.size()-2;
-
-                    auto info = wireInfo->vertices[idx].edgeInfo();
-                    showShape(info, "merge", iteration);
-
-                    if (info != &beginInfo) {
-                        while (true) {
-                            if (++idx == (int)wireInfo->vertices.size())
-                                idx = 0;
-                            info = wireInfo->vertices[idx].edgeInfo();
-                            if (info == &beginInfo)
-                                break;
-                            stack.emplace_back(vertexStack.size());
-                            vertexStack.push_back(wireInfo->vertices[idx]);
-                            ++stack.back().iEnd;
-                            checkStack();
-                        }
+            if (proceed) {
+                while (true) {
+                    auto &r = stack.back();
+                    if (r.iCurrent<r.iEnd) {
+                        // now pick one edge from stack.back(), connect it to
+                        // pend, then extend pend
+                        currentVertex = vertexStack[r.iCurrent];
+                        pend = currentVertex.ptOther();
+                        // update current edge info
+                        currentInfo = currentVertex.edgeInfo();
+                        showShape(currentInfo, "iterate", iteration);
+                        currentIdx = currentVertex.start?1:0;
+                        edgeSet.insert(currentInfo);
+                        if (!wireSet.empty())
+                            wireSet.insert(currentInfo->wireInfo.get());
+                        break;
                     }
+                    vertexStack.erase(vertexStack.begin()+r.iStart,vertexStack.end());
+
+                    stack.pop_back();
+                    if (stack.size() == stackEnd) {
+                        // If stack reaches the end, it means this wire is open.
+                        return TopoDS_Wire();
+                    }
+
+                    auto &lastInfo = *vertexStack[stack.back().iCurrent].it;
+                    edgeSet.erase(&lastInfo);
+                    wireSet.erase(lastInfo.wireInfo.get());
+                    showShape(&lastInfo, "pop", iteration);
+                    ++stack.back().iCurrent;
                 }
-            }
-            
-            if (checkDistance) {
+
                 if (pstart.SquareDistance(pend) > myTol2) {
                     // if the wire is not closed yet, continue search for the
                     // next connected edge
@@ -1602,7 +1604,7 @@ public:
                         if (next == current || next->iteration2 == iteration2 || next->iteration<0)
                             continue;
 
-                        showShape(next, "check", iteration);
+                        showShape(next, "tcheck", iteration);
 
                         if (!isInside(*wireInfo, next->mid)) {
                             showShape(next, "ninside", iteration);

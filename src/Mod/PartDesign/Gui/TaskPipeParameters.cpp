@@ -270,8 +270,8 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView, bool /*newObj
     ui->profileBaseEdit->setMouseTracking(true);
     ui->spineBaseEdit->installEventFilter(this);
     ui->spineBaseEdit->setMouseTracking(true);
-    ui->listWidgetReferences->installEventFilter(this);
-    ui->listWidgetReferences->setMouseTracking(true);
+    ui->treeWidgetReferences->installEventFilter(this);
+    ui->treeWidgetReferences->setMouseTracking(true);
 
     ui->profileBaseEdit->setReadOnly(true);
     ui->spineBaseEdit->setReadOnly(true);
@@ -284,9 +284,9 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView, bool /*newObj
             this, SLOT(onButtonRefAdd(bool)));
     connect(ui->buttonSpineBase, SIGNAL(clicked(bool)),
             this, SLOT(onBaseButton(bool)));
-    connect(ui->listWidgetReferences, SIGNAL(itemEntered(QListWidgetItem*)),
-            this, SLOT(onItemEntered(QListWidgetItem*)));
-    connect(ui->listWidgetReferences, SIGNAL(itemSelectionChanged()),
+    connect(ui->treeWidgetReferences, SIGNAL(itemEntered(QTreeWidgetItem*, int)),
+            this, SLOT(onItemEntered(QTreeWidgetItem*, int)));
+    connect(ui->treeWidgetReferences, SIGNAL(itemSelectionChanged()),
             this, SLOT(onItemSelectionChanged()));
 
     // Create context menu
@@ -296,9 +296,9 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView, bool /*newObj
     // display shortcut behind the context menu entry
     remove->setShortcutVisibleInContextMenu(true);
 #endif
-    ui->listWidgetReferences->addAction(remove);
+    ui->treeWidgetReferences->addAction(remove);
     connect(remove, SIGNAL(triggered()), this, SLOT(onDeleteEdge()));
-    ui->listWidgetReferences->setContextMenuPolicy(Qt::ActionsContextMenu);
+    ui->treeWidgetReferences->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     this->initUI(proxy);
     this->groupLayout()->addWidget(proxy);
@@ -325,12 +325,12 @@ void TaskPipeParameters::updateUI()
     toggleShowOnTop(vp, lastProfile, "Profile", true);
 }
 
-void TaskPipeParameters::onItemEntered(QListWidgetItem *item)
+void TaskPipeParameters::onItemEntered(QTreeWidgetItem *item, int)
 {
     if (!vp)
         return;
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
-    App::SubObjectT objT(pipe->Spine.getValue(), item->text().toUtf8().constData());
+    App::SubObjectT objT(pipe->Spine.getValue(), getGeometryItemText(item).constData());
     PartDesignGui::highlightObjectOnTop(objT);
 }
 
@@ -340,7 +340,7 @@ void TaskPipeParameters::onItemSelectionChanged()
         return;
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
     App::SubObjectT objT(pipe->Spine.getValue());
-    auto items = ui->listWidgetReferences->selectedItems();
+    auto items = ui->treeWidgetReferences->selectedItems();
 
     Base::StateLocker lock(_Busy);
     if (items.isEmpty() || items.size() == 1) {
@@ -348,7 +348,7 @@ void TaskPipeParameters::onItemSelectionChanged()
         Gui::Selection().clearSelection();
     }
     for (auto item : items) {
-        objT.setSubName(item->text().toUtf8().constData());
+        objT.setSubName(getGeometryItemText(item).constData());
         PartDesignGui::selectObjectOnTop(objT, true);
     }
 }
@@ -362,7 +362,7 @@ bool TaskPipeParameters::eventFilter(QObject *o, QEvent *ev)
     case QEvent::ShortcutOverride:
     case QEvent::KeyPress: {
         QKeyEvent * kevent = static_cast<QKeyEvent*>(ev);
-        if (o == ui->listWidgetReferences && kevent->modifiers() == Qt::NoModifier) {
+        if (o == ui->treeWidgetReferences && kevent->modifiers() == Qt::NoModifier) {
             if (kevent->key() == Qt::Key_Delete) {
                 kevent->accept();
                 if (ev->type() == QEvent::KeyPress)
@@ -408,7 +408,7 @@ void TaskPipeParameters::refresh()
 
     ui->comboBoxTransition->setCurrentIndex(pipe->Transition.getValue());
 
-    PartDesignGui::populateGeometryReferences(ui->listWidgetReferences, pipe->Spine, !initing);
+    PartDesignGui::populateGeometryReferences(ui->treeWidgetReferences, pipe->Spine, !initing);
 
     for (QWidget* child : proxy->findChildren<QWidget*>())
         child->blockSignals(false);
@@ -422,8 +422,8 @@ void TaskPipeParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
         return;
 
     if (msg.Type == Gui::SelectionChanges::ClrSelection) {
-        QSignalBlocker blocker(ui->listWidgetReferences);
-        ui->listWidgetReferences->selectionModel()->clearSelection();
+        QSignalBlocker blocker(ui->treeWidgetReferences);
+        ui->treeWidgetReferences->selectionModel()->clearSelection();
         return;
     }
 
@@ -472,7 +472,7 @@ void TaskPipeParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
                 e.ReportException();
             }
             ui->spineBaseEdit->setText(QString::fromUtf8(refObj->Label.getValue()));
-            ui->listWidgetReferences->clear();
+            ui->treeWidgetReferences->clear();
         }
         if (!boost::starts_with(msg.pSubName, "Edge")
                 && !boost::starts_with(msg.pSubName, "Face")
@@ -480,11 +480,13 @@ void TaskPipeParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
             break;
 
         QString element = QString::fromUtf8(msg.pSubName);
-        auto items = ui->listWidgetReferences->findItems(element, Qt::MatchExactly);
+        auto items = ui->treeWidgetReferences->findItems(element, Qt::MatchExactly);
         if (items.isEmpty()) {
-            auto item = new QListWidgetItem(element, ui->listWidgetReferences);
-            QSignalBlocker blocker(ui->listWidgetReferences);
-            ui->listWidgetReferences->setCurrentItem(item);
+            auto item = new QTreeWidgetItem(ui->treeWidgetReferences);
+            item->setText(0, element);
+            setGeometryItemText(item, msg.pSubName);
+            QSignalBlocker blocker(ui->treeWidgetReferences);
+            ui->treeWidgetReferences->setCurrentItem(item);
             auto subs = pipe->Spine.getSubValues();
             subs.push_back(msg.pSubName);
             try {
@@ -495,8 +497,8 @@ void TaskPipeParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
                 e.ReportException();
             }
         } else {
-            QSignalBlocker blocker(ui->listWidgetReferences);
-            ui->listWidgetReferences->setCurrentItem(items[0]);
+            QSignalBlocker blocker(ui->treeWidgetReferences);
+            ui->treeWidgetReferences->setCurrentItem(items[0]);
         }
         break;
     }
@@ -572,8 +574,8 @@ void TaskPipeParameters::onDeleteEdge()
     auto subs = pipe->Spine.getSubValues(false);
 
     // Delete the selected path edge
-    for (auto item : ui->listWidgetReferences->selectedItems()) {
-        auto element = item->text().toUtf8();
+    for (auto item : ui->treeWidgetReferences->selectedItems()) {
+        auto element = getGeometryItemText(item);
         subs.erase(std::remove(subs.begin(), subs.end(), element.constData()), subs.end());
         delete item;
     }
@@ -617,8 +619,8 @@ TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool /*newO
 
     ui->profileBaseEdit->installEventFilter(this);
     ui->profileBaseEdit->setMouseTracking(true);
-    ui->listWidgetReferences->installEventFilter(this);
-    ui->listWidgetReferences->setMouseTracking(true);
+    ui->treeWidgetReferences->installEventFilter(this);
+    ui->treeWidgetReferences->setMouseTracking(true);
     ui->profileBaseEdit->setReadOnly(true);
 
     connect(ui->comboBoxMode, SIGNAL(currentIndexChanged(int)),
@@ -639,9 +641,9 @@ TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool /*newO
             this, SLOT(onBinormalChanged(double)));
     connect(ui->doubleSpinBoxZ, SIGNAL(valueChanged(double)),
             this, SLOT(onBinormalChanged(double)));
-    connect(ui->listWidgetReferences, SIGNAL(itemEntered(QListWidgetItem*)),
-            this, SLOT(onItemEntered(QListWidgetItem*)));
-    connect(ui->listWidgetReferences, SIGNAL(itemSelectionChanged()),
+    connect(ui->treeWidgetReferences, SIGNAL(itemEntered(QTreeWidgetItem*, int)),
+            this, SLOT(onItemEntered(QTreeWidgetItem*, int)));
+    connect(ui->treeWidgetReferences, SIGNAL(itemSelectionChanged()),
             this, SLOT(onItemSelectionChanged()));
 
     // Create context menu
@@ -651,9 +653,9 @@ TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool /*newO
     // display shortcut behind the context menu entry
     remove->setShortcutVisibleInContextMenu(true);
 #endif
-    ui->listWidgetReferences->addAction(remove);
+    ui->treeWidgetReferences->addAction(remove);
     connect(remove, SIGNAL(triggered()), this, SLOT(onDeleteItem()));
-    ui->listWidgetReferences->setContextMenuPolicy(Qt::ActionsContextMenu);
+    ui->treeWidgetReferences->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
 
@@ -681,7 +683,7 @@ void TaskPipeOrientation::onItemSelectionChanged()
         return;
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
     App::SubObjectT objT(pipe->AuxillerySpine.getValue());
-    auto items = ui->listWidgetReferences->selectedItems();
+    auto items = ui->treeWidgetReferences->selectedItems();
 
     Base::StateLocker lock(_Busy);
     if (items.isEmpty() || items.size() == 1) {
@@ -689,17 +691,17 @@ void TaskPipeOrientation::onItemSelectionChanged()
         Gui::Selection().clearSelection();
     }
     for (auto item : items) {
-        objT.setSubName(item->text().toUtf8().constData());
+        objT.setSubName(getGeometryItemText(item).constData());
         PartDesignGui::selectObjectOnTop(objT, true);
     }
 }
 
-void TaskPipeOrientation::onItemEntered(QListWidgetItem *item)
+void TaskPipeOrientation::onItemEntered(QTreeWidgetItem *item, int)
 {
     if (!vp)
         return;
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
-    App::SubObjectT objT(pipe->AuxillerySpine.getValue(), item->text().toUtf8().constData());
+    App::SubObjectT objT(pipe->AuxillerySpine.getValue(), getGeometryItemText(item).constData());
     PartDesignGui::highlightObjectOnTop(objT);
 }
 
@@ -709,7 +711,7 @@ bool TaskPipeOrientation::eventFilter(QObject *o, QEvent *ev)
     case QEvent::ShortcutOverride:
     case QEvent::KeyPress: {
         QKeyEvent * kevent = static_cast<QKeyEvent*>(ev);
-        if (o == ui->listWidgetReferences && kevent->modifiers() == Qt::NoModifier) {
+        if (o == ui->treeWidgetReferences && kevent->modifiers() == Qt::NoModifier) {
             if (kevent->key() == Qt::Key_Delete) {
                 kevent->accept();
                 if (ev->type() == QEvent::KeyPress)
@@ -719,11 +721,11 @@ bool TaskPipeOrientation::eventFilter(QObject *o, QEvent *ev)
         break;
     }
     case QEvent::FocusIn:
-        if (o == ui->profileBaseEdit || o == ui->listWidgetReferences)
+        if (o == ui->profileBaseEdit || o == ui->treeWidgetReferences)
             toggleShowOnTop(vp, lastAuxSpine, "AuxillerySpine", true);
         break;
     case QEvent::FocusOut:
-        if (o == ui->profileBaseEdit || o == ui->listWidgetReferences)
+        if (o == ui->profileBaseEdit || o == ui->treeWidgetReferences)
             toggleShowOnTop(vp, lastAuxSpine, nullptr);
         break;
     case QEvent::Leave:
@@ -758,7 +760,7 @@ void TaskPipeOrientation::refresh()
     if (pipe->AuxillerySpine.getValue())
         ui->profileBaseEdit->setText(QString::fromUtf8(pipe->AuxillerySpine.getValue()->Label.getValue()));
 
-    PartDesignGui::populateGeometryReferences(ui->listWidgetReferences, pipe->AuxillerySpine, !initing);
+    PartDesignGui::populateGeometryReferences(ui->treeWidgetReferences, pipe->AuxillerySpine, !initing);
 
     ui->curvelinear->setChecked(pipe->AuxilleryCurvelinear.getValue());
 
@@ -831,7 +833,7 @@ void TaskPipeOrientation::onBaseButton(bool checked)
 
 void TaskPipeOrientation::onClearButton()
 {
-    ui->listWidgetReferences->clear();
+    ui->treeWidgetReferences->clear();
     ui->profileBaseEdit->clear();
     try {
         setupTransaction();
@@ -874,8 +876,8 @@ void TaskPipeOrientation::onSelectionChanged(const SelectionChanges& msg) {
         return;
 
     if (msg.Type == Gui::SelectionChanges::ClrSelection) {
-        QSignalBlocker blocker(ui->listWidgetReferences);
-        ui->listWidgetReferences->selectionModel()->clearSelection();
+        QSignalBlocker blocker(ui->treeWidgetReferences);
+        ui->treeWidgetReferences->selectionModel()->clearSelection();
         return;
     }
 
@@ -907,7 +909,7 @@ void TaskPipeOrientation::onSelectionChanged(const SelectionChanges& msg) {
                 e.ReportException();
             }
             ui->profileBaseEdit->setText(QString::fromUtf8(refObj->Label.getValue()));
-            ui->listWidgetReferences->clear();
+            ui->treeWidgetReferences->clear();
         }
         if (!boost::starts_with(msg.pSubName, "Edge")
                 && !boost::starts_with(msg.pSubName, "Face")
@@ -915,11 +917,12 @@ void TaskPipeOrientation::onSelectionChanged(const SelectionChanges& msg) {
             break;
 
         QString element = QString::fromUtf8(msg.pSubName);
-        auto items = ui->listWidgetReferences->findItems(element, Qt::MatchExactly);
+        auto items = ui->treeWidgetReferences->findItems(element, Qt::MatchExactly);
         if (items.isEmpty()) {
-            auto item = new QListWidgetItem(element, ui->listWidgetReferences);
-            QSignalBlocker blocker(ui->listWidgetReferences);
-            ui->listWidgetReferences->setCurrentItem(item);
+            auto item = new QTreeWidgetItem(ui->treeWidgetReferences);
+            item->setText(0, element);
+            QSignalBlocker blocker(ui->treeWidgetReferences);
+            ui->treeWidgetReferences->setCurrentItem(item);
             auto subs = pipe->AuxillerySpine.getSubValues();
             subs.push_back(msg.pSubName);
             try {
@@ -930,8 +933,8 @@ void TaskPipeOrientation::onSelectionChanged(const SelectionChanges& msg) {
                 e.ReportException();
             }
         } else {
-            QSignalBlocker blocker(ui->listWidgetReferences);
-            ui->listWidgetReferences->setCurrentItem(items[0]);
+            QSignalBlocker blocker(ui->treeWidgetReferences);
+            ui->treeWidgetReferences->setCurrentItem(items[0]);
         }
         break;
     }
@@ -949,8 +952,8 @@ void TaskPipeOrientation::onDeleteItem()
     auto subs = pipe->AuxillerySpine.getSubValues(false);
 
     // Delete the selected path edge
-    for (auto item : ui->listWidgetReferences->selectedItems()) {
-        auto element = item->text().toUtf8();
+    for (auto item : ui->treeWidgetReferences->selectedItems()) {
+        auto element = getGeometryItemText(item);
         subs.erase(std::remove(subs.begin(), subs.end(), element.constData()), subs.end());
         delete item;
     }

@@ -27,7 +27,6 @@
 # include <QAction>
 # include <QFontMetrics>
 # include <QKeyEvent>
-# include <QListWidget>
 # include <QMessageBox>
 #endif
 
@@ -83,7 +82,7 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
     connect(ui->flipDirection, SIGNAL(toggled(bool)),
         this, SLOT(onFlipDirection(bool)));
 
-    setup(ui->message, ui->listWidgetReferences, ui->buttonRefAdd);
+    setup(ui->message, ui->treeWidgetReferences, ui->buttonRefAdd);
 }
 
 void TaskChamferParameters::setUpUI(PartDesign::Chamfer* pcChamfer)

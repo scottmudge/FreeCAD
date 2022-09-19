@@ -433,6 +433,14 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
 
     if(notify)
         aboutToSetValue();
+
+    auto updateSub = [&](const std::string &newSub) {
+        if (sub != newSub) {
+            signalUpdateElementReference(sub, newSub);
+            sub = newSub;
+        }
+    };
+
     if(missing) {
         FC_WARN(propertyName(this) 
                 << " missing element reference " << ret->getFullName() << " "
@@ -444,19 +452,19 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
                 << shadow.first << " -> " << elementName.first);
         shadow.swap(elementName);
         if(shadow.first.size() && Data::ComplexGeoData::hasMappedElementName(sub.c_str()))
-            sub = shadow.first;
+            updateSub(shadow.first);
     }
 
     if(reverse) {
         if(shadow.first.size() && Data::ComplexGeoData::hasMappedElementName(sub.c_str()))
-            sub = shadow.first;
+            updateSub(shadow.first);
         else
-            sub = shadow.second;
+            updateSub(shadow.second);
         return true;
     }
     if (missing) {
         if (sub != shadow.first)
-            sub = shadow.second;
+            updateSub(shadow.second);
         return true;
     }
     auto pos2 = shadow.first.rfind('.');
@@ -471,11 +479,13 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
     if(pos==pos2) {
         if(sub.compare(pos,sub.size()-pos,&shadow.first[pos2])!=0) {
             FC_LOG("element reference update " << sub << " -> " << shadow.first);
-            sub.replace(pos,sub.size()-pos,&shadow.first[pos2]);
+            std::string newSub(sub);
+            newSub.replace(pos,sub.size()-pos,&shadow.first[pos2]);
+            updateSub(newSub);
         } 
     } else if(sub!=shadow.second) {
         FC_LOG("element reference update " << sub << " -> " << shadow.second);
-        sub = shadow.second;
+        updateSub(shadow.second);
     }
     return true;
 }

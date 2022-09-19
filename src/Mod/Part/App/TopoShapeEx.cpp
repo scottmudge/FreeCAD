@@ -4633,6 +4633,83 @@ TopoShape &TopoShape::makEFillet(const TopoShape &shape, const std::vector<TopoS
     return makEShape(mkFillet,shape,op);
 }
 
+TopoShape &TopoShape::makEFillet(const TopoShape &shape,
+                                 const std::vector<TopoShape> &edges,
+                                 const std::vector<FilletSegments> &segments,
+                                 double defaultRadius,
+                                 const char *op)
+{
+    if(!op) op = Part::OpCodes::Fillet;
+    if(shape.isNull())
+        HANDLE_NULL_SHAPE;
+
+    if(edges.empty())
+        HANDLE_NULL_INPUT;
+
+    BRepFilletAPI_MakeFillet mkFillet(shape.getShape());
+    int i = -1;
+    for(auto &e : edges) {
+        ++i;
+        if(e.isNull())
+            HANDLE_NULL_INPUT;
+
+        const auto &edge = e.getShape();
+        if(!shape.findShape(edge))
+            FC_THROWM(Base::CADKernelError,"edge does not belong to the shape");
+
+        auto edgeSegments = segments[i];
+        if (edgeSegments.empty()) {
+            if (defaultRadius <= 0.0)
+                FC_THROWM(Base::CADKernelError,"no radius setting for fillet edge");
+            edgeSegments.emplace_back(0.0, defaultRadius);
+        }
+
+        double length = -1.0;
+        for (auto &segment : edgeSegments) {
+            if (segment.length <= 0.0)
+                continue;
+            if (length < 0.0) {
+                GProp_GProps props;
+                BRepGProp::LinearProperties(edge, props);
+                length = props.Mass();
+            }
+            if (length > segment.length)
+                segment.param = segment.length/length;
+            else
+                segment.param = 1.0;
+        }
+        std::stable_sort(edgeSegments.begin(), edgeSegments.end());
+        if (edgeSegments.front().param == 0.0 && edgeSegments.front().radius == 0.0) {
+            // If the first entry has both radius and paramemter be zero, treat
+            // it as suppressing the current edge for fillet
+            continue;
+        }
+        std::size_t count = edgeSegments.size();
+        if (edgeSegments.front().param > Precision::Confusion())
+            ++count;
+        if (1.0 - edgeSegments.back().param > Precision::Confusion())
+            ++count;
+        TColgp_Array1OfPnt2d UandR(1, count);
+        int j=1;
+        if (edgeSegments.front().param > Precision::Confusion())
+            UandR.SetValue(j++, gp_Pnt2d(0.0,
+                        defaultRadius>0.0?defaultRadius:edgeSegments.front().radius));
+        for (const auto &segment : edgeSegments) {
+            double t = segment.param;
+            if (t < 0.0)
+                t = 0.0;
+            else if (t > 1.0)
+                t = 1.0;
+            UandR.SetValue(j++, gp_Pnt2d(t, segment.radius));
+        }
+        if (1.0 - edgeSegments.back().param > Precision::Confusion())
+            UandR.SetValue(j++, gp_Pnt2d(1.0,
+                        defaultRadius>0.0?defaultRadius:edgeSegments.back().radius));
+        mkFillet.Add(UandR, TopoDS::Edge(edge));
+    }
+    return makEShape(mkFillet,shape,op);
+}
+
 TopoShape &TopoShape::makEChamfer(const TopoShape &shape, const std::vector<TopoShape> &edges,
         double radius1, double radius2, const char *op, bool flipDirection, bool asAngle)
 {

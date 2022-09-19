@@ -25,7 +25,9 @@
 
 #include <Gui/ActiveObjectList.h>
 
-class QListWidget;
+class QTreeWidget;
+class QTreeWidgetItem;
+class QByteArray;
 class QGridLayout;
 
 /** \file PartDesign/Gui/Utils.h
@@ -70,7 +72,11 @@ void toggleShowOnTop(Gui::ViewProviderDocumentObject *vp,
                      const char *prop,
                      bool init = false);
 
-bool populateGeometryReferences(QListWidget *listWidget, App::PropertyLinkSub &prop, bool refresh);
+bool populateGeometryReferences(QTreeWidget *treeWidget, App::PropertyLinkSub &prop, bool refresh);
+QByteArray getGeometryItemText(QTreeWidgetItem *item);
+QByteArray getGeometryItemReference(QTreeWidgetItem *item);
+void setGeometryItemText(QTreeWidgetItem *item, const std::string &);
+void setGeometryItemReference(QTreeWidgetItem *item, const std::string &);
 
 /// Import an external feature into the body of the host feature using SubShapeBinder
 App::SubObjectT importExternalObject(const App::SubObjectT &feature,

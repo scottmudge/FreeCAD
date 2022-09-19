@@ -97,7 +97,7 @@ TaskDraftParameters::TaskDraftParameters(ViewProviderDressUp *DressUpView,QWidge
     ui->linePlane->installEventFilter(this);
     ui->lineLine->installEventFilter(this);
 
-    setup(ui->message, ui->listWidgetReferences, ui->buttonRefAdd, touched);
+    setup(ui->message, ui->treeWidgetReferences, ui->buttonRefAdd, touched);
 }
 
 void TaskDraftParameters::refresh() {
