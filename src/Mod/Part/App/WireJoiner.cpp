@@ -37,6 +37,8 @@
 # include <BRepGProp.hxx>
 # include <BRepTools.hxx>
 # include <BRepTools_WireExplorer.hxx>
+# include <gp_Pln.hxx>
+# include <GeomAdaptor_Curve.hxx>
 # include <GeomLProp_CLProps.hxx>
 # include <GProp_GProps.hxx>
 # include <ShapeAnalysis_Wire.hxx>
