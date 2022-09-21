@@ -834,8 +834,15 @@ public:
         TColStd_SequenceOfReal errors;
         TopoDS_Wire wire;
         BRepBuilderAPI_MakeWire mkWire(info.edge);
-        mkWire.Add(BRepBuilderAPI_MakeEdge(info.p1, info.p2).Edge());
-        wire = mkWire;
+        if (!mkWire.IsDone())
+            return;
+        if (!BRep_Tool::IsClosed(mkWire.Wire())) {
+            BRepBuilderAPI_MakeEdge mkEdge(info.p1, info.p2);
+            if (!mkEdge.IsDone())
+                return;
+            mkWire.Add(mkEdge.Edge());
+        }
+        wire = mkWire.Wire();
         BRepBuilderAPI_MakeFace mkFace(wire);
         if (!mkFace.IsDone())
             return;
@@ -886,7 +893,7 @@ public:
         }
         // BRepExtrema_DistShapeShape has trouble finding all solutions for a
         // spline curve. ShapeAnalysis_Wire is better. Besides, it can check
-        // for self intersection. It's slightly troublesome to use, as it
+        // for self intersection. It's slightly more troublesome to use, as it
         // requires to build a face for the wire, so we only use it for planar
         // cases.
 
@@ -901,24 +908,40 @@ public:
             idx = 2;
         else if (mkWire.Error() == BRepBuilderAPI_DisconnectedWire) {
             idx = 3;
-            mkWire.Add(BRepBuilderAPI_MakeEdge(info.p1, other.p1).Edge());
+            BRepBuilderAPI_MakeEdge mkEdge(info.p1, other.p1);
+            if (!mkEdge.IsDone()) {
+                if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                    FC_WARN("Failed to build edge for checking intersection");
+                return;
+            }
+            mkWire.Add(mkEdge.Edge());
             mkWire.Add(other.edge);
         }
-        else {
+
+        if (!mkWire.IsDone()) {
             if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
                 FC_WARN("Failed to build wire for checking intersection");
             return;
         }
-        wire = mkWire;
+        wire = mkWire.Wire();
         if (!BRep_Tool::IsClosed(wire)) {
             gp_Pnt p1, p2;
             getEndPoints(wire, p1, p2);
-            mkWire.Add(BRepBuilderAPI_MakeEdge(p1, p2).Edge());
+            BRepBuilderAPI_MakeEdge mkEdge(p1, p2);
+            if (!mkEdge.IsDone()) {
+                if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                    FC_WARN("Failed to build edge for checking intersection");
+                return;
+            }
+            mkWire.Add(mkEdge.Edge());
         }
 
         BRepBuilderAPI_MakeFace mkFace(wire);
-        if (!mkFace.IsDone())
+        if (!mkFace.IsDone()) {
+            if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                FC_WARN("Failed to build face for checking intersection");
             return;
+        }
         TopoDS_Face face = mkFace.Face();
         ShapeAnalysis_Wire analysis(wire, face, myTol);
         analysis.CheckIntersectingEdges(1, idx, points2d, points3d, errors);
