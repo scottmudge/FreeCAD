@@ -84,6 +84,9 @@ public:
     App     ::PropertyPrecision      ArcFitTolerance;
     App     ::PropertyInteger        ExternalBSplineMaxDegree;
     App     ::PropertyPrecision      ExternalBSplineTolerance;
+    Part    ::PropertyPartShape      InternalShape;
+    App     ::PropertyPrecision      InternalTolerance;
+    App     ::PropertyBool           MakeInternals;
     /** @name methods override Feature */
     //@{
     short mustExecute() const override;
@@ -547,6 +550,9 @@ public:
         return convertSubName(subname.c_str(), postfix);
     }
 
+    static const std::string &internalPrefix();
+    static const char *convertInternalName(const char *name);
+
     std::string convertSubName(const Data::IndexedName &, bool postfix=true) const;
 
     Data::IndexedName shapeTypeFromGeoId(int GeoId, PointPos pos=Sketcher::none ) const;
@@ -602,6 +608,9 @@ public:
 
     // Signaled when solver has done update
     boost::signals2::signal<void ()> signalSolverUpdate;
+    boost::signals2::signal<void ()> signalElementsChanged;
+
+    Part::TopoShape buildInternals(const Part::TopoShape &edges) const;
 
 public: // geometry extension functionalities for single element sketch object user convenience
     int setGeometryId(int GeoId, long id);

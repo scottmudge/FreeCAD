@@ -691,20 +691,22 @@ std::vector<TopoShape> TopoShape::searchSubShape(
     int i=0;
     TopAbs_ShapeEnum shapeType = subshape.shapeType();
     switch(shapeType) {
-    case TopAbs_VERTEX:
+    case TopAbs_VERTEX: {
         // Vertex search will do comparison with tolerance to account for
         // rounding error inccured through transformation.
+        auto pt = BRep_Tool::Pnt(TopoDS::Vertex(subshape.getShape()));
         for(auto &s : getSubTopoShapes(TopAbs_VERTEX)) {
             ++i;
-            if(BRep_Tool::Pnt(TopoDS::Vertex(s.getShape())).SquareDistance(
-                        BRep_Tool::Pnt(TopoDS::Vertex(subshape.getShape()))) <= tol2)
-            {
+            auto ptOther = BRep_Tool::Pnt(TopoDS::Vertex(s.getShape()));
+            double d = pt.SquareDistance(ptOther);
+            if (d <= tol2) {
                 if(names)
                     names->push_back(std::string("Vertex")+std::to_string(i));
                 res.push_back(s);
             }
         }
         break;
+    }
     case TopAbs_EDGE:
     case TopAbs_FACE: {
         std::unique_ptr<Geometry> g;
@@ -1668,81 +1670,76 @@ TopoShape &TopoShape::makEEvolve(const TopoShape &spine,
 TopoShape &TopoShape::makERuledSurface(const std::vector<TopoShape> &shapes,
         int orientation, const char *op)
 {
-    if(!op) op = Part::OpCodes::RuledSurface;
+    if(!op)
+        op = Part::OpCodes::RuledSurface;
 
     if(shapes.size()!=2)
         FC_THROWM(Base::CADKernelError,"Wrong number of input shape");
 
-    std::array<TopoDS_Shape,2> curves;
+    std::vector<TopoShape> curves(2);
     int i=0;
     for(auto &s : shapes) {
         if(s.isNull())
             HANDLE_NULL_INPUT;
-        const auto &shape = s.getShape();
-        auto type = shape.ShapeType();
+        auto type = s.shapeType();
         if(type == TopAbs_WIRE || type == TopAbs_EDGE) {
-            curves[i++] = shape;
+            curves[i++] = s;
             continue;
         }
         auto count = s.countSubShapes(TopAbs_WIRE);
         if(count>1)
             FC_THROWM(Base::CADKernelError,"Input shape has more than one wire");
         if(count==1) {
-            curves[i++] = s.getSubShape(TopAbs_WIRE,1);
+            curves[i++] = s.getSubTopoShape(TopAbs_WIRE,1);
             continue;
         }
         count = s.countSubShapes(TopAbs_EDGE);
         if(count==0)
             FC_THROWM(Base::CADKernelError,"Input shape has no edge");
         if(count == 1) {
-            curves[i++] = s.getSubShape(TopAbs_EDGE,1);
+            curves[i++] = s.getSubTopoShape(TopAbs_EDGE,1);
             continue;
         }
-        curves[i] = s.makEWires().getShape();
-        if(curves[i].IsNull())
+        curves[i] = s.makEWires();
+        if(curves[i].isNull())
             HANDLE_NULL_INPUT;
-        if(curves[i].ShapeType()!=TopAbs_WIRE)
+        if(curves[i].shapeType()!=TopAbs_WIRE)
             FC_THROWM(Base::CADKernelError,"Input shape forms more than one wire");
         ++i;
     }
 
-    if(curves[0].ShapeType()!=curves[1].ShapeType()) {
+    if(curves[0].shapeType()!=curves[1].shapeType()) {
         for(auto &curve : curves) {
-            if(curve.ShapeType() == TopAbs_EDGE)
-                curve = BRepLib_MakeWire(TopoDS::Edge(curve));
+            if(curve.shapeType() == TopAbs_EDGE)
+                curve = curve.makEWires();
         }
     }
 
     auto &S1 = curves[0];
     auto &S2 = curves[1];
-    bool isWire = S1.ShapeType()==TopAbs_WIRE;
+    bool isWire = S1.shapeType()==TopAbs_WIRE;
 
     // https://forum.freecadweb.org/viewtopic.php?f=8&t=24052
     //
-    // if both shapes are sub-elements of one common shape then the fill algorithm
-    // leads to problems if the shape has set a placement
-    // The workaround is to reset the placement before calling BRepFill and then
-    // applying the placement to the output shape
-    TopLoc_Location Loc = S1.Location();
-    if(!Loc.IsIdentity() && Loc==S2.Location()) {
-        S1.Location(TopLoc_Location());
-        S2.Location(TopLoc_Location());
-    }else
-        Loc = TopLoc_Location();
+    // if both shapes are sub-elements of one common shape then the fill
+    // algorithm leads to problems if the shape has set a placement. The
+    // workaround is to copy the sub-shape
+    S1 = S1.makECopy();
+    S2 = S2.makECopy();
 
     if (orientation == 0) {
         // Automatic
         Handle(Adaptor3d_HCurve) a1;
         Handle(Adaptor3d_HCurve) a2;
         if (!isWire) {
-            BRepAdaptor_Curve adapt1(TopoDS::Edge(S1));
-            BRepAdaptor_Curve adapt2(TopoDS::Edge(S2));
+            BRepAdaptor_Curve adapt1(TopoDS::Edge(S1.getShape()));
+            BRepAdaptor_Curve adapt2(TopoDS::Edge(S2.getShape()));
             a1 = new BRepAdaptor_HCurve(adapt1);
             a2 = new BRepAdaptor_HCurve(adapt2);
         }
         else {
-            BRepAdaptor_CompCurve adapt1(TopoDS::Wire(S1));
-            BRepAdaptor_CompCurve adapt2(TopoDS::Wire(S2));
+            BRepAdaptor_CompCurve adapt1(TopoDS::Wire(S1.getShape()));
+            BRepAdaptor_CompCurve adapt2(TopoDS::Wire(S2.getShape()));
             a1 = new BRepAdaptor_HCompCurve(adapt1);
             a2 = new BRepAdaptor_HCompCurve(adapt2);
         }
@@ -1751,14 +1748,14 @@ TopoShape &TopoShape::makERuledSurface(const std::vector<TopoShape> &shapes,
             // get end points of 1st curve
             gp_Pnt p1 = a1->Value(a1->FirstParameter());
             gp_Pnt p2 = a1->Value(a1->LastParameter());
-            if (S1.Orientation() == TopAbs_REVERSED) {
+            if (S1.getShape().Orientation() == TopAbs_REVERSED) {
                 std::swap(p1, p2);
             }
 
             // get end points of 2nd curve
             gp_Pnt p3 = a2->Value(a2->FirstParameter());
             gp_Pnt p4 = a2->Value(a2->LastParameter());
-            if (S2.Orientation() == TopAbs_REVERSED) {
+            if (S2.getShape().Orientation() == TopAbs_REVERSED) {
                 std::swap(p3, p4);
             }
 
@@ -1774,29 +1771,40 @@ TopoShape &TopoShape::makERuledSurface(const std::vector<TopoShape> &shapes,
             gp_Vec n2 = v3.Crossed(v4);
 
             if (n1.Dot(n2) < 0) {
-                S2.Reverse();
+                S2.setShape(S2.getShape().Reversed(), false);
             }
         }
     }
     else if (orientation == 2) {
         // Reverse
-        S2.Reverse();
+        S2.setShape(S2.getShape().Reversed(), false);
     }
 
     TopoDS_Shape ruledShape;
     if (!isWire) {
-        ruledShape = BRepFill::Face(TopoDS::Edge(S1), TopoDS::Edge(S2));
+        ruledShape = BRepFill::Face(TopoDS::Edge(S1.getShape()), TopoDS::Edge(S2.getShape()));
     }
     else {
-        ruledShape = BRepFill::Shell(TopoDS::Wire(S1), TopoDS::Wire(S2));
+        ruledShape = BRepFill::Shell(TopoDS::Wire(S1.getShape()), TopoDS::Wire(S2.getShape()));
     }
+    
+    // Both BRepFill::Face() and Shell() modifies the original input edges
+    // without any API to provide relationship to the output edges. So we have
+    // to use searchSubShape() to build the relationship by ourselves.
 
-    // re-apply the placement in case we reset it
-    if (!Loc.IsIdentity())
-        move(ruledShape,Loc);
-
+    TopoShape res(ruledShape.Located(TopLoc_Location()));
+    std::vector<TopoShape> edges;
+    for (const auto &c : curves) {
+        for (const auto &e : c.getSubTopoShapes(TopAbs_EDGE)) {
+            auto found = res.searchSubShape(e);
+            if (found.size() > 0) {
+                found.front().resetElementMap(e.elementMap());
+                edges.push_back(found.front());
+            }
+        }
+    }
     // Use empty mapper and let makEShape name the created surface with lower elements.
-    return makESHAPE(ruledShape,Mapper(),shapes,op);
+    return makESHAPE(res.getShape(),Mapper(),edges,op);
 }
 
 const std::vector<TopoDS_Shape> &
@@ -3826,9 +3834,11 @@ TopoShape &TopoShape::makESHAPE(const TopoDS_Shape &shape, const Mapper &mapper,
                         // This warning occurs in makERevolve. It generates
                         // some shape from a vertex that never made into the
                         // final shape. There may be other cases there.
-                        if(FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                        if(FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_TRACE))
                             FC_WARN("Cannot find " << op << " modified " <<
-                                newInfo.shapetype << " from " << info.shapetype << i);
+                                newInfo.shapetype << " " << newShape.TShape().get()
+                                << " from " << info.shapetype << i << " "
+                                << otherElement.TShape().get());
                         continue;
                     }
 
@@ -4619,6 +4629,83 @@ TopoShape &TopoShape::makEFillet(const TopoShape &shape, const std::vector<TopoS
         if(!shape.findShape(edge))
             FC_THROWM(Base::CADKernelError,"edge does not belong to the shape");
         mkFillet.Add(radius1, radius2, TopoDS::Edge(edge));
+    }
+    return makEShape(mkFillet,shape,op);
+}
+
+TopoShape &TopoShape::makEFillet(const TopoShape &shape,
+                                 const std::vector<TopoShape> &edges,
+                                 const std::vector<FilletSegments> &segments,
+                                 double defaultRadius,
+                                 const char *op)
+{
+    if(!op) op = Part::OpCodes::Fillet;
+    if(shape.isNull())
+        HANDLE_NULL_SHAPE;
+
+    if(edges.empty())
+        HANDLE_NULL_INPUT;
+
+    BRepFilletAPI_MakeFillet mkFillet(shape.getShape());
+    int i = -1;
+    for(auto &e : edges) {
+        ++i;
+        if(e.isNull())
+            HANDLE_NULL_INPUT;
+
+        const auto &edge = e.getShape();
+        if(!shape.findShape(edge))
+            FC_THROWM(Base::CADKernelError,"edge does not belong to the shape");
+
+        auto edgeSegments = segments[i];
+        if (edgeSegments.empty()) {
+            if (defaultRadius <= 0.0)
+                FC_THROWM(Base::CADKernelError,"no radius setting for fillet edge");
+            edgeSegments.emplace_back(0.0, defaultRadius);
+        }
+
+        double length = -1.0;
+        for (auto &segment : edgeSegments) {
+            if (segment.length <= 0.0)
+                continue;
+            if (length < 0.0) {
+                GProp_GProps props;
+                BRepGProp::LinearProperties(edge, props);
+                length = props.Mass();
+            }
+            if (length > segment.length)
+                segment.param = segment.length/length;
+            else
+                segment.param = 1.0;
+        }
+        std::stable_sort(edgeSegments.begin(), edgeSegments.end());
+        if (edgeSegments.front().param == 0.0 && edgeSegments.front().radius == 0.0) {
+            // If the first entry has both radius and paramemter be zero, treat
+            // it as suppressing the current edge for fillet
+            continue;
+        }
+        std::size_t count = edgeSegments.size();
+        if (edgeSegments.front().param > Precision::Confusion())
+            ++count;
+        if (1.0 - edgeSegments.back().param > Precision::Confusion())
+            ++count;
+        TColgp_Array1OfPnt2d UandR(1, count);
+        int j=1;
+        if (edgeSegments.front().param > Precision::Confusion())
+            UandR.SetValue(j++, gp_Pnt2d(0.0,
+                        defaultRadius>0.0?defaultRadius:edgeSegments.front().radius));
+        for (const auto &segment : edgeSegments) {
+            double t = segment.param;
+            if (t < 0.0)
+                t = 0.0;
+            else if (t > 1.0)
+                t = 1.0;
+            UandR.SetValue(j++, gp_Pnt2d(t, segment.radius));
+        }
+        if (1.0 - edgeSegments.back().param > Precision::Confusion())
+            UandR.SetValue(j++, gp_Pnt2d(1.0,
+                        defaultRadius>0.0?defaultRadius:edgeSegments.back().radius));
+        mkFillet.Add(UandR, TopoDS::Edge(edge));
     }
     return makEShape(mkFillet,shape,op);
 }
@@ -5644,7 +5731,9 @@ bool TopoShape::isLinearEdge(Base::Vector3d *dir, Base::Vector3d *base) const
     if (isNull() || getShape().ShapeType() != TopAbs_EDGE)
         return false;
 
-    if (!GeomCurve::isLinear(BRepAdaptor_Curve(TopoDS::Edge(getShape())).Curve().Curve(), dir, base))
+    Standard_Real p1, p2;
+    Handle_Geom_Curve curve = BRep_Tool::Curve(TopoDS::Edge(getShape()), p1, p2);
+    if (!GeomCurve::isLinear(curve, dir, base))
         return false;
     if (dir || base) {
         auto pla = getPlacement();
@@ -5665,8 +5754,9 @@ bool TopoShape::isPlanarFace(double tol) const
     if (isNull() || getShape().ShapeType() != TopAbs_FACE)
         return false;
 
-    return GeomSurface::isPlanar(
-            BRepAdaptor_Surface(TopoDS::Face(getShape())).Surface().Surface(), nullptr, tol);
+    TopLoc_Location loc;
+    Handle(Geom_Surface) surf = BRep_Tool::Surface(TopoDS::Face(getShape()), loc);
+    return GeomSurface::isPlanar(surf, nullptr, tol);
 }
 
 bool TopoShape::linearize(bool face, bool edge)
@@ -5678,8 +5768,7 @@ bool TopoShape::linearize(bool face, bool edge)
     if (edge) {
         for (auto & edge : getSubTopoShapes(TopAbs_EDGE)) {
             TopoDS_Edge e = TopoDS::Edge(edge.getShape());
-            BRepAdaptor_Curve curve(e);
-            if (curve.GetType() == GeomAbs_Line || !edge.isLinearEdge())
+            if (!edge.isLinearEdge())
                 continue;
             std::unique_ptr<Geometry> geo(
                     Geometry::fromShape(e.Located(TopLoc_Location()).Oriented(TopAbs_FORWARD)));
@@ -5696,8 +5785,7 @@ bool TopoShape::linearize(bool face, bool edge)
     if (face) {
         for (auto & face : getSubTopoShapes(TopAbs_FACE)) {
             TopoDS_Face f = TopoDS::Face(face.getShape());
-            BRepAdaptor_Surface surf(f);
-            if (surf.GetType() == GeomAbs_Plane || !face.isPlanarFace())
+            if (!face.isPlanarFace())
                 continue;
             std::unique_ptr<Geometry> geo(
                     Geometry::fromShape(f.Located(TopLoc_Location()).Oriented(TopAbs_FORWARD)));

@@ -32,6 +32,7 @@ from params_utils import ParamProxy, auto_comment
 
 sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'App'))
 import GroupParams
+import LinkParams
 
 Title = 'Objects'
 NameSpace = 'Gui'
@@ -39,6 +40,7 @@ ClassName = 'DlgSettingsObjects'
 ClassDoc = 'Preference dialog for various document objects related settings'
 
 _GroupParams = { param.name : param for param in GroupParams.Params }
+_LinkParams = { param.name : param for param in LinkParams.Params }
 
 class ParamCreateOrigin(ParamProxy):
     def __init__(self, param):
@@ -99,6 +101,7 @@ ParamCreateOrigin(_GroupParams['CreateOrigin'])
 
 ParamGroup = (
     ('Group objects', GroupParams.Params),
+    ('App::Link', [_LinkParams['ShowElement']]),
 )
 
 def declare():

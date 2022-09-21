@@ -28,6 +28,7 @@
 # include <BRep_Builder.hxx>
 # include <BRep_Tool.hxx>
 # include <BRepBndLib.hxx>
+# include <BRepBuilderAPI_Copy.hxx>
 # include <BRepBuilderAPI_MakeEdge.hxx>
 # include <BRepBuilderAPI_MakeWire.hxx>
 # include <BRepBuilderAPI_MakeFace.hxx>
@@ -36,13 +37,15 @@
 # include <BRepGProp.hxx>
 # include <BRepTools.hxx>
 # include <BRepTools_WireExplorer.hxx>
+# include <gp_Pln.hxx>
+# include <GeomAdaptor_Curve.hxx>
 # include <GeomLProp_CLProps.hxx>
 # include <GProp_GProps.hxx>
+# include <ShapeAnalysis_Wire.hxx>
 # include <ShapeFix_ShapeTolerance.hxx>
 # include <ShapeExtend_WireData.hxx>
 # include <ShapeFix_Wire.hxx>
-# include <ShapeFix_Wireframe.hxx>
-# include <ShapeAnalysis_FreeBounds.hxx>
+# include <ShapeFix_Shape.hxx>
 # include <TopExp.hxx>
 # include <TopExp_Explorer.hxx>
 # include <TopTools_HSequenceOfShape.hxx>
@@ -67,6 +70,7 @@
 
 #include "Geometry.h"
 #include "PartFeature.h"
+#include "TopoShapeOpCode.h"
 
 namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
@@ -120,6 +124,8 @@ public:
     
     bool checkBBox(const Bnd_Box &box)
     {
+        if (box.IsVoid())
+            return false;
         Standard_Real xMin, yMin, zMin, xMax, yMax, zMax;
         box.Get(xMin, yMin, zMin, xMax, yMax, zMax);
         return zMax - zMin <= myTol;
@@ -176,22 +182,34 @@ public:
         bool queryBBox;
         std::shared_ptr<WireInfo> wireInfo;
         std::shared_ptr<WireInfo> wireInfo2; // an edge can be shared by at most two tight bound wires.
+        std::unique_ptr<Geometry> geo;
+        Standard_Real firstParam;
+        Standard_Real lastParam;
+        Handle_Geom_Curve curve;
+        GeomAbs_CurveType type;
+        bool isLinear;
 
         EdgeInfo(const TopoDS_Edge &e,
                  const gp_Pnt &pt1,
                  const gp_Pnt &pt2,
                  const Box &bound,
-                 bool bbox)
-            :edge(e),p1(pt1),p2(pt2),box(bound),queryBBox(bbox)
+                 bool bbox,
+                 bool isLinear)
+            :edge(e),p1(pt1),p2(pt2),box(bound),queryBBox(bbox),isLinear(isLinear)
         {
-
-            Standard_Real first,last;
-            Handle_Geom_Curve curve = BRep_Tool::Curve(e, first, last);
-            GeomLProp_CLProps prop(curve,(first+last)/2,0,Precision::Confusion());
+            curve = BRep_Tool::Curve(e, firstParam, lastParam);
+            type = GeomAdaptor_Curve(curve).GetType();
+            assertCheck(!curve.IsNull());
+            GeomLProp_CLProps prop(curve,(firstParam+lastParam)*0.5,0,Precision::Confusion());
             mid = prop.Value();
 
             iteration = 0;
             reset();
+        }
+        Geometry *geometry() {
+            if (!geo)
+                geo = Geometry::fromShape(edge);
+            return geo.get();
         }
         void reset() {
             wireInfo.reset();
@@ -215,6 +233,13 @@ public:
             if (superEdgeReversed.IsNull())
                 superEdgeReversed = superEdge.Reversed();
             return superEdgeReversed;
+        }
+        TopoDS_Wire wire() const
+        {
+            auto s = shape();
+            if (s.ShapeType() == TopAbs_WIRE)
+                return TopoDS::Wire(s);
+            return BRepBuilderAPI_MakeWire(TopoDS::Edge(s)).Wire();
         }
     };
 
@@ -354,6 +379,12 @@ public:
         }
         gp_Pnt &ptOther() {
             return start?it->p2:it->p1;
+        }
+        TopoDS_Vertex vertex() const {
+            return start ? TopExp::FirstVertex(edge()) : TopExp::LastVertex(edge());
+        }
+        TopoDS_Vertex otherVertex() const {
+            return start ? TopExp::LastVertex(edge()) : TopExp::FirstVertex(edge());
         }
         EdgeInfo *edgeInfo() const {
             return &(*it);
@@ -537,9 +568,9 @@ public:
     BRep_Builder builder;
     TopoDS_Compound compound;
 
-    std::vector<TopoShape> sourceEdges;
-    std::vector<TopoShape> openEdges;
-    TopoShape openEdgeCompound;
+    std::unordered_set<TopoShape, ShapeHasher, ShapeHasher> sourceEdges;
+    std::vector<TopoShape> sourceEdgeArray;
+    TopoDS_Compound openEdgeCompound;
 
     Handle(ShapeExtend_WireData) wireData = new ShapeExtend_WireData();
 
@@ -552,12 +583,12 @@ public:
         edges.clear();
         edgeSet.clear();
         wireSet.clear();
-        openEdges.clear();
         adjacentList.clear();
         stack.clear();
         tmpVertices.clear();
         vertexStack.clear();
         builder.MakeCompound(compound);
+        openEdgeCompound.Nullify();
     }
 
     Edges::iterator remove(Edges::iterator it)
@@ -588,6 +619,7 @@ public:
         vmap.insert(VertexInfo(it,false));
         if (it->queryBBox)
             boxMap.insert(it);
+        showShape(it->edge, "add");
     }
 
     int add(const TopoDS_Edge &e, bool queryBBox=false)
@@ -611,29 +643,103 @@ public:
     {
         gp_Pnt p1,p2;
         getEndPoints(e,p1,p2);
+        TopoDS_Vertex v1, v2;
+        TopoDS_Edge ev1, ev2;
         double tol = myTol2;
         // search for duplicate edges
+        showShape(e, "addcheck");
+        bool isLinear = TopoShape(e).isLinearEdge();
+        std::unique_ptr<Geometry> geo;
+
         for (auto vit=vmap.qbegin(bgi::nearest(p1,INT_MAX));vit!=vmap.qend();++vit) {
             auto &vinfo = *vit;
+            if (canShowShape())
+                FC_MSG("addcheck " << vinfo.edge().HashCode(INT_MAX));
             double d1 = vinfo.pt().SquareDistance(p1);
             if (d1 >= tol)
                 break;
+            if (v1.IsNull()) {
+                ev1 = vinfo.edge();
+                v1 = vinfo.vertex();
+            }
             double d2 = vinfo.ptOther().SquareDistance(p2);
             if (d2 < tol) {
-                auto g1 = Geometry::fromShape(e);
-                auto g2 = Geometry::fromShape(vinfo.edge());
-                if ((static_cast<GeomCurve*>(g1.get())->isLinear()
-                            && static_cast<GeomCurve*>(g2.get())->isLinear())
-                        || g1->isSame(*g2, myTol, myAngularTol))
-                {
+                if (v2.IsNull()) {
+                    ev2 = vinfo.edge();
+                    v2 = vinfo.otherVertex();
+                }
+                if (isLinear && vinfo.edgeInfo()->isLinear) {
                     showShape(e, "duplicate");
                     aHistory->Remove(e);
                     return false;
                 }
+                else {
+                    if (!geo)
+                        geo = Geometry::fromShape(e);
+                    if (geo->isSame(*vinfo.edgeInfo()->geometry(), myTol, myAngularTol)) {
+                        showShape(e, "duplicate");
+                        aHistory->Remove(e);
+                        return false;
+                    }
+                }
+            }
+        }
+        if (v2.IsNull()) {
+            for (auto vit=vmap.qbegin(bgi::nearest(p2,1));vit!=vmap.qend();++vit) {
+                auto &vinfo = *vit;
+                double d1 = vinfo.pt().SquareDistance(p2);
+                if (d1 < tol) {
+                    v2 = vit->vertex();
+                    ev2 = vit->edge();
+                }
             }
         }
 
-        it = edges.emplace(it,e,p1,p2,bbox,queryBBox);
+        // Make sure coincident vertices are actually the same TopoDS_Vertex,
+        // which is crutial for the OCC internal shape hierarchy structure. We
+        // achieve this by making a temp wire and let OCC do the hard work of
+        // replacing the vertex.
+        auto connectEdge = [&](TopoDS_Edge &e,
+                              const TopoDS_Vertex &v,
+                              const TopoDS_Edge &eOther,
+                              const TopoDS_Vertex &vOther)
+        {
+            if (vOther.IsNull())
+                return;
+            if (v.IsSame(vOther))
+                return;
+            double tol = std::max(BRep_Tool::Pnt(v).Distance(BRep_Tool::Pnt(vOther)),
+                                  BRep_Tool::Tolerance(vOther));
+            if (tol >= BRep_Tool::Tolerance(v)) {
+                ShapeFix_ShapeTolerance fix;
+                fix.SetTolerance(v, std::max(tol*0.5, myTol), TopAbs_VERTEX);
+            }
+            BRepBuilderAPI_MakeWire mkWire(eOther);
+            mkWire.Add(e);
+            auto newEdge = mkWire.Edge();
+            TopoDS_Vertex vFirst = TopExp::FirstVertex(newEdge);
+            TopoDS_Vertex vLast = TopExp::LastVertex(newEdge);
+            assertCheck(vLast.IsSame(vOther) || vFirst.IsSame(vOther));
+            e = newEdge;
+        };
+
+        TopoDS_Edge edge = e;
+        TopoDS_Vertex vFirst = TopExp::FirstVertex(e);
+        TopoDS_Vertex vLast = TopExp::LastVertex(e);
+        connectEdge(edge, vFirst, ev1, v1);
+        connectEdge(edge, vLast, ev2, v2);
+        if (!edge.IsSame(e)) {
+            auto itSource = sourceEdges.find(e);
+            if (itSource != sourceEdges.end()) {
+                TopoShape newEdge = *itSource;
+                newEdge.setShape(edge, false);
+                sourceEdges.erase(itSource);
+                sourceEdges.insert(newEdge);
+            }
+            getEndPoints(edge,p1,p2);
+            // Shall we also update bbox?
+        }
+        it = edges.emplace(it,edge,p1,p2,bbox,queryBBox,isLinear);
         add(it);
         return true;
     }
@@ -707,49 +813,173 @@ public:
     }
 
     struct IntersectInfo {
-        TopoDS_Shape support;
+        double param;
+        TopoDS_Shape intersectShape;
         gp_Pnt point;
-        IntersectInfo()
+        IntersectInfo(double p, const gp_Pnt &pt, const TopoDS_Shape &s)
+            :param(p), intersectShape(s), point(pt)
         {}
-        IntersectInfo(const TopoDS_Shape &s, const gp_Pnt &p)
-            :support(s), point(p)
-        {}
+        bool operator<(const IntersectInfo &other) const {
+            return param < other.param;
+        }
     };
 
-    void pushIntersection(std::map<double, IntersectInfo> &params,
-                          BRepExtrema_DistShapeShape &extss,
-                          int idx,
-                          bool other = false)
+    void checkSelfIntersection(const EdgeInfo &info, std::set<IntersectInfo> &params)
     {
-        Standard_Real p;
-        IntersectInfo info;
-        info.support = other ? extss.SupportOnShape2(idx) : extss.SupportOnShape1(idx);
-        if (info.support.ShapeType() == TopAbs_EDGE) {
-            if (other) {
-                info.point = extss.PointOnShape2(idx);
-                extss.ParOnEdgeS2(idx, p);
-            } else {
-                info.point = extss.PointOnShape1(idx);
-                extss.ParOnEdgeS1(idx, p);
-            }
-            params.emplace(p, info);
+        // Early return if checking for self intersection (only for non linear spline curves)
+        if (info.type <= GeomAbs_Parabola || info.isLinear)
+            return;
+        IntRes2d_SequenceOfIntersectionPoint points2d;
+        TColgp_SequenceOfPnt points3d;
+        TColStd_SequenceOfReal errors;
+        TopoDS_Wire wire;
+        BRepBuilderAPI_MakeWire mkWire(info.edge);
+        if (!mkWire.IsDone())
+            return;
+        if (!BRep_Tool::IsClosed(mkWire.Wire())) {
+            BRepBuilderAPI_MakeEdge mkEdge(info.p1, info.p2);
+            if (!mkEdge.IsDone())
+                return;
+            mkWire.Add(mkEdge.Edge());
         }
+        wire = mkWire.Wire();
+        BRepBuilderAPI_MakeFace mkFace(wire);
+        if (!mkFace.IsDone())
+            return;
+        TopoDS_Face face = mkFace.Face();
+        ShapeAnalysis_Wire analysis(wire, face, myTol);
+        analysis.CheckSelfIntersectingEdge(1, points2d, points3d);
+        assertCheck(points2d.Length() == points3d.Length());
+        for (int i=1; i<=points2d.Length(); ++i) {
+            params.emplace(points2d(i).ParamOnFirst(), points3d(i), info.edge);
+            params.emplace(points2d(i).ParamOnSecond(), points3d(i), info.edge);
+        }
+    }
+
+    void checkIntersection(const EdgeInfo &info,
+                           const EdgeInfo &other,
+                           std::set<IntersectInfo> &params1,
+                           std::set<IntersectInfo> &params2)
+    {
+        gp_Pln pln;
+        bool planar = TopoShape(info.edge).findPlane(pln);
+        if (!planar) {
+            TopoDS_Compound comp;
+            builder.MakeCompound(comp);
+            builder.Add(comp, info.edge);
+            builder.Add(comp, other.edge);
+            planar = TopoShape(comp).findPlane(pln);
+            if (!planar) {
+                BRepExtrema_DistShapeShape extss(info.edge, other.edge);
+                extss.Perform();
+                if (extss.IsDone() && extss.NbSolution() > 0)
+                if (!extss.IsDone() || extss.NbSolution()<=0 || extss.Value()>=myTol)
+                    return;
+                for (int i=1; i<=extss.NbSolution(); ++i) {
+                    Standard_Real p;
+                    auto s1 = extss.SupportOnShape1(i);
+                    auto s2 = extss.SupportOnShape2(i);
+                    if (s1.ShapeType() == TopAbs_EDGE) {
+                        extss.ParOnEdgeS1(i,p);
+                        pushIntersection(params1, p, extss.PointOnShape1(i), other.edge);
+                    }
+                    if (s2.ShapeType() == TopAbs_EDGE) {
+                        extss.ParOnEdgeS2(i,p);
+                        pushIntersection(params2, p, extss.PointOnShape2(i), info.edge);
+                    }
+                }
+                return;
+            }
+        }
+        // BRepExtrema_DistShapeShape has trouble finding all solutions for a
+        // spline curve. ShapeAnalysis_Wire is better. Besides, it can check
+        // for self intersection. It's slightly more troublesome to use, as it
+        // requires to build a face for the wire, so we only use it for planar
+        // cases.
+
+        IntRes2d_SequenceOfIntersectionPoint points2d;
+        TColgp_SequenceOfPnt points3d;
+        TColStd_SequenceOfReal errors;
+        TopoDS_Wire wire;
+        int idx;
+        BRepBuilderAPI_MakeWire mkWire(info.edge);
+        mkWire.Add(other.edge);
+        if (mkWire.IsDone())
+            idx = 2;
+        else if (mkWire.Error() == BRepBuilderAPI_DisconnectedWire) {
+            idx = 3;
+            BRepBuilderAPI_MakeEdge mkEdge(info.p1, other.p1);
+            if (!mkEdge.IsDone()) {
+                if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                    FC_WARN("Failed to build edge for checking intersection");
+                return;
+            }
+            mkWire.Add(mkEdge.Edge());
+            mkWire.Add(other.edge);
+        }
+
+        if (!mkWire.IsDone()) {
+            if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                FC_WARN("Failed to build wire for checking intersection");
+            return;
+        }
+        wire = mkWire.Wire();
+        if (!BRep_Tool::IsClosed(wire)) {
+            gp_Pnt p1, p2;
+            getEndPoints(wire, p1, p2);
+            BRepBuilderAPI_MakeEdge mkEdge(p1, p2);
+            if (!mkEdge.IsDone()) {
+                if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                    FC_WARN("Failed to build edge for checking intersection");
+                return;
+            }
+            mkWire.Add(mkEdge.Edge());
+        }
+
+        BRepBuilderAPI_MakeFace mkFace(wire);
+        if (!mkFace.IsDone()) {
+            if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                FC_WARN("Failed to build face for checking intersection");
+            return;
+        }
+        TopoDS_Face face = mkFace.Face();
+        ShapeAnalysis_Wire analysis(wire, face, myTol);
+        analysis.CheckIntersectingEdges(1, idx, points2d, points3d, errors);
+        assertCheck(points2d.Length() == points3d.Length());
+        for (int i=1; i<=points2d.Length(); ++i) {
+            pushIntersection(params1, points2d(i).ParamOnFirst(), points3d(i), other.edge);
+            pushIntersection(params2, points2d(i).ParamOnSecond(), points3d(i), info.edge);
+        }
+    }
+
+    void pushIntersection(std::set<IntersectInfo> &params, double param, const gp_Pnt &pt, const TopoDS_Shape &shape)
+    {
+        IntersectInfo info(param, pt, shape);
+        auto it = params.upper_bound(info);
+        if (it != params.end()) {
+            if (it->point.SquareDistance(pt) < myTol2)
+                return;
+        }
+        if (it != params.begin()) {
+            auto itPrev = it;
+            --itPrev;
+            if (itPrev->point.SquareDistance(pt) < myTol2)
+                return;
+        }
+        params.insert(it, info);
+        return;
     }
 
     struct SplitInfo {
         TopoDS_Edge edge;
-        TopoDS_Shape support;
+        TopoDS_Shape intersectShape;
         Box bbox; 
     };
 
     // Try splitting any edges that intersects other edge
     void splitEdges()
     {
-        BRepExtrema_DistShapeShape extss;
-#if OCC_VERSION_HEX >= 0x070600
-        extss.SetMultiThread(Standard_True);
-#endif
-        std::unordered_map<const EdgeInfo*, std::map<double, IntersectInfo>> intersects;
+        std::unordered_map<const EdgeInfo*, std::set<IntersectInfo>> intersects;
 
         int i=0;
         for (auto &info : edges)
@@ -763,30 +993,16 @@ public:
             seq->next(true);
             ++i;
             auto &info = *it;
-            extss.LoadS1(info.edge);
+            auto &params = intersects[&info];
+            checkSelfIntersection(info, params);
+
             for (auto vit=boxMap.qbegin(bgi::intersects(info.box)); vit!=boxMap.qend(); ++vit) {
                 const auto &other = *(*vit);
                 if (other.iteration <= i) {
                     // means the edge is before us, and we've already checked intersection
                     continue;
                 }
-
-                extss.LoadS2(other.edge);
-                extss.Perform();
-                if (!extss.IsDone())
-                    continue;
-                if (extss.Value() >= myTol) {
-                    // showShape(info.edge, "nsectA");
-                    // showShape(other.edge, "nsectB");
-                    continue;
-                }
-
-                auto &params = intersects[&info];
-                auto &otherParams = intersects[&other];
-                for (int i=1; i<=extss.NbSolution(); ++i) {
-                    pushIntersection(params, extss, i);
-                    pushIntersection(otherParams, extss, i, true);
-                }
+                checkIntersection(info, other, params, intersects[&other]);
             }
         }
 
@@ -801,18 +1017,20 @@ public:
             }
             auto &info = *it;
             auto &params = iter->second;
+            if (params.empty()) {
+                ++it;
+                continue;
+            }
 
-            Standard_Real first,last;
-            Handle_Geom_Curve curve = BRep_Tool::Curve(info.edge, first, last);
             auto itParam = params.begin();
-            if (itParam->second.point.SquareDistance(info.p1) < myTol2)
+            if (itParam->point.SquareDistance(info.p1) < myTol2)
                 params.erase(itParam);
-            params[first] = IntersectInfo(TopoDS_Shape(), info.p1);
+            params.emplace(info.firstParam, info.p1, TopoDS_Shape());
             itParam = params.end();
             --itParam;
-            if (itParam->second.point.SquareDistance(info.p2) < myTol2)
+            if (itParam->point.SquareDistance(info.p2) < myTol2)
                 params.erase(itParam);
-            params[last] = IntersectInfo(TopoDS_Shape(), info.p2);
+            params.emplace(info.lastParam, info.p2, TopoDS_Shape());
 
             if (params.size() <= 2) {
                 ++it;
@@ -822,30 +1040,30 @@ public:
             splitted.clear();
             itParam = params.begin();
             for (auto itPrevParam=itParam++; itParam!=params.end(); ++itParam) {
-                const auto &e = itParam->second.support.IsNull()
-                    ? itPrevParam->second.support : itParam->second.support;
-                if (e.IsNull())
+                const auto &intersectShape = itParam->intersectShape.IsNull()
+                    ? itPrevParam->intersectShape : itParam->intersectShape;
+                if (intersectShape.IsNull())
                     break;
 
                 // Using points cause MakeEdge failure for some reason. Using
                 // parameters is better.
                 //
-                const auto &p1 = itPrevParam->second.point;
-                const auto &p2 = itParam->second.point;
-                const auto &param1 = itPrevParam->first;
-                const auto &param2 = itParam->first;
+                const gp_Pnt &p1 = itPrevParam->point;
+                const gp_Pnt &p2 = itParam->point;
+                const Standard_Real &param1 = itPrevParam->param;
+                const Standard_Real &param2 = itParam->param;
 
-                BRepBuilderAPI_MakeEdge mkEdge(curve, param1, param2);
+                BRepBuilderAPI_MakeEdge mkEdge(info.curve, param1, param2);
                 if (mkEdge.IsDone()) {
                     splitted.emplace_back();
                     auto &entry = splitted.back();
                     entry.edge = mkEdge.Edge();
-                    entry.support = e;
+                    entry.intersectShape = intersectShape;
                     if (getBBox(entry.edge, entry.bbox))
                         itPrevParam = itParam;
                     else
                         splitted.pop_back();
-                }
+                    }
                 else if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG)) {
                     FC_WARN("edge split failed "
                             << std::setprecision(16)
@@ -859,13 +1077,15 @@ public:
             }
 
             showShape(info.edge, "remove");
+            auto removedEdge = info.edge;
             it = remove(it);
             for (const auto &v : splitted) {
                 if (!add(v.edge, false, v.bbox, it))
                     continue;
                 auto &newInfo = *it++;
-                aHistory->AddModified(v.support, newInfo.edge);
-                aHistory->AddModified(info.edge, newInfo.edge);
+                aHistory->AddModified(v.intersectShape, newInfo.edge);
+                if (v.intersectShape != removedEdge)
+                    aHistory->AddModified(removedEdge, newInfo.edge);
                 showShape(newInfo.edge, "split");
             }
         }
@@ -889,7 +1109,7 @@ public:
             if (info.iteration == iteration || info.iteration < 0)
                 continue;
             info.iteration = iteration;
-            showShape(&info, "scheck");
+            // showShape(&info, "scheck");
 
             vertices.clear();
             vertices.emplace_back(it, true);
@@ -901,7 +1121,7 @@ public:
                 while (true) {
                     auto currentVertex = k==1 ? vertices.front() : vertices.back();
                     auto current = currentVertex.edgeInfo();
-                    showShape(current, "siter", k);
+                    // showShape(current, "siter", k);
                     int idx = (currentVertex.start?1:0)^k;
                     EdgeInfo *found = nullptr;
                     for (int i=current->iStart[idx]; i<current->iEnd[idx]; ++i) {
@@ -918,12 +1138,12 @@ public:
                         if (found // more than one branch
                             || edgeSet.contains(next)) // or, self intersect
                         {
-                            if (found) {
-                                showShape(found, "branch_a", k);
-                                showShape(next, "branch_b", k);
-                            } else {
-                                showShape(next, "insect", k);
-                            }
+                            // if (found) {
+                            //     showShape(found, "branch_a", k);
+                            //     showShape(next, "branch_b", k);
+                            // } else {
+                            //     showShape(next, "insect", k);
+                            // }
                             found = nullptr;
                             break;
                         }
@@ -932,7 +1152,7 @@ public:
                     }
                     if (done || !found)
                         break;
-                    showShape(found, "snext", k);
+                    // showShape(found, "snext", k);
                     if (k==1) {
                         edgeSet.insert(current);
                         vertices.push_front(currentVertex.reversed());
@@ -1005,16 +1225,14 @@ public:
 #endif
                 showShape(&info,"closed");
                 if (!doTightBound)
-                    builder.Add(compound,info.shape());
+                    builder.Add(compound,info.wire());
                 continue;
             } else if (info.iteration < 0)
                 continue;
 
             if (info.p1.SquareDistance(info.p2)<=myTol2) {
-                auto wire = BRepBuilderAPI_MakeWire(info.edge).Wire();
-                showShape(wire,"closed");
                 if (!doTightBound)
-                    builder.Add(compound,wire);
+                    builder.Add(compound,info.wire());
                 info.iteration = -2;
                 continue;
             }
@@ -1100,10 +1318,8 @@ public:
                 new Base::SequencerLauncher("Finding wires", edges.size()));
 
         for (auto &info : edges) {
-            if (info.iteration >= 0) {
-                info.wireInfo.reset();
-                info.wireInfo2.reset();
-            }
+            info.wireInfo.reset();
+            info.wireInfo2.reset();
         }
 
         for (auto it=edges.begin(); it!=edges.end(); ++it) {
@@ -1203,6 +1419,8 @@ public:
             auto &r = stack.back();
             showShape(currentInfo, "check", iteration);
 
+            bool proceed = true;
+
             // The loop below is to find all edges connected to pend, and save them into stack.back()
             auto size = vertexStack.size();
             for (int i=currentInfo->iStart[currentIdx];i<currentInfo->iEnd[currentIdx];++i) {
@@ -1240,6 +1458,38 @@ public:
                 info.iteration = iteration;
 
                 if (wireInfo) {
+                    // We may be called by findTightBound() with an existing wire
+                    // to try to find a new wire by splitting the current one. So
+                    // check if we've iterated to some edge in the existing wire.
+                    if (int idx = wireInfo->find(vinfo)) {
+                        vertexStack.push_back(adjacentList[i]);
+                        r.iCurrent = r.iEnd++;
+                        --idx;
+                        proceed = false;
+                        if (idxVertex)
+                            *idxVertex = idx;
+                        if (stackPos)
+                            *stackPos = (int)stack.size()-2;
+
+                        auto info = wireInfo->vertices[idx].edgeInfo();
+                        showShape(info, "merge", iteration);
+
+                        if (info != &beginInfo) {
+                            while (true) {
+                                if (++idx == (int)wireInfo->vertices.size())
+                                    idx = 0;
+                                info = wireInfo->vertices[idx].edgeInfo();
+                                if (info == &beginInfo)
+                                    break;
+                                stack.emplace_back(vertexStack.size());
+                                vertexStack.push_back(wireInfo->vertices[idx]);
+                                ++stack.back().iEnd;
+                                checkStack();
+                            }
+                        }
+                        break;
+                    }
+
                     if (wireInfo->find(VertexInfo(vinfo.it, !vinfo.start))) {
                         showShape(&info, "rintersect", iteration);
                         // Only used when exhausting tight bound.
@@ -1257,70 +1507,38 @@ public:
             }
             checkStack();
 
-            while (true) {
-                auto &r = stack.back();
-                if (r.iCurrent<r.iEnd) {
-                    // now pick one edge from stack.back(), connect it to
-                    // pend, then extend pend
-                    currentVertex = vertexStack[r.iCurrent];
-                    pend = currentVertex.ptOther();
-                    // update current edge info
-                    currentInfo = currentVertex.edgeInfo();
-                    showShape(currentInfo, "iterate", iteration);
-                    currentIdx = currentVertex.start?1:0;
-                    edgeSet.insert(currentInfo);
-                    if (!wireSet.empty())
-                        wireSet.insert(currentInfo->wireInfo.get());
-                    break;
-                }
-                vertexStack.erase(vertexStack.begin()+r.iStart,vertexStack.end());
-
-                stack.pop_back();
-                if (stack.size() == stackEnd) {
-                    // If stack reaches the end, it means this wire is open.
-                    return TopoDS_Wire();
-                }
-
-                auto &lastInfo = *vertexStack[stack.back().iCurrent].it;
-                edgeSet.erase(&lastInfo);
-                wireSet.erase(lastInfo.wireInfo.get());
-                showShape(&lastInfo, "pop", iteration);
-                ++stack.back().iCurrent;
-            }
-
-            bool checkDistance = true;
-            if (wireInfo) {
-                // We may be called by findTightBound() with an existing wire
-                // to try to find a new wire by splitting the current one. So
-                // check if we've iterated to some edge in the existing wire.
-                if (int idx = wireInfo->find(currentVertex)) {
-                    --idx;
-                    checkDistance = false;
-                    if (idxVertex)
-                        *idxVertex = idx;
-                    if (stackPos)
-                        *stackPos = (int)stack.size()-2;
-
-                    auto info = wireInfo->vertices[idx].edgeInfo();
-                    showShape(info, "merge", iteration);
-
-                    if (info != &beginInfo) {
-                        while (true) {
-                            if (++idx == (int)wireInfo->vertices.size())
-                                idx = 0;
-                            info = wireInfo->vertices[idx].edgeInfo();
-                            if (info == &beginInfo)
-                                break;
-                            stack.emplace_back(vertexStack.size());
-                            vertexStack.push_back(wireInfo->vertices[idx]);
-                            ++stack.back().iEnd;
-                            checkStack();
-                        }
+            if (proceed) {
+                while (true) {
+                    auto &r = stack.back();
+                    if (r.iCurrent<r.iEnd) {
+                        // now pick one edge from stack.back(), connect it to
+                        // pend, then extend pend
+                        currentVertex = vertexStack[r.iCurrent];
+                        pend = currentVertex.ptOther();
+                        // update current edge info
+                        currentInfo = currentVertex.edgeInfo();
+                        showShape(currentInfo, "iterate", iteration);
+                        currentIdx = currentVertex.start?1:0;
+                        edgeSet.insert(currentInfo);
+                        if (!wireSet.empty())
+                            wireSet.insert(currentInfo->wireInfo.get());
+                        break;
                     }
+                    vertexStack.erase(vertexStack.begin()+r.iStart,vertexStack.end());
+
+                    stack.pop_back();
+                    if (stack.size() == stackEnd) {
+                        // If stack reaches the end, it means this wire is open.
+                        return TopoDS_Wire();
+                    }
+
+                    auto &lastInfo = *vertexStack[stack.back().iCurrent].it;
+                    edgeSet.erase(&lastInfo);
+                    wireSet.erase(lastInfo.wireInfo.get());
+                    showShape(&lastInfo, "pop", iteration);
+                    ++stack.back().iCurrent;
                 }
-            }
-            
-            if (checkDistance) {
+
                 if (pstart.SquareDistance(pend) > myTol2) {
                     // if the wire is not closed yet, continue search for the
                     // next connected edge
@@ -1380,6 +1598,7 @@ public:
             if (info.iteration < 0 || !info.wireInfo)
                 continue;
 
+            ++iteration2;
             while(!info.wireInfo->done) {
                 auto wireInfo = info.wireInfo;
                 checkWireInfo(*wireInfo);
@@ -1388,7 +1607,6 @@ public:
                 auto &beginInfo = *beginVertex.it;
                 initWireInfo(*wireInfo);
                 showShape(wireInfo->wire, "iwire", iteration);
-                ++iteration2;
                 for (auto &v : wireVertices)
                     v.it->iteration2 = iteration2;
 
@@ -1411,7 +1629,7 @@ public:
                         if (next == current || next->iteration2 == iteration2 || next->iteration<0)
                             continue;
 
-                        showShape(next, "check", iteration);
+                        showShape(next, "tcheck", iteration);
 
                         if (!isInside(*wireInfo, next->mid)) {
                             showShape(next, "ninside", iteration);
@@ -1687,6 +1905,7 @@ public:
                     showShape(*wireInfo, "nw2", iteration);
 
                     ++iteration;
+                    ++iteration2;
 
                     while (wireInfo && !wireInfo->done) {
                         showShape(next, "next2", iteration);
@@ -1700,7 +1919,6 @@ public:
 
                         const auto &wireVertices = wireInfo->vertices;
                         initWireInfo(*wireInfo);
-                        ++iteration2;
                         for (auto &v : wireVertices)
                             v.it->iteration2 = iteration2;
 
@@ -1822,27 +2040,68 @@ public:
     {
         // Make a clean wire with sorted, oriented, connected, etc edges
         TopoDS_Wire result;
-        ShapeFix_ShapeTolerance sTol;
+        std::vector<TopoShape> inputEdges;
+
+        if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_TRACE)) {
+            for (int i=1; i<=wireData->NbEdges(); ++i)
+                inputEdges.emplace_back(wireData->Edge(i));
+        }
 
         ShapeFix_Wire fixer;
+        fixer.SetContext(new ShapeBuild_ReShape);
         fixer.Load(wireData);
         fixer.SetMaxTolerance(myTol);
         fixer.ClosedWireMode() = Standard_True;
         fixer.Perform();
-        fixer.FixReorder();
-        fixer.FixConnected();
+        // fixer.FixReorder();
+        // fixer.FixConnected();
+
+        if (fixGap) {
+            // Gap fixing may change vertex, but we need all concident vertexes
+            // to be the same one.
+            //
+            // fixer.FixGap3d(1, Standard_True);
+        }
+
         fixer.FixClosed();
 
-        if (fixGap)
-            fixer.FixGap3d(1, Standard_True);
-
         result = fixer.Wire();
-        if (fixer.Context() && fixer.Context()->History())
-            aHistory->Merge(fixer.Context()->History());
+        auto newHistory = fixer.Context()->History(); 
+
+        if (FC_LOG_INSTANCE.level()>FC_LOGLEVEL_TRACE+1) {
+            FC_MSG("init:");
+            for (const auto &s : sourceEdges)
+                FC_MSG(s.getShape().TShape().get() << ", " << s.getShape().HashCode(INT_MAX));
+            printHistory(aHistory, sourceEdges);
+            printHistory(newHistory, inputEdges);
+        }
+
+        aHistory->Merge(newHistory);
+
+        if (FC_LOG_INSTANCE.level()>FC_LOGLEVEL_TRACE+1) {
+            printHistory(aHistory, sourceEdges);
+            FC_MSG("final:");
+            for (int i=1; i<=wireData->NbEdges(); ++i) {
+                auto s = wireData->Edge(i);
+                FC_MSG(s.TShape().get() << ", " << s.HashCode(INT_MAX));
+            }
+        }
         return result;
     }
 
-    bool canShowShape(int idx, bool forced)
+    template<class T>
+    void printHistory(Handle(BRepTools_History) hist, const T &input)
+    {
+        FC_MSG("\nHistory:\n");
+        for (const auto &s : input) {
+            for(TopTools_ListIteratorOfListOfShape it(hist->Modified(s.getShape())); it.More(); it.Next()) {
+                FC_MSG(s.getShape().TShape().get() << ", " << s.getShape().HashCode(INT_MAX)
+                        << " -> " << it.Value().TShape().get() << ", " << it.Value().HashCode(INT_MAX));
+            }
+        }
+    }
+
+    bool canShowShape(int idx=-1, bool forced=false)
     {
         if (idx < 0 || catchIteration == 0 || catchIteration > idx) {
             if (!forced && FC_LOG_INSTANCE.level()<=FC_LOGLEVEL_TRACE)
@@ -1889,7 +2148,9 @@ public:
     void build()
     {
         clear();
-        for (const auto &e : sourceEdges)
+        sourceEdges.clear();
+        sourceEdges.insert(sourceEdgeArray.begin(), sourceEdgeArray.end());
+        for (const auto &e : sourceEdgeArray)
             add(TopoDS::Edge(e.getShape()), true);
 
         if (doTightBound || doSplitEdge)
@@ -1951,7 +2212,7 @@ public:
             for (auto &info : edges) {
                 if (info.iteration == -2) {
                     if (!info.wireInfo) {
-                        builder.Add(compound, info.shape());
+                        builder.Add(compound, info.wire());
                         continue;
                     }
                     addWire(info.wireInfo);
@@ -1965,9 +2226,23 @@ public:
             wireSet.clear();
         }
 
+        // TODO: We choose to put open wires in a separated shape from the final
+        // result shape, so the history may contains some entries that are not
+        // presented in the final result, which will cause warning message when
+        // generating topo naming in TopoShape::makESHAPE(). We've lowered log
+        // message level to suppress the warning for the moment. The right way
+        // to solve the problem is to reconstruct the history and filter out
+        // those entries.
+
+        bool hasOpenEdge = false;
         for (const auto &info : edges) {
-            if (info.iteration == -3 || (!info.wireInfo && info.iteration>=0))
-                openEdges.emplace_back(info.shape());
+            if (info.iteration == -3 || (!info.wireInfo && info.iteration>=0)) {
+                if (!hasOpenEdge) {
+                    hasOpenEdge = true;
+                    builder.MakeCompound(openEdgeCompound);
+                }
+                builder.Add(openEdgeCompound, info.wire());
+            }
         }
     }
 
@@ -1979,6 +2254,29 @@ public:
         builder.Add(compound, wireInfo->wire);
     }
 
+    bool getOpenWires(TopoShape &shape, const char *op) {
+        if (openEdgeCompound.IsNull()) {
+            shape.setShape(TopoShape());
+            return false;
+        }
+        shape.makESHAPE(openEdgeCompound,
+                        MapperHistory(aHistory),
+                        {sourceEdges.begin(), sourceEdges.end()},
+                        op);
+        return true;
+    }
+
+    bool getResultWires(TopoShape &shape, const char *op) {
+        if (compound.IsNull()) {
+            shape.setShape(TopoShape());
+            return false;
+        }
+        shape.makESHAPE(compound,
+                        MapperHistory(aHistory),
+                        {sourceEdges.begin(), sourceEdges.end()},
+                        op);
+        return true;
+    }
 };
 
 
@@ -1995,7 +2293,7 @@ void WireJoiner::addShape(const TopoShape &shape)
 {
     NotDone();
     for (auto &e : shape.getSubTopoShapes(TopAbs_EDGE))
-        pimpl->sourceEdges.push_back(e);
+        pimpl->sourceEdgeArray.push_back(e);
 }
 
 void WireJoiner::addShape(const std::vector<TopoShape> &shapes)
@@ -2003,7 +2301,7 @@ void WireJoiner::addShape(const std::vector<TopoShape> &shapes)
     NotDone();
     for (const auto &shape : shapes) {
         for (auto &e : shape.getSubTopoShapes(TopAbs_EDGE))
-            pimpl->sourceEdges.push_back(e);
+            pimpl->sourceEdgeArray.push_back(e);
     }
 }
 
@@ -2012,7 +2310,7 @@ void WireJoiner::addShape(const std::vector<TopoDS_Shape> &shapes)
     NotDone();
     for (const auto &shape : shapes) {
         for (TopExp_Explorer xp(shape,TopAbs_EDGE); xp.More(); xp.Next())
-            pimpl->sourceEdges.emplace_back(TopoDS::Edge(xp.Current()), -1);
+            pimpl->sourceEdgeArray.emplace_back(TopoDS::Edge(xp.Current()), -1);
     }
 }
 
@@ -2070,18 +2368,23 @@ void WireJoiner::Build(const Message_ProgressRange&)
     if (IsDone())
         return;
     pimpl->build();
-    myShape = pimpl->compound;
+    if (TopoShape(pimpl->compound).countSubShapes(TopAbs_SHAPE) > 0)
+        myShape = pimpl->compound;
+    else
+        myShape.Nullify();
     Done();
 }
 
-TopoShape WireJoiner::getOpenWires()
+bool WireJoiner::getOpenWires(TopoShape &shape, const char *op)
 {
     Build();
-    if (pimpl->openEdgeCompound.isNull() && pimpl->openEdges.size()) {
-        pimpl->openEdgeCompound.makEWires(
-                pimpl->openEdges).mapSubElement(pimpl->sourceEdges);
-    }
-    return pimpl->openEdgeCompound;
+    return pimpl->getOpenWires(shape, op);
+}
+
+bool WireJoiner::getResultWires(TopoShape &shape, const char *op)
+{
+    Build();
+    return pimpl->getResultWires(shape, op);
 }
 
 const TopTools_ListOfShape& WireJoiner::Generated (const TopoDS_Shape& S)

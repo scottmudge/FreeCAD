@@ -109,7 +109,7 @@ App::DocumentObjectExecReturn *Face::execute(void)
         joiner.setSplitEdges(SplitEdges.getValue());
         joiner.addShape(shapes);
         TopoShape result(0, getDocument()->getStringHasher());
-        result.makEShape(joiner, shapes);
+        joiner.getResultWires(result);
         shapes.clear();
         shapes.push_back(result);
     }

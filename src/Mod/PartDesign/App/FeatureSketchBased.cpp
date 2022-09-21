@@ -204,7 +204,7 @@ Part::Feature* ProfileBased::getVerifiedObject(bool silent) const {
 }
 
 TopoShape ProfileBased::getVerifiedFace(bool silent,
-                                        bool dofit,
+                                        bool doFit,
                                         bool allowOpen,
                                         const App::DocumentObject *profile,
                                         const std::vector<std::string> &_subs) const
@@ -215,15 +215,22 @@ TopoShape ProfileBased::getVerifiedFace(bool silent,
             return TopoShape();
         throw Base::ValueError("No profile linked");
     }
-    auto &subs = profile ? _subs : Profile.getSubValues(true);
+    const auto &subs = profile ? _subs : Profile.getSubValues();
     try {
         TopoShape shape;
         if(AllowMultiFace.getValue()) {
-            shape = Part::Feature::getTopoShape(obj);
-            if (!shape.isNull() && subs.size()) {
+            if (subs.empty())
+                shape = Part::Feature::getTopoShape(obj);
+            else {
                 std::vector<TopoShape> shapes;
-                for (auto &sub : subs)
-                    shapes.push_back(shape.getSubTopoShape(sub.c_str()));
+                for (auto &sub : subs) {
+                    auto subshape = Part::Feature::getTopoShape(
+                            obj, sub.c_str(), /*needSubElement*/true);
+                    if (subshape.isNull())
+                        FC_THROWM(Base::CADKernelError, "Sub shape not found: " <<
+                                obj->getFullName() << "." << sub);
+                    shapes.push_back(subshape);
+                }
                 shape.makECompound(shapes);
             }
         } else {
@@ -287,7 +294,7 @@ TopoShape ProfileBased::getVerifiedFace(bool silent,
             throw Base::CADKernelError("Cannot make face from profile");
         }
 
-        if (dofit && (std::abs(Fit.getValue()) > Precision::Confusion()
+        if (doFit && (std::abs(Fit.getValue()) > Precision::Confusion()
                       || std::abs(InnerFit.getValue()) > Precision::Confusion())) {
 
             if (!shape.isNull())
@@ -400,11 +407,16 @@ TopoDS_Shape ProfileBased::getVerifiedFaceOld(bool silent) const {
 
 
 TopoShape ProfileBased::getProfileShape() const {
-    auto shape = getTopoShape(Profile.getValue());
-    if(!shape.isNull() && Profile.getSubValues().size()) {
+    TopoShape shape;
+    const auto &subs = Profile.getSubValues();
+    auto profile = Profile.getValue();
+    if (subs.empty())
+        shape = Part::Feature::getTopoShape(profile);
+    else {
         std::vector<TopoShape> shapes;
-        for(auto &sub : Profile.getSubValues())
-            shapes.push_back(shape.getSubTopoShape(sub.c_str()));
+        for(auto &sub : subs)
+            shapes.push_back(Part::Feature::getTopoShape(
+                        profile, sub.c_str(), /* needSubElement */true));
         shape = TopoShape(shape.Tag).makECompound(shapes);
     }
     if(shape.isNull())

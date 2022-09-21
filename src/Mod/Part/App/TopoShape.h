@@ -1893,7 +1893,6 @@ public:
             double radius1, double radius2, const char *op=nullptr);
     /* Make fillet shape
      *
-     * @param source: the source shape
      * @param edges: the edges of the source shape where to make fillets
      * @param radius1: the radius of the begining of the fillet
      * @param radius2: the radius of the ending of the fillet
@@ -1905,6 +1904,77 @@ public:
     TopoShape makEFillet(const std::vector<TopoShape> &edges, 
             double radius1, double radius2, const char *op=nullptr) const {
         return TopoShape(0,Hasher).makEFillet(*this,edges,radius1,radius2,op);
+    }
+
+    /// Describes a segment of an edge for fillet operation
+    struct FilletSegment {
+        /// The [0, 1] parameter that specifies a point on an edge.
+        double param;
+        /// The radius of the fillet for this segment
+        double radius;
+        /** Specifies a point that is length away from the first vertex
+         * traveralling along the dege.  Note. if 'length' is greater than
+         * zero, then 'param' is ignored, and will be dynamically calculated
+         * when making the fillet.
+         */
+        double length;
+        FilletSegment(double t, double r, double l=0.0)
+            :param(t), radius(r), length(l)
+        {}
+        bool operator==(const FilletSegment &other) const {
+            return param==other.param && radius==other.radius && length==other.length;
+        }
+        bool operator<(const FilletSegment &other) const {
+            return param < other.param;
+        }
+    };
+    typedef std::vector<FilletSegment> FilletSegments;
+
+    /* Make fillet shape with variable radius per edge
+     *
+     * @param source: the source shape
+     * @param edges: the edges of the source shape where to make fillets
+     * @param segments: list of segment configuration. @sa FilletSegments.
+     * @param defaultRadius: If greater than zero, than fills any missing
+     *                       configuration using this radius, e.g. missing
+     *                       radius of the param 0.0 or 1.0.  If this argument
+     *                       is less or equal to zero, then the missing
+     *                       configuration is filled with the radius of the
+     *                       closeset parameter.
+     * @param op: optional string to be encoded into topo naming for indicating
+     *            the operation
+     *
+     * @return The original content of this TopoShape is discarded and replaced
+     *         with the new shape. The function returns the TopoShape itself as
+     *         a self reference so that multiple operations can be carried out
+     *         for the same shape in the same line of code.
+     */
+    TopoShape &makEFillet(const TopoShape &source,
+                          const std::vector<TopoShape> &edges, 
+                          const std::vector<FilletSegments> &segments,
+                          double defaultRadius=0.0,
+                          const char *op=nullptr);
+
+    /* Make fillet shape with variable radius per edge
+     *
+     * @param edges: the edges of the source shape where to make fillets
+     * @param segments: list of segment configuration. @sa FilletSegments.
+     * @param defaultRadius: If greater than zero, than fills any missing
+     *                       configuration using this radius, e.g. missing
+     *                       radius of the param 0.0 or 1.0.  If this argument
+     *                       is less or equal to zero, then the missing
+     *                       configuration is filled with the radius of the
+     *                       closeset parameter.
+     * @param op: optional string to be encoded into topo naming for indicating
+     *            the operation
+     *
+     * @return Return the new shape. The TopoShape itself is not modified.
+     */
+    TopoShape makEFillet(const std::vector<TopoShape> &edges, 
+                         const std::vector<FilletSegments> &segments,
+                         double defaultRadius=0.0,
+                         const char *op=nullptr) const {
+        return TopoShape(0,Hasher).makEFillet(*this,edges,segments,defaultRadius,op);
     }
 
     /* Make chamfer shape

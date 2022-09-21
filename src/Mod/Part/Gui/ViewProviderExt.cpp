@@ -614,9 +614,13 @@ void ViewProviderPartExt::attach(App::DocumentObject *pcFeat)
 
     // putting all together with the switch
     addDisplayMaskMode(pcNormalRoot, "Flat Lines");
+    pFaceEdgeRoot = pcNormalRoot;
     addDisplayMaskMode(pcFlatRoot, "Shaded");
+    pFaceRoot = pcFlatRoot;
     addDisplayMaskMode(pcWireframeRoot, "Wireframe");
+    pEdgeRoot = pcWireframeRoot;
     addDisplayMaskMode(pcPointsRoot, "Points");
+    pVertexRoot = pcPointsRoot;
 }
 
 void ViewProviderPartExt::setDisplayMode(const char* ModeName)
@@ -736,12 +740,104 @@ bool ViewProviderPartExt::getDetailPath(const char *subname,
                                     bool append,
                                     SoDetail *&det) const
 {
-    auto element = Data::ComplexGeoData::findElementName(subname);
-    if (element && element == subname) {
-        if (Data::ComplexGeoData::hasMissingElement(subname))
-            return false;
+    auto subelement = Data::ComplexGeoData::findElementName(subname);
+    if (!subelement || subelement != subname)
+        return inherited::getDetailPath(subname, pPath, append, det);
+
+    if (Data::ComplexGeoData::hasMissingElement(subname))
+        return false;
+
+    if(pcRoot->findChild(pcModeSwitch) < 0) {
+        // this is possible in case of editing, where the switch node of the
+        // linked view object is temporarily removed from its root. We must
+        // still return true here, to prevent the selection action leaking to
+        // parent and sibling nodes.
+        if(append)
+            pPath->append(pcRoot);
+        return true;
     }
-    return inherited::getDetailPath(subname, pPath, append, det);
+
+    if (append) {
+        pPath->append(pcRoot);
+        pPath->append(pcModeSwitch);
+    }
+
+    const auto &shape = getShape();
+    Data::IndexedName element = shape.getElementName(subelement).index;
+    auto res = shape.shapeTypeAndIndex(element);
+    if(!res.second) {
+        // no SoDetail provided, which cause full selection
+        return true;
+    }
+
+    Part::TopoShape subshape = shape.getSubTopoShape(res.first, res.second, true);
+    if(subshape.isNull())
+        return true;
+
+    switch(res.first) {
+    case TopAbs_FACE:
+        if (!highlightFaceEdges) {
+            det = new SoFaceDetail();
+            static_cast<SoFaceDetail*>(det)->setPartIndex(res.second - 1);
+            pPath->append(pFaceRoot);
+        } else {
+            det = new SoFCDetail;
+            static_cast<SoFCDetail*>(det)->addIndex(SoFCDetail::Face, res.second-1);
+            for(auto &s : subshape.getSubShapes(TopAbs_EDGE)) {
+                int idx = shape.findShape(s);
+                if(idx>0)
+                    static_cast<SoFCDetail*>(det)->addIndex(SoFCDetail::Edge, idx-1);
+            }
+            pPath->append(pFaceEdgeRoot);
+        }
+        break;
+    case TopAbs_EDGE:
+        det = new SoLineDetail();
+        static_cast<SoLineDetail*>(det)->setLineIndex(res.second - 1);
+        pPath->append(pEdgeRoot);
+        break;
+    case TopAbs_VERTEX:
+        det = new SoPointDetail();
+        static_cast<SoPointDetail*>(det)->setCoordinateIndex(res.second + nodeset->startIndex.getValue() - 1);
+        pPath->append(pVertexRoot);
+        break;
+    default: {
+        auto fcDetail = new SoFCDetail;
+        det = fcDetail;
+        bool hasFace=false, hasEdge=false, hasVertex=false;
+        for(auto &s : subshape.getSubShapes(TopAbs_FACE)) {
+            int index = shape.findShape(s);
+            if(index>0) {
+                hasFace = true;
+                fcDetail->addIndex(SoFCDetail::Face, index-1);
+            }
+        }
+        for(auto &s : subshape.getSubShapes(TopAbs_EDGE)) {
+            int index = shape.findShape(s);
+            if(index>0) {
+                hasEdge = true;
+                fcDetail->addIndex(SoFCDetail::Edge, index-1);
+            }
+        }
+        for(auto &s : subshape.getSubShapes(TopAbs_VERTEX)) {
+            int index = shape.findShape(s);
+            if(index>0) {
+                hasVertex = true;
+                fcDetail->addIndex(SoFCDetail::Vertex, index-1);
+            }
+        }
+        if (hasFace) {
+            if (!hasEdge)
+                pPath->append(pFaceRoot);
+            else if (!hasVertex)
+                pPath->append(pFaceEdgeRoot);
+        } else if (hasEdge) {
+            if (!hasVertex)
+                pPath->append(pEdgeRoot);
+        } else
+            pPath->append(pVertexRoot);
+    }}
+    return true;
 }
 
 SoDetail* ViewProviderPartExt::getDetail(const char* subelement) const
@@ -1206,6 +1302,10 @@ void ViewProviderPartExt::reload()
         pcPointStyle->pointSize = pointsize;
         pcLineStyle->lineWidth = linewidth;
         update = true;
+    }
+    if (NormalsFromUV != PartParams::getNormalsFromUVNodes()) {
+        update = true;
+        NormalsFromUV = !NormalsFromUV;
     }
 
     tessRange.LowerBound = PartParams::getMinimumDeviation();

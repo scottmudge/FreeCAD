@@ -281,6 +281,7 @@ void Base::XMLReader::readElement(const char* ElementName, int *guard)
                 // Missing element. Consider this as non-fatal
                 FC_ERR("Document XML element '" << (ElementName?ElementName:"") << "' not found\n"
                         << "In context: " << _ReaderContext);
+                AttrMap.clear();
             }
             break;
         }

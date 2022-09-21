@@ -852,7 +852,7 @@ void prepareProfileBased(PartDesign::Body *pcActiveBody, Gui::Command* cmd, cons
     //if a profile is selected we can make our life easy and fast
     auto sels = Gui::Selection().getSelectionT("*", 0);
 
-    auto base_worker = [=](App::DocumentObject* feature, const std::vector<string> &subs) {
+    auto base_worker = [&](App::DocumentObject* feature, const std::vector<string> &subs) {
 
         if (!feature || !feature->isDerivedFrom(Part::Feature::getClassTypeId()))
             return;
@@ -884,29 +884,38 @@ void prepareProfileBased(PartDesign::Body *pcActiveBody, Gui::Command* cmd, cons
         if (subs.size() && !needSubElement
                         && feature->isDerivedFrom(Part::Part2DObject::getClassTypeId()))
         {
-            auto shape = Part::Feature::getTopoShape(feature);
-            if (subs.size() < shape.countSubShapes(TopAbs_EDGE)) {
-                std::vector<Part::TopoShape> shapes;
-                for (auto &sub : subs) {
-                    auto subshape = shape.getSubShape(sub.c_str(), true);
-                    if (subshape.IsNull() || subshape.ShapeType() != TopAbs_EDGE)
-                        break;
-                    shapes.push_back(subshape);
+            for (const auto &sub : subs) {
+                auto name = Data::ComplexGeoData::oldElementName(sub.c_str());
+                if (boost::starts_with(name, Sketcher::SketchObject::internalPrefix())) {
+                    needSubElement = true;
+                    break;
                 }
-                if (subs.size() == shapes.size()) {
-                    std::string BinderName = cmd->getUniqueObjectName(
-                            "Binder", pcActiveBody);
-                    Gui::cmdAppObject(pcActiveBody, std::ostringstream()
-                            << "newObject('PartDesign::SubShapeBinder', '" << BinderName << "')");
-                    auto binder = pcActiveBody->getDocument()->getObject(BinderName.c_str());
-                    std::ostringstream ss;
-                    for (auto &s : subs)
-                        ss << "'" << s << "',";
-                    Gui::cmdAppObject(binder, std::ostringstream() << "Support = (" << objCmd
-                            << ", [" << ss.str() << "])");
-                    Gui::cmdAppObject(Feat, std::ostringstream() << "Profile = "
-                            << Gui::Command::getObjectCmd(binder));
-                    profileSet = true;
+            }
+            if (!needSubElement) {
+                auto shape = Part::Feature::getTopoShape(feature);
+                if (subs.size() < shape.countSubShapes(TopAbs_EDGE)) {
+                    std::vector<Part::TopoShape> shapes;
+                    for (auto &sub : subs) {
+                        auto subshape = shape.getSubShape(sub.c_str(), true);
+                        if (subshape.IsNull() || subshape.ShapeType() != TopAbs_EDGE)
+                            break;
+                        shapes.push_back(subshape);
+                    }
+                    if (subs.size() == shapes.size()) {
+                        std::string BinderName = cmd->getUniqueObjectName(
+                                "Binder", pcActiveBody);
+                        Gui::cmdAppObject(pcActiveBody, std::ostringstream()
+                                << "newObject('PartDesign::SubShapeBinder', '" << BinderName << "')");
+                        auto binder = pcActiveBody->getDocument()->getObject(BinderName.c_str());
+                        std::ostringstream ss;
+                        for (auto &s : subs)
+                            ss << "'" << s << "',";
+                        Gui::cmdAppObject(binder, std::ostringstream() << "Support = (" << objCmd
+                                << ", [" << ss.str() << "])");
+                        Gui::cmdAppObject(Feat, std::ostringstream() << "Profile = "
+                                << Gui::Command::getObjectCmd(binder));
+                        profileSet = true;
+                    }
                 }
             }
         }

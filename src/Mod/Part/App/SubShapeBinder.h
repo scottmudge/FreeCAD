@@ -61,6 +61,7 @@ public:
     App::PropertyBool Relative;
     App::PropertyBool Fuse;
     App::PropertyBool MakeFace;
+    App::PropertyString FaceMaker;
     App::PropertyBool Refine;
     App::PropertyEnumeration FillStyle;
     App::PropertyEnumeration BindMode;

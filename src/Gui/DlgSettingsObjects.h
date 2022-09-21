@@ -74,10 +74,14 @@ private:
     Gui::PrefCheckBox *KeepHiddenChildren = nullptr;
     Gui::PrefCheckBox *ExportChildren = nullptr;
     Gui::PrefCheckBox *CreateOrigin = nullptr;
-    // Auto generated code (Gui/DlgSettingsObjects.py:55)
+    // Auto generated code (Gui/DlgSettingsObjects.py:57)
     QPushButton *buttonCreateOrigin = nullptr;
     Gui::PrefCheckBox *GeoGroupAllowCrossLink = nullptr;
     Gui::PrefCheckBox *CreateGroupInGroup = nullptr;
+
+    // Auto generated code (Tools/params_utils.py:327)
+    QGroupBox * groupAppLink = nullptr;
+    Gui::PrefCheckBox *ShowElement = nullptr;
 // Auto generated code (Tools/params_utils.py:454)
 };
 } // namespace Dialog

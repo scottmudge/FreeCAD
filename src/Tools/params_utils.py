@@ -22,11 +22,11 @@
 '''Utilites for generating C++ code for parameters management using Python Cog
 '''
 import cog
-import inspect
+import inspect, re
 from os import path
 
 def quote(txt, indent=0):
-    lines = [ ' '*indent + '"' + l.replace('"', '\"').replace('\\', '\\\\') for l in txt.split('\n')]
+    lines = [ ' '*indent + '"' + l.replace('\\', '\\\\').replace('"', '\\"') for l in txt.split('\n')]
     return '\\n"\n'.join(lines) + '"'
 
 def init_params(params, namespace, class_name, param_path, header_file=None):
@@ -321,7 +321,7 @@ def widgets_declare(param_set):
     param_group = param_set.ParamGroup
 
     for title,params in param_group:
-        name = title.replace(' ', '')
+        name = _regex.sub('', title)
         cog.out(f'''
 
     {trace_comment()}
@@ -335,7 +335,7 @@ def widgets_init(param_set):
     cog.out(f'''
     auto layout = new QVBoxLayout(this);''')
     for title, params in param_group:
-        name = title.replace(' ', '')
+        name = _regex.sub('', title)
         cog.out(f'''
 
 
@@ -461,6 +461,8 @@ def preference_dialog_declare(param_set, header=True):
     preference_dialog_declare_begin(param_set, header)
     preference_dialog_declare_end(param_set)
 
+_regex = re.compile(r"[^a-zA-Z_]")
+
 def preference_dialog_define(param_set, header=True):
     param_group = param_set.ParamGroup
     class_name = param_set.ClassName
@@ -537,7 +539,7 @@ void {class_name}::retranslateUi()
 {{
     setWindowTitle(QObject::tr("{param_set.Title}"));''')
     for title, params in param_group:
-        name = title.replace(' ', '')
+        name = _regex.sub('', title)
         cog.out(f'''
     group{name}->setTitle(QObject::tr("{title}"));''')
         for row,param in enumerate(params):

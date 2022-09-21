@@ -1152,16 +1152,19 @@ PyObject* TopoShapePy::childShapes(PyObject *args)
                                          &(PyBool_Type), &cumLoc))
         return NULL;
 #ifndef FC_NO_ELEMENT_MAP
-    if(PyObject_IsTrue(cumOri) && PyObject_IsTrue(cumLoc)) {
-        Py::List list;
-        PY_TRY {
-            for(auto &s : getTopoShapePtr()->getSubTopoShapes())
-                list.append(shape2pyshape(s));
-            return Py::new_reference_to(list);
-        }PY_CATCH_OCC
-    }
-#endif
-    PY_TRY {
+    TopoShape shape = *getTopoShapePtr();
+    if(!PyObject_IsTrue(cumOri))
+        shape.setShape(shape.getShape().Oriented(TopAbs_FORWARD), false);
+    if (!PyObject_IsTrue(cumLoc))
+        shape.setShape(shape.getShape().Located(TopLoc_Location()), false);
+    Py::List list;
+    try {
+        for(auto &s : shape.getSubTopoShapes())
+            list.append(shape2pyshape(s));
+        return Py::new_reference_to(list);
+    } PY_CATCH_OCC
+#else
+    try {
         const TopoDS_Shape& shape = getTopoShapePtr()->getShape();
         if (shape.IsNull()) {
             PyErr_SetString(PyExc_ValueError, "Shape is null");
@@ -1215,6 +1218,7 @@ PyObject* TopoShapePy::childShapes(PyObject *args)
         }
         return Py::new_reference_to(list);
     } PY_CATCH_OCC
+#endif
 }
 
 namespace Part {

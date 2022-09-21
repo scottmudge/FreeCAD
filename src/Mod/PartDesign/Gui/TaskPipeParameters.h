@@ -34,6 +34,9 @@
 #include "ViewProviderPipe.h"
 #include "TaskDressUpParameters.h"
 
+class QListWidget;
+class QListWidgetItem;
+class QTreeWidgetItem;
 
 namespace App {
 class Property;
@@ -48,7 +51,6 @@ namespace PartDesignGui {
 class Ui_TaskPipeParameters;
 class Ui_TaskPipeOrientation;
 class Ui_TaskPipeScaling;
-
 
 class TaskPipeParameters : public TaskSketchBasedParameters
 {
@@ -65,7 +67,7 @@ private Q_SLOTS:
     void onBaseButton(bool checked);
     void onProfileButton(bool checked);
     void onDeleteEdge();
-    void onItemEntered(QListWidgetItem *);
+    void onItemEntered(QTreeWidgetItem *, int);
     void onItemSelectionChanged();
     void updateUI();
 
@@ -112,7 +114,7 @@ private Q_SLOTS:
     void onCurvelinearChanged(bool checked);
     void onBinormalChanged(double);
     void onDeleteItem();
-    void onItemEntered(QListWidgetItem *);
+    void onItemEntered(QTreeWidgetItem *, int);
     void onItemSelectionChanged();
   
 protected:

@@ -26,7 +26,7 @@
 # include <QPointer>
 # include <QMessageBox>
 # include <QCheckBox>
-# include <QListWidget>
+# include <QTreeWidget>
 # include <Precision.hxx>
 # include <gp_Pln.hxx>
 # include <functional>
@@ -1463,9 +1463,9 @@ App::SubObjectT importExternalElement(App::SubObjectT feature, bool report) {
     return _MonitorInstance->importExternalObject(feature, report, false, true);
 }
 
-bool populateGeometryReferences(QListWidget *listWidget, App::PropertyLinkSub &prop, bool refresh)
+bool populateGeometryReferences(QTreeWidget *treeWidget, App::PropertyLinkSub &prop, bool refresh)
 {
-    listWidget->clear();
+    treeWidget->clear();
     auto base = prop.getValue();
     const auto &baseShape = Part::Feature::getTopoShape(base);
     const auto &subs = prop.getShadowSubs();
@@ -1479,7 +1479,9 @@ bool populateGeometryReferences(QListWidget *listWidget, App::PropertyLinkSub &p
     for(auto &sub : subs) {
         refs.push_back(sub.second);
         if(refresh || sub.first.empty() || baseShape.isNull()) {
-            listWidget->addItem(QString::fromStdString(sub.second));
+            auto item = new QTreeWidgetItem(treeWidget);
+            item->setText(0, QString::fromStdString(sub.second)), 
+            setGeometryItemText(item, sub.second);
             continue;
         }
         const auto &ref = sub.first;
@@ -1488,7 +1490,9 @@ bool populateGeometryReferences(QListWidget *listWidget, App::PropertyLinkSub &p
             element = baseShape.getSubShape(ref.c_str());
         }catch(...) {}
         if(!element.isNull())  {
-            listWidget->addItem(QString::fromStdString(sub.second));
+            auto item = new QTreeWidgetItem(treeWidget);
+            item->setText(0, QString::fromStdString(sub.second));
+            setGeometryItemText(item, sub.second);
             continue;
         }
         FC_WARN("missing element reference in " << prop.getFullName() << ": " << ref);
@@ -1503,7 +1507,9 @@ bool populateGeometryReferences(QListWidget *listWidget, App::PropertyLinkSub &p
             if (!subSet.insert(indexedName).second)
                 continue;
             FC_WARN("guess element reference in " << prop.getFullName() << ": " << ref << " -> " << element.name);
-            listWidget->addItem(QString::fromStdString(indexedName));
+            auto item = new QTreeWidgetItem(treeWidget);
+            item->setText(0, QString::fromStdString(indexedName));
+            setGeometryItemText(item, indexedName);
             if(!popped) {
                 refs.pop_back();
                 touched = true;
@@ -1515,12 +1521,12 @@ bool populateGeometryReferences(QListWidget *listWidget, App::PropertyLinkSub &p
             std::string missingSub = refs.back();
             if(!boost::starts_with(missingSub,Data::ComplexGeoData::missingPrefix()))
                 missingSub = Data::ComplexGeoData::missingPrefix()+missingSub;
-            auto item = new QListWidgetItem(listWidget);
-            item->setText(QString::fromStdString(missingSub));
+            auto item = new QTreeWidgetItem(treeWidget);
+            item->setText(0, QString::fromStdString(missingSub));
 
-            item->setData(Qt::UserRole,
-                    QByteArray(Data::ComplexGeoData::newElementName(ref.c_str()).c_str()));
-            item->setForeground(Qt::red);
+            setGeometryItemText(item, sub.second);
+            setGeometryItemReference(item, Data::ComplexGeoData::newElementName(ref.c_str()));
+            item->setForeground(0, Qt::red);
             refs.back() = ref; // use new style name for future guessing
         }
     }
@@ -1528,6 +1534,27 @@ bool populateGeometryReferences(QListWidget *listWidget, App::PropertyLinkSub &p
     if(touched)
         prop.setValue(base, refs);
     return touched;
+}
+
+void setGeometryItemText(QTreeWidgetItem *item, const std::string &text)
+{
+    item->setData(0, Qt::UserRole+1, QByteArray(text.c_str()));
+    item->setExpanded(true);
+}
+
+QByteArray getGeometryItemText(QTreeWidgetItem *item)
+{
+    return item->data(0, Qt::UserRole+1).toByteArray().constData();
+}
+
+void setGeometryItemReference(QTreeWidgetItem *item, const std::string &ref)
+{
+    item->setData(0, Qt::UserRole, QByteArray(ref.c_str()));
+}
+
+QByteArray getGeometryItemReference(QTreeWidgetItem *item)
+{
+    return item->data(0, Qt::UserRole).toByteArray();
 }
 
 void toggleShowOnTop(Gui::ViewProviderDocumentObject *vp,

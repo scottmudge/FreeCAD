@@ -433,6 +433,14 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
 
     if(notify)
         aboutToSetValue();
+
+    auto updateSub = [&](const std::string &newSub) {
+        if (sub != newSub) {
+            signalUpdateElementReference(sub, newSub);
+            sub = newSub;
+        }
+    };
+
     if(missing) {
         FC_WARN(propertyName(this) 
                 << " missing element reference " << ret->getFullName() << " "
@@ -444,19 +452,19 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
                 << shadow.first << " -> " << elementName.first);
         shadow.swap(elementName);
         if(shadow.first.size() && Data::ComplexGeoData::hasMappedElementName(sub.c_str()))
-            sub = shadow.first;
+            updateSub(shadow.first);
     }
 
     if(reverse) {
         if(shadow.first.size() && Data::ComplexGeoData::hasMappedElementName(sub.c_str()))
-            sub = shadow.first;
+            updateSub(shadow.first);
         else
-            sub = shadow.second;
+            updateSub(shadow.second);
         return true;
     }
     if (missing) {
         if (sub != shadow.first)
-            sub = shadow.second;
+            updateSub(shadow.second);
         return true;
     }
     auto pos2 = shadow.first.rfind('.');
@@ -471,11 +479,13 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
     if(pos==pos2) {
         if(sub.compare(pos,sub.size()-pos,&shadow.first[pos2])!=0) {
             FC_LOG("element reference update " << sub << " -> " << shadow.first);
-            sub.replace(pos,sub.size()-pos,&shadow.first[pos2]);
+            std::string newSub(sub);
+            newSub.replace(pos,sub.size()-pos,&shadow.first[pos2]);
+            updateSub(newSub);
         } 
     } else if(sub!=shadow.second) {
         FC_LOG("element reference update " << sub << " -> " << shadow.second);
-        sub = shadow.second;
+        updateSub(shadow.second);
     }
     return true;
 }
@@ -785,6 +795,16 @@ void PropertyLink::getLinks(std::vector<App::DocumentObject *> &objs,
     (void)subs;
     if((all||_pcScope!=LinkScope::Hidden) && _pcLink && _pcLink->getNameInDocument())
         objs.push_back(_pcLink);
+}
+
+void PropertyLink::getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                              App::DocumentObject *obj,
+                              const char *subname,
+                              bool all) const
+{
+    (void)subname;
+    if((all||_pcScope!=LinkScope::Hidden) && obj && _pcLink == obj)
+        identifiers.emplace_back(*this);
 }
 
 void PropertyLink::breakLink(App::DocumentObject *obj, bool clear) {
@@ -1160,6 +1180,24 @@ void PropertyLinkList::getLinks(std::vector<App::DocumentObject *> &objs,
         for(auto obj : _lValueList) {
             if(obj && obj->getNameInDocument())
                 objs.push_back(obj);
+        }
+    }
+}
+
+void PropertyLinkList::getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                                  App::DocumentObject *obj,
+                                  const char *subname,
+                                  bool all) const
+{
+    (void)subname;
+    if (!obj || (!all && _pcScope == LinkScope::Hidden))
+        return;
+    int i = -1;
+    for(auto o : _lValueList) {
+        ++i;
+        if (o == obj) {
+            identifiers.emplace_back(*this, i);
+            break;
         }
     }
 }
@@ -1934,6 +1972,85 @@ void PropertyLinkSub::getLinks(std::vector<App::DocumentObject *> &objs,
                 *subs = getSubValues(newStyle);
         }
     }
+}
+
+static void _getLinksTo(const App::PropertyLinkBase *prop,
+                        std::vector<App::ObjectIdentifier> &identifiers,
+                        App::DocumentObject *obj,
+                        const char *subname,
+                        App::DocumentObject *link,
+                        const std::vector<std::string> &subs,
+                        const std::vector<PropertyLinkBase::ShadowSub> &shadows,
+                        bool withIndex=false)
+{
+    if (!obj || obj != link)
+        return;
+    if (!subname) {
+        identifiers.emplace_back(*prop);
+        return;
+    }
+    App::SubObjectT objT(obj, subname);
+    auto sobj = objT.getSubObject();
+    auto subElement = objT.getOldElementName();
+
+    int i = -1;
+    for (const auto &sub : subs) {
+        ++i;
+        if (sub == subname) {
+            if (withIndex) {
+                identifiers.emplace_back(*prop, i);
+                continue;
+            }
+            identifiers.emplace_back(*prop);
+            return;
+        }
+        if (!sobj)
+            continue;
+        App::SubObjectT sobjT(obj, sub.c_str());
+        if (sobjT.getSubObject() == sobj
+                && sobjT.getOldElementName() == subElement) {
+            if (withIndex) {
+                identifiers.emplace_back(*prop, i);
+                continue;
+            }
+            identifiers.emplace_back(*prop);
+            return;
+        }
+        if (i < (int)shadows.size()) {
+            const auto &shadow = shadows[i];
+            if (shadow.first == subname
+                    || shadow.second == subname)
+            {
+                if (withIndex) {
+                    identifiers.emplace_back(*prop, i);
+                    continue;
+                }
+                identifiers.emplace_back(*prop);
+                return;
+            }
+            if (!sobj)
+                continue;
+            App::SubObjectT sobjT(obj, shadow.first.empty() ? shadow.second.c_str() : shadow.first.c_str());
+            if (sobjT.getSubObject() == sobj
+                    && sobjT.getOldElementName() == subElement) {
+                if (withIndex) {
+                    identifiers.emplace_back(*prop, i);
+                    continue;
+                }
+                identifiers.emplace_back(*prop);
+                return;
+            }
+        }
+    }
+}
+
+void PropertyLinkSub::getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                                 App::DocumentObject *obj,
+                                 const char *subname,
+                                 bool all) const
+{
+    if (all || _pcScope != LinkScope::Hidden)
+        _getLinksTo(this, identifiers, obj, subname, _pcLinkSub, _cSubList, _ShadowSubList);
 }
 
 void PropertyLinkSub::breakLink(App::DocumentObject *obj, bool clear) {
@@ -2944,6 +3061,46 @@ void PropertyLinkSubList::getLinks(std::vector<App::DocumentObject *> &objs,
             auto _subs = getSubValues(newStyle);
             subs->reserve(subs->size()+_subs.size());
             std::move(_subs.begin(),_subs.end(),std::back_inserter(*subs));
+        }
+    }
+}
+
+void PropertyLinkSubList::getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                                     App::DocumentObject *obj,
+                                     const char *subname,
+                                     bool all) const
+{
+    if (!obj || (!all && _pcScope == LinkScope::Hidden))
+        return;
+    App::SubObjectT objT(obj, subname);
+    auto sobj = objT.getSubObject();
+    auto subElement = objT.getOldElementName();
+
+    int i = -1;
+    for (const auto &o : _lValueList) {
+        ++i;
+        if (o != obj)
+            continue;
+        if (!subname || (i < (int)_lSubList.size() && subname == _lSubList[i])) {
+            identifiers.emplace_back(*this, i);
+            continue;
+        }
+        if (!sobj || i < (int)_lSubList.size())
+            continue;
+        App::SubObjectT sobjT(obj, _lSubList[i].c_str());
+        if (sobjT.getSubObject() == sobj
+                && sobjT.getOldElementName() == subElement) {
+            identifiers.emplace_back(*this);
+            continue;
+        }
+        if (i < (int)_ShadowSubList.size()) {
+            const auto &shadow = _ShadowSubList[i];
+            App::SubObjectT sobjT(obj, shadow.first.empty() ? shadow.second.c_str() : shadow.first.c_str());
+            if (sobjT.getSubObject() == sobj
+                    && sobjT.getOldElementName() == subElement) {
+                identifiers.emplace_back(*this);
+                continue;
+            }
         }
     }
 }
@@ -4250,6 +4407,15 @@ void PropertyXLink::getLinks(std::vector<App::DocumentObject *> &objs,
     }
 }
 
+void PropertyXLink::getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                               App::DocumentObject *obj,
+                               const char *subname,
+                               bool all) const
+{
+    if (all || _pcScope != LinkScope::Hidden)
+        _getLinksTo(this, identifiers,obj,subname,_pcLink,_SubList,_ShadowSubList);
+}
+
 bool PropertyXLink::adjustLink(const std::set<App::DocumentObject*> &inList) {
     if (_pcScope==LinkScope::Hidden)
         return false;
@@ -4917,6 +5083,17 @@ void PropertyXLinkSubList::getLinks(std::vector<App::DocumentObject *> &objs,
                 }
             }
         }
+    }
+}
+
+void PropertyXLinkSubList::getLinksTo(std::vector<App::ObjectIdentifier> &identifiers,
+                                      App::DocumentObject *obj,
+                                      const char *subname,
+                                      bool all) const
+{
+    if (all || _pcScope != LinkScope::Hidden) {
+        for(auto &l : _Links)
+            _getLinksTo(this, identifiers,obj,subname,l._pcLink,l._SubList,l._ShadowSubList,true);
     }
 }
 
