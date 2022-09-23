@@ -234,10 +234,13 @@ const TopoDS_Shape& BRepOffsetAPI_MakeOffsetFix::Shape()
 
 const TopTools_ListOfShape& BRepOffsetAPI_MakeOffsetFix::Generated(const TopoDS_Shape& S)
 {
-    myGenerated.Clear();
+    static TopTools_ListOfShape dummy;
     auto it = myMap.find(S);
-    if (it == myMap.end())
-        return myGenerated;
+    if (it == myMap.end()) {
+        if (mkOffset)
+            return mkOffset->Generated(S);
+        return dummy;
+    }
     return it->second;
 }
 

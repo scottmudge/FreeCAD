@@ -2437,7 +2437,7 @@ TopoShape &TopoShape::makEOffset(const TopoShape &shape,
     return *this;
 }
 
-TopoShape &TopoShape::makEOffsetFace(const TopoShape &shape,
+TopoShape &TopoShape::makEOffsetFace(const TopoShape &_shape,
                                      double offset,
                                      double innerOffset,
                                      JoinType joinType,
@@ -2446,15 +2446,17 @@ TopoShape &TopoShape::makEOffsetFace(const TopoShape &shape,
 {
     if (std::abs(innerOffset) < Precision::Confusion()
             && std::abs(offset) < Precision::Confusion()) {
-        *this = shape;
+        *this = _shape;
         return *this;
     }
 
-    if (shape.isNull())
+    if (_shape.isNull())
         FC_THROWM(Base::ValueError, "makeOffsetFace: input shape is null!");
-    if (!shape.hasSubShape(TopAbs_FACE))
+    if (!_shape.hasSubShape(TopAbs_FACE))
         FC_THROWM(Base::ValueError, "makeOffsetFace: no face found");
 
+    // makERefine will try to unify adjacent faces so that they can be correctly offset together.
+    TopoShape shape = _shape.makERefine();
     std::vector<TopoShape> res;
     for (auto & face : shape.getSubTopoShapes(TopAbs_FACE)) {
         std::vector<TopoShape> wires;
@@ -3146,16 +3148,23 @@ public:
     }
 };
 
-TopoShape &TopoShape::makERefine(const TopoShape &shape, const char *op, bool no_fail) {
+TopoShape &TopoShape::makERefine(const TopoShape &_shape, const char *op, bool no_fail) {
+    TopoShape shape(_shape);
     if(shape.isNull()) {
         if(!no_fail)
             HANDLE_NULL_SHAPE;
-        _Shape.Nullify();
+        setShape(TopoDS_Shape());
         return *this;
     }
     if(!op) op = Part::OpCodes::Refine;
     bool closed = shape.isClosed();
     try {
+        if (!shape.hasSubShape(TopAbs_SHELL)) {
+            if (shape.countSubShapes(TopAbs_FACE) <= 1)
+                return *this;
+            auto faces = shape.makEShell(false).makERefine(op, false).getSubTopoShapes(TopAbs_FACE);
+            return makECompound(faces, nullptr, false);
+        }
 #if 1
         MyRefineMaker mkRefine(shape.getShape());
         GenericShapeMapper mapper;
@@ -3288,7 +3297,7 @@ TopoShape &TopoShape::makEShellFromWires(const std::vector<TopoShape> &wires, bo
     }
     if (wires.empty()) {
         if (silent) {
-            _Shape.Nullify();
+            setShape(TopoDS_Shape());
             return *this;
         }
         FC_THROWM(NullShapeException,"No input shapes");

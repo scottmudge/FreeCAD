@@ -1027,7 +1027,7 @@ void PropertyFilletSegments::connectLinkProperty(App::PropertyLinkSub &links)
                                         App::ObjectIdentifier(p2) << App::ObjectIdentifier::SimpleComponent("Length"));
                     }
                 }
-                value[key] = iter->second;
+                value[sub] = iter->second;
             }
             if (value != segmentsMap)
                 setValue(std::move(value));

@@ -99,9 +99,11 @@ TaskPocketParameters::TaskPocketParameters(ViewProviderPocket *PocketView,QWidge
     ui->taperAngleEdit2->setToolTip(QApplication::translate(
                 "Property", pcPocket->TaperAngleRev.getDocumentation()));
     ui->innerTaperAngleEdit->setToolTip(QApplication::translate(
-                "Property", pcPocket->InnerTaperAngle.getDocumentation()));
+                "Property", pcPocket->TaperInnerAngle.getDocumentation()));
     ui->innerTaperAngleEdit2->setToolTip(QApplication::translate(
-                "Property", pcPocket->InnerTaperAngleRev.getDocumentation()));
+                "Property", pcPocket->TaperInnerAngleRev.getDocumentation()));
+    ui->autoInnerTaperAngle->setToolTip(QApplication::translate(
+                "Property", pcPocket->AutoTaperInnerAngle.getDocumentation()));
 
     // Bind input fields to properties
     ui->lengthEdit->bind(pcPocket->Length);
@@ -109,8 +111,8 @@ TaskPocketParameters::TaskPocketParameters(ViewProviderPocket *PocketView,QWidge
     ui->offsetEdit->bind(pcPocket->Offset);
     ui->taperAngleEdit->bind(pcPocket->TaperAngle);
     ui->taperAngleEdit2->bind(pcPocket->TaperAngleRev);
-    ui->innerTaperAngleEdit->bind(pcPocket->InnerTaperAngle);
-    ui->innerTaperAngleEdit2->bind(pcPocket->InnerTaperAngleRev);
+    ui->innerTaperAngleEdit->bind(pcPocket->TaperInnerAngle);
+    ui->innerTaperAngleEdit2->bind(pcPocket->TaperInnerAngleRev);
 
     QMetaObject::connectSlotsByName(this);
 
@@ -142,6 +144,14 @@ TaskPocketParameters::TaskPocketParameters(ViewProviderPocket *PocketView,QWidge
             this, SLOT(onButtonFace()));
     connect(ui->lineFaceName, SIGNAL(textEdited(QString)),
             this, SLOT(onFaceName(QString)));
+
+    QObject::connect(ui->autoInnerTaperAngle, &QCheckBox::toggled, [this](bool checked) {
+        PartDesign::Pocket* pcPocket = static_cast<PartDesign::Pocket*>(vp->getObject());
+        pcPocket->AutoTaperInnerAngle.setValue(checked);
+        ui->innerTaperAngleEdit->setDisabled(checked);
+        ui->innerTaperAngleEdit2->setDisabled(checked);
+        recomputeFeature();
+    });
 
     // Due to signals attached after changes took took into effect we should update the UI now.
     refresh();
@@ -204,8 +214,8 @@ void TaskPocketParameters::refresh()
     int index = pcPocket->Type.getValue(); // must extract value here, clear() kills it!
     double angle = pcPocket->TaperAngle.getValue();
     double angle2 = pcPocket->TaperAngleRev.getValue();
-    double innerAngle = pcPocket->InnerTaperAngle.getValue();
-    double innerAngle2 = pcPocket->InnerTaperAngleRev.getValue();
+    double innerAngle = pcPocket->TaperInnerAngle.getValue();
+    double innerAngle2 = pcPocket->TaperInnerAngleRev.getValue();
 
     // Temporarily prevent unnecessary feature recomputes
     for (QWidget* child : proxy->findChildren<QWidget*>())
@@ -248,6 +258,8 @@ void TaskPocketParameters::refresh()
     ui->changeMode->setCurrentIndex(index);
 
     ui->checkFaceLimits->setChecked(pcPocket->CheckUpToFaceLimits.getValue());
+
+    ui->autoInnerTaperAngle->setChecked(pcPocket->AutoTaperInnerAngle.getValue());
 
     // Temporarily prevent unnecessary feature recomputes
     for (QWidget* child : proxy->findChildren<QWidget*>())
@@ -418,14 +430,14 @@ void TaskPocketParameters::onAngle2Changed(double angle)
 void TaskPocketParameters::onInnerAngleChanged(double angle)
 {
     PartDesign::Pocket* pcPocket = static_cast<PartDesign::Pocket*>(vp->getObject());
-    pcPocket->InnerTaperAngle.setValue(angle);
+    pcPocket->TaperInnerAngle.setValue(angle);
     recomputeFeature();
 }
 
 void TaskPocketParameters::onInnerAngle2Changed(double angle)
 {
     PartDesign::Pocket* pcPocket = static_cast<PartDesign::Pocket*>(vp->getObject());
-    pcPocket->InnerTaperAngleRev.setValue(angle);
+    pcPocket->TaperInnerAngleRev.setValue(angle);
     recomputeFeature();
 }
 

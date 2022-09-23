@@ -118,17 +118,19 @@ void TaskPadParameters::setupUI(bool newObj)
     ui->taperAngleEdit2->setToolTip(QApplication::translate(
                 "Property", pcPad->TaperAngleRev.getDocumentation()));
     ui->innerTaperAngleEdit->setToolTip(QApplication::translate(
-                "Property", pcPad->InnerTaperAngle.getDocumentation()));
+                "Property", pcPad->TaperInnerAngle.getDocumentation()));
     ui->innerTaperAngleEdit2->setToolTip(QApplication::translate(
-                "Property", pcPad->InnerTaperAngleRev.getDocumentation()));
+                "Property", pcPad->TaperInnerAngleRev.getDocumentation()));
+    ui->autoInnerTaperAngle->setToolTip(QApplication::translate(
+                "Property", pcPad->AutoTaperInnerAngle.getDocumentation()));
 
     // Bind input fields to properties
     ui->lengthEdit->bind(pcPad->Length);
     ui->lengthEdit2->bind(pcPad->Length2);
     ui->taperAngleEdit->bind(pcPad->TaperAngle);
     ui->taperAngleEdit2->bind(pcPad->TaperAngleRev);
-    ui->innerTaperAngleEdit->bind(pcPad->InnerTaperAngle);
-    ui->innerTaperAngleEdit2->bind(pcPad->InnerTaperAngleRev);
+    ui->innerTaperAngleEdit->bind(pcPad->TaperInnerAngle);
+    ui->innerTaperAngleEdit2->bind(pcPad->TaperInnerAngleRev);
 
     ui->XDirectionEdit->bind(App::ObjectIdentifier::parse(pcPad, std::string(".Direction.x")));
     ui->YDirectionEdit->bind(App::ObjectIdentifier::parse(pcPad, std::string(".Direction.y")));
@@ -201,6 +203,13 @@ void TaskPadParameters::setupUI(bool newObj)
             this, SLOT(onFaceName(QString)));
     this->propReferenceAxis = &(pcPad->ReferenceAxis);
 
+    QObject::connect(ui->autoInnerTaperAngle, &QCheckBox::toggled, [this](bool checked) {
+        PartDesign::Pad* pcPad = static_cast<PartDesign::Pad*>(vp->getObject());
+        pcPad->AutoTaperInnerAngle.setValue(checked);
+        ui->innerTaperAngleEdit->setDisabled(checked);
+        ui->innerTaperAngleEdit2->setDisabled(checked);
+        recomputeFeature();
+    });
     refresh();
 
     // if it is a newly created object use the last value of the history
@@ -245,8 +254,8 @@ void TaskPadParameters::refresh()
     int index = pcPad->Type.getValue(); // must extract value here, clear() kills it!
     double angle = pcPad->TaperAngle.getValue();
     double angle2 = pcPad->TaperAngleRev.getValue();
-    double innerAngle = pcPad->InnerTaperAngle.getValue();
-    double innerAngle2 = pcPad->InnerTaperAngleRev.getValue();
+    double innerAngle = pcPad->TaperInnerAngle.getValue();
+    double innerAngle2 = pcPad->TaperInnerAngleRev.getValue();
 
     // Temporarily prevent unnecessary feature recomputes
     for (QWidget* child : proxy->findChildren<QWidget*>())
@@ -299,6 +308,8 @@ void TaskPadParameters::refresh()
     ui->changeMode->setCurrentIndex(index);
 
     ui->checkFaceLimits->setChecked(pcPad->CheckUpToFaceLimits.getValue());
+
+    ui->autoInnerTaperAngle->setChecked(pcPad->AutoTaperInnerAngle.getValue());
 
     // Temporarily prevent unnecessary feature recomputes
     for (QWidget* child : proxy->findChildren<QWidget*>())
@@ -543,14 +554,14 @@ void TaskPadParameters::onAngle2Changed(double angle)
 void TaskPadParameters::onInnerAngleChanged(double angle)
 {
     PartDesign::Pad* pcPad = static_cast<PartDesign::Pad*>(vp->getObject());
-    pcPad->InnerTaperAngle.setValue(angle);
+    pcPad->TaperInnerAngle.setValue(angle);
     recomputeFeature();
 }
 
 void TaskPadParameters::onInnerAngle2Changed(double angle)
 {
     PartDesign::Pad* pcPad = static_cast<PartDesign::Pad*>(vp->getObject());
-    pcPad->InnerTaperAngleRev.setValue(angle);
+    pcPad->TaperInnerAngleRev.setValue(angle);
     recomputeFeature();
 }
 
