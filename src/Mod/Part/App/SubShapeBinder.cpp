@@ -707,61 +707,68 @@ void SubShapeBinder::buildShape(TopoShape &result)
         }
     }
 
-    if(Fuse.getValue()) {
-        if (_Version.getValue() > 4
-                && !result.hasSubShape(TopAbs_SOLID)
-                && result.hasSubShape(TopAbs_FACE))
-        {
-            if (!result.hasSubShape(TopAbs_SHELL)) {
-                try {
-                    result = result.makEShell();
-                } catch(Base::Exception & e) {
-                    FC_LOG(getFullName() << " Failed to make shell: " << e.what());
-                } catch(Standard_Failure & e) {
-                    FC_LOG(getFullName() << " Failed to make shell: " << e.GetMessageString());
-                } catch(...) {
-                    FC_LOG(getFullName() << " Failed to make shell");
+    auto doFuse = [&]() {
+        if(Fuse.getValue()) {
+            if (_Version.getValue() > 4
+                    && !result.hasSubShape(TopAbs_SOLID)
+                    && result.hasSubShape(TopAbs_FACE))
+            {
+                TopoShape tmp(result);
+                if (!tmp.hasSubShape(TopAbs_SHELL)) {
+                    try {
+                        tmp = tmp.makEShell();
+                        if (!tmp.isClosed() || !tmp.isValid())
+                            tmp = TopoShape();
+                    } catch(Base::Exception & e) {
+                        FC_LOG(getFullName() << " Failed to make shell: " << e.what());
+                    } catch(Standard_Failure & e) {
+                        FC_LOG(getFullName() << " Failed to make shell: " << e.GetMessageString());
+                    } catch(...) {
+                        FC_LOG(getFullName() << " Failed to make shell");
+                    }
                 }
-            }
 
-            if (result.hasSubShape(TopAbs_SHELL)) {
-                try {
-                    result = result.makESolid();
-                } catch(Base::Exception & e) {
-                    FC_LOG(getFullName() << " Failed to make solid: " << e.what());
-                } catch(Standard_Failure & e) {
-                    FC_LOG(getFullName() << " Failed to make solid: " << e.GetMessageString());
-                } catch(...) {
-                    FC_LOG(getFullName() << " Failed to make solid");
+                if (tmp.hasSubShape(TopAbs_SHELL) && tmp.isClosed()) {
+                    try {
+                        tmp = tmp.makESolid();
+                        if (!tmp.isClosed() || !tmp.isValid())
+                            tmp = TopoShape();
+                        result = tmp;
+                    } catch(Base::Exception & e) {
+                        FC_LOG(getFullName() << " Failed to make solid: " << e.what());
+                    } catch(Standard_Failure & e) {
+                        FC_LOG(getFullName() << " Failed to make solid: " << e.GetMessageString());
+                    } catch(...) {
+                        FC_LOG(getFullName() << " Failed to make solid");
+                    }
                 }
             }
-        }
-        if (result.hasSubShape(TopAbs_SOLID)) {
-            // If the compound has solid, fuse them together, and ignore other type of
-            // shapes
-            auto solids = result.getSubTopoShapes(TopAbs_SOLID);
-            if(solids.size() > 1) {
-                try {
-                    result.makEFuse(solids);
-                    if (Refine.getValue())
-                        result = result.makERefine();
-                } catch(Base::Exception & e) {
-                    FC_LOG(getFullName() << " Failed to fuse: " << e.what());
-                } catch(Standard_Failure & e) {
-                    FC_LOG(getFullName() << " Failed to fuse: " << e.GetMessageString());
-                } catch(...) {
-                    FC_LOG(getFullName() << " Failed to fuse");
+            if (result.hasSubShape(TopAbs_SOLID)) {
+                // If the compound has solid, fuse them together, and ignore other type of
+                // shapes
+                auto solids = result.getSubTopoShapes(TopAbs_SOLID);
+                if(solids.size() > 1) {
+                    try {
+                        result.makEFuse(solids);
+                    } catch(Base::Exception & e) {
+                        FC_LOG(getFullName() << " Failed to fuse: " << e.what());
+                    } catch(Standard_Failure & e) {
+                        FC_LOG(getFullName() << " Failed to fuse: " << e.GetMessageString());
+                    } catch(...) {
+                        FC_LOG(getFullName() << " Failed to fuse");
+                    }
+                } else {
+                    // wrap the single solid in compound to keep its placement
+                    auto solid = solids.front();
+                    result.makECompound({solid});
                 }
-            } else {
-                // wrap the single solid in compound to keep its placement
-                auto solid = solids.front();
-                if (Refine.getValue())
-                    solid = solid.makERefine();
-                result.makECompound({solid});
             }
-        } else if (result.hasSubShape(TopAbs_SHELL) && Refine.getValue())
+        } 
+        if (Refine.getValue())
             result = result.makERefine();
-    } 
+    };
+    
+    doFuse();
 
     if (fabs(Offset.getValue()) > Precision::Confusion()) {
         try {
@@ -802,6 +809,8 @@ void SubShapeBinder::buildShape(TopoShape &result)
             }
 
             result.makECompound(results);
+
+            doFuse();
 
         } catch(Base::Exception & e) {
             e.ReportException();

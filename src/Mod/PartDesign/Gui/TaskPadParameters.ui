@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>323</width>
-    <height>642</height>
+    <height>578</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -372,6 +372,16 @@ unnecessary use of BSplineSurface for planar faces in the resulting shape.</stri
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="autoInnerTaperAngle">
+     <property name="text">
+      <string>Auto inner taper angle</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_13">
