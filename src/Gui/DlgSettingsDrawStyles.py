@@ -62,6 +62,8 @@ ParamGroup = (
         'HiddenLineShaded',
         'HiddenLineShowOutline',
         'HiddenLinePerFaceOutline',
+        'HiddenLineSceneOutline',
+        'HiddenLineOutlineWidth',
         'HiddenLineHideFace',
         'HiddenLineHideSeam',
         'HiddenLineHideVertex',

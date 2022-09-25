@@ -351,18 +351,7 @@ def widgets_init(param_set):
             cog.out(f'''
 
     {trace_comment()}''')
-
             param.init_widget(row, name)
-
-            cog.out(f'''
-    {param.widget_name}->setEntryName("{param.name}");''')
-            prefix = 'User parameter:BaseApp/Preferences/'
-            if param.path.startswith(prefix):
-                cog.out(f'''
-    {param.widget_name}->setParamGrpPath("{param.path[len(prefix):]}");''')
-            else:
-                cog.out(f'''
-    {param.widget_name}->setParamGrpPath("{param.path}");''')
 
     cog.out('''
     layout->addItem(new QSpacerItem(40, 20, QSizePolicy::Fixed, QSizePolicy::Expanding));
@@ -375,8 +364,7 @@ def widgets_restore(param_set):
     {trace_comment()}''')
     for _,params in param_group:
         for param in params:
-            cog.out(f'''
-    {param.widget_name}->onRestore();''')
+            param.widget_restore()
 
 def widgets_save(param_set):
     param_group = param_set.ParamGroup
@@ -385,8 +373,7 @@ def widgets_save(param_set):
     {trace_comment()}''')
     for _,params in param_group:
         for param in params:
-            cog.out(f'''
-    {param.widget_name}->onSave();''')
+            param.widget_save()
 
 def preference_dialog_declare_begin(param_set, header=True):
     namespace = param_set.NameSpace
@@ -562,6 +549,8 @@ void {class_name}::changeEvent(QEvent *e)
 #include "moc_{class_name}.cpp"
 ''')
 
+_ParamPrefix = 'User parameter:BaseApp/Preferences/'
+
 class Param:
     WidgetPrefix = ''
 
@@ -613,12 +602,43 @@ class Param:
         if self.widget_setter:
             cog.out(f'''
     {self.widget_name}->{self.widget_setter}({self.namespace}::{self.class_name}::default{self.name}());''')
+        self._init_pref_widget()
+
+    def _init_pref_widget(self):
+        cog.out(f'''
+    {self.widget_name}->setEntryName("{self.name}");''')
+        if self.path.startswith(_ParamPrefix):
+            cog.out(f'''
+    {self.widget_name}->setParamGrpPath("{self.path[len(_ParamPrefix):]}");''')
+        else:
+            cog.out(f'''
+    {self.widget_name}->setParamGrpPath("{self.path}");''')
 
     def init_widget(self, row, group_name):
         if self.proxy:
             self.proxy.init_widget(self, row, group_name)
         else:
             self._init_widget(row, group_name)
+
+    def _widget_save(self):
+        cog.out(f'''
+    {self.widget_name}->onSave();''')
+
+    def widget_save(self):
+        if self.proxy:
+            self.proxy.widget_save(self)
+        else:
+            self._widget_save()
+
+    def _widget_restore(self):
+        cog.out(f'''
+    {self.widget_name}->onRestore();''')
+
+    def widget_restore(self):
+        if self.proxy:
+            self.proxy.widget_restore(self)
+        else:
+            self._widget_restore()
 
     def _retranslate_label(self):
         cog.out(f'''
@@ -806,6 +826,17 @@ class ParamProxy:
         param._retranslate()
         if self.param_bool:
             self.param_bool.retranslate()
+
+    def widget_save(self, param):
+        param._widget_save()
+        if self.param_bool:
+            self.param_bool.widget_save()
+
+    def widget_restore(self, param):
+        param._widget_restore()
+        if self.param_bool:
+            self.param_bool.widget_restore()
+
 
 class ComboBoxItem:
     def __init__(self, text, tooltips=None, data=None):

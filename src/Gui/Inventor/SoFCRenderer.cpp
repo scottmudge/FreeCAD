@@ -195,6 +195,7 @@ public:
   void renderSectionGrouped(SoGLRenderAction *action, bool transp);
 
   void renderOutline(SoGLRenderAction *action, DrawEntry &draw_entry, bool highlight);
+  void renderSceneOutline(SoGLRenderAction *action);
 
   void pauseShadowRender(SoState *state, bool paused);
   void renderLines(SoState *state, int array, DrawEntry &draw_entry);
@@ -1211,6 +1212,9 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
   if (this->shadowmapping
       || this->depthwriteonly
       || draw_entry.material->type != Material::Triangle
+      || (!highlight
+          && !ViewParams::getHiddenLinePerFaceOutline()
+          && ViewParams::getHiddenLineSceneOutline())
       || (!draw_entry.material->outline
           && (!ViewParams::getShowPreSelectedFaceOutline()
               || !highlight
@@ -1222,7 +1226,11 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
   int numparts = draw_entry.ventry->cache->getNumNonFlatParts();
   int dummyparts[1];
   const int *partindices = nullptr;
-  if (this->material.clippers.getNum() && drawidx < 0) {
+  if ((this->material.clippers.getNum() && drawidx < 0)
+      || (!highlight && ViewParams::getHiddenLinePerFaceOutline()
+                     && !ViewParams::getHiddenLineSceneOutline()
+                     && ViewParams::getHiddenLineOutlineWidth() > 0.0))
+  {
     numparts = draw_entry.ventry->cache->getNumFaceParts();
   } else if (ViewParams::getHiddenLinePerFaceOutline() && numparts && drawidx < 0) {
     partindices = draw_entry.ventry->cache->getNonFlatParts();
@@ -1233,6 +1241,8 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
   }
 
   bool pushed = false;
+  float current_linewidth = 0.f;
+  uint32_t current_color = 0;
   for (int i=0; i<numparts; ++i) {
     int partidx;
     if (partindices) {
@@ -1258,23 +1268,33 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
       glDisable(GL_CULL_FACE);
       glDisable(GL_LINE_STIPPLE);
       // glDisable(GL_DEPTH_TEST);
-      auto col = drawidx >= 0 ? this->material.emissive
-                              : (draw_entry.material->linecolor 
-                                  ? draw_entry.material->linecolor
-                                  : draw_entry.material->diffuse);
+      if (highlight)
+        glDisable(GL_BLEND);
+    }
+    auto col = drawidx >= 0 ? this->material.emissive
+                            : (draw_entry.material->linecolor 
+                                ? draw_entry.material->linecolor
+                                : draw_entry.material->diffuse);
+    if (col != current_color) {
+      current_color = col;
       glColor3ub((unsigned char)((col>>24)&0xff),
           (unsigned char)((col>>16)&0xff),
           (unsigned char)((col>>8)&0xff));
-      float linewidth = draw_entry.material->linewidth;
+    }
 
-      if (highlight) {
-        glDisable(GL_BLEND);
-        float w = linewidth * std::max(1.0, ViewParams::getSelectionLineThicken());
-        if (ViewParams::getSelectionLineMaxWidth() > 1.0)
-          w = std::min<float>(w, std::max<float>(linewidth, ViewParams::getSelectionLineMaxWidth()));
-        linewidth = w;
-      }
+    float linewidth = draw_entry.material->linewidth;
+    if (highlight) {
+      float w = linewidth * std::max(1.0, ViewParams::getSelectionLineThicken());
+      if (ViewParams::getSelectionLineMaxWidth() > 1.0)
+        w = std::min<float>(w, std::max<float>(linewidth, ViewParams::getSelectionLineMaxWidth()));
+      linewidth = w;
+    }
+    if (linewidth < ViewParams::getHiddenLineOutlineWidth())
+      linewidth = ViewParams::getHiddenLineOutlineWidth();
+    if (linewidth != current_linewidth) {
+      current_linewidth = linewidth;
       glLineWidth(linewidth*1.5f);
+      glPointSize(linewidth*1.5f);
     }
 
     glClear(GL_STENCIL_BUFFER_BIT);
@@ -1293,6 +1313,12 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
     draw_entry.ventry->cache->renderTriangles(state,
                                               SoFCVertexCache::NON_SORTED_ARRAY,
                                               partidx);
+    if (ViewParams::getHiddenLineHideVertex()) {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+      draw_entry.ventry->cache->renderTriangles(state,
+                                                SoFCVertexCache::NON_SORTED_ARRAY,
+                                                partidx);
+    }
     ++this->drawcallcount;
   }
   if (pushed) {
@@ -1307,6 +1333,92 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
     if (highlight)
       glLineWidth(this->material.linewidth);
   }
+}
+
+void
+SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
+{
+  SoState * state = action->getState();
+
+  if (this->transpshadowmapping
+      || this->shadowmapping
+      || !ViewParams::getHiddenLineSceneOutline()
+      || !SoFCDisplayModeElement::showHiddenLines(state))
+    return;
+
+  glPushAttrib(GL_ENABLE_BIT
+      | GL_DEPTH_BUFFER_BIT
+      | GL_STENCIL_BUFFER_BIT
+      | GL_CURRENT_BIT
+      | GL_POLYGON_BIT);
+
+  pauseShadowRender(state, true);
+
+  glEnable(GL_STENCIL_TEST);
+  glDisable(GL_LIGHTING);
+  glDisable(GL_TEXTURE_2D);
+  glDisable(GL_CULL_FACE);
+  glDisable(GL_LINE_STIPPLE);
+  glDisable(GL_DEPTH_TEST);
+  auto col = ViewParams::getHiddenLineColor();
+  glColor3ub((unsigned char)((col>>24)&0xff),
+             (unsigned char)((col>>16)&0xff),
+             (unsigned char)((col>>8)&0xff));
+
+  float linewidth = std::max(1.0, ViewParams::getHiddenLineOutlineWidth());
+  glLineWidth(linewidth*1.5f);
+
+  glClear(GL_STENCIL_BUFFER_BIT);
+  glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+  glStencilFunc (GL_ALWAYS, 1, -1);
+  glStencilOp (GL_KEEP, GL_REPLACE, GL_REPLACE);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+  for (const auto &draw_entry : this->drawentries) {
+    if (draw_entry.skip > 0
+        || draw_entry.material->type != Material::Triangle)
+      continue;
+
+    setupMatrix(action, draw_entry);
+
+    draw_entry.ventry->cache->renderTriangles(state,
+                                              SoFCVertexCache::NON_SORTED_ARRAY);
+  }
+
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  glStencilFunc(GL_NOTEQUAL, 1, -1);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+  for (const auto &draw_entry : this->drawentries) {
+    if (draw_entry.skip > 0
+        || draw_entry.material->type != Material::Triangle)
+      continue;
+
+    setupMatrix(action, draw_entry);
+
+    draw_entry.ventry->cache->renderTriangles(state,
+                                              SoFCVertexCache::NON_SORTED_ARRAY);
+    ++this->drawcallcount;
+  }
+
+  if (ViewParams::getHiddenLineHideVertex()) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+    glPointSize(linewidth);
+    for (const auto &draw_entry : this->drawentries) {
+      if (draw_entry.skip > 0
+          || draw_entry.material->type != Material::Triangle)
+        continue;
+
+      setupMatrix(action, draw_entry);
+
+      draw_entry.ventry->cache->renderTriangles(state,
+                                                SoFCVertexCache::NON_SORTED_ARRAY);
+      ++this->drawcallcount;
+    }
+  }
+
+  glPopAttrib();
 }
 
 bool
@@ -2131,6 +2243,8 @@ SoFCRenderer::render(SoGLRenderAction * action)
                               PRIVATE(this)->hlentries,
                               PRIVATE(this)->highlightlinesontop,
                               RenderPassHighlight);
+
+  PRIVATE(this)->renderSceneOutline(action);
 
   state->pop();
   glPopAttrib();

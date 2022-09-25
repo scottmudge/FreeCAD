@@ -31,10 +31,10 @@ import DlgSettingsUI
 DlgSettingsUI.declare_begin()
 ]]]*/
 
-// Auto generated code (Tools/params_utils.py:404)
+// Auto generated code (Tools/params_utils.py:391)
 #include <Gui/PropertyPage.h>
 #include <Gui/PrefWidgets.h>
-// Auto generated code (Tools/params_utils.py:409)
+// Auto generated code (Tools/params_utils.py:396)
 class QLabel;
 class QGroupBox;
 
@@ -180,7 +180,7 @@ import DlgSettingsUI
 DlgSettingsUI.declare_end()
 ]]]*/
 
-// Auto generated code (Tools/params_utils.py:454)
+// Auto generated code (Tools/params_utils.py:441)
 };
 } // namespace Dialog
 } // namespace Gui

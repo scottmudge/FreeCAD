@@ -47,6 +47,8 @@
 #include "FileDialog.h"
 #include "MainWindow.h"
 
+FC_LOG_LEVEL_INIT("Gui", true, true);
+
 using Base::Console;
 using namespace Gui;
 
@@ -195,10 +197,10 @@ void PrefWidget::onSave()
     return;
   Base::StateLocker guard(m_Busy);
   savePreferences();
-#ifdef FC_DEBUG
-  if (m_SubEntries.isEmpty() && !getWindowParameter().isValid())
-    qFatal( "No parameter group specified!" );
-#endif
+  if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG)) {
+    if (m_SubEntries.isEmpty() && !getWindowParameter().isValid())
+      FC_ERR( "No parameter group specified!" );
+  }
 }
 
 static inline ParameterGrp::handle _getEntryParameter() {

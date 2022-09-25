@@ -141,6 +141,8 @@ public:
     bool HiddenLineShaded;
     bool HiddenLineShowOutline;
     bool HiddenLinePerFaceOutline;
+    bool HiddenLineSceneOutline;
+    double HiddenLineOutlineWidth;
     double HiddenLineWidth;
     double HiddenLinePointSize;
     bool HiddenLineHideSeam;
@@ -406,6 +408,10 @@ public:
         funcs["HiddenLineShowOutline"] = &ViewParamsP::updateHiddenLineShowOutline;
         HiddenLinePerFaceOutline = handle->GetBool("HiddenLinePerFaceOutline", false);
         funcs["HiddenLinePerFaceOutline"] = &ViewParamsP::updateHiddenLinePerFaceOutline;
+        HiddenLineSceneOutline = handle->GetBool("HiddenLineSceneOutline", false);
+        funcs["HiddenLineSceneOutline"] = &ViewParamsP::updateHiddenLineSceneOutline;
+        HiddenLineOutlineWidth = handle->GetFloat("HiddenLineOutlineWidth", 0.0);
+        funcs["HiddenLineOutlineWidth"] = &ViewParamsP::updateHiddenLineOutlineWidth;
         HiddenLineWidth = handle->GetFloat("HiddenLineWidth", 1.5);
         funcs["HiddenLineWidth"] = &ViewParamsP::updateHiddenLineWidth;
         HiddenLinePointSize = handle->GetFloat("HiddenLinePointSize", 2);
@@ -812,7 +818,7 @@ public:
     }
     // Auto generated code (Tools/params_utils.py:238)
     static void updateMaxOnTopSelections(ViewParamsP *self) {
-        self->MaxOnTopSelections = self->handle->GetInt("MaxOnTopSelections", 20);
+        self->MaxOnTopSelections = self->handle->GetInt("MaxOnTopSelections", 100);
     }
     // Auto generated code (Tools/params_utils.py:238)
     static void updateMaxViewSelections(ViewParamsP *self) {
@@ -969,6 +975,14 @@ public:
     // Auto generated code (Tools/params_utils.py:238)
     static void updateHiddenLinePerFaceOutline(ViewParamsP *self) {
         self->HiddenLinePerFaceOutline = self->handle->GetBool("HiddenLinePerFaceOutline", false);
+    }
+    // Auto generated code (Tools/params_utils.py:238)
+    static void updateHiddenLineSceneOutline(ViewParamsP *self) {
+        self->HiddenLineSceneOutline = self->handle->GetBool("HiddenLineSceneOutline", false);
+    }
+    // Auto generated code (Tools/params_utils.py:238)
+    static void updateHiddenLineOutlineWidth(ViewParamsP *self) {
+        self->HiddenLineOutlineWidth = self->handle->GetFloat("HiddenLineOutlineWidth", 0.0);
     }
     // Auto generated code (Tools/params_utils.py:238)
     static void updateHiddenLineWidth(ViewParamsP *self) {
@@ -2744,7 +2758,7 @@ const long & ViewParams::getMaxOnTopSelections() {
 
 // Auto generated code (Tools/params_utils.py:300)
 const long & ViewParams::defaultMaxOnTopSelections() {
-    const static long def = 20;
+    const static long def = 100;
     return def;
 }
 
@@ -3627,7 +3641,8 @@ void ViewParams::removeHiddenLineOverrideBackground() {
 
 // Auto generated code (Tools/params_utils.py:288)
 const char *ViewParams::docHiddenLineShaded() {
-    return "";
+    return QT_TRANSLATE_NOOP("ViewParams",
+"Whether to enable shading in hidden line draw style");
 }
 
 // Auto generated code (Tools/params_utils.py:294)
@@ -3706,6 +3721,61 @@ void ViewParams::setHiddenLinePerFaceOutline(const bool &v) {
 // Auto generated code (Tools/params_utils.py:314)
 void ViewParams::removeHiddenLinePerFaceOutline() {
     instance()->handle->RemoveBool("HiddenLinePerFaceOutline");
+}
+
+// Auto generated code (Tools/params_utils.py:288)
+const char *ViewParams::docHiddenLineSceneOutline() {
+    return QT_TRANSLATE_NOOP("ViewParams",
+"Render outline of the whole scene.");
+}
+
+// Auto generated code (Tools/params_utils.py:294)
+const bool & ViewParams::getHiddenLineSceneOutline() {
+    return instance()->HiddenLineSceneOutline;
+}
+
+// Auto generated code (Tools/params_utils.py:300)
+const bool & ViewParams::defaultHiddenLineSceneOutline() {
+    const static bool def = false;
+    return def;
+}
+
+// Auto generated code (Tools/params_utils.py:307)
+void ViewParams::setHiddenLineSceneOutline(const bool &v) {
+    instance()->handle->SetBool("HiddenLineSceneOutline",v);
+    instance()->HiddenLineSceneOutline = v;
+}
+
+// Auto generated code (Tools/params_utils.py:314)
+void ViewParams::removeHiddenLineSceneOutline() {
+    instance()->handle->RemoveBool("HiddenLineSceneOutline");
+}
+
+// Auto generated code (Tools/params_utils.py:288)
+const char *ViewParams::docHiddenLineOutlineWidth() {
+    return "";
+}
+
+// Auto generated code (Tools/params_utils.py:294)
+const double & ViewParams::getHiddenLineOutlineWidth() {
+    return instance()->HiddenLineOutlineWidth;
+}
+
+// Auto generated code (Tools/params_utils.py:300)
+const double & ViewParams::defaultHiddenLineOutlineWidth() {
+    const static double def = 0.0;
+    return def;
+}
+
+// Auto generated code (Tools/params_utils.py:307)
+void ViewParams::setHiddenLineOutlineWidth(const double &v) {
+    instance()->handle->SetFloat("HiddenLineOutlineWidth",v);
+    instance()->HiddenLineOutlineWidth = v;
+}
+
+// Auto generated code (Tools/params_utils.py:314)
+void ViewParams::removeHiddenLineOutlineWidth() {
+    instance()->handle->RemoveFloat("HiddenLineOutlineWidth");
 }
 
 // Auto generated code (Tools/params_utils.py:288)
@@ -6210,7 +6280,7 @@ void ViewParams::removeToolTipIconSize() {
     instance()->handle->RemoveInt("ToolTipIconSize");
 }
 
-// Auto generated code (Gui/ViewParams.py:479)
+// Auto generated code (Gui/ViewParams.py:484)
 const std::vector<QString> ViewParams::AnimationCurveTypes = {
     QStringLiteral("Linear"),
     QStringLiteral("InQuad"),
@@ -6255,7 +6325,7 @@ const std::vector<QString> ViewParams::AnimationCurveTypes = {
     QStringLiteral("OutInBounce"),
 };
 
-// Auto generated code (Gui/ViewParams.py:487)
+// Auto generated code (Gui/ViewParams.py:492)
 static const char *DrawStyleNames[] = {
     QT_TRANSLATE_NOOP("DrawStyle", "As Is"),
     QT_TRANSLATE_NOOP("DrawStyle", "Points"),
@@ -6268,7 +6338,7 @@ static const char *DrawStyleNames[] = {
     QT_TRANSLATE_NOOP("DrawStyle", "Shadow"),
 };
 
-// Auto generated code (Gui/ViewParams.py:496)
+// Auto generated code (Gui/ViewParams.py:501)
 static const char *DrawStyleDocs[] = {
     QT_TRANSLATE_NOOP("DrawStyle", "Draw style, normal display mode"),
     QT_TRANSLATE_NOOP("DrawStyle", "Draw style, show points only"),
@@ -6282,7 +6352,7 @@ static const char *DrawStyleDocs[] = {
 };
 
 namespace Gui {
-// Auto generated code (Gui/ViewParams.py:505)
+// Auto generated code (Gui/ViewParams.py:510)
 const char *drawStyleNameFromIndex(int i)
 {
     if (i < 0 || i>= 9)
@@ -6290,7 +6360,7 @@ const char *drawStyleNameFromIndex(int i)
     return DrawStyleNames[i];
 }
 
-// Auto generated code (Gui/ViewParams.py:514)
+// Auto generated code (Gui/ViewParams.py:519)
 int drawStyleIndexFromName(const char *name)
 {
     if (!name)
@@ -6302,7 +6372,7 @@ int drawStyleIndexFromName(const char *name)
     return -1;
 }
 
-// Auto generated code (Gui/ViewParams.py:527)
+// Auto generated code (Gui/ViewParams.py:532)
 const char *drawStyleDocumentation(int i)
 {
     if (i < 0 || i>= 9)

@@ -89,6 +89,9 @@ class ParamCreateOrigin(ParamProxy):
             }}
         }}
     }});''')
+        cog.out(f'''
+    {auto_comment()}''')
+        param._init_pref_widget()
 
     def retranslate(self, param):
         super().retranslate(param)

@@ -27,7 +27,7 @@ import DlgSettingsObjects
 DlgSettingsObjects.define()
 ]]]*/
 
-// Auto generated code (Tools/params_utils.py:480)
+// Auto generated code (Tools/params_utils.py:467)
 #ifndef _PreComp_
 #   include <QApplication>
 #   include <QLabel>
@@ -42,12 +42,12 @@ DlgSettingsObjects.define()
 #include <App/Origin.h>
 #include <App/AutoTransaction.h>
 #include <App/LinkParams.h>
-// Auto generated code (Tools/params_utils.py:498)
+// Auto generated code (Tools/params_utils.py:485)
 #include "Gui/DlgSettingsObjects.h"
 using namespace Gui::Dialog;
 /* TRANSLATOR Gui::Dialog::DlgSettingsObjects */
 
-// Auto generated code (Tools/params_utils.py:505)
+// Auto generated code (Tools/params_utils.py:492)
 DlgSettingsObjects::DlgSettingsObjects(QWidget* parent)
     : PreferencePage( parent )
 {
@@ -114,6 +114,7 @@ DlgSettingsObjects::DlgSettingsObjects(QWidget* parent)
             }
         }
     });
+    // Auto generated code (Gui/DlgSettingsObjects.py:93)
     CreateOrigin->setEntryName("CreateOrigin");
     CreateOrigin->setParamGrpPath("Group");
 
@@ -148,19 +149,19 @@ DlgSettingsObjects::DlgSettingsObjects(QWidget* parent)
     ShowElement->setParamGrpPath("Link");
     layout->addItem(new QSpacerItem(40, 20, QSizePolicy::Fixed, QSizePolicy::Expanding));
     retranslateUi();
-    // Auto generated code (Tools/params_utils.py:512)
+    // Auto generated code (Tools/params_utils.py:499)
     
 }
 
-// Auto generated code (Tools/params_utils.py:517)
+// Auto generated code (Tools/params_utils.py:504)
 DlgSettingsObjects::~DlgSettingsObjects()
 {
 }
 
-// Auto generated code (Tools/params_utils.py:523)
+// Auto generated code (Tools/params_utils.py:510)
 void DlgSettingsObjects::saveSettings()
 {
-    // Auto generated code (Tools/params_utils.py:385)
+    // Auto generated code (Tools/params_utils.py:373)
     ClaimAllChildren->onSave();
     KeepHiddenChildren->onSave();
     ExportChildren->onSave();
@@ -170,10 +171,10 @@ void DlgSettingsObjects::saveSettings()
     ShowElement->onSave();
 }
 
-// Auto generated code (Tools/params_utils.py:530)
+// Auto generated code (Tools/params_utils.py:517)
 void DlgSettingsObjects::loadSettings()
 {
-    // Auto generated code (Tools/params_utils.py:375)
+    // Auto generated code (Tools/params_utils.py:364)
     ClaimAllChildren->onRestore();
     KeepHiddenChildren->onRestore();
     ExportChildren->onRestore();
@@ -183,7 +184,7 @@ void DlgSettingsObjects::loadSettings()
     ShowElement->onRestore();
 }
 
-// Auto generated code (Tools/params_utils.py:537)
+// Auto generated code (Tools/params_utils.py:524)
 void DlgSettingsObjects::retranslateUi()
 {
     setWindowTitle(QObject::tr("Objects"));
@@ -196,7 +197,7 @@ void DlgSettingsObjects::retranslateUi()
     ExportChildren->setText(QObject::tr("Export children by visibility"));
     CreateOrigin->setToolTip(QApplication::translate("GroupParams", App::GroupParams::docCreateOrigin()));
     CreateOrigin->setText(QObject::tr("Always create origin features in origin group"));
-    // Auto generated code (Gui/DlgSettingsObjects.py:96)
+    // Auto generated code (Gui/DlgSettingsObjects.py:99)
     buttonCreateOrigin->setText(tr("Apply to existing objects"));
     GeoGroupAllowCrossLink->setToolTip(QApplication::translate("GroupParams", App::GroupParams::docGeoGroupAllowCrossLink()));
     GeoGroupAllowCrossLink->setText(QObject::tr("Allow cross coordinate links in GeoFeatureGroup (App::Part)"));
@@ -207,7 +208,7 @@ void DlgSettingsObjects::retranslateUi()
     ShowElement->setText(QObject::tr("Show array element in Link array"));
 }
 
-// Auto generated code (Tools/params_utils.py:550)
+// Auto generated code (Tools/params_utils.py:537)
 void DlgSettingsObjects::changeEvent(QEvent *e)
 {
     if (e->type() == QEvent::LanguageChange) {
@@ -216,6 +217,6 @@ void DlgSettingsObjects::changeEvent(QEvent *e)
     QWidget::changeEvent(e);
 }
 
-// Auto generated code (Tools/params_utils.py:561)
+// Auto generated code (Tools/params_utils.py:548)
 #include "moc_DlgSettingsObjects.cpp"
 //[[[end]]]

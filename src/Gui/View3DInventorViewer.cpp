@@ -1989,7 +1989,7 @@ void View3DInventorViewer::Private::activate()
 
     App::Document *doc = owner->guiDocument?owner->guiDocument->getDocument():nullptr;
 
-    static const char *_ShadowDisplayMode[] = {"Flat Lines", "Shaded", "As Is", nullptr};
+    static const char *_ShadowDisplayMode[] = {"Flat Lines", "Shaded", "As Is", "Hidden line", nullptr};
     int displayMode = _shadowParam<App::PropertyEnumeration>(doc, "DisplayMode",
             ViewParams::docShadowDisplayMode(), ViewParams::getShadowDisplayMode(),
             [](App::PropertyEnumeration &prop) {
@@ -2011,6 +2011,9 @@ void View3DInventorViewer::Private::activate()
             break;
         case 1:
             mode = SoFCUnifiedSelection::DisplayModeShaded;
+            break;
+        case 3:
+            mode = SoFCUnifiedSelection::DisplayModeHiddenLine;
             break;
         default:
             mode = SoFCUnifiedSelection::DisplayModeAsIs;
