@@ -1224,7 +1224,7 @@ void Feature::onChanged(const App::Property* prop)
     }
     // if the point data has changed check and adjust the transformation as well
     else if (prop == &this->Shape) {
-        if (this->isRecomputing()) {
+        if (this->shouldApplyPlacement()) {
             this->Shape._Shape.setTransform(this->Placement.getValue().toMatrix());
         }
         else {
@@ -1238,6 +1238,11 @@ void Feature::onChanged(const App::Property* prop)
     }
 
     GeoFeature::onChanged(prop);
+}
+
+bool Feature::shouldApplyPlacement()
+{
+    return isRecomputing();
 }
 
 const std::vector<std::string> &

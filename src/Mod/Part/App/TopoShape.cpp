@@ -582,6 +582,10 @@ gp_Trsf TopoShape::convert(const Base::Matrix4D& mtrx) {
     return trsf;
 }
 
+gp_Trsf TopoShape::convert(const Base::Placement& pla) {
+    return convert(pla.toMatrix());
+}
+
 void TopoShape::setTransform(const Base::Matrix4D& rclTrf)
 {
     gp_Trsf mov;

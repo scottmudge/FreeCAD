@@ -1359,7 +1359,7 @@ SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
   glDisable(GL_TEXTURE_2D);
   glDisable(GL_CULL_FACE);
   glDisable(GL_LINE_STIPPLE);
-  glDisable(GL_DEPTH_TEST);
+  // glDisable(GL_DEPTH_TEST);
   auto col = ViewParams::getHiddenLineColor();
   glColor3ub((unsigned char)((col>>24)&0xff),
              (unsigned char)((col>>16)&0xff),

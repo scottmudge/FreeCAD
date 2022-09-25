@@ -3148,10 +3148,10 @@ public:
     }
 };
 
-TopoShape &TopoShape::makERefine(const TopoShape &_shape, const char *op, bool no_fail) {
+TopoShape &TopoShape::makERefine(const TopoShape &_shape, const char *op, bool silent) {
     TopoShape shape(_shape);
     if(shape.isNull()) {
-        if(!no_fail)
+        if(!silent)
             HANDLE_NULL_SHAPE;
         setShape(TopoDS_Shape());
         return *this;
@@ -3160,8 +3160,10 @@ TopoShape &TopoShape::makERefine(const TopoShape &_shape, const char *op, bool n
     bool closed = shape.isClosed();
     try {
         if (!shape.hasSubShape(TopAbs_SHELL)) {
-            if (shape.countSubShapes(TopAbs_FACE) <= 1)
+            if (shape.countSubShapes(TopAbs_FACE) <= 1) {
+                *this = _shape;
                 return *this;
+            }
             auto faces = shape.makEShell(false).makERefine(op, false).getSubTopoShapes(TopAbs_FACE);
             return makECompound(faces, nullptr, false);
         }
@@ -3170,17 +3172,22 @@ TopoShape &TopoShape::makERefine(const TopoShape &_shape, const char *op, bool n
         GenericShapeMapper mapper;
         mkRefine.populate(mapper);
         mapper.init(shape, mkRefine.Shape());
-        makESHAPE(mkRefine.Shape(), mapper, {shape}, op);
+        TopoShape res(Tag, Hasher);
+        res.makESHAPE(mkRefine.Shape(), mapper, {shape}, op);
         // For some reason, refine operation may reverse the solid
         fixSolidOrientation();
-        if (isClosed() == closed)
+        if (isClosed() == closed) {
+            *this = res;
             return *this;
+        }
 #else
         BRepBuilderAPI_RefineModel mkRefine(shape.getShape());
         return makEShape(mkRefine,shape,op);
 #endif
     }catch (Standard_Failure &) {
-        if(!no_fail) throw;
+        if(!silent) throw;
+    }catch (Base::Exception &) {
+        if (!silent) throw;
     }
     *this = shape;
     return *this;
@@ -3245,21 +3252,20 @@ TopoShape &TopoShape::makEShell(bool silent, const char *op) {
             // TODO confirm the above won't change OCCT topological naming
         }
 
-        if (shape.IsNull()) {
+        tmp.setShape(shape, false);
+        if (tmp.isNull()) {
             if (silent)
                 return *this;
             FC_THROWM(NullShapeException, "Failed to make shell");
         }
 
-        if (shape.ShapeType() != TopAbs_SHELL) {
+        if (!tmp.hasSubShape(TopAbs_SHELL)) {
             if (silent)
                 return *this;
-            FC_THROWM(Base::CADKernelError, "Failed to make shell: unexpected output shape type "
-                    << shapeType(shape.ShapeType(), true));
+            FC_THROWM(Base::CADKernelError, "Failed to make shell");
         }
 
-        setShape(shape);
-        resetElementMap(tmp.elementMap());
+        *this = tmp;
     }
     catch (Standard_Failure &e) {
         if(!silent)

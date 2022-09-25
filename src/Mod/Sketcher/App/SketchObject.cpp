@@ -338,7 +338,7 @@ void SketchObject::buildShape() {
         Shape.setValue(Part::TopoShape().makECompound(results, Part::OpCodes::Sketch));
     }
 
-    InternalShape.setValue(buildInternals(Shape.getShape()));
+    InternalShape.setValue(buildInternals(Shape.getShape().located()));
 }
 
 Part::TopoShape SketchObject::buildInternals(const Part::TopoShape &edges) const
@@ -9826,7 +9826,8 @@ App::DocumentObject *SketchObject::getSubObject(
     if (auto realType = convertInternalName(indexedName.getType())) {
         auto shapeType = Part::TopoShape::shapeType(realType, true);
         if (shapeType != TopAbs_SHAPE)
-            subshape = InternalShape.getShape().getSubTopoShape(shapeType, indexedName.getIndex(), true);
+            subshape = InternalShape.getShape().located(
+                    Placement.getValue()).getSubTopoShape(shapeType, indexedName.getIndex(), true);
         if (subshape.isNull())
             return nullptr;
     }

@@ -32,6 +32,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <iosfwd>
+#include <TopLoc_Location.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_Wire.hxx>
 #include <TopTools_ListOfShape.hxx>
@@ -152,6 +153,7 @@ public:
     static void convertToMatrix(const gp_Trsf& trsf, Base::Matrix4D& mtrx);
     static Base::Matrix4D convert(const gp_Trsf& trsf);
     static gp_Trsf convert(const Base::Matrix4D& mtrx);
+    static gp_Trsf convert(const Base::Placement& pla);
     //@}
 
     /** @name Subelement management */
@@ -1150,7 +1152,7 @@ public:
      * The location is applied in addition to any current transformation of the shape
      */
     void move(const TopLoc_Location &loc) {
-        _Shape.Move(loc);
+        move(_Shape._Shape, loc);
     }
     /** Return a new shape that is moved to a new location
      *
@@ -1161,9 +1163,7 @@ public:
      *         shape
      */
     TopoShape moved(const TopLoc_Location &loc) const {
-        TopoShape ret(*this);
-        ret._Shape.Move(loc);
-        return ret;
+        return TopoShape(Tag, Hasher, moved(_Shape._Shape, loc));
     }
     /** Move and/or rotate the shape
      *
@@ -1184,7 +1184,48 @@ public:
      *         transformation of the shape
      */
     TopoShape moved(const gp_Trsf &trsf) const {
-        return moved(_Shape._Shape, trsf);
+        return TopoShape(Tag, Hasher, moved(_Shape._Shape, trsf));
+    }
+    /** Move and/or rotate the shape
+     *
+     * @param matrix: transformation matrix (must not have scale)
+     *
+     * The transformation is applied in addition to any current transformation
+     * of the shape
+     */
+    void move(const Base::Matrix4D &matrix) {
+        move(_Shape._Shape, convert(matrix));
+    }
+    /** Return a new transformed shape
+     *
+     * @param matrix: transformation matrix (must not have scale)
+     *
+     * @return Return a shallow copy of the shape transformed to the new
+     *         location that is applied in addition to any current
+     *         transformation of the shape
+     */
+    TopoShape moved(const Base::Matrix4D &matrix) const {
+        return TopoShape(Tag, Hasher, moved(_Shape._Shape, convert(matrix)));
+    }
+    /** Move the shape to a new placement
+     *
+     * @param pla: placement
+     *
+     * The placement is applied in addition to any current transformation of the shape
+     */
+    void move(const Base::Placement &pla) {
+        move(_Shape._Shape, convert(pla));
+    }
+    /** Return a new shape that is moved to a new placement
+     *
+     * @param loc: placement
+     *
+     * @return Return a shallow copy of the shape moved to the new placement
+     *         that is applied in addition to any current transformation of the
+     *         shape
+     */
+    TopoShape moved(const Base::Placement &pla) const {
+        return TopoShape(Tag, Hasher, moved(_Shape._Shape, convert(pla)));
     }
     /** Set a new location for the shape
      *
@@ -1193,10 +1234,10 @@ public:
      * Any previous location of the shape is discarded before applying the
      * input location
      */
-    void locate(const TopLoc_Location &loc) {
-        _Shape.Location(loc);
+    void locate(const TopLoc_Location &loc = TopLoc_Location()) {
+        locate(_Shape._Shape, loc);
     }
-    /** ReturnSet a new location for the shape
+    /** Return a shape at a new location
      *
      * @param loc: shape location
      *
@@ -1204,10 +1245,8 @@ public:
      *         location of the shape is discarded before applying the input
      *         location
      */
-    TopoShape located(const TopLoc_Location &loc) const {
-        TopoShape ret(*this);
-        ret._Shape.Location(loc);
-        return ret;
+    TopoShape located(const TopLoc_Location &loc = TopLoc_Location()) const {
+        return TopoShape(Tag, Hasher, located(_Shape._Shape, loc));
     }
     /** Set a new transformation for the shape
      *
@@ -1217,17 +1256,60 @@ public:
      * the input transformation
      */
     void locate(const gp_Trsf &trsf) {
-        located(_Shape._Shape, trsf);
+        locate(_Shape._Shape, trsf);
     }
     /** Set a new transformation for the shape
      *
      * @param trsf: OCCT transformation (must not have scale)
      *
-     * Any previous transformation of the shape is discarded before applying
-     * the input transformation.
+     * @return Return a shallow copy of the shape with the given
+     *         transformation. Any previous transformation of this shape is
+     *         discarded.
      */
     TopoShape located(const gp_Trsf &trsf) const {
-        return located(_Shape._Shape, trsf);
+        return TopoShape(Tag, Hasher, located(_Shape._Shape, trsf));
+    }
+    /** Set a new transformation for the shape
+     *
+     * @param matrix: transformation matrix (must not have scale)
+     *
+     * Any previous transformation of the shape is discarded before applying
+     * the input transformation
+     */
+    void locate(const Base::Matrix4D &matrix) {
+        locate(_Shape._Shape, convert(matrix));
+    }
+    /** Set a new transformation for the shape
+     *
+     * @param matrix: transformation matrix (must not have scale)
+     *
+     * @return Return a shallow copy of the shape with the given
+     *         transformation. Any previous transformation of this shape is
+     *         discarded.
+     */
+    TopoShape located(const Base::Matrix4D &matrix) const {
+        return TopoShape(Tag, Hasher, located(_Shape._Shape, convert(matrix)));
+    }
+    /** Set a new placement for the shape
+     *
+     * @param pla: shape placement
+     *
+     * Any previous placement of the shape is discarded before applying
+     * the input placement
+     */
+    void locate(const Base::Placement &pla) {
+        locate(_Shape._Shape, convert(pla));
+    }
+    /** Return a shape at a new placement
+     *
+     * @param pla: shape placement
+     *
+     * @return Return a shallow copy of the shape with the given
+     *         placement. Any previous placement of this shape is
+     *         discarded.
+     */
+    TopoShape located(const Base::Placement &pla) const {
+        return TopoShape(Tag, Hasher, located(_Shape._Shape, convert(pla)));
     }
 
     static TopoDS_Shape &move(TopoDS_Shape &s, const TopLoc_Location &);

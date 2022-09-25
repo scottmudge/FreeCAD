@@ -197,6 +197,9 @@ protected:
     virtual void unsetupObject() override;
     virtual void onDocumentRestored() override;
 
+    // Return true if need to apply the shape placement to the Placement property
+    virtual bool shouldApplyPlacement();
+
 private:
     struct ElementCache;
     boost::container::map<std::string, ElementCache> _elementCache;
