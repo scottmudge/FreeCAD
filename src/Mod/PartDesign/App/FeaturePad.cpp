@@ -198,8 +198,7 @@ App::DocumentObjectExecReturn *Pad::_execute(bool makeface, bool fuse)
     Base::Vector3d SketchVector = getProfileNormal();
 
     try {
-        this->positionByPrevious();
-        TopLoc_Location invObjLoc = this->getLocation().Inverted();
+        auto invObjLoc = this->positionByPrevious();
         auto invTrsf = invObjLoc.Transformation();
 
         base.move(invObjLoc);

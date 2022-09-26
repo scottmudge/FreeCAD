@@ -64,7 +64,6 @@ public:
 
 protected:
     void initAddSubType(Type t);
-    virtual bool shouldApplyPlacement() override;
 
 private:
     Type addSubType = Type::Additive;

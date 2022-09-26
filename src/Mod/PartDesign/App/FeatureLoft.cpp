@@ -133,8 +133,7 @@ App::DocumentObjectExecReturn *Loft::execute(void)
  
     try {
         //setup the location
-        this->positionByPrevious();
-        auto invObjLoc = this->getLocation().Inverted(); 
+        auto invObjLoc = this->positionByPrevious();
         if(!base.isNull())
             base.move(invObjLoc);
              

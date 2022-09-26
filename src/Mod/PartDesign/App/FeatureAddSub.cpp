@@ -96,11 +96,6 @@ void FeatureAddSub::onChanged(const App::Property *prop)
     PartDesign::Feature::onChanged(prop);
 }
 
-bool FeatureAddSub::shouldApplyPlacement()
-{
-    return false;
-}
-
 short FeatureAddSub::mustExecute() const
 {
     if (Refine.isTouched())

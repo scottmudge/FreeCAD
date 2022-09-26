@@ -124,8 +124,7 @@ App::DocumentObjectExecReturn *Pipe::execute()
     TopoShape path, auxpath;
     TopLoc_Location invObjLoc;
     try {
-        positionByPrevious();
-        invObjLoc = getLocation().Inverted();
+        invObjLoc = positionByPrevious();
 
         //build the paths
         path = buildPipePath(Spine,invObjLoc);

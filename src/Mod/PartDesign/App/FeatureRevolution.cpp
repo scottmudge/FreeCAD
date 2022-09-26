@@ -132,8 +132,7 @@ App::DocumentObjectExecReturn *Revolution::execute(void)
             sketchshape.move(loc);
         }
 
-        this->positionByPrevious();
-        TopLoc_Location invObjLoc = this->getLocation().Inverted();
+        auto invObjLoc = this->positionByPrevious();
         pnt.Transform(invObjLoc.Transformation());
         dir.Transform(invObjLoc.Transformation());
         base.move(invObjLoc);
