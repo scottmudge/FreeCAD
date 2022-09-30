@@ -90,8 +90,6 @@ void FilletSegmentDelegate::setModelData(QWidget *editor, QAbstractItemModel *mo
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-static const char *_ParamPath = "User parameter:BaseApp/Preferences/General/Widgets/TaskFilletParameters";
-
 TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWidget *parent)
     : TaskDressUpParameters(DressUpView, true, true, parent)
     , ui(new Ui_TaskFilletParameters)
@@ -133,6 +131,7 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
 "value to another. Or, you can use 'Length' to specify the\n"
 "point with absolute distance along the edge."));
 
+    static const char *_ParamPath = "User parameter:BaseApp/Preferences/General/Widgets/TaskFilletParameters";
     auto hParam = App::GetApplication().GetParameterGroupByPath(_ParamPath);
     for (int i=0; i<ui->treeWidgetReferences->header()->count(); ++i) {
         std::string key("ColumnSize");
@@ -169,7 +168,7 @@ void TaskFilletParameters::setBinding(Gui::ExpressionBinding *binding,
         return;
     PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
     App::ObjectIdentifier path(pcFillet->Segments);
-    path << App::ObjectIdentifier::MapComponent(std::string(getGeometryItemText(parent).constData()))
+    path << App::ObjectIdentifier::SimpleComponent(std::string(getGeometryItemText(parent).constData()))
          << App::ObjectIdentifier::ArrayComponent(index.row())
          << App::ObjectIdentifier::SimpleComponent(index.column()==1 ? "Radius" : 
                                                    (index.column()==3 ? "Length" : "Param"));
@@ -296,7 +295,7 @@ void TaskFilletParameters::setSegment(QTreeWidgetItem *item, double param, doubl
 
     auto parent = item->parent();
     App::ObjectIdentifier path(pcFillet->Segments);
-    path << App::ObjectIdentifier::MapComponent(std::string(getGeometryItemText(parent).constData()))
+    path << App::ObjectIdentifier::SimpleComponent(std::string(getGeometryItemText(parent).constData()))
          << App::ObjectIdentifier::ArrayComponent(parent->indexOfChild(item));
     auto linkColor = QVariant::fromValue(QApplication::palette().color(QPalette::Link));
 

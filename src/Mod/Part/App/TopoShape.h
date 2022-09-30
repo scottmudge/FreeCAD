@@ -341,6 +341,7 @@ public:
     void sewShape(double tolerance = 1.0e-06);
     bool fix(double, double, double);
     bool fixSolidOrientation();
+    bool fix();
     bool removeInternalWires(double);
     TopoDS_Shape removeSplitter() const;
     TopoDS_Shape defeaturing(const std::vector<TopoDS_Shape>& s) const;
@@ -2063,8 +2064,61 @@ public:
      *
      * @param source: the source shape
      * @param edges: the edges of the source shape where to make chamfers
-     * @param radius1: the radius of the begining of the chamfer
-     * @param radius2: the radius of the ending of the chamfer
+     * @param size: the size of the of the chamfer edge
+     * @param size2: the size of the other side of the chamfer
+     * @param op: optional string to be encoded into topo naming for indicating
+     *            the operation
+     * @param flipDirection: whether to reverse two sides of the chamfer
+     * @param asAngle: treat size2 as an angle of the chamfer
+     *
+     * @return The original content of this TopoShape is discarded and replaced
+     *         with the new shape. The function returns the TopoShape itself as
+     *         a self reference so that multiple operations can be carried out
+     *         for the same shape in the same line of code.
+     */
+    TopoShape &makEChamfer(const TopoShape &source, const std::vector<TopoShape> &edges, 
+            double size, double size2, const char *op=nullptr, bool flipDirection=false, bool asAngle=false);
+    /* Make chamfer shape
+     *
+     * @param source: the source shape
+     * @param edges: the edges of the source shape where to make chamfers
+     * @param size: the size of the of the chamfer edge
+     * @param size2: the size of the other side of the chamfer
+     * @param op: optional string to be encoded into topo naming for indicating
+     *            the operation
+     * @param flipDirection: whether to reverse two sides of the chamfer
+     * @param asAngle: treat size2 as angle in radian of the chamfer
+     *
+     * @return Return the new shape. The TopoShape itself is not modified.
+     */
+    TopoShape makEChamfer(const std::vector<TopoShape> &edges, 
+            double size, double size2, const char *op=nullptr, bool flipDirection=false, bool asAngle=false) const {
+        return TopoShape(0,Hasher).makEChamfer(*this,edges,size,size2,op,flipDirection,asAngle);
+    }
+
+    /// Chamfer configuration per edge
+    struct ChamferInfo {
+        /// size of the chamfer
+        double size = 0;
+        /// size of the other side of the chamfer
+        double size2 = 0;
+        /// Chamge angle in radian. If non zero, then size2 is ignored
+        double angle = 0;
+        /// Reverse two sides of the chamfer
+        bool flip = false;
+
+        bool operator==(const ChamferInfo &other) const {
+            return size==other.size
+                && size2==other.size2
+                && angle==other.angle
+                && flip==other.flip;
+        }
+    };
+    /* Make chamfer shape with per edge configuration
+     *
+     * @param source: the source shape
+     * @param edges: the edges of the source shape where to make chamfers
+     * @param info: chamfer configuration
      * @param op: optional string to be encoded into topo naming for indicating
      *            the operation
      *
@@ -2073,22 +2127,26 @@ public:
      *         a self reference so that multiple operations can be carried out
      *         for the same shape in the same line of code.
      */
-    TopoShape &makEChamfer(const TopoShape &source, const std::vector<TopoShape> &edges, 
-            double radius1, double radius2, const char *op=nullptr, bool flipDirection=false, bool asAngle=false);
-    /* Make chamfer shape
+    TopoShape &makEChamfer(const TopoShape &source,
+                           const std::vector<TopoShape> &edges,
+                           const std::vector<ChamferInfo> &edgeInfo,
+                           const char *op=nullptr);
+
+    /* Make chamfer shape with per edge configuration
      *
      * @param source: the source shape
      * @param edges: the edges of the source shape where to make chamfers
-     * @param radius1: the radius of the begining of the chamfer
-     * @param radius2: the radius of the ending of the chamfer
+     * @param info: chamfer configuration
      * @param op: optional string to be encoded into topo naming for indicating
      *            the operation
      *
      * @return Return the new shape. The TopoShape itself is not modified.
      */
-    TopoShape makEChamfer(const std::vector<TopoShape> &edges, 
-            double radius1, double radius2, const char *op=nullptr, bool flipDirection=false, bool asAngle=false) const {
-        return TopoShape(0,Hasher).makEChamfer(*this,edges,radius1,radius2,op,flipDirection,asAngle);
+    TopoShape &makEChamfer(const std::vector<TopoShape> &edges,
+                           const std::vector<ChamferInfo> &edgeInfo,
+                           const char *op=nullptr)
+    {
+        return TopoShape(0,Hasher).makEChamfer(*this,edges,edgeInfo,op);
     }
 
     /* Make draft shape

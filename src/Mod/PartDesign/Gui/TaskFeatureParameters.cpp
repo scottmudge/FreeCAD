@@ -74,6 +74,12 @@ void TaskFeatureParameters::slotDeletedObject(const Gui::ViewProviderDocumentObj
         this->vp = nullptr;
 }
 
+void TaskFeatureParameters::slotDeleteDocument(const Gui::Document& Doc)
+{
+    if (this->vp && this->vp->getDocument() == &Doc)
+        this->vp = nullptr;
+}
+
 void TaskFeatureParameters::slotUndoDocument(const Gui::Document &)
 {
     _refresh();

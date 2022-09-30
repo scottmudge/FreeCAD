@@ -71,7 +71,6 @@ protected:
     double getRadius() const;
     void changeEvent(QEvent *e);
     virtual void refresh();
-    void populateSegments();
     void removeSegments();
     void clearSegments();
     void newSegment();

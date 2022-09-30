@@ -24,10 +24,12 @@
 #ifndef PARTDESIGN_FEATUREFILLET_H
 #define PARTDESIGN_FEATUREFILLET_H
 
+#include "FeatureDressUp.h"
+
 #include <App/PropertyStandard.h>
 #include <App/PropertyUnits.h>
 #include <App/PropertyLinks.h>
-#include "FeatureDressUp.h"
+#include <Mod/Part/App/PropertyDressUp.h>
 
 namespace PartDesign
 {

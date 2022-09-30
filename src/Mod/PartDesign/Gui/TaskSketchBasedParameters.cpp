@@ -285,12 +285,14 @@ const QString TaskSketchBasedParameters::onAddSelection(const Gui::SelectionChan
 void TaskSketchBasedParameters::onSelectReference(const bool pressed, const bool edge, const bool face, const bool planar, const bool circle) {
     // Note: Even if there is no solid, App::Plane and Part::Datum can still be selected
 
+    selectingReference = false;
     PartDesign::ProfileBased* pcSketchBased = dynamic_cast<PartDesign::ProfileBased*>(vp->getObject());
     if (pcSketchBased) {
         // The solid this feature will be fused to
         App::DocumentObject* prevSolid = pcSketchBased->getBaseObject( /* silent =*/ true );
 
         if (pressed) {
+            selectingReference = true;
             Gui::Selection().clearSelection();
             Gui::Selection().addSelectionGate
                 (new ReferenceSelection(prevSolid, edge, face, planar, false, false, circle));

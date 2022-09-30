@@ -700,7 +700,7 @@ std::string ObjectIdentifier::getSubPathStr(bool toPython, bool prefix) const {
 
 ObjectIdentifier::Component::Component(const String &_name,
         ObjectIdentifier::Component::typeEnum _type, int _begin, int _end, int _step)
-    : name(_name)
+    : name(_type!=MAP || _name.isRealString() ? _name : String(_name.getString(), true))
     , type(_type)
     , begin(_begin)
     , end(_end)
@@ -710,7 +710,7 @@ ObjectIdentifier::Component::Component(const String &_name,
 
 ObjectIdentifier::Component::Component(String &&_name,
         ObjectIdentifier::Component::typeEnum _type, int _begin, int _end, int _step)
-    : name(std::move(_name))
+    : name(_type!=MAP || _name.isRealString() ? std::move(_name) : String(_name.getString(), true))
     , type(_type)
     , begin(_begin)
     , end(_end)

@@ -240,62 +240,6 @@ protected:
     virtual void saveStream(Base::OutputStream &) const override;
 };
 
-/// A property class to store multi-segment fillet radius
-class PartExport PropertyFilletSegments : public App::Property
-                                        , private App::AtomicPropertyChangeInterface<PropertyFilletSegments>
-{
-    TYPESYSTEM_HEADER_WITH_OVERRIDE();
-
-    friend class AtomicPropertyChange;
-public:
-    PropertyFilletSegments();
-    ~PropertyFilletSegments();
-
-    typedef TopoShape::FilletSegment Segment;
-    typedef TopoShape::FilletSegments Segments;
-
-    void setValue(std::map<std::string, Segments> &&v);
-    void setValue(const std::map<std::string, Segments> &v={});
-    void setValue(const std::string &sub, double param, double radius, double length=0.0);
-    void setValue(const std::string &sub, Segments &&segments);
-    void removeValue(const std::string &sub, double param, double length=0.0);
-    void removeValue(const std::string &sub, int index);
-    void removeValue(const std::string &sub);
-
-    const Segments &getValue(const std::string &sub) const;
-    const std::map<std::string, Segments> &getValue() const;
-
-    void connectLinkProperty(App::PropertyLinkSub &);
-
-    virtual PyObject *getPyObject(void) override;
-    virtual void setPyObject(PyObject *) override;
-
-    virtual void Save (Base::Writer &writer) const override;
-    virtual void Restore(Base::XMLReader &reader) override;
-
-    virtual Property *Copy(void) const override;
-    virtual void Paste(const Property &from) override;
-
-    virtual bool getPyPathValue(const App::ObjectIdentifier &path, Py::Object &res) const override;
-    virtual void getPaths(std::vector<App::ObjectIdentifier> &paths) const override;
-
-    virtual bool setPyPathValue(const App::ObjectIdentifier & path, const Py::Object &value) override;
-
-    virtual void setPathValue(const App::ObjectIdentifier &path, const App::any &value) override;
-    virtual App::any getPathValue(const App::ObjectIdentifier &path) const override;
-
-    virtual unsigned int getMemSize (void) const override;
-    
-    virtual bool isSame(const Property &other) const override;
-
-protected:
-    std::map<std::string, Segments> segmentsMap;
-    std::map<std::string, std::string> referenceUpdates;
-    boost::signals2::scoped_connection connUpdateReference;
-    boost::signals2::scoped_connection connChanged;
-};
-
-
 class PartExport PropertyShapeCache: public App::Property {
 
     TYPESYSTEM_HEADER_WITH_OVERRIDE();

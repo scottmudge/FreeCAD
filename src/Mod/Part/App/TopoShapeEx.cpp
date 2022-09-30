@@ -2246,7 +2246,14 @@ TopoShape &TopoShape::makERevolve(const TopoShape &_base, const gp_Ax1& axis,
         base = base.makEFace(0,face_maker);
     }
     BRepPrimAPI_MakeRevol mkRevol(base.getShape(), axis,d);
-    return makEShape(mkRevol,base,op);
+
+    makEShape(mkRevol,base,op);
+
+    // BRepPrimAPI_MakeRevol sometimes produce invalid surface that has reversed
+    // parameter (e.g. VFirst > VLast, see https://github.com/realthunder/FreeCAD/issues/559).
+    // ShapeFix_Shape seems to be able to fix it.
+    fix();
+    return *this;
 }
 
 TopoShape &TopoShape::makEMirror(const TopoShape &shape, const gp_Ax2 &ax2, const char *op) {
@@ -4726,7 +4733,7 @@ TopoShape &TopoShape::makEFillet(const TopoShape &shape,
 }
 
 TopoShape &TopoShape::makEChamfer(const TopoShape &shape, const std::vector<TopoShape> &edges,
-        double radius1, double radius2, const char *op, bool flipDirection, bool asAngle)
+        double size, double size2, const char *op, bool flipDirection, bool asAngle)
 {
     if(!op) op = Part::OpCodes::Chamfer;
     if(shape.isNull())
@@ -4749,9 +4756,49 @@ TopoShape &TopoShape::makEChamfer(const TopoShape &shape, const std::vector<Topo
         else
             face = shape.findAncestorShape(edge,TopAbs_FACE);
         if(asAngle)
-            mkChamfer.AddDA(radius1, radius2, TopoDS::Edge(edge), TopoDS::Face(face));
+            mkChamfer.AddDA(size, size2, TopoDS::Edge(edge), TopoDS::Face(face));
         else
-            mkChamfer.Add(radius1, radius2, TopoDS::Edge(edge), TopoDS::Face(face));
+            mkChamfer.Add(size, size2, TopoDS::Edge(edge), TopoDS::Face(face));
+    }
+    return makEShape(mkChamfer,shape,op);
+}
+
+TopoShape &TopoShape::makEChamfer(const TopoShape &shape,
+                                  const std::vector<TopoShape> &edges,
+                                  const std::vector<ChamferInfo> &edgeInfo,
+                                  const char *op)
+{
+    if(!op) op = Part::OpCodes::Chamfer;
+    if(shape.isNull())
+        HANDLE_NULL_SHAPE;
+
+    if(edges.empty())
+        HANDLE_NULL_INPUT;
+    
+    if (edges.size() > edgeInfo.size())
+        FC_THROWM(Base::CADKernelError,"Not enough chamfer edge configuration");
+
+    BRepFilletAPI_MakeChamfer mkChamfer(shape.getShape());
+    std::size_t i = 0;
+    for(auto &e : edges) {
+        const auto &edge = e.getShape();
+        const auto &info = edgeInfo[i++];
+        if(e.isNull())
+            HANDLE_NULL_INPUT;
+        if(!shape.findShape(edge))
+            FC_THROWM(Base::CADKernelError,"edge does not belong to the shape");
+        //Add edge to fillet algorithm
+        TopoDS_Shape face;
+        if(info.flip)
+            face = shape.findAncestorsShapes(edge,TopAbs_FACE).back();
+        else
+            face = shape.findAncestorShape(edge,TopAbs_FACE);
+        if(info.angle > 0.0)
+            mkChamfer.AddDA(info.size, info.angle, TopoDS::Edge(edge), TopoDS::Face(face));
+        else if (info.size2 > 0.0)
+            mkChamfer.Add(info.size, info.size2, TopoDS::Edge(edge), TopoDS::Face(face));
+        else
+            mkChamfer.Add(info.size, info.size, TopoDS::Edge(edge), TopoDS::Face(face));
     }
     return makEShape(mkChamfer,shape,op);
 }

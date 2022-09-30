@@ -2988,6 +2988,20 @@ void TopoShape::sewShape(double tolerance)
     *this = makEShape(sew);
 }
 
+bool TopoShape::fix()
+{
+    if (this->_Shape.IsNull())
+        return false;
+
+    ShapeFix_Shape fix(this->_Shape);
+    fix.Perform();
+    BRepCheck_Analyzer aChecker(fix.Shape());
+    if (!aChecker.IsValid())
+        return false;
+    setShape(fix.Shape(), false);
+    return true;
+}
+
 bool TopoShape::fix(double precision, double mintol, double maxtol)
 {
     if (this->_Shape.IsNull())

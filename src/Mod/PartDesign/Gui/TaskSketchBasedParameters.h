@@ -83,6 +83,7 @@ protected:
     QComboBox *fitJoinType = nullptr;
     Gui::PrefQuantitySpinBox * innerFitEdit = nullptr;
     QComboBox *innerFitJoinType = nullptr;
+    bool selectingReference = false;
 };
 
 class TaskDlgSketchBasedParameters : public PartDesignGui::TaskDlgFeatureParameters

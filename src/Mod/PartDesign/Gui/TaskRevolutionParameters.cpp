@@ -240,6 +240,8 @@ void TaskRevolutionParameters::updateUI()
 void TaskRevolutionParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     if (msg.Type == Gui::SelectionChanges::AddSelection) {
+        if (!selectingReference)
+            return;
 
         exitSelectionMode();
         std::vector<std::string> axis;

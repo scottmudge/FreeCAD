@@ -86,6 +86,7 @@ protected:
 private:
     /** Notifies when the object is about to be removed. */
     virtual void slotDeletedObject(const Gui::ViewProviderDocumentObject& Obj);
+    virtual void slotDeleteDocument(const Gui::Document& Doc);
     /** Notifies on undo */
     virtual void slotUndoDocument(const Gui::Document& Doc);
     /** Notifies on redo */

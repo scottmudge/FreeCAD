@@ -2188,12 +2188,15 @@ void View3DInventorViewer::Private::activate()
     owner->getSceneBoundBox(bbox);
 
     static const App::PropertyPrecision::Constraints _epsilon_cstr(0.0,1000.0,1e-5);
-    pcShadowGroup->epsilon = _shadowParam<App::PropertyPrecision>(doc, "Epsilon",
+    auto epsilon = _shadowParam<App::PropertyPrecision>(doc, "Epsilon",
             ViewParams::docShadowEpsilon(), ViewParams::getShadowEpsilon(),
             [](App::PropertyFloatConstraint &prop) {
                 if(prop.getConstraints() != &_epsilon_cstr)
                     prop.setConstraints(&_epsilon_cstr);
             });
+    if (epsilon == 0.0)
+        epsilon = 1e-5;
+    pcShadowGroup->epsilon = epsilon;
 
     static const App::PropertyFloatConstraint::Constraints _threshold_cstr(0.0,1.0,0.1);
     pcShadowGroup->threshold = _shadowParam<App::PropertyFloatConstraint>(doc, "Threshold",

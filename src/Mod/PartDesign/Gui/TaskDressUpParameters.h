@@ -85,6 +85,7 @@ protected:
     bool populate(bool refresh=false);
     virtual void refresh();
     void showMessage(const char *msg=nullptr);
+    virtual void onNewItem(QTreeWidgetItem *) {}
 
     QTreeWidgetItem *getCurrentItem() const;
 
@@ -121,6 +122,7 @@ protected:
     boost::signals2::scoped_connection connUndo;
     boost::signals2::scoped_connection connRedo;
     boost::signals2::scoped_connection connDelete;
+    boost::signals2::scoped_connection connDeleteDoc;
 
     QTimer *timer = nullptr;
     QObject *enteredObject = nullptr;

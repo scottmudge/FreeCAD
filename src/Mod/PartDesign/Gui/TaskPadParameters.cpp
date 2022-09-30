@@ -410,6 +410,8 @@ void TaskPadParameters::updateUI(int index)
 void TaskPadParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     if (msg.Type == Gui::SelectionChanges::AddSelection) {
+        if (!selectingReference)
+            return;
         // if we have an edge selection for the pad direction
         if (!selectionFace) {
             removeBlinkLabel(ui->labelEdge);
@@ -423,7 +425,7 @@ void TaskPadParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
                 fillDirectionCombo();
             }
         }
-        else {
+        else if (selectionFace) {
             QString refText = onAddSelection(msg);
             if (refText.length() > 0) {
                 ui->lineFaceName->blockSignals(true);

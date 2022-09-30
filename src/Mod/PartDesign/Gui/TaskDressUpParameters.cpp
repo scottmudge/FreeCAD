@@ -90,6 +90,12 @@ TaskDressUpParameters::TaskDressUpParameters(ViewProviderDressUp *DressUpView, b
                 this->DressUpView = nullptr;
         });
 
+    connDeleteDoc = Gui::Application::Instance->signalDeleteDocument.connect(
+        [this](const Gui::Document &Doc) {
+            if(this->DressUpView && this->DressUpView->getDocument() == &Doc)
+                this->DressUpView = nullptr;
+        });
+
     timer = new QTimer(this);
     timer->setSingleShot(true);
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimer()));
@@ -478,6 +484,7 @@ bool TaskDressUpParameters::syncItems(const std::vector<App::SubObjectT> &sels) 
                 setGeometryItemText(item, element.c_str());
                 item->setSelected(true);
                 subs.push_back(std::move(element));
+                onNewItem(item);
             }
         }
     }

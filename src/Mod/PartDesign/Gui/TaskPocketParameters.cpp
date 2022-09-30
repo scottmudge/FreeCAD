@@ -373,6 +373,9 @@ void TaskPocketParameters::updateUI(int index)
 void TaskPocketParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     if (msg.Type == Gui::SelectionChanges::AddSelection) {
+        if (!selectingReference)
+            return;
+
         QString refText = onAddSelection(msg);
         if (refText.length() > 0) {
             ui->lineFaceName->blockSignals(true);
