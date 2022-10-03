@@ -131,9 +131,11 @@ public:
     /// signal on change of document's modified status
     mutable boost::signals2::signal<void (const Gui::Document& doc)> signalChangedModified;
     /// signal on attaching new view
-    mutable boost::signals2::signal<void (BaseView *, bool passive)> signalAttachView;
+    mutable boost::signals2::signal<void (const BaseView &, bool passive)> signalAttachView;
     /// signal on detaching view
-    mutable boost::signals2::signal<void (BaseView *, bool passive)> signalDetachView;
+    mutable boost::signals2::signal<void (const BaseView &, bool passive)> signalDetachView;
+    /// signal on changed view property
+    mutable boost::signals2::signal<void (const Gui::BaseView &, const App::Property &)> signalChangedView;
     /// signal on changes in show on top objects
     mutable boost::signals2::signal<void (int, const App::SubObjectT &)> signalOnTopObject;
     //@}

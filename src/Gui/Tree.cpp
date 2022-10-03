@@ -6966,7 +6966,7 @@ DocumentItem::DocumentItem(const Gui::Document* doc, QTreeWidgetItem * parent)
     connectChangedModified = doc->signalChangedModified.connect([this](const Document &) { setDocumentLabel(); });
 
     connectDetachView = doc->signalDetachView.connect(
-        [this](BaseView *, bool passive) {
+        [this](const BaseView &, bool passive) {
             if (!passive && document()->getMDIViews().empty())
                 this->setExpanded(false);
         });

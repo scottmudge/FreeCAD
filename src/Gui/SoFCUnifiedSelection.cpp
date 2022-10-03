@@ -870,14 +870,17 @@ void SoFCUnifiedSelection::Private::applyOverrideMode(SoState * state) const
         else if (mode == DisplayModeHiddenLine) {
             hiddenline = true;
             mode = DisplayModeFlatLines;
-            shading = ViewParams::getHiddenLineShaded();
-            if (ViewParams::getHiddenLineWidth() >= 1.0) {
-                SoLineWidthElement::set(state, master, ViewParams::getHiddenLineWidth());
-                SoOverrideElement::setLineWidthOverride(state, master, TRUE);
-            }
-            if (ViewParams::getHiddenLinePointSize() >= 1.0) {
-                SoPointSizeElement::set(state, master, ViewParams::getHiddenLinePointSize());
-                SoOverrideElement::setPointSizeOverride(state, master, TRUE);
+            if (pcViewer) {
+                const auto &config = pcViewer->getHiddenLineConfig();
+                shading = config.shaded;
+                if (config.lineWidth >= 1.0) {
+                    SoLineWidthElement::set(state, master, config.lineWidth);
+                    SoOverrideElement::setLineWidthOverride(state, master, TRUE);
+                }
+                if (config.pointSize >= 1.0) {
+                    SoPointSizeElement::set(state, master, config.pointSize);
+                    SoOverrideElement::setPointSizeOverride(state, master, TRUE);
+                }
             }
         }
         else if (mode == DisplayModeNoShading) {
@@ -887,7 +890,8 @@ void SoFCUnifiedSelection::Private::applyOverrideMode(SoState * state) const
         else if (mode == DisplayModeAsIs)
             mode = SbName::empty();
 
-        SoFCDisplayModeElement::set(state, master, mode, hiddenline, ViewParams::getHiddenLineShowOutline());
+        SoFCDisplayModeElement::set(state, master, mode, hiddenline,
+                pcViewer ? &pcViewer->getHiddenLineConfig() : nullptr);
     }
 
     if (!shading && state->isElementEnabled(SoLightModelElement::getClassStackIndex())) {

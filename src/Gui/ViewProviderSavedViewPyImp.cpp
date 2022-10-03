@@ -80,8 +80,8 @@ static bool getOptions(PyObject *tuple, ViewProviderSavedView::CaptureOptions &o
                 options |= ViewProviderSavedView::CaptureOption::ShowOnTop;
             else if (boost::iequals(opt, "camera"))
                 options |= ViewProviderSavedView::CaptureOption::Camera;
-            else if (boost::iequals(opt, "shadow"))
-                options |= ViewProviderSavedView::CaptureOption::Shadow;
+            else if (boost::iequals(opt, "drawstyle"))
+                options |= ViewProviderSavedView::CaptureOption::DrawStyle;
             else if (boost::iequals(opt, "clippings"))
                 options |= ViewProviderSavedView::CaptureOption::Clippings;
             else if (boost::iequals(opt, "all"))

@@ -1471,6 +1471,8 @@ void ToolTip::showText(const QPoint & pos,
 {
     ToolTip* tip = instance();
     if (!text.isEmpty()) {
+        if (!overlay && ViewParams::getToolTipDisable())
+            return;
         tip->pos = pos;
         tip->text = text;
         tip->iconPixmap = QPixmap();
@@ -1495,6 +1497,8 @@ void ToolTip::showText(const QPoint & pos,
 {
     ToolTip* tip = instance();
     if (!text.isEmpty() || !iconPath.isEmpty()) {
+        if (ViewParams::getToolTipDisable())
+            return;
         tip->pos = pos;
         tip->text = text;
         tip->iconPath = iconPath;
@@ -1519,6 +1523,8 @@ void ToolTip::showText(const QPoint & pos,
 {
     ToolTip* tip = instance();
     if (!text.isEmpty() || !pixmap.isNull()) {
+        if (ViewParams::getToolTipDisable())
+            return;
         tip->pos = pos;
         tip->text = text;
         tip->iconPath.clear();
@@ -1632,6 +1638,8 @@ void ToolTip::onHideTimer(bool hideOverlay)
 }
 
 bool ToolTip::checkToolTip(QWidget *w, QHelpEvent *helpEvent) {
+    if (ViewParams::getToolTipDisable())
+        return true;
     if (ViewParams::getToolTipIconSize() <= 0)
         return false;
     QString tooltip;

@@ -279,6 +279,9 @@ public:
   bool shadowmapping = false;
   bool transpshadowmapping = false;
 
+  SoFCDisplayModeElement::HiddenLineConfig hiddenLineConfig;
+  bool showHiddenLine = false;
+
   HatchTexture *hatchtexture = nullptr;
 
   char stats[512];
@@ -1181,9 +1184,9 @@ SoFCRendererP::renderLines(SoState *state, int array, DrawEntry &draw_entry)
 {
   if (this->depthwriteonly || this->shadowmapping)
     return;
-  bool noseam = ViewParams::getHiddenLineHideSeam()
-    && draw_entry.ventry->partidx < 0
-    && draw_entry.material->outline;
+  bool noseam = draw_entry.ventry->partidx < 0
+                  && draw_entry.material->outline
+                  && this->hiddenLineConfig.hideSeam;
   pauseShadowRender(state, true);
   draw_entry.ventry->cache->renderLines(state, array, draw_entry.ventry->partidx, noseam);
   ++this->drawcallcount;
@@ -1194,9 +1197,10 @@ SoFCRendererP::renderPoints(SoGLRenderAction *action, int array, DrawEntry &draw
 {
   if (this->depthwriteonly || this->shadowmapping)
     return;
-  if (!ViewParams::getHiddenLineHideVertex()
-      || draw_entry.ventry->partidx >= 0
-      || !draw_entry.material->outline) {
+  if (draw_entry.ventry->partidx >= 0
+      || !draw_entry.material->outline
+      || !this->hiddenLineConfig.hideVertex)
+  {
     pauseShadowRender(action->getState(), true);
     draw_entry.ventry->cache->renderPoints(action, array, draw_entry.ventry->partidx);
     ++this->drawcallcount;
@@ -1213,8 +1217,8 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
       || this->depthwriteonly
       || draw_entry.material->type != Material::Triangle
       || (!highlight
-          && !ViewParams::getHiddenLinePerFaceOutline()
-          && ViewParams::getHiddenLineSceneOutline())
+          && !this->hiddenLineConfig.perFaceOutline
+          && this->hiddenLineConfig.sceneOutline)
       || (!draw_entry.material->outline
           && (!ViewParams::getShowPreSelectedFaceOutline()
               || !highlight
@@ -1227,12 +1231,12 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
   int dummyparts[1];
   const int *partindices = nullptr;
   if ((this->material.clippers.getNum() && drawidx < 0)
-      || (!highlight && ViewParams::getHiddenLinePerFaceOutline()
-                     && !ViewParams::getHiddenLineSceneOutline()
-                     && ViewParams::getHiddenLineOutlineWidth() > 0.0))
+      || (!highlight && this->hiddenLineConfig.perFaceOutline
+                     && !this->hiddenLineConfig.sceneOutline
+                     && this->hiddenLineConfig.outlineWidth > 0.0f))
   {
     numparts = draw_entry.ventry->cache->getNumFaceParts();
-  } else if (ViewParams::getHiddenLinePerFaceOutline() && numparts && drawidx < 0) {
+  } else if (this->hiddenLineConfig.perFaceOutline && numparts && drawidx < 0) {
     partindices = draw_entry.ventry->cache->getNonFlatParts();
   } else {
     numparts = 1;
@@ -1289,8 +1293,8 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
         w = std::min<float>(w, std::max<float>(linewidth, ViewParams::getSelectionLineMaxWidth()));
       linewidth = w;
     }
-    if (linewidth < ViewParams::getHiddenLineOutlineWidth())
-      linewidth = ViewParams::getHiddenLineOutlineWidth();
+    if (linewidth < this->hiddenLineConfig.outlineWidth)
+      linewidth = this->hiddenLineConfig.outlineWidth;
     if (linewidth != current_linewidth) {
       current_linewidth = linewidth;
       glLineWidth(linewidth*1.5f);
@@ -1313,7 +1317,7 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
     draw_entry.ventry->cache->renderTriangles(state,
                                               SoFCVertexCache::NON_SORTED_ARRAY,
                                               partidx);
-    if (ViewParams::getHiddenLineHideVertex()) {
+    if (this->hiddenLineConfig.hideVertex) {
       glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
       draw_entry.ventry->cache->renderTriangles(state,
                                                 SoFCVertexCache::NON_SORTED_ARRAY,
@@ -1342,8 +1346,8 @@ SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
 
   if (this->transpshadowmapping
       || this->shadowmapping
-      || !ViewParams::getHiddenLineSceneOutline()
-      || !SoFCDisplayModeElement::showHiddenLines(state))
+      || !this->showHiddenLine
+      || !this->hiddenLineConfig.sceneOutline)
     return;
 
   glPushAttrib(GL_ENABLE_BIT
@@ -1360,12 +1364,16 @@ SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
   glDisable(GL_CULL_FACE);
   glDisable(GL_LINE_STIPPLE);
   // glDisable(GL_DEPTH_TEST);
-  auto col = ViewParams::getHiddenLineColor();
+  unsigned col;
+  if (auto pColor = SoFCDisplayModeElement::getLineColor(state))
+    col = pColor->getPackedValue(0.0);
+  else
+    col = ViewParams::getHiddenLineColor();
   glColor3ub((unsigned char)((col>>24)&0xff),
              (unsigned char)((col>>16)&0xff),
              (unsigned char)((col>>8)&0xff));
 
-  float linewidth = std::max(1.0, ViewParams::getHiddenLineOutlineWidth());
+  float linewidth = std::max(1.0f, hiddenLineConfig.outlineWidth);
   glLineWidth(linewidth*1.5f);
 
   glClear(GL_STENCIL_BUFFER_BIT);
@@ -1402,7 +1410,7 @@ SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
     ++this->drawcallcount;
   }
 
-  if (ViewParams::getHiddenLineHideVertex()) {
+  if (hiddenLineConfig.hideVertex) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
     glPointSize(linewidth);
     for (const auto &draw_entry : this->drawentries) {
@@ -1813,7 +1821,7 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
         if (&draw_entries != &this->slentries
             && &draw_entries != &this->hlentries
             && draw_entry.material->outline
-            && ViewParams::getHiddenLineHideFace())
+            && this->hiddenLineConfig.hideFace)
           continue;
 
         pauseShadowRender(state, pauseshadow
@@ -1878,8 +1886,8 @@ SoFCRendererP::renderTransparency(SoGLRenderAction * action,
   bool notriangle = false;
   if (&draw_entries != &this->slentries
       && &draw_entries != &this->hlentries
-      && SoFCDisplayModeElement::showHiddenLines(state)
-      && ViewParams::getHiddenLineHideFace())
+      && this->showHiddenLine
+      && this->hiddenLineConfig.hideFace)
   {
     notriangle = true;
   }
@@ -2000,6 +2008,8 @@ SoFCRenderer::render(SoGLRenderAction * action)
   PRIVATE(this)->shadowrendering = (shapestyleflags & SoShapeStyleElement::SHADOWS) ? true : false;
   PRIVATE(this)->shadowmapping = (shapestyleflags & SoShapeStyleElement::SHADOWMAP) ? true : false;
   PRIVATE(this)->transpshadowmapping = PRIVATE(this)->shadowmapping && (shapestyleflags & 0x01000000);
+
+  PRIVATE(this)->showHiddenLine = SoFCDisplayModeElement::showHiddenLines(state, &PRIVATE(this)->hiddenLineConfig);
 
   PRIVATE(this)->section_entries.clear();
   PRIVATE(this)->transp_section_entries.clear();

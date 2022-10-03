@@ -22,6 +22,7 @@
 
 
 #include "PreCompiled.h"
+#include "Renderer/Renderer.h"
 
 #ifndef _PreComp_
 # include <algorithm>
@@ -115,6 +116,7 @@ struct DocumentP
     std::set<const App::DocumentObject*> _editObjs;
 
     std::vector<CameraInfo>     _savedViews;
+    std::map<int, std::string>  _view3DContents;
 
     Application*    _pcAppWnd;
     // the doc/Document
@@ -1652,6 +1654,7 @@ void Document::RestoreDocFile(Base::Reader &reader)
         int cameraExtra = xmlReader.getAttributeAsInteger("extra", "0");
         int cameraBinding = xmlReader.getAttributeAsInteger("binding", "0");
         int cameraId = xmlReader.getAttributeAsInteger("id", "0");
+        int view3dCount = xmlReader.getAttributeAsInteger("view3d", "0");
 
         cameraSettings.clear();
         if(xmlReader.hasAttribute("settings"))
@@ -1671,6 +1674,13 @@ void Document::RestoreDocFile(Base::Reader &reader)
                 saveCameraSettings(xmlReader.readCharacters().c_str(),&settings);
                 d->_savedViews.emplace_back(id, binding, std::move(settings));
             }
+        }
+
+        d->_view3DContents.clear();
+        for (int i=0; i<view3dCount; ++i) {
+            xmlReader.readElement("View3D");
+            int id = xmlReader.getAttributeAsInteger("id");
+            d->_view3DContents[id] = xmlReader.readCharacters();
         }
     }
 
@@ -1756,6 +1766,16 @@ void Document::slotFinishRestoreDocument(const App::Document& doc)
                     view->getViewer()->checkGroupOnTop(SelectionChanges(
                                 SelectionChanges::AddSelection,
                                 docName, v.first.c_str(), v.second.c_str()), true);
+                }
+            }
+            auto iter = d->_view3DContents.find(info.id);
+            if (iter != d->_view3DContents.end()) {
+                try {
+                    std::istringstream in(iter->second);
+                    Base::XMLReader reader("<memory>", in);
+                    view->Restore(reader);
+                } catch (Base::Exception &e) {
+                    e.ReportException();
                 }
             }
         }
@@ -1859,6 +1879,7 @@ void Document::SaveDocFile (Base::Writer &writer) const
     // save camera settings
     std::list<MDIView*> mdi = getMDIViews();
     std::vector<CameraInfo> cameraInfo;
+    std::vector<View3DInventor*> view3Ds;
     bool first = true;
     for (std::list<MDIView*>::iterator it = mdi.begin(); it != mdi.end(); ++it) {
         auto v = *it;
@@ -1880,13 +1901,15 @@ void Document::SaveDocFile (Base::Writer &writer) const
             auto binding = view->boundView();
             cameraInfo.emplace_back(view->getID(),
                     binding?binding->getID():0, std::move(settings));
+            view3Ds.push_back(view);
         }
     }
 
     writer.Stream() << writer.ind() << "<Camera";
     if(cameraInfo.size())
         writer.Stream() << " extra=\"" << cameraInfo.size()-1 << "\" id=\""
-            << cameraInfo[0].id << "\" binding=\"" << cameraInfo[0].binding << "\"";
+            << cameraInfo[0].id << "\" binding=\"" << cameraInfo[0].binding << "\""
+            << " view3d=\"" << view3Ds.size() << "\"";
     if(writer.getFileVersion() > 1) {
         writer.Stream() << ">\n";
         writer.beginCharStream(false) << '\n' << getCameraSettings();
@@ -1905,6 +1928,15 @@ void Document::SaveDocFile (Base::Writer &writer) const
         }
     }
     d->_savedViews = std::move(cameraInfo);
+
+    Base::StringWriter stringWriter;
+    for (auto view : view3Ds) {
+        writer.Stream() << writer.ind() << "<View3D id=\"" << view->getID() << "\">";
+        stringWriter.clear();
+        view->Save(stringWriter);
+        writer.beginCharStream(false) << '\n' << stringWriter.getString();
+        writer.endCharStream() << '\n' << writer.ind() << "</View3D>\n";
+    }
 
     writer.decInd(); // indentation for camera settings
     writer.Stream() << "</Document>\n";
@@ -2132,7 +2164,6 @@ Gui::MDIView* Document::cloneView(Gui::MDIView* oldview)
         View3DInventor* firstView = static_cast<View3DInventor*>(oldview);
         std::string overrideMode = firstView->getViewer()->getOverrideMode();
         view3D->getViewer()->setOverrideMode(overrideMode);
-        Application::Instance->signalViewModeChanged(view3D);
 
         view3D->getViewer()->setAxisCross(firstView->getViewer()->hasAxisCross());
 
@@ -2202,7 +2233,8 @@ void Document::attachView(Gui::BaseView* pcView, bool bPassiv)
         d->baseViews.push_back(pcView);
     else
         d->passiveViews.push_back(pcView);
-    signalAttachView(pcView, bPassiv);
+    signalAttachView(*pcView, bPassiv);
+    Application::Instance->signalAttachView(*pcView, bPassiv);
 }
 
 void Document::detachView(Gui::BaseView* pcView, bool bPassiv)
@@ -2211,7 +2243,8 @@ void Document::detachView(Gui::BaseView* pcView, bool bPassiv)
         if (find(d->passiveViews.begin(),d->passiveViews.end(),pcView)
             != d->passiveViews.end())
         {
-            signalDetachView(pcView, true);
+            signalDetachView(*pcView, true);
+            Application::Instance->signalDetachView(*pcView, true);
             d->passiveViews.remove(pcView);
         }
     }
@@ -2219,7 +2252,8 @@ void Document::detachView(Gui::BaseView* pcView, bool bPassiv)
         if (find(d->baseViews.begin(),d->baseViews.end(),pcView)
             != d->baseViews.end())
         {
-            signalDetachView(pcView, false);
+            signalDetachView(*pcView, false);
+            Application::Instance->signalDetachView(*pcView, false);
             d->baseViews.remove(pcView);
         }
 

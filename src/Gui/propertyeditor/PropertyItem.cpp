@@ -614,6 +614,9 @@ void PropertyItem::setPropertyValue(const QString& value)
             App::Document* doc = obj->getDocument();
             ss << "FreeCADGui.getDocument('" << doc->getName() << "').getObject('"
                << obj->getNameInDocument() << "').";
+        } else if (parent->isDerivedFrom(MDIView::getClassTypeId())) {
+            auto doc = static_cast<MDIView*>(parent)->getAppDocument();
+            ss << "FreeCADGui.getDocument('" << doc->getName() << "').ActiveView.";
         } else
             continue;
         ss << parent->getPropertyPrefix() << prop->getName()

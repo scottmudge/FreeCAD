@@ -37,7 +37,7 @@
 #include "Document.h"
 #include "Application.h"
 #include "NavigationStyle.h"
-#include "View3DPy.h"
+#include "View3DInventorPy.h"
 
 
 using namespace Gui;

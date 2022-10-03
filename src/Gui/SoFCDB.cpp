@@ -82,7 +82,7 @@
 #include "GestureNavigationStyle.h"
 #include "Flag.h"
 #include "SelectionObject.h"
-#include "View3DPy.h"
+#include "View3DInventor.h"
 
 using namespace Gui;
 using namespace Gui::Inventor;

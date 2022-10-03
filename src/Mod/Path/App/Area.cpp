@@ -75,10 +75,11 @@
 # include <ShapeFix_ShapeTolerance.hxx>
 # include <ShapeExtend_WireData.hxx>
 # include <ShapeFix_Wire.hxx>
-# include <ShapeFix_Wireframe.hxx>
 # include <ShapeAnalysis_FreeBounds.hxx>
 # include <TopTools_HSequenceOfShape.hxx>
 #endif
+
+#include <ShapeFix_Wireframe.hxx>
 
 #include <Base/Exception.h>
 #include <Base/Tools.h>

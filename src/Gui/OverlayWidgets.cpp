@@ -2009,6 +2009,18 @@ isNear(const QPoint &a, const QPoint &b, int tol = 16)
     return d.x()*d.x() + d.y()*d.y() < tol;
 }
 
+void OverlayTitleBar::endDrag()
+{
+    if (_Dragging == this) {
+        _Dragging = nullptr;
+        setCursor(Qt::OpenHandCursor);
+        if (_DragFrame)
+            _DragFrame->hide();
+        if (_DragFloating)
+            _DragFrame->hide();
+    }
+}
+
 void OverlayTitleBar::mouseMoveEvent(QMouseEvent *me)
 {
     if (ignoreMouse) {
@@ -2031,12 +2043,7 @@ void OverlayTitleBar::mouseMoveEvent(QMouseEvent *me)
         return;
 
     if (!(me->buttons() & Qt::LeftButton)) {
-        _Dragging = nullptr;
-        setCursor(Qt::OpenHandCursor);
-        if (_DragFrame)
-            _DragFrame->hide();
-        if (_DragFloating)
-            _DragFrame->hide();
+        endDrag();
         return;
     }
     OverlayManager::instance()->dragDockWidget(me->globalPos(),
@@ -2116,14 +2123,8 @@ void OverlayTitleBar::mouseReleaseEvent(QMouseEvent *me)
 
 void OverlayTitleBar::keyPressEvent(QKeyEvent *ke)
 {
-    if (_Dragging == this && ke->key() == Qt::Key_Escape) {
-        setCursor(Qt::OpenHandCursor);
-        _Dragging = nullptr;
-        if (_DragFrame)
-            _DragFrame->hide();
-        if (_DragFloating)
-            _DragFrame->hide();
-    }
+    if (_Dragging == this && ke->key() == Qt::Key_Escape)
+        endDrag();
 }
 
 
@@ -4195,7 +4196,13 @@ bool OverlayManager::eventFilter(QObject *o, QEvent *ev)
             if (d->mouseTransparent) {
                 d->setMouseTransparent(false);
                 accepted = true;
-            } else {
+            } else if (_Dragging && _Dragging != o) {
+                if (auto titleBar = qobject_cast<OverlayTitleBar*>(_Dragging))
+                    titleBar->endDrag();
+                else if (auto splitHandle = qobject_cast<OverlaySplitterHandle*>(_Dragging))
+                    splitHandle->endDrag();
+            }
+            else if (!_Dragging) {
                 for (OverlayTabWidget *tabWidget : _Overlays) {
                     if (tabWidget->onEscape())
                         accepted = true;
@@ -4236,6 +4243,12 @@ bool OverlayManager::eventFilter(QObject *o, QEvent *ev)
     case QEvent::MouseButtonRelease:
     case QEvent::MouseButtonPress:
     case QEvent::MouseMove: {
+        if (_Dragging && _Dragging != o) {
+            if (auto titleBar = qobject_cast<OverlayTitleBar*>(_Dragging))
+                titleBar->endDrag();
+            else if (auto splitHandle = qobject_cast<OverlaySplitterHandle*>(_Dragging))
+                splitHandle->endDrag();
+        }
         QWidget *grabber = QWidget::mouseGrabber();
         d->lastIntercept = nullptr;
         if (d->mouseTransparent || (grabber && grabber != d->_trackingOverlay))
@@ -4423,6 +4436,10 @@ void OverlayManager::Private::interceptEvent(QWidget *widget, QEvent *ev)
     case QEvent::Wheel: {
         auto we = static_cast<QWheelEvent*>(ev);
         lastIntercept = getChildAt(widget, we->globalPos());
+        for (auto parent=lastIntercept->parentWidget(); parent; parent=parent->parentWidget()) {
+            if (qobject_cast<QGraphicsView*>(parent))
+                lastIntercept = parent;
+        }
 #if QT_VERSION >= QT_VERSION_CHECK(5,12,0)
         QWheelEvent wheelEvent(lastIntercept->mapFromGlobal(we->globalPos()),
                                we->globalPos(),

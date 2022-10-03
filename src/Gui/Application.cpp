@@ -75,7 +75,7 @@
 #include "Document.h"
 #include "DocumentPy.h"
 #include "View.h"
-#include "View3DPy.h"
+#include "View3DInventorPy.h"
 #include "UiLoader.h"
 #include "WidgetFactory.h"
 #include "Command.h"
@@ -94,7 +94,6 @@
 #include "PythonConsolePy.h"
 #include "PythonDebugger.h"
 #include "MDIViewPy.h"
-#include "View3DPy.h"
 #include "DlgOnlineHelpImp.h"
 #include "SpaceballEvent.h"
 #include "Control.h"
@@ -519,8 +518,6 @@ Application::Application(bool GUIenabled)
     OutputStdout                ::init_type();
     OutputStderr                ::init_type();
     PythonStdin                 ::init_type();
-    MDIViewPy                   ::init_type();
-    View3DInventorPy            ::init_type();
     View3DInventorViewerPy      ::init_type();
     AbstractSplitViewPy         ::init_type();
 

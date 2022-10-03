@@ -232,6 +232,7 @@ public:
     unsigned long SelectionStackSize;
     long DefaultDrawStyle;
     long ToolTipIconSize;
+    bool ToolTipDisable;
 
     // Auto generated code (Tools/params_utils.py:203)
     ViewParamsP() {
@@ -590,6 +591,8 @@ public:
         funcs["DefaultDrawStyle"] = &ViewParamsP::updateDefaultDrawStyle;
         ToolTipIconSize = handle->GetInt("ToolTipIconSize", 64);
         funcs["ToolTipIconSize"] = &ViewParamsP::updateToolTipIconSize;
+        ToolTipDisable = handle->GetBool("ToolTipDisable", false);
+        funcs["ToolTipDisable"] = &ViewParamsP::updateToolTipDisable;
     }
 
     // Auto generated code (Tools/params_utils.py:217)
@@ -1359,6 +1362,10 @@ public:
     // Auto generated code (Tools/params_utils.py:238)
     static void updateToolTipIconSize(ViewParamsP *self) {
         self->ToolTipIconSize = self->handle->GetInt("ToolTipIconSize", 64);
+    }
+    // Auto generated code (Tools/params_utils.py:238)
+    static void updateToolTipDisable(ViewParamsP *self) {
+        self->ToolTipDisable = self->handle->GetBool("ToolTipDisable", false);
     }
 };
 
@@ -6280,7 +6287,34 @@ void ViewParams::removeToolTipIconSize() {
     instance()->handle->RemoveInt("ToolTipIconSize");
 }
 
-// Auto generated code (Gui/ViewParams.py:484)
+// Auto generated code (Tools/params_utils.py:288)
+const char *ViewParams::docToolTipDisable() {
+    return "";
+}
+
+// Auto generated code (Tools/params_utils.py:294)
+const bool & ViewParams::getToolTipDisable() {
+    return instance()->ToolTipDisable;
+}
+
+// Auto generated code (Tools/params_utils.py:300)
+const bool & ViewParams::defaultToolTipDisable() {
+    const static bool def = false;
+    return def;
+}
+
+// Auto generated code (Tools/params_utils.py:307)
+void ViewParams::setToolTipDisable(const bool &v) {
+    instance()->handle->SetBool("ToolTipDisable",v);
+    instance()->ToolTipDisable = v;
+}
+
+// Auto generated code (Tools/params_utils.py:314)
+void ViewParams::removeToolTipDisable() {
+    instance()->handle->RemoveBool("ToolTipDisable");
+}
+
+// Auto generated code (Gui/ViewParams.py:487)
 const std::vector<QString> ViewParams::AnimationCurveTypes = {
     QStringLiteral("Linear"),
     QStringLiteral("InQuad"),
@@ -6325,7 +6359,7 @@ const std::vector<QString> ViewParams::AnimationCurveTypes = {
     QStringLiteral("OutInBounce"),
 };
 
-// Auto generated code (Gui/ViewParams.py:492)
+// Auto generated code (Gui/ViewParams.py:495)
 static const char *DrawStyleNames[] = {
     QT_TRANSLATE_NOOP("DrawStyle", "As Is"),
     QT_TRANSLATE_NOOP("DrawStyle", "Points"),
@@ -6336,9 +6370,10 @@ static const char *DrawStyleNames[] = {
     QT_TRANSLATE_NOOP("DrawStyle", "Flat Lines"),
     QT_TRANSLATE_NOOP("DrawStyle", "Tessellation"),
     QT_TRANSLATE_NOOP("DrawStyle", "Shadow"),
+    nullptr,
 };
 
-// Auto generated code (Gui/ViewParams.py:501)
+// Auto generated code (Gui/ViewParams.py:505)
 static const char *DrawStyleDocs[] = {
     QT_TRANSLATE_NOOP("DrawStyle", "Draw style, normal display mode"),
     QT_TRANSLATE_NOOP("DrawStyle", "Draw style, show points only"),
@@ -6352,7 +6387,13 @@ static const char *DrawStyleDocs[] = {
 };
 
 namespace Gui {
-// Auto generated code (Gui/ViewParams.py:510)
+// Auto generated code (Gui/ViewParams.py:515)
+const char **drawStyleNames()
+{
+    return DrawStyleNames;
+}
+
+// Auto generated code (Gui/ViewParams.py:522)
 const char *drawStyleNameFromIndex(int i)
 {
     if (i < 0 || i>= 9)
@@ -6360,7 +6401,7 @@ const char *drawStyleNameFromIndex(int i)
     return DrawStyleNames[i];
 }
 
-// Auto generated code (Gui/ViewParams.py:519)
+// Auto generated code (Gui/ViewParams.py:531)
 int drawStyleIndexFromName(const char *name)
 {
     if (!name)
@@ -6372,7 +6413,7 @@ int drawStyleIndexFromName(const char *name)
     return -1;
 }
 
-// Auto generated code (Gui/ViewParams.py:532)
+// Auto generated code (Gui/ViewParams.py:544)
 const char *drawStyleDocumentation(int i)
 {
     if (i < 0 || i>= 9)

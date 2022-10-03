@@ -72,6 +72,8 @@ class ImportExport ImportOCAF2
 public:
     ImportOCAF2(Handle(TDocStd_Document) h, App::Document* d, const std::string& name);
     virtual ~ImportOCAF2();
+    ImportOCAF2(const ImportOCAF2 &) = delete;
+    ImportOCAF2 & operator=(const ImportOCAF2 &) = delete;
     App::DocumentObject* loadShapes();
     void setMerge(bool enable) { merge=enable;};
     void setUseLegacyImporter(bool enable) { useLegacyImporter=enable; }

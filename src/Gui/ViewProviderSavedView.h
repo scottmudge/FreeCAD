@@ -50,10 +50,10 @@ public:
         Clippings       = 0x01,
         Camera          = 0x02,
         Visibilities    = 0x04,
-        Shadow          = 0x08,
+        DrawStyle       = 0x08,
         ShowOnTop       = 0x10,
         Default         = 0x80,
-        All             = Clippings | Camera | Visibilities | ShowOnTop | Shadow,
+        All             = Clippings | Camera | Visibilities | ShowOnTop | DrawStyle,
     };
     Q_DECLARE_FLAGS(CaptureOptions, CaptureOption);
 

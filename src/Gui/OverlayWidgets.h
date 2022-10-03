@@ -341,6 +341,7 @@ class OverlayTitleBar: public QWidget
 public:
     OverlayTitleBar(QWidget * parent);
     void setTitleItem(QLayoutItem *);
+    void endDrag();
 
 protected:
     void mouseMoveEvent(QMouseEvent *);
@@ -406,6 +407,7 @@ public:
 
     void showTitle(bool enable);
     bool isShowing() const { return _showTitle; }
+    void endDrag();
 
 protected:
     virtual void showEvent(QShowEvent *);
@@ -418,8 +420,6 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent *);
     virtual void keyPressEvent(QKeyEvent *);
     virtual QSize sizeHint() const;
-
-    void endDrag();
 
 protected Q_SLOTS:
     void onAction();

@@ -4703,6 +4703,21 @@ bool StdCmdCloseLinkedView::isActive(void)
 }
 
 //===========================================================================
+// Std_ToolTipDisable
+//===========================================================================
+
+VIEW_CMD_DEF(ToolTipDisable, ToolTipDisable)
+{
+    sGroup        = "View";
+    sMenuText     = QT_TR_NOOP("Disable tool tip");
+    sToolTipText  = QT_TR_NOOP("Disable showing tool tips for all widgets.");
+    sWhatsThis    = "Std_ToolTipDisable";
+    sStatusTip    = sToolTipText;
+    eType         = 0;
+    sAccel        = "D, T";
+}
+
+//===========================================================================
 // Instantiation
 //===========================================================================
 
@@ -4785,6 +4800,7 @@ void CreateViewStdCommands(void)
     rcCmdMgr.addCommand(new StdCmdPickGeometry());
     rcCmdMgr.addCommand(new StdCmdCloseLinkedView());
     rcCmdMgr.addCommand(new StdCmdItemMenu());
+    rcCmdMgr.addCommand(new StdCmdToolTipDisable());
 
 #ifdef FC_HAS_DOCK_OVERLAY
     rcCmdMgr.addCommand(new StdCmdDockOverlay());

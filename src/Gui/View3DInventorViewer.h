@@ -45,6 +45,7 @@
 #include <Gui/Selection.h>
 #include <Gui/Namespace.h>
 #include <Gui/InventorBase.h>
+#include "Inventor/SoFCDisplayModeElement.h"
 
 class SoTranslation;
 class SoTransform;
@@ -247,6 +248,7 @@ public:
     void setOverrideMode(const std::string &mode);
     void applyOverrideMode();
     std::string getOverrideMode() const {return overrideMode;}
+    const SoFCDisplayModeElement::HiddenLineConfig &getHiddenLineConfig() const;
     //@}
 
     /** @name Making pictures */
@@ -466,6 +468,8 @@ public:
 
     void onGetBoundingBox(SoGetBoundingBoxAction *);
 
+    void onViewPropertyChanged(const App::Property &);
+
     struct Private;
     friend struct Private;
 
@@ -486,7 +490,6 @@ protected:
     SbBool processSoEventBase(const SoEvent * const ev);
     void printDimension();
     void selectAll();
-    void slotChangeDocument(const App::Document &, const App::Property &);
 
 private:
     static void setViewportCB(void * userdata, SoAction * action);

@@ -238,6 +238,8 @@ generate_from_xml(ViewProviderSavedViewPy)
 generate_from_xml(AxisOriginPy)
 generate_from_xml(CommandPy)
 generate_from_xml(FileDialogPy)
+generate_from_xml(MDIViewPy)
+generate_from_xml(View3DInventorPy)
 
 generate_from_py(FreeCADGuiInit GuiInitScript.h)
 
@@ -256,6 +258,8 @@ SET(FreeCADGui_XML_SRCS
     AxisOriginPy.xml
     CommandPy.xml
     FileDialogPy.xml
+    MDIViewPy.xml
+    View3DInventorPy.xml
 )
 SOURCE_GROUP("XML" FILES ${FreeCADApp_XML_SRCS})
 
@@ -872,7 +876,7 @@ SET(View3D_CPP_SRCS
     View3DInventorViewer.cpp
     View3DInventorRiftViewer.cpp
     CoinRiftWidget.cpp
-    View3DPy.cpp
+    View3DInventorPyImp.cpp
     View3DViewerPy.cpp
     NaviCube.cpp
 )
@@ -889,7 +893,6 @@ SET(View3D_SRCS
     View3DInventor.h
     View3DInventorExamples.h
     View3DInventorViewer.h
-    View3DPy.h
     View3DInventorRiftViewer.h
     CoinRiftWidget.h
     View3DViewerPy.h
@@ -1150,13 +1153,12 @@ SOURCE_GROUP("Params" FILES ${Params_SRCS})
 # The view sources
 SET(View_CPP_SRCS
     MDIView.cpp
-    MDIViewPy.cpp
+    MDIViewPyImp.cpp
     GraphvizView.cpp
     ActiveObjectList.cpp
 )
 SET(View_HPP_SRCS
     MDIView.h
-    MDIViewPy.h
     GraphvizView.h
     ActiveObjectList.h
 )
