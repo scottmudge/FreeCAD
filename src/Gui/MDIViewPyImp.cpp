@@ -107,13 +107,13 @@ PyObject* MDIViewPy::getActiveObject(PyObject *args)
     App::DocumentObject* obj = nullptr;
     try {
         obj = getMDIViewPtr()->getActiveObject<App::DocumentObject*>(name,&parent,&subname);
-        if (obj)
+        if (!obj)
             Py_Return;
         if (PyObject_IsTrue(resolve))
             return obj->getPyObject();
         return Py::new_reference_to(Py::TupleN(
                 Py::asObject(obj->getPyObject()),
-                Py::asObject(parent->getPyObject()),
+                parent ? Py::asObject(parent->getPyObject()) : Py::Object(),
                 Py::String(subname.c_str())));
     } PY_CATCH
 }
