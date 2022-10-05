@@ -255,7 +255,7 @@ public:
     void testItemStatus(bool resetStatus = false);
     void setExpandedStatus(bool);
     void setData(int column, int role, const QVariant & value);
-    bool isChildOfItem(DocumentObjectItem*);
+    bool isChildOfItem(const DocumentObjectItem*) const;
 
     void restoreBackground();
     void detachOwner();
@@ -3241,19 +3241,7 @@ void TreeWidget::onStartEditing()
             // to temporary hold the next potential editing item to not reset
             // the current editin item prematrually.
             pimpl->nextEditingItem = objitem;
-            App::DocumentObject *topParent = 0;
-            std::ostringstream ss;
-            objitem->getSubName(ss,topParent);
-            if(!topParent)
-                topParent = obj;
-            else
-                ss << obj->getNameInDocument() << '.';
-            auto vp = Application::Instance->getViewProvider(topParent);
-            if(!vp) {
-                FC_ERR("Cannot find editing object");
-                return;
-            }
-            doc->setEdit(vp, edit, ss.str().c_str());
+            doc->setEdit(objitem->object(), edit);
             pimpl->nextEditingItem = nullptr;
 #endif
         }
@@ -3591,7 +3579,14 @@ bool TreeWidget::setupObjectMenu(QMenu &menu,
     contextItem = item;
     if (ctxObj) {
         *ctxObj = item->getSubObjectT();
-        ctxObj->setSubName(ctxObj->getSubName() + sobj->getElementName());
+        // DocumentObjectItem::getSubObjecT/getSubName() has inherent
+        // limitations. For example, it cannot find the correct sub name for a
+        // collapsed link array element. It can only be identified through 3D
+        // view picking. So here, we choose the longest path.
+        if (ctxObj->getSubObjectList().size() <= sobj->getSubObjectList().size())
+            *ctxObj = *sobj;
+        else
+            ctxObj->setSubName(ctxObj->getSubName() + sobj->getElementName());
     }
     return tree->_setupObjectMenu(item, menu);
 }
@@ -8981,7 +8976,7 @@ void DocumentObjectItem::setData (int column, int role, const QVariant & value)
     QTreeWidgetItem::setData(column, role, myValue);
 }
 
-bool DocumentObjectItem::isChildOfItem(DocumentObjectItem* item)
+bool DocumentObjectItem::isChildOfItem(const DocumentObjectItem* item) const
 {
     for(auto pitem=parent();pitem;pitem=pitem->parent())
         if(pitem == item)
@@ -9060,6 +9055,10 @@ int DocumentObjectItem::isGroup() const {
         return SuperGroup;
     else if(obj->hasChildElement())
         return LinkGroup;
+    else if(auto ext = obj->getExtensionByType<App::LinkBaseExtension>(true)) {
+        if (ext->getElementCountValue() && !ext->getShowElementValue())
+            return LinkGroup;
+    }
 
     // Check for plain group inside a link/linkgroup, which has special treatment
     if(App::GeoFeatureGroupExtension::isNonGeoGroup(obj)) {
@@ -9102,6 +9101,10 @@ int DocumentObjectItem::getSubName(std::ostringstream &str, App::DocumentObject 
     if (it == myOwner->ObjectMap.end() || it->second->items.empty())
         return res;
     auto item = *it->second->items.begin();
+    if (item == this || item->isChildOfItem(this)) {
+        // This could happen on documents with cyclic dependency
+        return res;
+    }
     res = item->getSubName(str, topParent);
     if (!topParent)
         topParent = group;

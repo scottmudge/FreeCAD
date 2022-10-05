@@ -1037,10 +1037,16 @@ void prepareProfileBased(PartDesign::Body *pcActiveBody, Gui::Command* cmd, cons
 
     if (!sels.empty()) {
         App::SubObjectT ref;
+        auto inList = pcActiveBody->getInListEx(true);
+        inList.insert(pcActiveBody);
         for (unsigned i=0; i<sels.size(); ++i) {
             auto sobj = sels[i].getSubObject();
             if (!sobj)
                 continue;
+            if (inList.count(sobj)) {
+                FC_WARN("ignore selection of " << sobj->getFullName() << " to avoid dependency loop");
+                continue;
+            }
             ref = PartDesignGui::importExternalObject(sels[i], false);
             if (auto obj = ref.getSubObject()) {
                 std::vector<std::string> subs;
