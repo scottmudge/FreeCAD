@@ -551,6 +551,7 @@ void TaskAttacher::onSelectionChanged(const Gui::SelectionChanges& msg)
 
         try {
             setupTransaction();
+            touched = true;
 
             // Remove subname for planes and datum features
             if (selObj->getLinkedObject(true)->isDerivedFrom(App::OriginFeature::getClassTypeId()))
@@ -881,6 +882,7 @@ void TaskAttacher::onRefName(const QString& text, unsigned idx)
         }
 
         setupTransaction();
+        touched = true;
 
         if (editObjT.getSubObject()) {
             std::vector<App::DocumentObject*> objs;

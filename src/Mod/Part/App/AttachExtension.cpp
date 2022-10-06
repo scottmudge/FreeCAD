@@ -200,12 +200,12 @@ bool AttachExtension::positionBySupport()
     _active = 0;
     if (!_props.attacher)
         throw Base::RuntimeError("AttachExtension: can't positionBySupport, because no AttachEngine is set.");
+    Base::Placement plaOriginal = getPlacement().getValue();
     try {
         if (_props.attacher->mapMode == mmDeactivated)
             return false;
         bool subChanged = false;
 
-        Base::Placement plaOriginal = getPlacement().getValue();
         getPlacement().setValue(Base::Placement());
 
         Base::Placement basePlacement;
@@ -228,8 +228,15 @@ bool AttachExtension::positionBySupport()
         return true;
     } catch (ExceptionCancel&) {
         //disabled, don't do anything
+        getPlacement().setValue(plaOriginal);
         return false;
-    };
+    } catch (Base::Exception &) {
+        getPlacement().setValue(plaOriginal);
+        throw;
+    } catch (Standard_Failure &) {
+        getPlacement().setValue(plaOriginal);
+        throw;
+    }
 }
 
 bool AttachExtension::isAttacherActive() const {
