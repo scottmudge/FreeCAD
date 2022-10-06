@@ -166,6 +166,7 @@
 # include <BRepOffsetAPI_DraftAngle.hxx>
 # include <BRepPrimAPI_MakeHalfSpace.hxx>
 # include <gp_Pln.hxx>
+# include <gp_Quaternion.hxx>
 # include <BRepLProp_SLProps.hxx>
 # include <BRepGProp_Face.hxx>
 #endif
@@ -5886,11 +5887,11 @@ bool TopoShape::getRotation(Base::Rotation& rot) const
     } else if (facecount == 1) {
         if (std::unique_ptr<Geometry> geo = Geometry::fromShape(getSubShape(TopAbs_FACE, 1))) {
             if (geo->isDerivedFrom(GeomElementarySurface::getClassTypeId())) {
-                auto dir = static_cast<GeomElementarySurface*>(geo.get())->getDir();
-                auto xdir = static_cast<GeomElementarySurface*>(geo.get())->getXDir();
-                rot = Base::Rotation(Base::Vector3d(0,0,1), dir);
-                auto xd = rot.multVec(xdir);
-                rot *= Base::Rotation(Base::Vector3d(1,0,0), xd);
+                Handle(Geom_ElementarySurface) s = Handle(Geom_ElementarySurface)::DownCast(geo->handle());
+                gp_Trsf trsf;
+                trsf.SetTransformation(s->Position().Ax2(),gp_Ax3());
+                auto q = trsf.GetRotation();
+                rot = Base::Rotation(q.X(),q.Y(),q.Z(),q.W());
                 return true;
             }
         }

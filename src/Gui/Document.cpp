@@ -501,7 +501,19 @@ bool Document::setEdit(Gui::ViewProvider* p, int ModNum, const char *subname)
     //         d->_editingTransform = ext->globalGroupPlacement().toMatrix();
     //     }
     // }
-    auto sobj = obj->getSubObject(subname,0,&d->_editingTransform);
+    d->_editSubElement.clear();
+    d->_editSubname.clear();
+    if (subname) {
+        const char *element = Data::ComplexGeoData::findElementName(subname);
+        if (element) {
+            d->_editSubname = std::string(subname,element-subname);
+            d->_editSubElement = element;
+        }
+        else {
+            d->_editSubname = subname;
+        }
+    }
+    auto sobj = obj->getSubObject(d->_editSubname.c_str(),0,&d->_editingTransform);
     if(!sobj || !sobj->getNameInDocument()) {
         FC_ERR("Invalid sub object '" << obj->getFullName()
                 << '.' << (subname?subname:"") << "'");
@@ -528,19 +540,6 @@ bool Document::setEdit(Gui::ViewProvider* p, int ModNum, const char *subname)
     Application::Instance->setEditDocument(this);
 
     d->_editViewProviderParent = vp;
-    d->_editSubElement.clear();
-    d->_editSubname.clear();
-
-    if (subname) {
-        const char *element = Data::ComplexGeoData::findElementName(subname);
-        if (element) {
-            d->_editSubname = std::string(subname,element-subname);
-            d->_editSubElement = element;
-        }
-        else {
-            d->_editSubname = subname;
-        }
-    }
 
     auto sobjs = obj->getSubObjectList(subname);
     d->_editObjs.clear();

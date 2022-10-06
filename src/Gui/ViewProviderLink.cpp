@@ -3183,13 +3183,49 @@ bool ViewProviderLink::initDraggingPlacement(int mode) {
         // (obtained using ViewProviderDragger::getDragOffset()).
         dragCtx->initialPlacement = pla.toMatrix() * offset;
 
+        if (dragPlacementIndex >= 0) {
+            if (auto plaList = ext->getPlacementListProperty()) {
+                if (dragPlacementIndex < plaList->getSize()) {
+                    auto mat = plaList->getValue()[dragPlacementIndex].toMatrix();
+                    auto scaleMat = ext->getTransform(false);
+                    mat = scaleMat * mat;
+                    mat.inverseGauss();
+                    offset = mat * offset;
+                    dragCtx->plaInverse = ext->getTransform(true);
+                    dragCtx->plaInverse.inverseGauss();
+                }
+            }
+        }
+
         // dragCtx->mat is to transform the dragger placement to our own placement.
         // So inverse the transform
         dragCtx->mat = offset;
-        dragCtx->mat.inverse();
+        dragCtx->mat.inverseGauss();
     }
 
     return true;
+}
+
+bool ViewProviderLink::startDragArrayElement(int mode, int idx)
+{
+    if (mode != ViewProvider::Transform
+            && mode != ViewProvider::TransformAt
+            && mode != ViewProvider::Default)
+        return false;
+    if (mode != ViewProvider::TransformAt)
+        dragPlacementIndex = idx;
+    else
+        dragPlacementIndex = -1;
+    if (!startEditing(ViewProvider::TransformAt)) {
+        dragPlacementIndex = -1;
+        return false;
+    }
+    return true;
+}
+
+void ViewProviderLink::endDragArrayElement()
+{
+    dragPlacementIndex = -1;
 }
 
 ViewProvider *ViewProviderLink::startEditing(int mode) {
@@ -3205,8 +3241,8 @@ ViewProvider *ViewProviderLink::startEditing(int mode) {
         return inherited::startEditing(mode);
     }
 
-    static thread_local bool _pendingTransform;
-    static thread_local Base::Matrix4D  _editingTransform;
+    FC_STATIC bool _pendingTransform;
+    FC_STATIC Base::Matrix4D  _editingTransform;
 
     auto doc = Application::Instance->editDocument();
 
@@ -3347,6 +3383,7 @@ void ViewProviderLink::setEditViewer(Gui::View3DInventorViewer* viewer, int ModN
 
 void ViewProviderLink::unsetEditViewer(Gui::View3DInventorViewer* viewer)
 {
+    dragPlacementIndex = -1;
     SoNode *child = static_cast<SoFCUnifiedSelection*>(viewer->getSceneGraph())->getChild(0);
     if (child && child->isOfType(SoPickStyle::getClassTypeId()))
         static_cast<SoFCUnifiedSelection*>(viewer->getSceneGraph())->removeChild(child);
@@ -3429,13 +3466,21 @@ bool ViewProviderLink::callDraggerProxy(const char *fname, bool update) {
         auto ext = getLinkExtension();
         if(ext) {
             const auto &pla = currentDraggingPlacement();
-            auto prop = ext->getLinkPlacementProperty();
-            if(!prop)
-                prop = ext->getPlacementProperty();
-            if(prop) {
-                auto plaNew = pla * Base::Placement(dragCtx->mat);
-                if(prop->getValue()!=plaNew)
+            if (dragPlacementIndex >= 0) {
+                if (auto plaList = ext->getPlacementListProperty()) {
+                    if (dragPlacementIndex < plaList->getSize()) {
+                        auto plaNew = dragCtx->plaInverse * pla.toMatrix() * dragCtx->mat;
+                        plaList->set1Value(dragPlacementIndex, plaNew);
+                    }
+                }
+            } else {
+                auto prop = ext->getLinkPlacementProperty();
+                if(!prop)
+                    prop = ext->getPlacementProperty();
+                if(prop) {
+                    auto plaNew = pla * Base::Placement(dragCtx->mat);
                     prop->setValue(plaNew);
+                }
             }
             updateDraggingPlacement(pla);
         }

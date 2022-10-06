@@ -50,6 +50,7 @@
 #include "View3DInventorViewer.h"
 #include "Application.h"
 #include "Document.h"
+#include "ViewProviderLink.h"
 #include "Window.h"
 
 #include <Base/Console.h>
@@ -147,6 +148,39 @@ bool ViewProviderDragger::checkLink(int mode) {
     doc->getInEdit(&vpParent,&subname);
     if(!vpParent)
         return false;
+
+    auto parent = vpParent->getObject();
+    // Check for collapsed link array
+    std::vector<int> subSizes;
+    auto objs = parent->getSubObjectList(subname.c_str(), &subSizes);
+    auto it = std::find(objs.begin(), objs.end(), getObject());
+    if (it != objs.end()) {
+        auto prev = it;
+        --prev;
+        std::string sub(subname.begin()+(prev - objs.begin()),
+                        subname.begin()+(it - objs.begin()));
+        if (sub.size() && std::isdigit(*sub.begin())) {
+            auto prevObj = prev==objs.begin() ? parent : *(prev-1);
+            auto linkExt = prevObj->getExtensionByType<App::LinkBaseExtension>(true);
+            if (linkExt && !linkExt->getShowElementValue() && linkExt->getElementCountValue() > 0) {
+                if (auto linkVp = Base::freecad_dynamic_cast<ViewProviderLink>(
+                        Application::Instance->getViewProvider(prevObj))) {
+                    _linkArrayIndex = atoi(sub.c_str());
+                    Base::Matrix4D mat;
+                    parent->getSubObject(std::string(subname.c_str(), subSizes[prev-objs.begin()]).c_str(), nullptr, &mat);
+                    auto matSave = doc->getEditingTransform();
+                    doc->setEditingTransform(mat);
+                    if (linkVp->startDragArrayElement(mode, _linkArrayIndex)) {
+                        _linkArray = prevObj;
+                        _linkDragger = linkVp;
+                    } else
+                        doc->setEditingTransform(matSave);
+                    return true;
+                }
+            }
+        }
+    }
+
     auto sobj = vpParent->getObject()->getSubObject(subname.c_str());
     if(!sobj || sobj==getObject() || sobj->getLinkedObject(true)!=getObject())
         return false;
@@ -165,27 +199,31 @@ Base::Matrix4D ViewProviderDragger::getDragOffset(const ViewProviderDocumentObje
     if (!vp || !vp->getObject())
         return res;
     auto selctx = Gui::Selection().getExtendedContext(vp->getObject());
-    auto objs = selctx.getSubObjectList();
+    auto parent = selctx.getObject();
+    if (!parent)
+        return res;
+    std::vector<int> subSizes;
+    auto objs = parent->getSubObjectList(selctx.getSubName().c_str(), &subSizes);
     auto it = std::find(objs.begin(), objs.end(), vp->getObject());
-    if (it != objs.end()) {
-        objs.erase(objs.begin(), it+1);
-        std::string element = selctx.getElementName();
-        selctx = App::SubObjectT(objs);
-        selctx.setSubName(selctx.getSubName() + element);
+    if (it != objs.end() && it != objs.begin()) {
+        int offset = it - objs.begin();
+        selctx = App::SubObjectT(vp->getObject(), selctx.getSubName().c_str() + subSizes[offset]);
     }
 
     Base::Rotation rot;
     Base::BoundBox3d bbox;
 
     PyObject *pyobj = nullptr;
-    vp->getObject()->getSubObject(selctx.getSubName().c_str(), &pyobj, nullptr, false);
+    Base::Matrix4D mat;
+    vp->getObject()->getSubObject(selctx.getSubName().c_str(), &pyobj, &mat, false);
     if (pyobj) {
         Base::PyGILStateLocker lock;
         Py::Object pyObj(pyobj, true);
         try {
             if (PyObject_TypeCheck(pyobj, &Data::ComplexGeoDataPy::Type)) {
                 auto geodata = static_cast<Data::ComplexGeoDataPy*>(pyobj)->getComplexGeoDataPtr();
-                geodata->getRotation(rot);
+                if (!geodata->getRotation(rot))
+                    rot = geodata->getPlacement().getRotation();
                 bbox = geodata->getBoundBox();
             }
         } catch (Base::Exception &e) {
@@ -193,8 +231,10 @@ Base::Matrix4D ViewProviderDragger::getDragOffset(const ViewProviderDocumentObje
         }
     }
 
-    if (!bbox.IsValid())
-        bbox = vp->getBoundingBox(selctx.getSubName().c_str(),0,false);
+    if (!bbox.IsValid()) {
+        Base::Matrix4D mat;
+        bbox = vp->getBoundingBox(selctx.getSubName().c_str(),&mat,false);
+    }
     if (bbox.IsValid()) 
         res = Base::Placement(bbox.GetCenter(), rot).toMatrix();
     return res;
@@ -260,6 +300,14 @@ bool ViewProviderDragger::setEdit(int ModNum)
 void ViewProviderDragger::unsetEdit(int ModNum)
 {
   Q_UNUSED(ModNum);
+
+  if (_linkArrayIndex >= 0) {
+      auto vp = Base::freecad_dynamic_cast<ViewProviderLink>(
+              Application::Instance->getViewProvider(_linkArray.getObject()));
+      if (vp)
+          vp->endDragArrayElement();
+      _linkArrayIndex = -1;
+  }
 
   if(csysDragger)
   {
