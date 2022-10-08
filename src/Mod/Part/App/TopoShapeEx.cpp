@@ -3184,7 +3184,7 @@ TopoShape &TopoShape::makERefine(const TopoShape &_shape, const char *op, bool s
         res.makESHAPE(mkRefine.Shape(), mapper, {shape}, op);
         // For some reason, refine operation may reverse the solid
         fixSolidOrientation();
-        if (isClosed() == closed) {
+        if (res.isClosed() == closed) {
             *this = res;
             return *this;
         }

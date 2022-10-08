@@ -1959,7 +1959,8 @@ void PropertyLinkSub::Paste(const Property &from)
     if(!from.isDerivedFrom(PropertyLinkSub::getClassTypeId()))
         throw Base::TypeError("Incompatible property to paste to");
     auto &link = static_cast<const PropertyLinkSub&>(from);
-    setValue(link._pcLinkSub, link._cSubList);
+    setValue(link._pcLinkSub, link._cSubList,
+            std::vector<ShadowSub>(link._ShadowSubList));
 }
 
 void PropertyLinkSub::getLinks(std::vector<App::DocumentObject *> &objs,
@@ -3027,7 +3028,8 @@ void PropertyLinkSubList::Paste(const Property &from)
     if(!from.isDerivedFrom(PropertyLinkSubList::getClassTypeId()))
         throw Base::TypeError("Incompatible property to paste to");
     auto &link = static_cast<const PropertyLinkSubList&>(from);
-    setValues(link._lValueList, link._lSubList);
+    setValues(link._lValueList, link._lSubList,
+              std::vector<ShadowSub>(link._ShadowSubList));
 }
 
 unsigned int PropertyLinkSubList::getMemSize (void) const
@@ -4238,10 +4240,12 @@ void PropertyXLink::Paste(const Property &from)
             FC_WARN("Object '" << other.docName << '#' << other.objectName << "' not found");
             return;
         }
-        setValue(obj,std::vector<std::string>(other._SubList));
+        setValue(obj,std::vector<std::string>(other._SubList),
+                 std::vector<ShadowSub>(other._ShadowSubList));
     } else
         setValue(std::string(other.filePath),std::string(other.objectName),
-                std::vector<std::string>(other._SubList));
+                std::vector<std::string>(other._SubList),
+                std::vector<ShadowSub>(other._ShadowSubList));
     setFlag(LinkAllowPartial,other.testFlag(LinkAllowPartial));
 }
 

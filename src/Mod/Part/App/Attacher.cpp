@@ -970,10 +970,12 @@ Base::Placement AttachEngine::calculateAttachedPlacement(
         if(pla.getPosition().IsEqual(origPlacement.getPosition(),1e-7)
             && pla.getRotation().isSame(origPlacement.getRotation(),1e-12))
         {
-            if(subChanged) *subChanged = true;
-            subnames = std::move(subs);
-            for(auto &v : subChanges)
-                shadowSubs[v.first] = v.second.first;
+            if(subChanged) {
+                *subChanged = true;
+                subnames = std::move(subs);
+                for(auto &v : subChanges)
+                    shadowSubs[v.first] = v.second.first;
+            }
             return pla;
         }
     }
