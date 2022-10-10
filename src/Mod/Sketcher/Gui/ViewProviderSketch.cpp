@@ -31,6 +31,7 @@
 # include <Geom_Circle.hxx>
 # include <Geom_Ellipse.hxx>
 # include <Geom_TrimmedCurve.hxx>
+# include <TopoDS.hxx>
 # include <Inventor/actions/SoGetBoundingBoxAction.h>
 # include <Inventor/SoPath.h>
 # include <Inventor/SbBox3f.h>
@@ -116,6 +117,7 @@
 
 #include <Mod/Part/App/Geometry.h>
 #include <Mod/Part/App/BodyBase.h>
+#include <Mod/Part/Gui/PartParams.h>
 #include <Mod/Sketcher/App/SketchObject.h>
 #include <Mod/Sketcher/App/Sketch.h>
 #include <Mod/Sketcher/App/GeometryFacade.h>
@@ -5016,26 +5018,62 @@ void ViewProviderSketch::draw(bool temp /*=false*/, bool rebuildinformationlayer
             Base::Vector3d startp  = spline->getStartPoint();
             Base::Vector3d endp    = spline->getEndPoint();
 
-            double first = curve->FirstParameter();
-            double last = curve->LastParameter();
-            if (first > last) // if arc is reversed
-                std::swap(first, last);
+            // Because BSpline can be arbitary complex in curvature, using a
+            // constant segment limit won't give satisfying result in many
+            // cases. We opt to use the same way PartGui::ViewProviderPartExt
+            // to discretize the edge.
+            auto edge = Part::TopoShape(spline->toShape());
+            auto bound = edge.getBoundBox();
+            double deflection = std::max(Precision::Confusion(),
+                (bound.LengthX()+bound.LengthY()+bound.LengthZ())/300.0 *
+                    std::max(PartGui::PartParams::getOverrideTessellation() ? 
+                                PartGui::PartParams::getMeshDeviation() : Deviation.getValue(),
+                        PartGui::PartParams::getMinimumDeviation()));
 
-            double range = last-first;
-            int countSegments = stdcountsegments;
-            double segment = range / countSegments;
+            double angDeflectionRads = std::max(Precision::Angular(),
+                    std::max((PartGui::PartParams::getOverrideTessellation() ?
+                                PartGui::PartParams::getMeshAngularDeflection() : AngularDeflection.getValue()),
+                      PartGui::PartParams::getMinimumAngularDeflection()) / 180.0 * M_PI);
+            edge.meshShape(deflection, angDeflectionRads);
+            TopLoc_Location aLoc;
+            Handle(Poly_Polygon3D) aPoly = BRep_Tool::Polygon3D(TopoDS::Edge(edge.getShape()), aLoc);
+            if (!aPoly.IsNull()) {
+                gp_Trsf trsf;
+                if (!aLoc.IsIdentity())
+                    trsf = aLoc.Transformation();
+                const TColgp_Array1OfPnt& aNodes = aPoly->Nodes();
+                int nbNodesInEdge = aPoly->NbNodes();
+                gp_Pnt pnt;
+                for (Standard_Integer j=1;j <= nbNodesInEdge;j++) {
+                    pnt = aNodes(j);
+                    if (!aLoc.IsIdentity())
+                        pnt.Transform(trsf);
+                    Coords.emplace_back((float)(pnt.X()),(float)(pnt.Y()),(float)(pnt.Z()));
+                }
+                Index.push_back(nbNodesInEdge);
 
-            for (int i=0; i < countSegments; i++) {
-                gp_Pnt pnt = curve->Value(first);
-                Coords.emplace_back(pnt.X(), pnt.Y(), pnt.Z());
-                first += segment;
+            } else {
+                double first = curve->FirstParameter();
+                double last = curve->LastParameter();
+                if (first > last) // if arc is reversed
+                    std::swap(first, last);
+
+                double range = last-first;
+                int countSegments = stdcountsegments;
+                double segment = range / countSegments;
+
+                for (int i=0; i < countSegments; i++) {
+                    gp_Pnt pnt = curve->Value(first);
+                    Coords.emplace_back(pnt.X(), pnt.Y(), pnt.Z());
+                    first += segment;
+                }
+
+                // end point
+                gp_Pnt end = curve->Value(last);
+                Coords.emplace_back(end.X(), end.Y(), end.Z());
+                Index.push_back(countSegments+1);
             }
 
-            // end point
-            gp_Pnt end = curve->Value(last);
-            Coords.emplace_back(end.X(), end.Y(), end.Z());
-
-            Index.push_back(countSegments+1);
             edit->CurvIdToGeoId.push_back(GeoId);
             Points.push_back(startp);
             Points.push_back(endp);
@@ -5107,12 +5145,16 @@ void ViewProviderSketch::draw(bool temp /*=false*/, bool rebuildinformationlayer
     if ( (combrepscale > (2 * combrepscalehyst)) || (combrepscale < (combrepscalehyst/2)))
         combrepscalehyst = combrepscale ;
 
+    bool externalVisible = hGrpsk->GetBool("BSplineExternalVisible", false);
 
     // geometry information layer for bsplines, as they need a second round now that max curvature is known
     for (std::vector<int>::const_iterator it = bsplineGeoIds.begin(); it != bsplineGeoIds.end(); ++it) {
 
         int GeoId = *it;
-        const Part::Geometry *geo = GeoById(*geomlist, *it);
+        if (GeoId <= Sketcher::GeoEnum::RefExt && !externalVisible)
+            continue;
+
+        const Part::Geometry *geo = GeoById(*geomlist, GeoId);
 
         const Part::GeomBSplineCurve *spline = static_cast<const Part::GeomBSplineCurve *>(geo);
 

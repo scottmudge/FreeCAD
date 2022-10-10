@@ -7873,14 +7873,26 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                     BRepOffsetAPI_NormalProjection mkProj(aProjFace);
                     mkProj.Add(edge);
                     mkProj.Build();
-                    const TopoDS_Shape& projShape = mkProj.Projection();
-                    if (projShape.IsNull()) {
-                        FC_ERR("Invalid geometry in sketch " << getFullName() << ": " << key);
-                        return;
+                    Part::TopoShape projShape(mkProj.Projection());
+                    if (projShape.isNull() || !projShape.hasSubShape(TopAbs_EDGE)) {
+                        // In some cases, BSpline (or maybe other type of
+                        // curves) silently fails projection for some reason. We
+                        // check if the edge is planar and try to manually move
+                        // the edge to the sketch plane.
+                        gp_Pln pln;
+                        if (Part::TopoShape(edge).findPlane(pln)
+                                && pln.Axis().Direction().IsParallel(sketchPlane.Axis().Direction(), Precision::Confusion())) {
+                            double d = pln.Distance(sketchPlane);
+                            gp_Trsf trsf;
+                            trsf.SetTranslation(gp_Vec(pln.Axis().Direction()) * d);
+                            projShape.setShape(edge.Moved(trsf));
+                        } else {
+                            FC_ERR("Invalid geometry in sketch " << getFullName() << ": " << key);
+                            return;
+                        }
                     }
-                    TopExp_Explorer xp;
-                    for (xp.Init(projShape, TopAbs_EDGE); xp.More(); xp.Next()) {
-                        TopoDS_Edge projEdge = TopoDS::Edge(xp.Current());
+                    for (const auto &e : projShape.getSubShapes(TopAbs_EDGE)) {
+                        TopoDS_Edge projEdge = TopoDS::Edge(e);
                         TopLoc_Location loc(mov);
                         projEdge.Location(loc);
 
