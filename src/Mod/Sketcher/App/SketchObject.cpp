@@ -311,6 +311,7 @@ void SketchObject::buildShape() {
         shapes.push_back(getEdge(geo, convertSubName(
                         Data::IndexedName::fromConst("ExternalEdge", i-1), false).c_str()));
     }
+    InternalShape.setValue(Part::TopoShape());
     if(shapes.empty() && vertices.empty()) {
         Shape.setValue(Part::TopoShape());
         return;
@@ -9205,7 +9206,8 @@ void SketchObject::onChanged(const App::Property* prop)
                 }
             }
             ExternalGeometry.setValues(objs,subs);
-        }
+        } else
+            signalElementsChanged();
     } else if( prop == &ExternalGeometry ) {
 
         if(doc && doc->isPerformingTransaction())
@@ -9215,6 +9217,7 @@ void SketchObject::onChanged(const App::Property* prop)
             // must wait till onDocumentRestored() when shadow references are
             // fully restored
             updateGeometryRefs();
+            signalElementsChanged();
         }
     } else if (prop == &Placement) {
         if (ExternalGeometry.getSize() > 0)
@@ -9824,10 +9827,13 @@ App::DocumentObject *SketchObject::getSubObject(
     Base::Vector3d point;
 
     if (auto realType = convertInternalName(indexedName.getType())) {
-        auto shapeType = Part::TopoShape::shapeType(realType, true);
-        if (shapeType != TopAbs_SHAPE)
-            subshape = InternalShape.getShape().located(
-                    Placement.getValue()).getSubTopoShape(shapeType, indexedName.getIndex(), true);
+        if (realType[0] == '\0')
+            subshape = InternalShape.getShape();
+        else {
+            auto shapeType = Part::TopoShape::shapeType(realType, true);
+            if (shapeType != TopAbs_SHAPE)
+                subshape = InternalShape.getShape().getSubTopoShape(shapeType, indexedName.getIndex(), true);
+        }
         if (subshape.isNull())
             return nullptr;
     }

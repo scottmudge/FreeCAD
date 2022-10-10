@@ -197,9 +197,11 @@ static bool _AllowFaceExternal = true;
 static double _SnapTolerance;
 static bool _ViewBottomOnEdit;
 static bool _AdjustCamera;
+static bool _ViewSection;
 static const char *_ParamAllowFaceExternal = "AllowFaceExternalPick";
 static const char *_ParamSnapTolerance = "SnapTolerance";
 static const char *_ParamViewBottomOnEdit = "ViewBottomOnEdit";
+static const char *_ParamViewSection = "ViewSection";
 static const char *_ParamAdjustCamera = "AdjustCamera";
 
 //**************************************************************************
@@ -268,6 +270,7 @@ struct EditData {
         _AllowFaceExternal = hSketchGeneral->GetBool(_ParamAllowFaceExternal, true);
         _SnapTolerance = hSketchGeneral->GetFloat(_ParamSnapTolerance, 0.2);
         _ViewBottomOnEdit = hSketchGeneral->GetBool(_ParamViewBottomOnEdit, false);
+        _ViewSection = hSketchGeneral->GetBool(_ParamViewSection, false);
         _AdjustCamera = hSketchGeneral->GetBool(_ParamAdjustCamera, true);
 
         timer.setSingleShot(true);
@@ -4372,6 +4375,10 @@ void ViewProviderSketch::OnChange(Base::Subject<const char*> &rCaller, const cha
         _SnapTolerance = edit->hSketchGeneral->GetFloat(_ParamSnapTolerance, 0.2);
     else if (boost::equals(sReason, _ParamViewBottomOnEdit))
         _ViewBottomOnEdit = edit->hSketchGeneral->GetBool(_ParamViewBottomOnEdit, false);
+    else if (boost::equals(sReason, _ParamViewSection)) {
+        _ViewSection = edit->hSketchGeneral->GetBool(_ParamViewSection, false);
+        toggleViewSection();
+    }
     else if (boost::equals(sReason, _ParamAdjustCamera))
         _AdjustCamera = edit->hSketchGeneral->GetBool(_ParamAdjustCamera, false);
 }
@@ -4386,10 +4393,43 @@ bool ViewProviderSketch::viewBottomOnEdit()
     return _ViewBottomOnEdit;
 }
 
+ViewProviderSketch *ViewProviderSketch::getEditingViewProvider()
+{
+    if (auto gdoc = Gui::Application::Instance->getDocument(App::GetApplication().getActiveDocument()))
+        return Base::freecad_dynamic_cast<ViewProviderSketch>(gdoc->getInEdit());
+    return nullptr;
+}
+
 void ViewProviderSketch::setViewBottomOnEdit(bool enable)
 {
     if (_ViewBottomOnEdit != enable && edit)
         edit->hSketchGeneral->SetBool(_ParamViewBottomOnEdit, enable);
+}
+
+bool ViewProviderSketch::viewSection()
+{
+    return _ViewSection;
+}
+
+void ViewProviderSketch::setViewSection(bool enable)
+{
+    if (_ViewSection != enable) {
+        if (auto vp = getEditingViewProvider()) {
+            if (vp->edit)
+                vp->edit->hSketchGeneral->SetBool(_ParamViewSection, enable);
+        }
+    }
+}
+
+void ViewProviderSketch::toggleViewSection()
+{
+    if (edit) {
+        Gui::cmdGuiObject(getObject(), std::ostringstream()
+                << "TempoVis.sketchClipPlane("
+                << getObject()->getFullName(/*python*/true)
+                << ", reverse=" << (viewBottomOnEdit() ? "True" : "False")
+                << ", enable=" << (viewSection() ? "True" : "False") << ")");
+    }
 }
 
 void ViewProviderSketch::updateInventorNodeSizes()
@@ -7641,6 +7681,9 @@ void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int Mo
                               QString::fromUtf8(getSketchObject()->getNameInDocument()));
             QByteArray cmdstr_bytearray = cmdstr.toUtf8();
             Gui::Command::runCommand(Gui::Command::Gui, cmdstr_bytearray);
+
+            if (viewSection())
+                toggleViewSection();
         } catch (Base::PyException &e){
             Base::Console().Error("ViewProviderSketch::setEdit: visibility automation failed with an error: \n");
             e.ReportException();

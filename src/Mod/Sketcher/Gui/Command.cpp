@@ -696,9 +696,7 @@ CmdSketcherViewSketch::CmdSketcherViewSketch()
 void CmdSketcherViewSketch::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
-    Gui::Document *doc = getActiveGuiDocument();
-    SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
-    if (vp) {
+    if (auto vp = ViewProviderSketch::getEditingViewProvider()) {
         vp->setViewBottomOnEdit(false);
         runCommand(Gui,"Gui.ActiveDocument.ActiveView.setCameraOrientation("
                 "Gui.editDocument().EditingTransform.getTransform()[1].Q)");
@@ -737,9 +735,7 @@ CmdSketcherViewSketchBottom::CmdSketcherViewSketchBottom()
 void CmdSketcherViewSketchBottom::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
-    Gui::Document *doc = getActiveGuiDocument();
-    SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
-    if (vp) {
+    if (auto vp = ViewProviderSketch::getEditingViewProvider()) {
         vp->setViewBottomOnEdit(true);
         runCommand(Gui,"Gui.ActiveDocument.ActiveView.setCameraOrientation("
                 "(Gui.editDocument().EditingTransform.getTransform()[1] * App.Rotation(App.Vector(0,1,0), 180)).Q)");
@@ -748,14 +744,7 @@ void CmdSketcherViewSketchBottom::activated(int iMsg)
 
 bool CmdSketcherViewSketchBottom::isActive(void)
 {
-    Gui::Document *doc = getActiveGuiDocument();
-    if (doc) {
-        // checks if a Sketch Viewprovider is in Edit and is in no special mode
-        SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
-        if (vp /*&& vp->getSketchMode() == ViewProviderSketch::STATUS_NONE*/)
-            return true;
-    }
-    return false;
+    return true;
 }
 
 class CmdSketcherViewSketchGroup: public Gui::GroupCommand
@@ -1044,26 +1033,12 @@ CmdSketcherViewSection::CmdSketcherViewSection()
 void CmdSketcherViewSection::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
-    if (Gui::Document *doc = getActiveGuiDocument()) {
-        if (auto vp = Base::freecad_dynamic_cast<SketcherGui::ViewProviderSketch>(doc->getInEdit()))
-            Gui::cmdGuiObject(vp->getObject(), std::ostringstream()
-                    << "TempoVis.sketchClipPlane("
-                    << vp->getObject()->getFullName(/*python*/true)
-                    << ", reverse=" << (vp->viewBottomOnEdit() ? "True" : "False")
-                    << ")");
-    }
+    ViewProviderSketch::setViewSection(!ViewProviderSketch::viewSection());
 }
 
 bool CmdSketcherViewSection::isActive(void)
 {
-    Gui::Document *doc = getActiveGuiDocument();
-    if (doc) {
-        // checks if a Sketch Viewprovider is in Edit and is in no special mode
-        SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
-        if (vp /*&& vp->getSketchMode() == ViewProviderSketch::STATUS_NONE*/)
-            return true;
-    }
-    return false;
+    return true;
 }
 
 void CreateSketcherCommands(void)

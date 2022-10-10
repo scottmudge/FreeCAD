@@ -89,9 +89,9 @@ Pad::Pad()
 
     ADD_PROPERTY_TYPE(TaperAngle,(0.0), "Pad", App::Prop_None, "Sets the angle of slope (draft) to apply to the sides. The angle is for outward taper; negative value yields inward tapering.");
     ADD_PROPERTY_TYPE(TaperAngleRev,(0.0), "Pad", App::Prop_None, "Taper angle of reverse part of padding.");
-    ADD_PROPERTY_TYPE(TaperInnerAngle,(0.0), "Pocket", App::Prop_None, "Taper angle of inner holes.");
-    ADD_PROPERTY_TYPE(TaperInnerAngleRev,(0.0), "Pocket", App::Prop_None, "Taper angle of the reverse part for inner holes.");
-    ADD_PROPERTY_TYPE(AutoTaperInnerAngle,(true), "Pocket", App::Prop_None,
+    ADD_PROPERTY_TYPE(TaperInnerAngle,(0.0), "Pad", App::Prop_None, "Taper angle of inner holes.");
+    ADD_PROPERTY_TYPE(TaperInnerAngleRev,(0.0), "Pad", App::Prop_None, "Taper angle of the reverse part for inner holes.");
+    ADD_PROPERTY_TYPE(AutoTaperInnerAngle,(true), "Pad", App::Prop_None,
             "Automatically set inner taper angle to the negative of (outer) taper angle.\n"
             "If false, then inner taper angle can be set independent of taper angle.");
 

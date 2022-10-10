@@ -299,6 +299,11 @@ public:
     /// check if by default viewing sketch from bottom on start editing
     static bool viewBottomOnEdit();
     void setViewBottomOnEdit(bool enable);
+    /// check if section view is enabled
+    static bool viewSection();
+    static void setViewSection(bool enable);
+    void toggleViewSection();
+    static ViewProviderSketch *getEditingViewProvider();
 
     /** Observer for parameter group. */
     void OnChange(Base::Subject<const char*> &rCaller, const char * sReason) override;
