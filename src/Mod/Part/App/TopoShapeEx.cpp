@@ -939,7 +939,7 @@ bool TopoShape::canMapElement(const TopoShape &other) const {
 }
 
 void TopoShape::mapSubElement(const std::vector<TopoShape> &shapes, const char *op) {
-    if (shapes.empty())
+    if (shapes.empty() || this->Tag == -1)
         return;
 
     if (shapeType(true) == TopAbs_COMPOUND) {
@@ -986,6 +986,8 @@ void TopoShape::mapSubElement(const std::vector<TopoShape> &shapes, const char *
 }
 
 void TopoShape::mapSubElementsTo(std::vector<TopoShape> &shapes, const char *op) const {
+    if (this->Tag == -1)
+        return;
     for(auto &shape : shapes)
         shape.mapSubElement(*this,op);
 }
@@ -3773,7 +3775,7 @@ TopoShape &TopoShape::makESHAPE(const TopoDS_Shape &shape, const Mapper &mapper,
     if(shape.IsNull())
         HANDLE_NULL_SHAPE;
 
-    if(shapes.empty())
+    if(shapes.empty() || this->Tag == -1)
         return *this;
 
     size_t canMap=0;

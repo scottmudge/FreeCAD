@@ -570,7 +570,7 @@ public:
 
     std::unordered_set<TopoShape, ShapeHasher, ShapeHasher> sourceEdges;
     std::vector<TopoShape> sourceEdgeArray;
-    TopoDS_Compound openEdgeCompound;
+    TopoDS_Compound openWireCompound;
 
     Handle(ShapeExtend_WireData) wireData = new ShapeExtend_WireData();
 
@@ -588,7 +588,7 @@ public:
         tmpVertices.clear();
         vertexStack.clear();
         builder.MakeCompound(compound);
-        openEdgeCompound.Nullify();
+        openWireCompound.Nullify();
     }
 
     Edges::iterator remove(Edges::iterator it)
@@ -1084,8 +1084,8 @@ public:
                     continue;
                 auto &newInfo = *it++;
                 aHistory->AddModified(v.intersectShape, newInfo.edge);
-                if (v.intersectShape != removedEdge)
-                    aHistory->AddModified(removedEdge, newInfo.edge);
+                // if (v.intersectShape != removedEdge)
+                //     aHistory->AddModified(removedEdge, newInfo.edge);
                 showShape(newInfo.edge, "split");
             }
         }
@@ -2239,9 +2239,9 @@ public:
             if (info.iteration == -3 || (!info.wireInfo && info.iteration>=0)) {
                 if (!hasOpenEdge) {
                     hasOpenEdge = true;
-                    builder.MakeCompound(openEdgeCompound);
+                    builder.MakeCompound(openWireCompound);
                 }
-                builder.Add(openEdgeCompound, info.wire());
+                builder.Add(openWireCompound, info.wire());
             }
         }
     }
@@ -2254,12 +2254,40 @@ public:
         builder.Add(compound, wireInfo->wire);
     }
 
-    bool getOpenWires(TopoShape &shape, const char *op) {
-        if (openEdgeCompound.IsNull()) {
+    bool getOpenWires(TopoShape &shape, const char *op, bool noOriginal) {
+        if (openWireCompound.IsNull()) {
             shape.setShape(TopoShape());
             return false;
         }
-        shape.makESHAPE(openEdgeCompound,
+        auto comp = openWireCompound;
+        if (noOriginal) {
+            TopoShape source(-1);
+            source.makECompound(sourceEdgeArray);
+            auto wires = TopoShape(openWireCompound, -1).getSubTopoShapes(TopAbs_WIRE);
+            bool touched = false;
+            for (auto it=wires.begin(); it!=wires.end();) {
+                bool purge = true;
+                for (const auto &e : it->getSubShapes(TopAbs_EDGE)) {
+                    if (source.searchSubShape(TopoShape(e, -1)).empty()) {
+                        purge = false;
+                        break;
+                    }
+                }
+                if (purge) {
+                    it = wires.erase(it);
+                    touched = true;
+                } else
+                    ++it;
+            }
+            if (touched) {
+                if (wires.empty()) {
+                    shape.setShape(TopoShape());
+                    return false;
+                }
+                comp = TopoDS::Compound(TopoShape(-1).makECompound(wires).getShape());
+            }
+        }
+        shape.makESHAPE(comp,
                         MapperHistory(aHistory),
                         {sourceEdges.begin(), sourceEdges.end()},
                         op);
@@ -2375,10 +2403,10 @@ void WireJoiner::Build(const Message_ProgressRange&)
     Done();
 }
 
-bool WireJoiner::getOpenWires(TopoShape &shape, const char *op)
+bool WireJoiner::getOpenWires(TopoShape &shape, const char *op, bool noOriginal)
 {
     Build();
-    return pimpl->getOpenWires(shape, op);
+    return pimpl->getOpenWires(shape, op, noOriginal);
 }
 
 bool WireJoiner::getResultWires(TopoShape &shape, const char *op)

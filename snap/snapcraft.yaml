@@ -254,6 +254,7 @@ parts:
       - python3-pyside2.qtsvg
       - python3-pyside2.qtwidgets
       - python3-pyside2.qtnetwork
+      - python3-pyside2.qtuitools
       - calculix-ccx # FEM
       - libfreeimage3
       - libtbb2

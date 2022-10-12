@@ -1164,7 +1164,9 @@ public:
      *         shape
      */
     TopoShape moved(const TopLoc_Location &loc) const {
-        return TopoShape(Tag, Hasher, moved(_Shape._Shape, loc));
+        auto res = *this;
+        res.setShape(moved(_Shape._Shape, loc), false);
+        return res;
     }
     /** Move and/or rotate the shape
      *
@@ -1185,7 +1187,9 @@ public:
      *         transformation of the shape
      */
     TopoShape moved(const gp_Trsf &trsf) const {
-        return TopoShape(Tag, Hasher, moved(_Shape._Shape, trsf));
+        auto res = *this;
+        res.setShape(moved(_Shape._Shape, trsf), false);
+        return res;
     }
     /** Move and/or rotate the shape
      *
@@ -1206,7 +1210,9 @@ public:
      *         transformation of the shape
      */
     TopoShape moved(const Base::Matrix4D &matrix) const {
-        return TopoShape(Tag, Hasher, moved(_Shape._Shape, convert(matrix)));
+        auto res = *this;
+        res.setShape(moved(_Shape._Shape, convert(matrix)), false);
+        return res;
     }
     /** Move the shape to a new placement
      *
@@ -1226,7 +1232,9 @@ public:
      *         shape
      */
     TopoShape moved(const Base::Placement &pla) const {
-        return TopoShape(Tag, Hasher, moved(_Shape._Shape, convert(pla)));
+        auto res = *this;
+        res.setShape(moved(_Shape._Shape, convert(pla)), false);
+        return res;
     }
     /** Set a new location for the shape
      *
@@ -1247,7 +1255,9 @@ public:
      *         location
      */
     TopoShape located(const TopLoc_Location &loc = TopLoc_Location()) const {
-        return TopoShape(Tag, Hasher, located(_Shape._Shape, loc));
+        auto res = *this;
+        res.setShape(located(_Shape._Shape, loc), false);
+        return res;
     }
     /** Set a new transformation for the shape
      *
@@ -1268,7 +1278,9 @@ public:
      *         discarded.
      */
     TopoShape located(const gp_Trsf &trsf) const {
-        return TopoShape(Tag, Hasher, located(_Shape._Shape, trsf));
+        auto res = *this;
+        res.setShape(located(_Shape._Shape, trsf), false);
+        return res;
     }
     /** Set a new transformation for the shape
      *
@@ -1289,7 +1301,9 @@ public:
      *         discarded.
      */
     TopoShape located(const Base::Matrix4D &matrix) const {
-        return TopoShape(Tag, Hasher, located(_Shape._Shape, convert(matrix)));
+        auto res = *this;
+        res.setShape(located(_Shape._Shape, convert(matrix)), false);
+        return res;
     }
     /** Set a new placement for the shape
      *
@@ -1310,7 +1324,9 @@ public:
      *         discarded.
      */
     TopoShape located(const Base::Placement &pla) const {
-        return TopoShape(Tag, Hasher, located(_Shape._Shape, convert(pla)));
+        auto res = *this;
+        res.setShape(located(_Shape._Shape, convert(pla)), false);
+        return res;
     }
 
     static TopoDS_Shape &move(TopoDS_Shape &s, const TopLoc_Location &);

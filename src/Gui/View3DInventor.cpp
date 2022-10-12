@@ -254,6 +254,7 @@ View3DInventor::~View3DInventor()
     }
 
     if (_viewerPy) {
+        Base::PyGILStateLocker lock;
         _viewerPy->setInvalid();
         _viewerPy->DecRef();
     }

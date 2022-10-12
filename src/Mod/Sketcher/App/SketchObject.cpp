@@ -7630,7 +7630,7 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
             };
 
             auto importEdge = [&](const TopoDS_Shape &refSubShape) {
-                const TopoDS_Edge& edge = TopoDS::Edge(refSubShape);
+                TopoDS_Edge edge = TopoDS::Edge(refSubShape);
                 BRepAdaptor_Curve curve(edge);
                 Handle(Geom_Curve) origCurve = curve.Curve().Curve();
                 gp_Pnt firstPoint, lastPoint;
@@ -7870,23 +7870,29 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                     }
                 }
                 if (!done) {
-                    BRepOffsetAPI_NormalProjection mkProj(aProjFace);
-                    mkProj.Add(edge);
-                    mkProj.Build();
-                    Part::TopoShape projShape(mkProj.Projection());
-                    if (projShape.isNull() || !projShape.hasSubShape(TopAbs_EDGE)) {
-                        // In some cases, BSpline (or maybe other type of
-                        // curves) silently fails projection for some reason. We
-                        // check if the edge is planar and try to manually move
-                        // the edge to the sketch plane.
-                        gp_Pln pln;
-                        if (Part::TopoShape(edge).findPlane(pln)
-                                && pln.Axis().Direction().IsParallel(sketchPlane.Axis().Direction(), Precision::Confusion())) {
-                            double d = pln.Distance(sketchPlane);
-                            gp_Trsf trsf;
-                            trsf.SetTranslation(gp_Vec(pln.Axis().Direction()) * d);
-                            projShape.setShape(edge.Moved(trsf));
-                        } else {
+                    // In some cases, BSpline (or maybe other type of curves)
+                    // silently fails (OCC >= 7.6) projection for some reason,
+                    // or produce incorrect shape (OCC < 7.6). We check if the
+                    // edge is planar and try to manually move the edge to the
+                    // sketch plane.
+                    Part::TopoShape projShape;
+                    gp_Pln pln;
+                    if (Part::TopoShape(edge).findPlane(pln)
+                            && pln.Axis().Direction().IsParallel(
+                                sketchPlane.Axis().Direction(), Precision::Confusion())) {
+                        double d = pln.Distance(sketchPlane);
+                        gp_Trsf trsf;
+                        trsf.SetTranslation(gp_Vec(pln.Axis().Direction()) * d);
+                        projShape.setShape(edge);
+                        // Must copy the edge to make the transformation work
+                        // for some reason.
+                        projShape.transformShape(Part::TopoShape::convert(trsf), /*copy*/true);
+                    } else {
+                        BRepOffsetAPI_NormalProjection mkProj(aProjFace);
+                        mkProj.Add(edge);
+                        mkProj.Build();
+                        projShape.setShape(mkProj.Projection());
+                        if (projShape.isNull() || !projShape.hasSubShape(TopAbs_EDGE)) {
                             FC_ERR("Invalid geometry in sketch " << getFullName() << ": " << key);
                             return;
                         }

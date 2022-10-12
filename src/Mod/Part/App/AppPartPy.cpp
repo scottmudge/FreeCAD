@@ -2677,11 +2677,12 @@ private:
         PyObject *tighten = Py_True;
         PyObject *outline = Py_False;
         PyObject *keep_open = Py_False;
+        PyObject *no_open_original = Py_True;
         double tol = 1e-6;
         const char *op = "";
-        static char* kwd_list[] = {"shape", "split", "merge", "tighten", "outline", "keep_open", "tol", "op", 0};
+        static char* kwd_list[] = {"shape", "split", "merge", "tighten", "outline", "keep_open", "no_open_original", "tol", "op", 0};
         if(!PyArg_ParseTupleAndKeywords(args.ptr(), kwds.ptr(), "O|OOOOOds", kwd_list,
-                &pyshape, &split, &merge, &tighten, &outline, &keep_open, &tol, &op))
+                &pyshape, &split, &merge, &tighten, &outline, &keep_open, &no_open_original, &tol, &op))
             throw Py::Exception();
 
         PY_TRY {
@@ -2698,7 +2699,7 @@ private:
             if (!PyObject_IsTrue(keep_open))
                 return shape2pyshape(result);
             TopoShape openWires;
-            joiner.getOpenWires(openWires, op);
+            joiner.getOpenWires(openWires, op, PyObject_IsTrue(no_open_original));
             return Py::TupleN(shape2pyshape(result), shape2pyshape(openWires));
         } _PY_CATCH_OCC(throw Py::Exception())
     }
