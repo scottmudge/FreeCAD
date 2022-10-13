@@ -164,9 +164,7 @@ App::DocumentObjectExecReturn *Chamfer::execute(void)
         if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False)) {
             ShapeFix_ShapeTolerance aSFT;
             aSFT.LimitTolerance(shape.getShape(), Precision::Confusion(), Precision::Confusion(), TopAbs_SHAPE);
-            Handle(ShapeFix_Shape) aSfs = new ShapeFix_Shape(shape.getShape());
-            aSfs->Perform();
-            shape.setShape(aSfs->Shape(),false);
+            shape.fix();
             if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False))
                 failed = true;
         }

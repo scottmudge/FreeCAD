@@ -2993,12 +2993,31 @@ bool TopoShape::fix()
     if (this->_Shape.IsNull())
         return false;
 
-    ShapeFix_Shape fix(this->_Shape);
+    // First, we do fix regardless if the current shape is valid or not,
+    // because not all problems that are handled by ShapeFix_Shape can be
+    // recognized by BRepCheck_Analyzer.
+    //
+    // Second, for some reason, a failed fix (i.e. a fix that produces invalid shape)
+    // will affect the input shape. (See // https://github.com/realthunder/FreeCAD/issues/585,
+    // BTW, the file attached in the issue also shows that ShapeFix_Shape may
+    // actually make a valid input shape invalid). So, it actually change the
+    // underlying shape data. Therefore, we try with a copy first. 
+    ShapeFix_Shape fix(BRepBuilderAPI_Copy(this->_Shape).Shape());
     fix.Perform();
     BRepCheck_Analyzer aChecker(fix.Shape());
     if (!aChecker.IsValid())
         return false;
-    setShape(fix.Shape(), false);
+
+    // If the above fix produces a valid shape, then we fix the original shape,
+    // because BRepBuilderAPI_Copy has some undesired side effect (e.g. flatten
+    // underlying shape, and thus break internal shape sharing).
+    ShapeFix_Shape fixThis(this->_Shape);
+    fixThis.Perform();
+    aChecker.Init(fixThis.Shape());
+    if (aChecker.IsValid())
+        setShape(fixThis.Shape(), false);
+    else
+        setShape(fix.Shape(), false);
     return true;
 }
 
@@ -3007,43 +3026,52 @@ bool TopoShape::fix(double precision, double mintol, double maxtol)
     if (this->_Shape.IsNull())
         return false;
 
-    TopAbs_ShapeEnum type = this->_Shape.ShapeType();
+    auto doFix = [precision, mintol, maxtol](TopoShape &s) {
+        TopAbs_ShapeEnum type = s._Shape.ShapeType();
 
-    ShapeFix_Shape fix(this->_Shape);
-    fix.SetPrecision(precision);
-    fix.SetMinTolerance(mintol);
-    fix.SetMaxTolerance(maxtol);
+        ShapeFix_Shape fix(BRepBuilderAPI_Copy(s._Shape).Shape());
+        fix.SetPrecision(precision);
+        fix.SetMinTolerance(mintol);
+        fix.SetMaxTolerance(maxtol);
 
-    fix.Perform();
+        fix.Perform();
 
-    if (type == TopAbs_SOLID) {
-        //fix.FixEdgeTool();
-        fix.FixWireTool()->Perform();
-        fix.FixFaceTool()->Perform();
-        fix.FixShellTool()->Perform();
-        fix.FixSolidTool()->Perform();
-        setShape(fix.FixSolidTool()->Shape(), false);
-    }
-    else if (type == TopAbs_SHELL) {
-        fix.FixWireTool()->Perform();
-        fix.FixFaceTool()->Perform();
-        fix.FixShellTool()->Perform();
-        setShape(fix.FixShellTool()->Shape(), false);
-    }
-    else if (type == TopAbs_FACE) {
-        fix.FixWireTool()->Perform();
-        fix.FixFaceTool()->Perform();
-        setShape(fix.Shape(), false);
-    }
-    else if (type == TopAbs_WIRE) {
-        fix.FixWireTool()->Perform();
-        setShape(fix.Shape(), false);
-    }
-    else {
-        setShape(fix.Shape(), false);
-        return isValid();
-    }
-    return isValid();
+        if (type == TopAbs_SOLID) {
+            //fix.FixEdgeTool();
+            fix.FixWireTool()->Perform();
+            fix.FixFaceTool()->Perform();
+            fix.FixShellTool()->Perform();
+            fix.FixSolidTool()->Perform();
+            s.setShape(fix.FixSolidTool()->Shape(), false);
+        }
+        else if (type == TopAbs_SHELL) {
+            fix.FixWireTool()->Perform();
+            fix.FixFaceTool()->Perform();
+            fix.FixShellTool()->Perform();
+            s.setShape(fix.FixShellTool()->Shape(), false);
+        }
+        else if (type == TopAbs_FACE) {
+            fix.FixWireTool()->Perform();
+            fix.FixFaceTool()->Perform();
+            s.setShape(fix.Shape(), false);
+        }
+        else if (type == TopAbs_WIRE) {
+            fix.FixWireTool()->Perform();
+            s.setShape(fix.Shape(), false);
+        }
+        else {
+            s.setShape(fix.Shape(), false);
+            return s.isValid();
+        }
+        return s.isValid();
+    };
+
+    auto copy = makECopy();
+    if (!doFix(copy))
+        return false;
+    if (!doFix(*this))
+        *this = copy;
+    return true;
 }
 
 bool TopoShape::removeInternalWires(double minArea)

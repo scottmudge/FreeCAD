@@ -3131,10 +3131,7 @@ TopoShape &TopoShape::makEFace(const std::vector<TopoShape> &shapes,
         // See code comments in findPlane() for the description of the bug and
         // work around.
 
-        ShapeFix_Shape fixer(getShape());
-        fixer.Perform();
-        setShape(fixer.Shape(), false);
-
+        fix();
         if (!isValid())
             FC_WARN("makEFace: resulting face is invalid");
     }
