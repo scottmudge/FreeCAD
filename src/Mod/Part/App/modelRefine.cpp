@@ -80,7 +80,9 @@ FC_LOG_LEVEL_INIT("Part", true, true);
 
 using namespace ModelRefine;
 
-
+// Used for increasing tolerance
+static constexpr Standard_Real Precision_Multiplier = 1.0;
+inline Standard_Real GetPrecision() { return Precision::Confusion() * Precision_Multiplier; }
 
 void ModelRefine::getFaceEdges(const TopoDS_Face &face, EdgeVectorType &edges)
 {
@@ -384,8 +386,8 @@ bool FaceTypedPlane::isEqual(const TopoDS_Face &faceOne, const TopoDS_Face &face
 
     gp_Pln planeOne(planeSurfaceOne->Pln());
     gp_Pln planeTwo(planeSurfaceTwo->Pln());
-    return (planeOne.Position().Direction().IsParallel(planeTwo.Position().Direction(), Precision::Confusion()) &&
-            planeOne.Distance(planeTwo.Position().Location()) < Precision::Confusion());
+    return (planeOne.Position().Direction().IsParallel(planeTwo.Position().Direction(), GetPrecision()) &&
+            planeOne.Distance(planeTwo.Position().Location()) < GetPrecision());
 }
 
 GeomAbs_SurfaceType FaceTypedPlane::getType() const
@@ -475,10 +477,10 @@ bool FaceTypedCylinder::isEqual(const TopoDS_Face &faceOne, const TopoDS_Face &f
     gp_Cylinder cylinderOne = surfaceOne->Cylinder();
     gp_Cylinder cylinderTwo = surfaceTwo->Cylinder();
 
-    if (fabs(cylinderOne.Radius() - cylinderTwo.Radius()) > Precision::Confusion())
+    if (fabs(cylinderOne.Radius() - cylinderTwo.Radius()) > GetPrecision())
         return false;
-    if (!cylinderOne.Axis().IsCoaxial(cylinderTwo.Axis(), Precision::Angular(), Precision::Confusion()) &&
-        !cylinderOne.Axis().IsCoaxial(cylinderTwo.Axis().Reversed(), Precision::Angular(), Precision::Confusion()))
+    if (!cylinderOne.Axis().IsCoaxial(cylinderTwo.Axis(), Precision::Angular(), GetPrecision()) &&
+        !cylinderOne.Axis().IsCoaxial(cylinderTwo.Axis().Reversed(), Precision::Angular(), GetPrecision()))
         return false;
 
     return true;
@@ -546,7 +548,7 @@ bool wireEncirclesAxis(const TopoDS_Wire& wire, const Handle(Geom_CylindricalSur
             // Check orientation in relation to cylinder axis
             GeomAPI_ProjectPointOnSurf proj(segFirst, plane);
             gp_Vec bv = gp_Vec(proj.Point(1).X(), proj.Point(1).Y(), proj.Point(1).Z());
-            if ((bv - cv).Crossed(segTangent).IsOpposite(av, Precision::Confusion()))
+            if ((bv - cv).Crossed(segTangent).IsOpposite(av, GetPrecision()))
                 length = -length;
         } else {
             // Linearize the edge. Idea taken from ShapeAnalysis.cxx ShapeAnalysis::TotCross2D()
@@ -572,7 +574,7 @@ bool wireEncirclesAxis(const TopoDS_Wire& wire, const Handle(Geom_CylindricalSur
 
                     if (dist > 0) {
                         // Check orientation of this piece in relation to cylinder axis
-                        if ((bv - cv).Crossed(dv).IsOpposite(av, Precision::Confusion()))
+                        if ((bv - cv).Crossed(dv).IsOpposite(av, GetPrecision()))
                             dist = -dist;
 
                         length += dist;
@@ -592,12 +594,12 @@ bool wireEncirclesAxis(const TopoDS_Wire& wire, const Handle(Geom_CylindricalSur
             // Second wire segment. Determine whether the second segment continues from
             // the first or from the last point of the first segment
             secondSegment = true;
-            if (last.IsEqual(segFirst, Precision::Confusion())) {
+            if (last.IsEqual(segFirst, GetPrecision())) {
                 last = segLast; // Third segment must begin here
-            } else if (last.IsEqual(segLast, Precision::Confusion())) {
+            } else if (last.IsEqual(segLast, GetPrecision())) {
                 last = segFirst;
                 length = -length;
-            } else if (first.IsEqual(segLast, Precision::Confusion())) {
+            } else if (first.IsEqual(segLast, GetPrecision())) {
                 last = segFirst;
                 totalArc = -totalArc;
                 length = -length;
@@ -606,7 +608,7 @@ bool wireEncirclesAxis(const TopoDS_Wire& wire, const Handle(Geom_CylindricalSur
                 totalArc = -totalArc;
             }
         } else {
-            if (!last.IsEqual(segFirst, Precision::Confusion())) {
+            if (!last.IsEqual(segFirst, GetPrecision())) {
                 // The length was calculated in the opposite direction of the wire traversal
                 length = -length;
                 last = segFirst;
@@ -855,7 +857,7 @@ bool FaceTypedBSpline::isEqual(const TopoDS_Face &faceOne, const TopoDS_Face &fa
     {
         for (int indexV = 1; indexV <= vPoleCountOne; ++indexV)
         {
-            if (!(polesOne.Value(indexU, indexV).IsEqual(polesTwo.Value(indexU, indexV), Precision::Confusion())))
+            if (!(polesOne.Value(indexU, indexV).IsEqual(polesTwo.Value(indexU, indexV), GetPrecision())))
                 return false;
         }
     }
@@ -1077,12 +1079,12 @@ bool FaceUniter::process()
                     oldBounds.SetGap(0.0);
                     Standard_Real xMin1, yMin1, zMin1, xMax1, yMax1, zMax1;
                     oldBounds.Get(xMin1, yMin1, zMin1, xMax1, yMax1, zMax1);
-                    if (std::fabs(xMin-xMin1) > Precision::Confusion()
-                        || std::fabs(yMin-yMin1) > Precision::Confusion()
-                        || std::fabs(zMin-zMin1) > Precision::Confusion()
-                        || std::fabs(xMax-xMax1) > Precision::Confusion()
-                        || std::fabs(yMax-yMax1) > Precision::Confusion()
-                        || std::fabs(zMax-zMax1) > Precision::Confusion())
+                    if (std::fabs(xMin-xMin1) > GetPrecision()
+                        || std::fabs(yMin-yMin1) > GetPrecision()
+                        || std::fabs(zMin-zMin1) > GetPrecision()
+                        || std::fabs(xMax-xMax1) > GetPrecision()
+                        || std::fabs(yMax-yMax1) > GetPrecision()
+                        || std::fabs(zMax-zMax1) > GetPrecision())
                     {
                         if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
                             FC_WARN("united face bounding box mismatch");
