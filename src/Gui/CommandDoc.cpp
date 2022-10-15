@@ -1417,7 +1417,12 @@ void StdCmdDelete::activated(int iMsg)
             return;
         }
 
-        SelectionPauseNotification slock;
+        // Some code (e.g. DAGView) assumes any selection changes refers to
+        // existing object, and will crash if not. So must not delay
+        // notification.
+        //
+        // SelectionPauseNotification slock;
+
         App::TransactionLocker tlock;
 
         Gui::getMainWindow()->setUpdatesEnabled(false);

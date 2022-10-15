@@ -808,6 +808,8 @@ SoFCRenderCacheManager::addSelection(const std::string & key,
     else
       id |= SoFCRenderer::SelIdPartial;
   }
+  else if (id > 0 && implicit)
+    id |= SoFCRenderer::SelIdImplicit;
   
   if (elentry.id && elentry.id != id) {
     if (elentry.id > 0 && element.empty())
@@ -925,11 +927,31 @@ SoFCRenderCacheManager::removeSelection(const std::string & key,
         }
       }
     }
-    if (sensor.elements.empty())
-      itpath = paths.erase(itpath);
-    else
+    if (!sensor.elements.empty()) {
       ++itpath;
-    continue;
+      continue;
+    }
+
+    itpath = paths.erase(itpath);
+    if (paths.size() != 1)
+      continue;
+
+    // Check if there is an implicit full selection, added because selection on
+    // top is active.
+    const auto &other = paths.begin()->second;
+    if (other.elements.size() != 1
+        || !other.elements.begin()->first.empty())
+      continue;
+
+    const auto &otherentry = other.elements.begin()->second;
+    if ((otherentry.id & SoFCRenderer::SelIdImplicit)
+        && !(otherentry.id & SoFCRenderer::SelIdAlt))
+    {
+      PRIVATE(this)->selpaths.erase(otherentry.id);
+      PRIVATE(this)->renderer->removeSelection(otherentry.id);
+      paths.clear();
+      break;
+    }
   }
 
   if (paths.empty())
