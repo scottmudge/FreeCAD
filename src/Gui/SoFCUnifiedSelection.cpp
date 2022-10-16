@@ -1931,6 +1931,11 @@ void SoFCSeparator::GLRenderBelowPath(SoGLRenderAction * action) {
     inherited::GLRenderBelowPath(action);
 }
 
+void SoFCSeparator::GLRenderInPath(SoGLRenderAction *action)
+{
+    _GLRenderInPath(this, action);
+}
+
 void SoFCSeparator::initClass(void)
 {
     SO_NODE_INIT_CLASS(SoFCSeparator,SoSeparator,"FCSeparator");
@@ -2478,7 +2483,7 @@ struct SelectionRootPathCode {
     int &code;
 };
 
-static void _GLRenderInPath(SoNode *node, SoGLRenderAction * action)
+void SoFCSeparator::_GLRenderInPath(SoNode *node, SoGLRenderAction * action)
 {
     int numindices;
     const int * indices;
@@ -3057,7 +3062,10 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
             ctx->highlightColor = hlaction->getColor();
             node->touch();
         } else if (detail->isOfType(SoFCDetail::getClassTypeId())) {
-            const auto &indices = static_cast<const SoFCDetail*>(detail)->getIndices(detailType);
+            void *dctx = nullptr;
+            const auto &indices = static_cast<const SoFCDetail*>(detail)->getIndices(detailType, &dctx);
+            if (dctx && dctx != node)
+                return false;
 
             auto ctx = getActionContext(action,node,selContext,!indices.empty());
 
@@ -3068,22 +3076,34 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
             }
         } else {
             int index = -1;
+            void *dctx = nullptr;
             switch(detailType) {
             case SoFCDetail::Face:
-                if (detail->isOfType(SoFaceDetail::getClassTypeId()))
+                if (detail->isOfType(SoFaceDetail::getClassTypeId())) {
                     index = static_cast<const SoFaceDetail*>(detail)->getPartIndex();
+                    if (detail->isOfType(SoFCFaceDetail::getClassTypeId()))
+                        dctx = static_cast<const SoFCFaceDetail*>(detail)->getContext();
+                }
                 break;
             case SoFCDetail::Edge:
-                if (detail->isOfType(SoLineDetail::getClassTypeId()))
+                if (detail->isOfType(SoLineDetail::getClassTypeId())) {
                     index = static_cast<const SoLineDetail*>(detail)->getLineIndex();
+                    if (detail->isOfType(SoFCLineDetail::getClassTypeId()))
+                        dctx = static_cast<const SoFCLineDetail*>(detail)->getContext();
+                }
                 break;
             case SoFCDetail::Vertex:
-                if (detail->isOfType(SoPointDetail::getClassTypeId()))
+                if (detail->isOfType(SoPointDetail::getClassTypeId())) {
                     index = static_cast<const SoPointDetail*>(detail)->getCoordinateIndex();
+                    if (detail->isOfType(SoFCPointDetail::getClassTypeId()))
+                        dctx = static_cast<const SoFCPointDetail*>(detail)->getContext();
+                }
                 break;
             default:
                 break;
             }
+            if (dctx && dctx != node)
+                return false;
             if(index>=0) {
                 auto ctx = getActionContext(action,node,selContext);
                 ctx->highlightColor = hlaction->getColor();
@@ -3166,7 +3186,10 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
     case SoSelectionElementAction::Append: {
         const SoDetail* detail = selaction->getElement();
         if (detail && detail->isOfType(SoFCDetail::getClassTypeId())) {
-            const auto &indices = static_cast<const SoFCDetail*>(detail)->getIndices(detailType);
+            void *dctx = nullptr;
+            const auto &indices = static_cast<const SoFCDetail*>(detail)->getIndices(detailType, &dctx);
+            if (dctx && dctx != node)
+                return false;
             if(indices.size()) {
                 bool touched = false;
                 if (selaction->getType() == SoSelectionElementAction::Append) {
@@ -3197,23 +3220,35 @@ bool SoFCSelectionRoot::handleSelectionAction(SoAction *action,
             // comments below.
 
         } else if(detail) {
+            void *dctx = nullptr;
             int index = -1;
             switch(detailType) {
             case SoFCDetail::Face:
-                if (detail->isOfType(SoFaceDetail::getClassTypeId()))
+                if (detail->isOfType(SoFaceDetail::getClassTypeId())) {
                     index = static_cast<const SoFaceDetail*>(detail)->getPartIndex();
+                    if (detail->isOfType(SoFCFaceDetail::getClassTypeId()))
+                        dctx = static_cast<const SoFCFaceDetail*>(detail)->getContext();
+                }
                 break;
             case SoFCDetail::Edge:
-                if (detail->isOfType(SoLineDetail::getClassTypeId()))
+                if (detail->isOfType(SoLineDetail::getClassTypeId())) {
                     index = static_cast<const SoLineDetail*>(detail)->getLineIndex();
+                    if (detail->isOfType(SoFCLineDetail::getClassTypeId()))
+                        dctx = static_cast<const SoFCLineDetail*>(detail)->getContext();
+                }
                 break;
             case SoFCDetail::Vertex:
-                if (detail->isOfType(SoPointDetail::getClassTypeId()))
+                if (detail->isOfType(SoPointDetail::getClassTypeId())) {
                     index = static_cast<const SoPointDetail*>(detail)->getCoordinateIndex();
+                    if (detail->isOfType(SoFCPointDetail::getClassTypeId()))
+                        dctx = static_cast<const SoFCPointDetail*>(detail)->getContext();
+                }
                 break;
             default:
                 break;
             }
+            if (dctx && dctx != node)
+                return false;
             if(index >= 0) {
                 if (selaction->getType() == SoSelectionElementAction::Append) {
                     auto ctx = getActionContext(action,node,selContext);

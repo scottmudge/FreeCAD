@@ -777,65 +777,53 @@ bool ViewProviderPartExt::getDetailPath(const char *subname,
     switch(res.first) {
     case TopAbs_FACE:
         if (!highlightFaceEdges) {
-            det = new SoFaceDetail();
-            static_cast<SoFaceDetail*>(det)->setPartIndex(res.second - 1);
-            pPath->append(pFaceRoot);
+            auto fdet = new SoFCFaceDetail;
+            det = fdet;
+            fdet->setPartIndex(res.second - 1);
+            fdet->setContext(faceset);
         } else {
-            det = new SoFCDetail;
-            static_cast<SoFCDetail*>(det)->addIndex(SoFCDetail::Face, res.second-1);
+            auto fdet = new SoFCDetail;
+            det = fdet;
+            fdet->addIndex(SoFCDetail::Face, res.second-1);
             for(auto &s : subshape.getSubShapes(TopAbs_EDGE)) {
                 int idx = shape.findShape(s);
                 if(idx>0)
-                    static_cast<SoFCDetail*>(det)->addIndex(SoFCDetail::Edge, idx-1);
+                    fdet->addIndex(SoFCDetail::Edge, idx-1);
             }
-            pPath->append(pFaceEdgeRoot);
+            fdet->setContext(SoFCDetail::Face, faceset);
         }
         break;
     case TopAbs_EDGE:
-        det = new SoLineDetail();
-        static_cast<SoLineDetail*>(det)->setLineIndex(res.second - 1);
-        pPath->append(pEdgeRoot);
+        det = new SoFCLineDetail();
+        static_cast<SoFCLineDetail*>(det)->setLineIndex(res.second - 1);
+        static_cast<SoFCLineDetail*>(det)->setContext(lineset);
         break;
     case TopAbs_VERTEX:
-        det = new SoPointDetail();
-        static_cast<SoPointDetail*>(det)->setCoordinateIndex(res.second + nodeset->startIndex.getValue() - 1);
-        pPath->append(pVertexRoot);
+        det = new SoFCPointDetail();
+        static_cast<SoFCPointDetail*>(det)->setCoordinateIndex(res.second + nodeset->startIndex.getValue() - 1);
+        static_cast<SoFCPointDetail*>(det)->setContext(nodeset);
         break;
     default: {
         auto fcDetail = new SoFCDetail;
         det = fcDetail;
-        bool hasFace=false, hasEdge=false, hasVertex=false;
         for(auto &s : subshape.getSubShapes(TopAbs_FACE)) {
             int index = shape.findShape(s);
-            if(index>0) {
-                hasFace = true;
+            if(index>0)
                 fcDetail->addIndex(SoFCDetail::Face, index-1);
-            }
         }
+        fcDetail->setContext(SoFCDetail::Face, faceset);
         for(auto &s : subshape.getSubShapes(TopAbs_EDGE)) {
             int index = shape.findShape(s);
-            if(index>0) {
-                hasEdge = true;
+            if(index>0)
                 fcDetail->addIndex(SoFCDetail::Edge, index-1);
-            }
         }
+        fcDetail->setContext(SoFCDetail::Edge, lineset);
         for(auto &s : subshape.getSubShapes(TopAbs_VERTEX)) {
             int index = shape.findShape(s);
-            if(index>0) {
-                hasVertex = true;
+            if(index>0)
                 fcDetail->addIndex(SoFCDetail::Vertex, index-1);
-            }
         }
-        if (hasFace) {
-            if (!hasEdge)
-                pPath->append(pFaceRoot);
-            else if (!hasVertex)
-                pPath->append(pFaceEdgeRoot);
-        } else if (hasEdge) {
-            if (!hasVertex)
-                pPath->append(pEdgeRoot);
-        } else
-            pPath->append(pVertexRoot);
+        fcDetail->setContext(SoFCDetail::Vertex, nodeset);
     }}
     return true;
 }

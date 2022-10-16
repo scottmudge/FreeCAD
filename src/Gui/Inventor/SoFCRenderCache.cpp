@@ -1711,15 +1711,31 @@ SoFCRenderCache::buildHighlightCache(SbFCMap<int, VertexCachePtr> &sharedcache,
   const SoLineDetail * ld = nullptr;
   const SoFaceDetail * fd = nullptr;
   const SoFCDetail * d = nullptr;
+  void *fctx = nullptr;
+  void *pctx = nullptr;
+  void *lctx = nullptr;
   if (detail) {
-    if (detail->isOfType(SoPointDetail::getClassTypeId()))
+    if (detail->isOfType(SoPointDetail::getClassTypeId())) {
       pd = static_cast<const SoPointDetail*>(detail);
-    else if (detail->isOfType(SoLineDetail::getClassTypeId()))
+      if (pd->isOfType(SoFCPointDetail::getClassTypeId()))
+        pctx = static_cast<const SoFCPointDetail*>(pd)->getContext();
+    }
+    else if (detail->isOfType(SoLineDetail::getClassTypeId())) {
       ld = static_cast<const SoLineDetail*>(detail);
-    else if (detail->isOfType(SoFaceDetail::getClassTypeId()))
+      if (ld->isOfType(SoFCLineDetail::getClassTypeId()))
+        lctx = static_cast<const SoFCLineDetail*>(ld)->getContext();
+    }
+    else if (detail->isOfType(SoFaceDetail::getClassTypeId())) {
       fd = static_cast<const SoFaceDetail*>(detail);
-    else if (detail->isOfType(SoFCDetail::getClassTypeId()))
+      if (fd->isOfType(SoFCFaceDetail::getClassTypeId()))
+        fctx = static_cast<const SoFCFaceDetail*>(fd)->getContext();
+    }
+    else if (detail->isOfType(SoFCDetail::getClassTypeId())) {
       d = static_cast<const SoFCDetail*>(detail);
+      fctx = d->getContext(SoFCDetail::Face);
+      lctx = d->getContext(SoFCDetail::Edge);
+      pctx = d->getContext(SoFCDetail::Vertex);
+    }
 
     // Some shape nodes (e.g. SoBrepFaceSet), support partial highlight on
     // whole object selection. 'checkindices' is used to indicate if we shall
@@ -1770,6 +1786,10 @@ SoFCRenderCache::buildHighlightCache(SbFCMap<int, VertexCachePtr> &sharedcache,
         && child.first.selectstyle != Material::Unpickable;
 
       if (detail) {
+        if ((pctx && pctx != ventry.cache->getNode())
+            || (lctx && lctx != ventry.cache->getNode())
+            || (fctx && fctx != ventry.cache->getNode()))
+          continue;
         if (ventry.mergecount)
           continue;
       } else if (ventry.skipcount)

@@ -153,6 +153,9 @@ void Gui::SoFCDB::init()
     SoFCSelectionRoot               ::initClass();
     SoFCPathAnnotation              ::initClass();
     SoFCDetail                      ::initClass();
+    SoFCFaceDetail                  ::initClass();
+    SoFCLineDetail                  ::initClass();
+    SoFCPointDetail                 ::initClass();
     SoFCDirectionalLightDragger     ::initClass();
     SoFCSpotLightDragger            ::initClass();
     SoFCDirectionalLight            ::initClass();

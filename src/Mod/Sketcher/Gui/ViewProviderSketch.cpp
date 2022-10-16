@@ -1401,8 +1401,7 @@ bool ViewProviderSketch::getDetailPath(
                 pPath->append(pcRoot);
                 pPath->append(pcModeSwitch);
             }
-            pPath->append(pFaceRoot);
-            if (!pInternalView->getDetailPath(realName, pPath, true, det)) {
+            if (!pInternalView->getDetailPath(realName, pPath, false, det)) {
                 pPath->truncate(len);
                 return false;
             }
