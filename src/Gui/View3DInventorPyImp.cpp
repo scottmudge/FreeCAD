@@ -1654,6 +1654,9 @@ PyObject* View3DInventorPy::addEventCallback(PyObject *args)
             throw Py::TypeError(s_out.str());
         }
 
+        if (std::find(callbacks.begin(), callbacks.end(), method) != callbacks.end())
+            throw Py::RuntimeError("callback already added");
+
         getView3DInventorPtr()->getViewer()->addEventCallback(eventId, eventCallback, method);
         callbacks.push_back(method);
         Py_INCREF(method);
@@ -1679,8 +1682,12 @@ PyObject* View3DInventorPy::removeEventCallback(PyObject *args)
             throw Py::TypeError(s_out.str());
         }
 
+        auto it = std::find(callbacks.begin(), callbacks.end(), method);
+        if (it == callbacks.end())
+            throw Py::RuntimeError("callback not found");
+
         getView3DInventorPtr()->getViewer()->removeEventCallback(eventId, eventCallback, method);
-        callbacks.remove(method);
+        callbacks.erase(it);
         Py_DECREF(method);
         Py_Return;
     } PY_CATCH
@@ -1829,7 +1836,8 @@ PyObject* View3DInventorPy::addEventCallbackPivy(PyObject *args)
         SoEventCallbackCB* callback = (ex == 1 ?  eventCallbackPivyEx : eventCallbackPivy);
         getView3DInventorPtr()->getViewer()->addEventCallback(*eventId, callback, method);
         callbacks.push_back(method);
-        Py_INCREF(method);
+        Py_INCREF(method); // reference to keep method in callbacks
+        Py_INCREF(method); // reference for return
         return method;
     } PY_CATCH
 }
