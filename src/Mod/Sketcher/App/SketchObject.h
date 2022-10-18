@@ -182,6 +182,7 @@ public:
      *  external geometry
      */
     int delExternal(int ExtGeoId);
+    int delExternal(const std::vector<int> &ExtGeoIds);
     /// attach a link reference to an external geometry
     int attachExternal(const std::vector<int> &geoIds, App::DocumentObject *Obj, const char* SubName);
     int detachExternal(const std::vector<int> &geoIds);

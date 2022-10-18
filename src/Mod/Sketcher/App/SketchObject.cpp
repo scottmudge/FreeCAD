@@ -6771,22 +6771,30 @@ int SketchObject::addExternal(App::DocumentObject *Obj, const char* SubName, boo
 
 int SketchObject::delExternal(int ExtGeoId)
 {
-    int GeoId = GeoEnum::RefExt - ExtGeoId;
-    if(GeoId > GeoEnum::RefExt || -GeoId-1 >= ExternalGeo.getSize())
-        return -1;
+    return delExternal({ExtGeoId});
+}
 
-    auto geo = getGeometry(GeoId);
-    if(!geo)
-        return -1;
-
+int SketchObject::delExternal(const std::vector<int> &ExtGeoIds)
+{
     std::set<long> geoIds;
-    auto egf = ExternalGeometryFacade::getFacade(geo);
-    geoIds.insert(egf->getId());
-    if(egf->getRef().size()) {
-        auto &refs = externalGeoRefMap[egf->getRef()];
-        geoIds.insert(refs.begin(),refs.end());
+    for (int ExtGeoId : ExtGeoIds) {
+        int GeoId = GeoEnum::RefExt - ExtGeoId;
+        if(GeoId > GeoEnum::RefExt || -GeoId-1 >= ExternalGeo.getSize())
+            return -1;
+
+        auto geo = getGeometry(GeoId);
+        if(!geo)
+            return -1;
+
+        auto egf = ExternalGeometryFacade::getFacade(geo);
+        geoIds.insert(egf->getId());
+        if(egf->getRef().size()) {
+            auto &refs = externalGeoRefMap[egf->getRef()];
+            geoIds.insert(refs.begin(),refs.end());
+        }
     }
-    delExternalPrivate(geoIds,true);
+
+    delExternalPrivate(geoIds, true);
     return 0;
 }
 

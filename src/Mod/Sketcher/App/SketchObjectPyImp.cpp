@@ -581,18 +581,18 @@ PyObject* SketchObjectPy::addExternal(PyObject *args)
 
 PyObject* SketchObjectPy::delExternal(PyObject *args)
 {
-    int Index;
-    if (!PyArg_ParseTuple(args, "i", &Index))
-        return 0;
+    try {
+        std::vector<int> geoIds;
+        Py::Sequence seq(args);
+        for(int i=0;i<seq.size();++i)
+            geoIds.push_back(Py::Int(seq[i].ptr()));
+        if (this->getSketchObjectPtr()->delExternal(geoIds)) {
+            PyErr_SetString(PyExc_ValueError, "Failed to delete external geometry");
+            return 0;
+        }
+        Py_Return;
+    } PY_CATCH
 
-    if (this->getSketchObjectPtr()->delExternal(Index)) {
-        std::stringstream str;
-        str << "Not able to delete an external geometry with the given index: " << Index;
-        PyErr_SetString(PyExc_ValueError, str.str().c_str());
-        return 0;
-    }
-
-    Py_Return;
 }
 
 PyObject* SketchObjectPy::attachExternal(PyObject *args)

@@ -8119,9 +8119,15 @@ bool ViewProviderSketch::onDelete(const std::vector<std::string> &subList)
             stream.str(std::string());
         }
 
-        for (rit = delExternalGeometries.rbegin(); rit != delExternalGeometries.rend(); ++rit) {
+        if (!delExternalGeometries.empty()) {
+            std::stringstream stream;
+            auto endit = std::prev(delExternalGeometries.end());
+            for (auto it = delExternalGeometries.begin(); it != endit; ++it) {
+                stream << *it << ",";
+            }
+            stream << *endit;
             try {
-                Gui::cmdAppObjectArgs(getObject(), "delExternal(%i)", *rit);
+                Gui::cmdAppObjectArgs(getObject(), "delExternal(%s)", stream.str());
             }
             catch (const Base::Exception& e) {
                 Base::Console().Error("%s\n", e.what());
