@@ -983,6 +983,7 @@ void Document::slotChangedObject(const App::DocumentObject& Obj, const App::Prop
                 if(sobj == d->_editingObject && d->_editingTransform!=mat) {
                     d->_editingTransform = mat;
                     d->_editingViewer->setEditingTransform(d->_editingTransform);
+                    signalEditingTransformChanged(*this);
                 }
             }
         }

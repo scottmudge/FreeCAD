@@ -400,6 +400,7 @@ struct EditData {
     SoDrawStyle * InformationDrawStyle;
 
     QTimer timer;
+    QTimer timerSectionView;
 };
 
 
@@ -4422,14 +4423,21 @@ void ViewProviderSketch::setViewSection(bool enable)
     }
 }
 
-void ViewProviderSketch::toggleViewSection()
+void ViewProviderSketch::toggleViewSection(int toggle)
 {
     if (edit) {
+        bool enable;
+        if (toggle > 0)
+            enable = true;
+        else if (toggle == 0)
+            enable = false;
+        else
+            enable = viewSection();
         Gui::cmdGuiObject(getObject(), std::ostringstream()
                 << "TempoVis.sketchClipPlane("
                 << getObject()->getFullName(/*python*/true)
                 << ", reverse=" << (viewBottomOnEdit() ? "True" : "False")
-                << ", enable=" << (viewSection() ? "True" : "False") << ")");
+                << ", enable=" << (enable ? "True" : "False") << ")");
     }
 }
 
@@ -7237,6 +7245,12 @@ bool ViewProviderSketch::setEdit(int ModNum)
         ->signalRedoDocument.connect(boost::bind(&ViewProviderSketch::slotRedoDocument, this, bp::_1));
     connectSolverUpdate = getSketchObject()
         ->signalSolverUpdate.connect(boost::bind(&ViewProviderSketch::slotSolverUpdate, this));
+    connectMoved = getDocument()->signalEditingTransformChanged.connect([this](const Gui::Document &) {
+        if (edit && viewSection()) {
+            toggleViewSection(0);
+            toggleViewSection(1);
+        }
+    });
 
     // Enable solver initial solution update while dragging.
     ParameterGrp::handle hGrp2 = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher");
@@ -7679,6 +7693,7 @@ void ViewProviderSketch::unsetEdit(int ModNum)
     connectUndoDocument.disconnect();
     connectRedoDocument.disconnect();
     connectSolverUpdate.disconnect();
+    connectMoved.disconnect();
 
     // when pressing ESC make sure to close the dialog
     Gui::Control().closeDialog();

@@ -302,7 +302,7 @@ public:
     /// check if section view is enabled
     static bool viewSection();
     static void setViewSection(bool enable);
-    void toggleViewSection();
+    void toggleViewSection(int toggle=-1);
     static ViewProviderSketch *getEditingViewProvider();
 
     /** Observer for parameter group. */
@@ -343,6 +343,7 @@ protected:
     boost::signals2::connection connectUndoDocument;
     boost::signals2::connection connectRedoDocument;
     boost::signals2::connection connectSolverUpdate;
+    boost::signals2::connection connectMoved;
 
     /// set color, icon & font sizes
     void initParams();

@@ -138,6 +138,8 @@ public:
     mutable boost::signals2::signal<void (const Gui::BaseView &, const App::Property &)> signalChangedView;
     /// signal on changes in show on top objects
     mutable boost::signals2::signal<void (int, const App::SubObjectT &)> signalOnTopObject;
+    /// signal on changes in accumulated editting transformation
+    mutable boost::signals2::signal<void (const Gui::Document &)> signalEditingTransformChanged;
     //@}
 
     /** @name I/O of the document */
