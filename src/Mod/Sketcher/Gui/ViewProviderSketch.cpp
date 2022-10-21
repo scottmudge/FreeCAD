@@ -535,6 +535,11 @@ void ViewProviderSketch::setSketchMode(SketchMode mode)
 {
     if (_Mode != mode) {
         _Mode = mode;
+        if (edit && _Mode == STATUS_NONE) {
+            edit->DragCurve = -1;
+            edit->DragPoint = -1;
+            edit->DragConstraintSet.clear();
+        }
         Gui::getMainWindow()->updateActions();
     }
 }

@@ -1786,10 +1786,13 @@ SoFCRenderCache::buildHighlightCache(SbFCMap<int, VertexCachePtr> &sharedcache,
         && child.first.selectstyle != Material::Unpickable;
 
       if (detail) {
-        if ((pctx && pctx != ventry.cache->getNode())
-            || (lctx && lctx != ventry.cache->getNode())
-            || (fctx && fctx != ventry.cache->getNode()))
-          continue;
+        if (pctx || fctx || lctx) {
+          // If there is detail context, make sure it matches to the node
+          if ((!pctx || pctx != ventry.cache->getNode())
+              && (!lctx || lctx != ventry.cache->getNode())
+              && (!fctx || fctx != ventry.cache->getNode()))
+            continue;
+        }
         if (ventry.mergecount)
           continue;
       } else if (ventry.skipcount)

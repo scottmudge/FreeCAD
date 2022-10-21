@@ -193,6 +193,7 @@
 
 #include <Base/Exception.h>
 #include <Base/Console.h>
+#include <Base/Tools.h>
 #include <App/MappedElement.h>
 #include <App/Application.h>
 #include <App/Document.h>
@@ -4794,7 +4795,7 @@ TopoShape &TopoShape::makEChamfer(const TopoShape &shape,
         else
             face = shape.findAncestorShape(edge,TopAbs_FACE);
         if(info.angle > 0.0)
-            mkChamfer.AddDA(info.size, info.angle, TopoDS::Edge(edge), TopoDS::Face(face));
+            mkChamfer.AddDA(info.size, Base::toRadians(info.angle), TopoDS::Edge(edge), TopoDS::Face(face));
         else if (info.size2 > 0.0)
             mkChamfer.Add(info.size, info.size2, TopoDS::Edge(edge), TopoDS::Face(face));
         else
