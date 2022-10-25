@@ -248,8 +248,8 @@ void SequencerBar::setValue(int step)
     // if number of total steps is unknown then increment only by one
     if (nTotalSteps == 0) {
         int elapsed = d->progressTime.elapsed();
-        // allow an update every 100 milliseconds only
-        if (elapsed > 100) {
+        // allow an update every 200 milliseconds only
+        if (elapsed > 200) {
             d->progressTime.restart();
             if (thr != currentThread) {
                 QMetaObject::invokeMethod(d->bar, "setValueEx", Qt::/*Blocking*/QueuedConnection,
@@ -263,8 +263,8 @@ void SequencerBar::setValue(int step)
     }
     else {
         int elapsed = d->progressTime.elapsed();
-        // allow an update every 100 milliseconds only
-        if (elapsed > 100) {
+        // allow an update every 200 milliseconds only
+        if (elapsed > 200) {
             d->progressTime.restart();
             if (thr != currentThread) {
                 QMetaObject::invokeMethod(d->bar, "setValueEx", Qt::/*Blocking*/QueuedConnection,

@@ -709,8 +709,8 @@ void TopoShape::importIges(const char *FileName)
         if (aReader.ReadFile(encodeFilename(FileName).c_str()) != IFSelect_RetDone)
             throw Base::FileException("Error in reading IGES");
 
-#if OCC_VERSION_HEX < 0x070500
         Handle(Message_ProgressIndicator) pi = new ProgressIndicator(100);
+#if OCC_VERSION_HEX < 0x070500
         pi->NewScope(100, "Reading IGES file...");
         pi->Show();
         aReader.WS()->MapReader()->SetProgress(pi);
@@ -718,7 +718,11 @@ void TopoShape::importIges(const char *FileName)
 
         // make brep
         aReader.ClearShapes();
+#if OCC_VERSION_HEX < 0x070500
         aReader.TransferRoots();
+#else
+        aReader.TransferRoots(pi->Start());
+#endif
         // one shape that contains all subshapes
         setShape(aReader.OneShape());
 
@@ -738,15 +742,17 @@ void TopoShape::importStep(const char *FileName)
         if (aReader.ReadFile(encodeFilename(FileName).c_str()) != IFSelect_RetDone)
             throw Base::FileException("Error in reading STEP");
 
-#if OCC_VERSION_HEX < 0x070500
         Handle(Message_ProgressIndicator) pi = new ProgressIndicator(100);
+#if OCC_VERSION_HEX < 0x070500
         aReader.WS()->MapReader()->SetProgress(pi);
         pi->NewScope(100, "Reading STEP file...");
         pi->Show();
-#endif
-
         // Root transfers
         aReader.TransferRoots();
+#else
+        aReader.TransferRoots(pi->Start());
+#endif
+
         // one shape that contains all subshapes
         setShape(aReader.OneShape());
 
@@ -765,14 +771,14 @@ void TopoShape::importBrep(const char *FileName)
         // read brep-file
         BRep_Builder aBuilder;
         TopoDS_Shape aShape;
-#if OCC_VERSION_HEX >= 0x060300 && OCC_VERSION_HEX < 0x070500
         Handle(Message_ProgressIndicator) pi = new ProgressIndicator(100);
+#if OCC_VERSION_HEX >= 0x060300 && OCC_VERSION_HEX < 0x070500
         pi->NewScope(100, "Reading BREP file...");
         pi->Show();
         BRepTools::Read(aShape,encodeFilename(FileName).c_str(),aBuilder,pi);
         pi->EndScope();
 #else
-        BRepTools::Read(aShape,(Standard_CString)FileName,aBuilder);
+        BRepTools::Read(aShape,(Standard_CString)FileName,aBuilder,pi->Start());
 #endif
         setShape(aShape);
     }
@@ -787,21 +793,20 @@ void TopoShape::importBrep(std::istream& str, int indicator)
         // read brep-file
         BRep_Builder aBuilder;
         TopoDS_Shape aShape;
-#if OCC_VERSION_HEX >= 0x060300 && OCC_VERSION_HEX < 0x070500
         if (indicator) {
             Handle(Message_ProgressIndicator) pi = new ProgressIndicator(100);
+#if OCC_VERSION_HEX >= 0x060300 && OCC_VERSION_HEX < 0x070500
             pi->NewScope(100, "Reading BREP file...");
             pi->Show();
             BRepTools::Read(aShape,str,aBuilder,pi);
             pi->EndScope();
+#else
+            BRepTools::Read(aShape,str,aBuilder, pi->Start());
+#endif
         }
         else {
             BRepTools::Read(aShape,str,aBuilder);
         }
-#else
-        (void)indicator;
-        BRepTools::Read(aShape,str,aBuilder);
-#endif
         setShape(aShape);
     }
     catch (Standard_Failure& e) {
@@ -3029,7 +3034,7 @@ bool TopoShape::fix(double precision, double mintol, double maxtol)
     auto doFix = [precision, mintol, maxtol](TopoShape &s) {
         TopAbs_ShapeEnum type = s._Shape.ShapeType();
 
-        ShapeFix_Shape fix(BRepBuilderAPI_Copy(s._Shape).Shape());
+        ShapeFix_Shape fix(s._Shape);
         fix.SetPrecision(precision);
         fix.SetMinTolerance(mintol);
         fix.SetMaxTolerance(maxtol);
@@ -3484,14 +3489,14 @@ void TopoShape::setFaces(const std::vector<Base::Vector3d> &Points,
     aSewingTool.Init(tolerance, performSewing);
     aSewingTool.Load(aComp);
 
-#if OCC_VERSION_HEX < 0x070500
     Handle(Message_ProgressIndicator) pi = new ProgressIndicator(100);
+#if OCC_VERSION_HEX < 0x070500
     pi->NewScope(100, "Create shape from mesh...");
     pi->Show();
 
     aSewingTool.Perform(pi);
 #else
-    aSewingTool.Perform();
+    aSewingTool.Perform(pi->Start());
 #endif
 
     resetElementMap();

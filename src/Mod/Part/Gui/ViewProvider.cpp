@@ -215,6 +215,7 @@ void ViewProviderPart::updateData(const App::Property *prop)
 
 static QByteArray _SuppressedTag("Part::Suppressed");
 static QByteArray _ReplacementTag("Part::Replacement");
+static QByteArray _DetachedTag("Part::Detached");
 
 void ViewProviderPart::getExtraIcons(std::vector<std::pair<QByteArray, QPixmap> > &icons) const
 {
@@ -222,6 +223,10 @@ void ViewProviderPart::getExtraIcons(std::vector<std::pair<QByteArray, QPixmap> 
         if (auto prop = feat->getShapeContentSuppressedProperty()) {
             if (prop->getValue())
                 icons.emplace_back(_SuppressedTag, Gui::BitmapFactory().pixmap("Part_Suppressed.svg"));
+        }
+        if (auto prop = feat->getShapeContentDetachedProperty()) {
+            if (prop->getValue())
+                icons.emplace_back(_DetachedTag, Gui::BitmapFactory().pixmap("Part_ContentDetached.svg"));
         }
         if (auto prop = feat->getShapeContentReplacementProperty()) {
             if (prop->getValue()) {
@@ -238,6 +243,8 @@ QString ViewProviderPart::getToolTip(const QByteArray &iconTag) const
 {
     if (iconTag == _SuppressedTag)
         return QObject::tr("Shape content suppressed. Alt + Click this icon to enable");
+    else if (iconTag == _DetachedTag)
+        return QObject::tr("Shape content detached so that is won't be deleted if the parent is deleted.\nAlt + Click this icon to re-attach");
     else if (iconTag == _ReplacementTag)
         return QObject::tr("Shape content replacement. Alt + Click this icon to toggle the replacement");
     return inherited::getToolTip(iconTag);
@@ -251,6 +258,21 @@ bool ViewProviderPart::iconMouseEvent(QMouseEvent *ev, const QByteArray &iconTag
                 if (auto prop = feat->getShapeContentSuppressedProperty()) {
                     try {
                         static const char *title = QT_TR_NOOP("Toggle shape suppress");
+                        App::AutoTransaction guard(title);
+                        prop->setValue(!prop->getValue());
+                        Gui::Command::updateActive();
+                    } catch (Base::Exception &e) {
+                        e.ReportException();
+                    }
+                }
+            }
+            return true;
+        }
+        else if (iconTag == _DetachedTag) {
+            if (auto feat = Base::freecad_dynamic_cast<Part::Feature>(getObject())) {
+                if (auto prop = feat->getShapeContentDetachedProperty()) {
+                    try {
+                        static const char *title = QT_TR_NOOP("Attach shape content");
                         App::AutoTransaction guard(title);
                         prop->setValue(!prop->getValue());
                         Gui::Command::updateActive();
@@ -372,6 +394,24 @@ void ViewProviderPart::setupContextMenu(QMenu* menu, QObject* receiver, const ch
                     }
                 });
             }
+
+            auto propDetach = feat->getShapeContentDetachedProperty();
+            static const char *title = propDetach && propDetach->getValue()
+                ? QT_TR_NOOP("Re-attach shape content")
+                : QT_TR_NOOP("Detach shape content");
+            auto action = menu->addAction(QObject::tr(title), [feat](){
+                try {
+                    App::AutoTransaction guard(title);
+                    foreachFeature(feat, [](Part::Feature *f) {
+                        if (auto propDetach = f->getShapeContentDetachedProperty(true))
+                            propDetach->setValue(!propDetach->getValue());
+                    });
+                    Gui::Command::updateActive();
+                } catch (Base::Exception &e) {
+                    e.ReportException();
+                }
+            });
+            action->setToolTip(QObject::tr("Detach the shape content if you want to keep it after its parent is removed"));
         }
         if (auto prop = feat->getShapeContentReplacementProperty()) {
             if (prop->getValue()) {

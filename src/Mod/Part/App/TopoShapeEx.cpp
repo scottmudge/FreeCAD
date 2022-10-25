@@ -4726,8 +4726,7 @@ TopoShape &TopoShape::makEFillet(const TopoShape &shape,
             UandR.SetValue(j++, gp_Pnt2d(t, segment.radius));
         }
         if (1.0 - edgeSegments.back().param > Precision::Confusion())
-            UandR.SetValue(j++, gp_Pnt2d(1.0,
-                        defaultRadius>0.0?defaultRadius:edgeSegments.back().radius));
+            UandR.SetValue(j++, gp_Pnt2d(1.0, edgeSegments.back().radius));
         mkFillet.Add(UandR, TopoDS::Edge(edge));
     }
     return makEShape(mkFillet,shape,op);

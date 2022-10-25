@@ -1327,7 +1327,7 @@ import PartParams
 PartParams.define_properties()
 ]]]*/
 
-// Auto generated code (Tools/params_utils.py:957)
+// Auto generated code (Tools/params_utils.py:990)
 App::PropertyLinkList *Part::Feature::getShapeContentsProperty(bool force)
 {
     auto obj = this;
@@ -1345,7 +1345,7 @@ App::PropertyLinkList *Part::Feature::getShapeContentsProperty(bool force)
     App::Prop_None));
 }
 
-// Auto generated code (Tools/params_utils.py:957)
+// Auto generated code (Tools/params_utils.py:990)
 App::PropertyBool *Part::Feature::getShapeContentSuppressedProperty(bool force)
 {
     auto obj = this;
@@ -1363,7 +1363,7 @@ App::PropertyBool *Part::Feature::getShapeContentSuppressedProperty(bool force)
     App::Prop_None));
 }
 
-// Auto generated code (Tools/params_utils.py:957)
+// Auto generated code (Tools/params_utils.py:990)
 App::PropertyLinkHidden *Part::Feature::getShapeContentReplacementProperty(bool force)
 {
     auto obj = this;
@@ -1381,7 +1381,7 @@ App::PropertyLinkHidden *Part::Feature::getShapeContentReplacementProperty(bool 
     App::Prop_None));
 }
 
-// Auto generated code (Tools/params_utils.py:957)
+// Auto generated code (Tools/params_utils.py:990)
 App::PropertyBool *Part::Feature::getShapeContentReplacementSuppressedProperty(bool force)
 {
     auto obj = this;
@@ -1399,7 +1399,25 @@ App::PropertyBool *Part::Feature::getShapeContentReplacementSuppressedProperty(b
     App::Prop_None));
 }
 
-// Auto generated code (Tools/params_utils.py:957)
+// Auto generated code (Tools/params_utils.py:990)
+App::PropertyBool *Part::Feature::getShapeContentDetachedProperty(bool force)
+{
+    auto obj = this;
+    if (auto prop = Base::freecad_dynamic_cast<App::PropertyBool>(
+            obj->getPropertyByName("ShapeContentDetached")))
+    {
+        if (prop->getContainer() == obj)
+            return prop;
+    }
+    if (!force)
+        return nullptr;
+    return static_cast<App::PropertyBool*>(obj->addDynamicProperty(
+            "App::PropertyBool", "ShapeContentDetached", "ShapeContent",
+    "If detached, than the shape content will not be auto removed and parent shape is removed",
+    App::Prop_None));
+}
+
+// Auto generated code (Tools/params_utils.py:990)
 App::PropertyLinkHidden *Part::Feature::get_ShapeContentOwnerProperty(bool force)
 {
     auto obj = this;
@@ -1517,7 +1535,9 @@ void Feature::collapseShapeContents(bool removeProperty)
         for (auto obj : prop->getValues()) {
             if (auto feat = Base::freecad_dynamic_cast<Part::Feature>(obj)) {
                 if (auto prop = feat->get_ShapeContentOwnerProperty()) {
-                    if (prop->getValue() == this)
+                    if (prop->getValue() == this
+                            && (!feat->getShapeContentDetachedProperty()
+                                || !feat->getShapeContentDetachedProperty()->getValue()))
                         removes.push_back(obj->getNameInDocument());
                 }
             }
@@ -1952,3 +1972,4 @@ bool Part::checkIntersection(const TopoDS_Shape& first, const TopoDS_Shape& seco
     }
 
 }
+

@@ -138,7 +138,7 @@ App::DocumentObjectExecReturn *Chamfer::execute(void)
     Part::TopoShape::ChamferInfo defaultChamfer;
     defaultChamfer.size = size;
     defaultChamfer.size2 = chamferType == 1 ? size2 : size;
-    defaultChamfer.angle = chamferType == 2 ? Base::toRadians(angle) : 0.0;
+    defaultChamfer.angle = chamferType == 2 ? angle : 0.0;
     defaultChamfer.flip = flipDirection;
 
     std::string name;

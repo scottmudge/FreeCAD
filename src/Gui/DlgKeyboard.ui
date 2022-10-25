@@ -206,7 +206,7 @@ to low. If more than one command with the same shortcut are active at the
 same time. The one with the highest priority will be triggered.</string>
            </property>
            <property name="text">
-            <string>Shorcut priority list:</string>
+            <string>Shortcut priority list:</string>
            </property>
           </widget>
          </item>

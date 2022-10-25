@@ -1033,7 +1033,8 @@ CmdSketcherViewSection::CmdSketcherViewSection()
 void CmdSketcherViewSection::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
-    ViewProviderSketch::setViewSection(!ViewProviderSketch::viewSection());
+    if (auto vp = ViewProviderSketch::getEditingViewProvider())
+        vp->toggleViewSection();
 }
 
 bool CmdSketcherViewSection::isActive(void)

@@ -315,6 +315,104 @@ void TaskLoftParameters::refresh()
 
 }
 
+bool TaskLoftParameters::setProfile(const App::SubObjectT &obj)
+{
+    if (!vp)
+        return false;
+    PartDesign::Loft* loft = static_cast<PartDesign::Loft*>(vp->getObject());
+    try {
+        auto ref = PartDesignGui::importExternalElement(obj);
+        auto refObj = ref.getSubObject();
+        if (refObj) {
+            QString text = QString::fromUtf8(refObj->Label.getValue());
+            setupTransaction();
+            loft->Profile.setValue(refObj);
+            recomputeFeature();
+            exitSelectionMode();
+            ui->profileBaseEdit->setText(text);
+            ui->buttonProfileBase->setChecked(false);
+            if (auto o = ref.getSubObject()) {
+                if (!o->isDerivedFrom(PartDesign::Feature::getClassTypeId()))
+                    o->Visibility.setValue(false);
+            }
+            return true;
+        }
+    } catch (Base::Exception &e) {
+        e.ReportException();
+    }
+    return false;
+}
+
+bool TaskLoftParameters::addSections(const std::vector<App::SubObjectT> &objs)
+{
+    if (!vp)
+        return false;
+    PartDesign::Loft* loft = static_cast<PartDesign::Loft*>(vp->getObject());
+    try {
+        auto sections = loft->Sections.getSubListValues();
+        bool touched = false;
+        std::set<App::DocumentObjectT> newSections;
+        for (auto ref : objs) {
+            ref = PartDesignGui::importExternalObject(ref);
+            auto refObj = ref.getObject();
+            if (!refObj)
+                continue;
+            bool found = false;
+            for (auto &v : sections) {
+                if (v.first != refObj)
+                    continue;
+                if (ref.getSubName().empty()) {
+                    if (v.second.size() != 1 || v.second.front().size()) {
+                        v.second.clear();
+                        v.second.emplace_back();
+                        touched = true;
+                    }
+                    found = true;
+                    break;
+                }
+                for (auto it=v.second.begin(); it!=v.second.end();) {
+                    if (it->empty()) {
+                        it = v.second.erase(it);
+                        touched = true;
+                    }
+                    else if (*it == ref.getSubName()) {
+                        found = true;
+                        break;
+                    } else
+                        ++it;
+                }
+                if (!found) {
+                    v.second.push_back(ref.getSubName());
+                    touched = found = true;
+                }
+                break;
+            }
+            if (!found) {
+                newSections.emplace(refObj);
+                std::vector<std::string> subs;
+                if (!ref.getSubName().empty())
+                    subs.push_back(ref.getSubName());
+                sections.emplace_back(refObj, std::move(subs));
+                touched = true;
+            }
+        }
+        if (!touched)
+            return false;
+        setupTransaction();
+        loft->Sections.setSubListValues(sections);
+        recomputeFeature();
+        for (const auto &o : newSections) {
+            if (auto obj = o.getObject())
+                obj->Visibility.setValue(false);
+        }
+        refresh();
+        return true;
+    } catch (Base::Exception &e) {
+        e.ReportException();
+    }
+    return false;
+}
+
 void TaskLoftParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     if (!vp || _Busy)
@@ -333,77 +431,15 @@ void TaskLoftParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
     if (!obj)
         return;
 
-    PartDesign::Loft* loft = static_cast<PartDesign::Loft*>(vp->getObject());
-
     switch(selectionMode) {
     case refProfile: {
         App::SubObjectT ref(msg.pOriginalMsg ? msg.pOriginalMsg->Object : msg.Object);
-        ref = PartDesignGui::importExternalElement(ref);
-        auto refObj = ref.getSubObject();
-        if (refObj) {
-            ui->profileBaseEdit->setText(QString::fromUtf8(refObj->Label.getValue()));
-            try {
-                setupTransaction();
-                loft->Profile.setValue(refObj);
-                recomputeFeature();
-            } catch (Base::Exception &e) {
-                e.ReportException();
-            }
-            exitSelectionMode();
-        }
+        setProfile(ref);
         break;
     }
     case refAdd: {
         App::SubObjectT ref(msg.pOriginalMsg ? msg.pOriginalMsg->Object : msg.Object);
-        ref = PartDesignGui::importExternalObject(ref);
-        auto refObj = ref.getObject();
-        if (refObj) {
-            bool touched = false;
-            const std::vector<std::string> *psubs = nullptr;
-            auto sections = loft->Sections.getSubListValues();
-            for (auto &v : sections) {
-                if (v.first != refObj)
-                    continue;
-                if (ref.getSubName().empty()) {
-                    v.second.clear();
-                    v.second.emplace_back();
-                    psubs = &v.second;
-                    touched = true;
-                    break;
-                }
-                for (auto it=v.second.begin(); it!=v.second.end();) {
-                    if (it->empty())
-                        it = v.second.erase(it);
-                    else if (*it == ref.getSubName()) {
-                        psubs = &v.second;
-                        touched = true;
-                        break;
-                    } else
-                        ++it;
-                }
-                if (!touched) {
-                    v.second.push_back(ref.getSubName());
-                    psubs = &v.second;
-                    touched = true;
-                }
-                break;
-            }
-            if (!touched) {
-                std::vector<std::string> subs;
-                if (!ref.getSubName().empty())
-                    subs.push_back(ref.getSubName());
-                sections.emplace_back(refObj, std::move(subs));
-                psubs = &sections.back().second;
-            }
-            addItem(refObj, *psubs, true);
-            try {
-                setupTransaction();
-                loft->Sections.setSubListValues(sections);
-                recomputeFeature();
-            } catch (Base::Exception &e) {
-                e.ReportException();
-            }
-        }
+        addSections({ref});
         break;
     }
     default:
@@ -518,6 +554,11 @@ void TaskLoftParameters::onSplitProfile(bool val) {
 void TaskLoftParameters::onProfileButton(bool checked)
 {
     if (checked) {
+        auto sels = Gui::Selection().getSelectionT("*", 0);
+        if (sels.size()) {
+            if (setProfile(sels.front()))
+                return;
+        }
         Gui::Selection().clearSelection();
         Gui::Selection().addSelectionGate(new LoftProfileSelectionGate(this, vp));
         selectionMode = refProfile;
@@ -531,6 +572,13 @@ void TaskLoftParameters::onRefButtonAdd(bool checked) {
     if (!vp)
         return;
     if (checked) {
+        auto sels = Gui::Selection().getSelectionT("*", 0);
+        if (sels.size()) {
+            if (addSections(sels)) {
+                ui->buttonRefAdd->setChecked(false);
+                return;
+            }
+        }
         Gui::Selection().clearSelection();
         Gui::Selection().addSelectionGate(new LoftSectionSelectionGate(this, vp));
         selectionMode = refAdd;

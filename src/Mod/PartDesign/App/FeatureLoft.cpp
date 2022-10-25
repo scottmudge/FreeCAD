@@ -99,6 +99,11 @@ Loft::getSectionShape(const char *name,
     }
     auto compound = TopoShape().makECompound(shapes, "", false);
     auto wires = compound.getSubTopoShapes(TopAbs_WIRE);
+    auto edges = compound.getSubTopoShapes(TopAbs_EDGE, TopAbs_WIRE); // get free edges and make wires from it
+    if (edges.size()) {
+        auto extra = TopoShape().makEWires(edges).getSubTopoShapes(TopAbs_WIRE);
+        wires.insert(wires.end(), extra.begin(), extra.end());
+    }
     const char *msg = "Loft: Sections need to have the same amount of wires or vertices as the base section";
     if (!wires.empty()) {
         if (expected_size && expected_size != wires.size())
@@ -171,7 +176,7 @@ App::DocumentObjectExecReturn *Loft::execute(void)
                 for(auto& wire : wires)
                     wire.move(invObjLoc);
                 shells.push_back(TopoShape(0, hasher).makELoft(
-                            wires, true, Ruled.getValue(), Closed.getValue()));
+                            wires, false, Ruled.getValue(), Closed.getValue()));
             }
 
             //build the top and bottom face, sew the shell and build the final solid

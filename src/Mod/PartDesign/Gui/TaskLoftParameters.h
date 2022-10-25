@@ -74,6 +74,8 @@ protected:
     void changeEvent(QEvent *e);
     bool eventFilter(QObject *o, QEvent *e);
     void refresh();
+    bool addSections(const std::vector<App::SubObjectT> &objs);
+    bool setProfile(const App::SubObjectT &obj);
 
 private:
     void onSelectionChanged(const Gui::SelectionChanges& msg);

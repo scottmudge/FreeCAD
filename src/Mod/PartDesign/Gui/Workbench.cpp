@@ -641,7 +641,9 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
           << "Separator"
           << "PartDesign_Boolean"
           << "PartDesign_Split"
-          << "PartDesign_Extrusion";
+          << "PartDesign_Extrusion"
+          << "Separator"
+          << "Part_CheckGeometry";
 
     // use Part's measure features also for PartDesign
     Gui::ToolBarItem* measure = new Gui::ToolBarItem(root);

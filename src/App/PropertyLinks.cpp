@@ -2492,6 +2492,11 @@ void PropertyLinkSubList::setSubListValues(const std::vector<PropertyLinkSubList
     std::vector<std::string> subs;
 
     for (std::vector<PropertyLinkSubList::SubSet>::const_iterator it = values.begin(); it != values.end(); ++it) {
+        if (it->second.empty()) {
+            links.push_back(it->first);
+            subs.emplace_back();
+            continue;
+        }
         for (std::vector<std::string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
             links.push_back(it->first);
             subs.push_back(*jt);

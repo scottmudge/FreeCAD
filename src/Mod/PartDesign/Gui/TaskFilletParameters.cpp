@@ -60,6 +60,12 @@ QWidget *FilletSegmentDelegate::createEditor(QWidget *parent, const QStyleOption
 {
     if (index.column() < 1 || index.column() > 3)
         return nullptr;
+    if (!index.parent().isValid()) {
+        if (auto owner = qobject_cast<TaskFilletParameters*>(this->parent()))
+            owner->newSegment(index.column());
+        return nullptr;
+    }
+
     Gui::QuantitySpinBox *editor = new Gui::QuantitySpinBox(parent);
     if (index.column() != 2)
         editor->setUnit(Base::Unit::Length);
@@ -77,6 +83,7 @@ void FilletSegmentDelegate::setEditorData(QWidget *editor, const QModelIndex &in
 
     Gui::QuantitySpinBox *spinBox = static_cast<Gui::QuantitySpinBox*>(editor);
     spinBox->setValue(value);
+    spinBox->selectNumber();
 }
 
 void FilletSegmentDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
@@ -190,6 +197,7 @@ void TaskFilletParameters::refresh()
     QSignalBlocker blocker(ui->treeWidgetReferences);
     for (int i=0; i<ui->treeWidgetReferences->topLevelItemCount(); ++i) {
         auto item = ui->treeWidgetReferences->topLevelItem(i);
+        item->setFlags(item->flags() | Qt::ItemIsEditable);
         int j = 0;
         for (const auto &segment : pcFillet->Segments.getValue(getGeometryItemText(item).constData())) {
             setSegment(j<item->childCount() ? item->child(j) : new QTreeWidgetItem(item),
@@ -235,7 +243,7 @@ void TaskFilletParameters::updateSegments(QTreeWidgetItem *item)
     Part::PropertyFilletSegments::Segments segments;
     auto parent = item->parent();
     if (!parent)
-        return;
+        parent = item;
     for (int i=0; i<parent->childCount(); ++i) {
         auto child = parent->child(i);
         segments.emplace_back(child->data(2, Qt::UserRole).toDouble(),
@@ -317,7 +325,7 @@ void TaskFilletParameters::setSegment(QTreeWidgetItem *item, double param, doubl
     setupItem("Length", 3, Base::Quantity(length, Base::Unit::Length), length==0.0);
 }
 
-void TaskFilletParameters::newSegment()
+void TaskFilletParameters::newSegment(int editColumn)
 {
     auto current = getCurrentItem();
     if (!current)
@@ -328,15 +336,26 @@ void TaskFilletParameters::newSegment()
     auto item = new QTreeWidgetItem;
     if (!parent) {
         current->addChild(item);
-        if (current->childCount() != 0)
+        if (current->childCount() != 1)
             param = 1.0;
     } else {
-        parent->insertChild(parent->indexOfChild(current), item);
-        param = item->data(2, Qt::UserRole).toDouble();
+        int index = parent->indexOfChild(current);
+        if (index == 0 && parent->childCount() == 1) {
+            parent->addChild(item);
+            param = 1.0;
+        } else {
+            parent->insertChild(index, item);
+            if (index == 0)
+                param = 0;
+            else
+                param = current->data(2, Qt::UserRole).toDouble();
+        }
     }
     setSegment(item, param, getRadius());
-    updateSegments(parent ? parent : current);
     ui->treeWidgetReferences->setCurrentItem(item);
+    if (editColumn)
+        ui->treeWidgetReferences->editItem(item, editColumn);
+    updateSegments(parent ? parent : current);
 }
 
 void TaskFilletParameters::onLengthChanged(double len)
@@ -349,6 +368,11 @@ void TaskFilletParameters::onLengthChanged(double len)
     setupTransaction();
     pcFillet->Radius.setValue(len);
     recompute();
+}
+
+void TaskFilletParameters::onNewItem(QTreeWidgetItem *item)
+{
+    item->setFlags(item->flags() | Qt::ItemIsEditable);
 }
 
 double TaskFilletParameters::getRadius() const
