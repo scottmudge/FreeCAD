@@ -69,6 +69,7 @@
 # include <TopTools_IndexedMapOfShape.hxx>
 # include <ElCLib.hxx>
 # include <GC_MakeArcOfCircle.hxx>
+# include <GCPnts_AbscissaPoint.hxx>
 # include <boost_bind_bind.hpp>
 //# include <QtGlobal>
 #endif
@@ -280,6 +281,14 @@ App::DocumentObjectExecReturn *SketchObject::execute(void)
     return App::DocumentObject::StdReturn;
 }
 
+static bool inline checkSmallEdge(const Part::TopoShape &s)
+{
+    if (s.shapeType() != TopAbs_EDGE)
+        return false;
+    BRepAdaptor_Curve adapt(TopoDS::Edge(s.getShape()));
+    return GCPnts_AbscissaPoint::Length(adapt, Precision::Confusion()) <= Precision::Confusion();
+}
+
 void SketchObject::buildShape() {
 
     // Shape.setValue(solvedSketch.toShape());
@@ -298,9 +307,13 @@ void SketchObject::buildShape() {
             std::string name = convertSubName(Data::IndexedName::fromConst("Vertex", idx+1), false);
             vertices.back().setElementName(Data::IndexedName::fromConst("Vertex", 1), 
                                            Data::MappedName::fromRawData(name.c_str()));
-        } else 
-            shapes.push_back(getEdge(geo,convertSubName(
-                        Data::IndexedName::fromConst("Edge", i), false).c_str()));
+        } else {
+            auto indexedName = Data::IndexedName::fromConst("Edge", i);
+            shapes.push_back(getEdge(geo,convertSubName(indexedName, false).c_str()));
+            if (checkSmallEdge(shapes.back())) {
+                FC_WARN("Edge too small: " << indexedName);
+            }
+        }
     }
 
     for(i=2;i<ExternalGeo.getSize();++i) {
@@ -308,8 +321,11 @@ void SketchObject::buildShape() {
         auto egf = ExternalGeometryFacade::getFacade(geo);
         if(!egf->testFlag(ExternalGeometryExtension::Defining))
             continue;
-        shapes.push_back(getEdge(geo, convertSubName(
-                        Data::IndexedName::fromConst("ExternalEdge", i-1), false).c_str()));
+        auto indexedName = Data::IndexedName::fromConst("ExternalEdge", i-1);
+        shapes.push_back(getEdge(geo, convertSubName(indexedName, false).c_str()));
+        if (checkSmallEdge(shapes.back())) {
+            FC_WARN("Edge too small: " << indexedName);
+        }
     }
     InternalShape.setValue(Part::TopoShape());
     if(shapes.empty() && vertices.empty()) {

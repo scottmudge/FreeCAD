@@ -3007,8 +3007,13 @@ bool TopoShape::fix()
     // BTW, the file attached in the issue also shows that ShapeFix_Shape may
     // actually make a valid input shape invalid). So, it actually change the
     // underlying shape data. Therefore, we try with a copy first. 
-    ShapeFix_Shape fix(BRepBuilderAPI_Copy(this->_Shape).Shape());
+    auto copy = makECopy();
+    ShapeFix_Shape fix(copy._Shape);
     fix.Perform();
+
+    if (fix.Shape().IsSame(copy._Shape))
+        return false;
+
     BRepCheck_Analyzer aChecker(fix.Shape());
     if (!aChecker.IsValid())
         return false;
@@ -3018,11 +3023,21 @@ bool TopoShape::fix()
     // underlying shape, and thus break internal shape sharing).
     ShapeFix_Shape fixThis(this->_Shape);
     fixThis.Perform();
+
     aChecker.Init(fixThis.Shape());
-    if (aChecker.IsValid())
-        setShape(fixThis.Shape(), false);
-    else
-        setShape(fix.Shape(), false);
+    if (aChecker.IsValid()) {
+        // Must call makESHAPE() (which calls mapSubElement()) to remap element
+        // names because ShapeFix_Shape may delete (e.g. small edges) or modify
+        // the input shape.
+        //
+        // See https://github.com/realthunder/FreeCAD/issues/595. Sketch001
+        // has small edges. Simply recompute the sketch to trigger call of fix()
+        // through makEWires(), and it will remove those edges. Without
+        // remapping, there will be invalid index jumpping in reference in
+        // Sketch002.ExternalEdge5.
+        makESHAPE(fixThis.Shape(), MapperHistory(fixThis), {*this});
+    } else
+        makESHAPE(fix.Shape(), MapperHistory(fix), {copy});
     return true;
 }
 
@@ -3031,10 +3046,12 @@ bool TopoShape::fix(double precision, double mintol, double maxtol)
     if (this->_Shape.IsNull())
         return false;
 
-    auto doFix = [precision, mintol, maxtol](TopoShape &s) {
+    auto doFix = [precision, mintol, maxtol](ShapeFix_Shape &fix,
+                                             const TopoShape &s,
+                                             TopoDS_Shape &result)
+    {
         TopAbs_ShapeEnum type = s._Shape.ShapeType();
 
-        ShapeFix_Shape fix(s._Shape);
         fix.SetPrecision(precision);
         fix.SetMinTolerance(mintol);
         fix.SetMaxTolerance(maxtol);
@@ -3047,35 +3064,43 @@ bool TopoShape::fix(double precision, double mintol, double maxtol)
             fix.FixFaceTool()->Perform();
             fix.FixShellTool()->Perform();
             fix.FixSolidTool()->Perform();
-            s.setShape(fix.FixSolidTool()->Shape(), false);
+            result = fix.FixSolidTool()->Shape();
         }
         else if (type == TopAbs_SHELL) {
             fix.FixWireTool()->Perform();
             fix.FixFaceTool()->Perform();
             fix.FixShellTool()->Perform();
-            s.setShape(fix.FixShellTool()->Shape(), false);
+            result = fix.FixShellTool()->Shape();
         }
         else if (type == TopAbs_FACE) {
             fix.FixWireTool()->Perform();
             fix.FixFaceTool()->Perform();
-            s.setShape(fix.Shape(), false);
+            result = fix.Shape();
         }
         else if (type == TopAbs_WIRE) {
             fix.FixWireTool()->Perform();
-            s.setShape(fix.Shape(), false);
+            result = fix.Shape();
         }
         else {
-            s.setShape(fix.Shape(), false);
-            return s.isValid();
+            result = fix.Shape();
         }
-        return s.isValid();
+        if (result.IsSame(s.getShape()))
+            return false;
+        BRepCheck_Analyzer check(result);
+        return check.IsValid();
     };
 
     auto copy = makECopy();
-    if (!doFix(copy))
+    TopoDS_Shape copiedShape;
+    ShapeFix_Shape fix(copy._Shape);
+    if (!doFix(fix, copy, copiedShape))
         return false;
-    if (!doFix(*this))
-        *this = copy;
+    ShapeFix_Shape fixThis(_Shape);
+    TopoDS_Shape fixedShape;
+    if (doFix(fixThis, *this, fixedShape))
+        makESHAPE(fixedShape, MapperHistory(fixThis), {*this});
+    else
+        makESHAPE(copiedShape, MapperHistory(fix), {copy});
     return true;
 }
 
