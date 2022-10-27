@@ -3067,7 +3067,8 @@ TopoShape &TopoShape::makEWires(const TopoShape &shape,
 TopoShape &TopoShape::makEFace(const TopoShape &shape,
                                const char *op,
                                const char *maker,
-                               const gp_Pln *pln)
+                               const gp_Pln *pln,
+                               int minElementNames)
 {
     std::vector<TopoShape> shapes;
     if (shape.isNull())
@@ -3076,18 +3077,20 @@ TopoShape &TopoShape::makEFace(const TopoShape &shape,
         shapes = shape.getSubTopoShapes();
     else
         shapes.push_back(shape);
-    return makEFace(shapes,op,maker,pln);
+    return makEFace(shapes,op,maker,pln,minElementNames);
 }
 
 TopoShape &TopoShape::makEFace(const std::vector<TopoShape> &shapes,
                                const char *op,
                                const char *maker,
-                               const gp_Pln *pln)
+                               const gp_Pln *pln,
+                               int minElementNames)
 {
     if(!maker || !maker[0]) maker = "Part::FaceMakerBullseye";
     std::unique_ptr<FaceMaker> mkFace = FaceMaker::ConstructFromType(maker);
     mkFace->MyHasher = Hasher;
     mkFace->MyOp = op;
+    // mkFace->setMinimumElementName(minElementNames);
     if (pln)
         mkFace->setPlane(*pln);
 

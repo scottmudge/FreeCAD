@@ -207,29 +207,29 @@ void Part::FaceMaker::postBuild() {
 
         std::vector<Data::MappedName> names;
         Data::ElementIDRefs sids;
-#if 0
-        for (auto &e : edgeNames) {
-            names.insert(e.name);
+
+        // To avoid name collision, we keep track of any used names to make sure
+        // to use at least 'minElementNames' number of unused element names to
+        // generate the face name.
+        int nameCount = 0;
+        for (const auto &e : edgeNames) {
+            names.push_back(e.name);
             sids += e.sids;
-        }
-#else
-        // We just use the first source element name to make the face name more
-        // stable
-        names.push_back(edgeNames.begin()->name);
-        if (!namesUsed.insert(names.back()).second) {
-            if (edgeNames.size() > 1) {
-                auto it = edgeNames.begin();
-                ++it;
-                names.push_back(it->name);
+            if (namesUsed.insert(e.name).second) {
+                if (++nameCount >= minElementNames)
+                    break;
             }
         }
-        sids = edgeNames.begin()->sids;
-#endif
         this->myTopoShape.setElementComboName(
                 Data::IndexedName::fromConst("Face",i),names,op,nullptr,&sids);
     }
     this->myTopoShape.initCache(true);
     this->Done();
+}
+
+void Part::FaceMaker::setMinimumElementName(int n)
+{
+    minElementNames = n;
 }
 
 std::unique_ptr<Part::FaceMaker> Part::FaceMaker::ConstructFromType(const char* className)

@@ -201,9 +201,12 @@ protected:
     // Return true if need to apply the shape placement to the Placement property
     virtual bool shouldApplyPlacement();
 
+    void registerElementCache(const std::string &prefix, PropertyPartShape *prop);
+
 private:
     struct ElementCache;
     boost::container::map<std::string, ElementCache> _elementCache;
+    std::vector<std::pair<std::string, PropertyPartShape*>> _elementCachePrefixMap;
 };
 
 class FilletBase : public Part::Feature

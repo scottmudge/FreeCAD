@@ -549,6 +549,8 @@ public:
      * @param maker: optional type name of the face maker. If not given,
      *               default to "Part::FaceMakerBullseye"
      * @param pln: optional plane of the face.
+     * @param minElementNames: minimum edge element names used to generate new
+     *                         face names.
      *
      * @return The function creates a planar face. The original content of this
      *         TopoShape is discarded and replaced with the new shape. The
@@ -559,7 +561,8 @@ public:
     TopoShape &makEFace(const std::vector<TopoShape> &shapes,
                         const char *op = nullptr,
                         const char *maker = nullptr,
-                        const gp_Pln *pln = nullptr);
+                        const gp_Pln *pln = nullptr,
+                        int minElementNames=1);
     /** Make a planar face with the input wire or edge 
      *
      * @param shape: input shape. Can be either edge, wire, or compound of
@@ -569,6 +572,8 @@ public:
      * @param maker: optional type name of the face maker. If not given,
      *               default to "Part::FaceMakerBullseye"
      * @param pln: optional plane of the face.
+     * @param minElementNames: minimum edge element names used to generate new
+     *                         face names.
      *
      * @return The function creates a planar face. The original content of this
      *         TopoShape is discarded and replaced with the new shape. The
@@ -579,7 +584,8 @@ public:
     TopoShape &makEFace(const TopoShape &shape,
                         const char *op = nullptr,
                         const char *maker = nullptr,
-                        const gp_Pln *pln = nullptr);
+                        const gp_Pln *pln = nullptr,
+                        int minElementNames=1);
     /** Make a planar face using this shape 
      *
      * @param op: optional string to be encoded into topo naming for indicating
@@ -587,14 +593,17 @@ public:
      * @param maker: optional type name of the face maker. If not given,
      *               default to "Part::FaceMakerBullseye"
      * @param pln: optional plane of the face.
+     * @param minElementNames: minimum edge element names used to generate new
+     *                         face names.
      *
      * @return The function returns a new planar face made using the wire or edge
      *         inside this shape. The shape itself is not modified.
      */
     TopoShape makEFace(const char *op = nullptr,
                        const char *maker = nullptr,
-                       const gp_Pln *pln = nullptr) const {
-        return TopoShape(0,Hasher).makEFace(*this,op,maker,pln);
+                       const gp_Pln *pln = nullptr,
+                       int minElementNames=1) const {
+        return TopoShape(0,Hasher).makEFace(*this,op,maker,pln,minElementNames);
     }
 
     /// Filling style when making a BSpline face

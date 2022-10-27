@@ -55,6 +55,7 @@ public:
 
     void addTopoShape(const TopoShape &s);
     void useTopoCompound(const TopoShape &comp);
+    void setMinimumElementName(int n);
     const TopoShape &getTopoShape() const;
     const TopoShape &TopoFace() const;
 
@@ -104,6 +105,7 @@ protected:
     std::vector<TopoDS_Shape> myShapesToReturn;
     std::vector<TopoDS_Shape> myInputFaces;
     TopoShape myTopoShape;
+    int minElementNames = 1;
 
     /**
      * @brief Build_Essence: build routine that can assume there is no nesting.

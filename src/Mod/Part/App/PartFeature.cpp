@@ -1174,9 +1174,56 @@ struct Feature::ElementCache {
     mutable bool searched;
 };
 
+void Feature::registerElementCache(const std::string &prefix, PropertyPartShape *prop)
+{
+    if (prop) {
+        _elementCachePrefixMap.emplace_back(prefix, prop);
+        return;
+    }
+    for (auto it=_elementCachePrefixMap.begin(); it!=_elementCachePrefixMap.end();) {
+        if (it->first == prefix) {
+            _elementCachePrefixMap.erase(it);
+            break;
+        }
+    }
+}
+
 void Feature::onBeforeChange(const App::Property *prop) {
-    if(prop == &Shape) {
-        _elementCache.clear();
+    PropertyPartShape *propShape = nullptr;
+    const std::string *prefix = nullptr;
+    if (prop == &Shape)
+        propShape = &Shape;
+    else {
+        for (const auto &v :_elementCachePrefixMap) {
+            if (prop == v.second) {
+                prefix = &v.first;
+                propShape = v.second;
+            }
+        }
+    }
+    if (propShape) {
+        if (_elementCachePrefixMap.empty())
+            _elementCache.clear();
+        else {
+            for (auto it=_elementCache.begin(); it!=_elementCache.end();) {
+                bool remove;
+                if (prefix)
+                    remove = boost::starts_with(it->first, *prefix);
+                else {
+                    remove = true;
+                    for (const auto &v : _elementCache) {
+                        if (boost::starts_with(it->first, v.first)) {
+                            remove = false;
+                            break;
+                        }
+                    }
+                }
+                if (remove)
+                    it = _elementCache.erase(it);
+                else
+                    ++it;
+            }
+        }
         if(getDocument() && !getDocument()->testStatus(App::Document::Restoring)
                          && !getDocument()->isPerformingTransaction())
         {
@@ -1193,11 +1240,26 @@ void Feature::onBeforeChange(const App::Property *prop) {
                     if(!element || !element[0]
                                 || Data::ComplexGeoData::hasMissingElement(element))
                         continue;
+                    if (prefix) {
+                        if (!boost::starts_with(element, *prefix))
+                            continue;
+                    } else {
+                        bool found = false;
+                        for (const auto &v : _elementCachePrefixMap) {
+                            if (boost::starts_with(element, v.first)) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found)
+                            continue;
+                    }
                     auto res = _elementCache.insert(
                             std::make_pair(std::string(element), ElementCache()));
                     if(res.second) {
                         res.first->second.searched = false;
-                        res.first->second.shape = Shape.getShape().getSubTopoShape(element, true);
+                        res.first->second.shape = propShape->getShape().getSubTopoShape(
+                                element + (prefix?prefix->size():0), true);
                     }
                 }
             }
@@ -1258,9 +1320,26 @@ Feature::searchElementCache(const std::string &element,
     if(it == _elementCache.end() || it->second.shape.isNull())
         return none;
     if(!it->second.searched) {
+        auto propShape = &Shape;
+        const std::string *prefix = nullptr;
+        for (const auto &v : _elementCachePrefixMap) {
+            if (boost::starts_with(element, v.first)) {
+                propShape = v.second;
+                prefix = &v.first;
+                break;
+            }
+        }
         it->second.searched = true;
-        Shape.getShape().searchSubShape(
+        propShape->getShape().searchSubShape(
                 it->second.shape, &it->second.names, checkGeometry, tol, atol);
+        if (prefix) {
+            for (auto &name : it->second.names) {
+                if (auto dot = strrchr(name.c_str(), '.'))
+                    name.insert(dot+1-name.c_str(), *prefix);
+                else
+                    name.insert(0, *prefix);
+            }
+        }
     }
     return it->second.names;
 }

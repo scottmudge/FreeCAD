@@ -185,6 +185,8 @@ SketchObject::SketchObject()
 
     internaltransaction=false;
     managedoperation=false;
+
+    registerElementCache(internalPrefix(), &InternalShape);
 }
 
 SketchObject::~SketchObject()
@@ -327,14 +329,15 @@ void SketchObject::buildShape() {
             FC_WARN("Edge too small: " << indexedName);
         }
     }
-    InternalShape.setValue(Part::TopoShape());
     if(shapes.empty() && vertices.empty()) {
+        InternalShape.setValue(Part::TopoShape());
         Shape.setValue(Part::TopoShape());
         return;
     }
+    Part::TopoShape result(getID(), getDocument()->getStringHasher());
     if (vertices.empty()) {
         // Notice here we supply op code Part::OpCodes::Sketch to makEWires().
-        Shape.setValue(Part::TopoShape().makEWires(shapes,Part::OpCodes::Sketch));
+        result.makEWires(shapes,Part::OpCodes::Sketch);
     } else {
         std::vector<Part::TopoShape> results;
         if (!shapes.empty()) {
@@ -352,10 +355,13 @@ void SketchObject::buildShape() {
                 results.push_back(wire);
         }
         results.insert(results.end(), vertices.begin(), vertices.end());
-        Shape.setValue(Part::TopoShape().makECompound(results, Part::OpCodes::Sketch));
+        result.makECompound(results, Part::OpCodes::Sketch);
     }
-
-    InternalShape.setValue(buildInternals(Shape.getShape().located()));
+    InternalShape.setValue(buildInternals(result.located()));
+    // Must set Shape property after InternalShape so that
+    // GeoFeature::updateElementReference() can run properly on change of Shape
+    // property, because some reference may pointing to the InternalShape
+    Shape.setValue(result);
 }
 
 Part::TopoShape SketchObject::buildInternals(const Part::TopoShape &edges) const
@@ -372,8 +378,15 @@ Part::TopoShape SketchObject::buildInternals(const Part::TopoShape &edges) const
         Part::TopoShape result(getID(), getDocument()->getStringHasher());
         if (!joiner.Shape().IsNull()) {
             joiner.getResultWires(result, "SKF");
+
+            // NOTE: we set minElementNames to 2 (i.e to use at least two
+            // unused edge name to construct face name) in order to reduce the
+            // chance of face jumpping.
             result = result.makEFace(result.getSubTopoShapes(TopAbs_WIRE), 
-                                     /*op*/"",  /*maker*/"Part::FaceMakerRing");
+                                     /*op*/"",
+                                     /*maker*/"Part::FaceMakerRing",
+                                     /*pln*/nullptr,
+                                     /*minElementNames*/2);
         }
         Part::TopoShape openWires(getID(), getDocument()->getStringHasher());
         joiner.getOpenWires(openWires, "SKF");
@@ -10037,40 +10050,50 @@ std::pair<std::string,std::string> SketchObject::getElementName(
         return Part2DObject::getElementName(name,type);
 
     const char *mapped = Data::ComplexGeoData::isMappedElement(name);
-    if(!mapped) {
-        if (auto realName = convertInternalName(name)) {
-            ret = _getElementName(realName, InternalShape.getShape().getElementName(realName));
-            if (ret.first.size() >= ret.second.size()) {
-                ret.first.resize(ret.first.size() - ret.second.size());
-                ret.first += name;
-            }
-            ret.second = name;
-            return ret;
+    Data::IndexedName index = checkSubName(name);
+    index.toString(ret.second);
+    if (auto realName = convertInternalName(ret.second.c_str())) {
+        Data::MappedElement mappedElement;
+        if (mapped)
+            mappedElement = InternalShape.getShape().getElementName(name);
+        else
+            mappedElement = InternalShape.getShape().getElementName(realName);
+        if (mappedElement.index) {
+            ret.second = internalPrefix();
+            mappedElement.index.toString(ret.second);
         }
+        if (mappedElement.name) {
+            ret.first = Data::ComplexGeoData::elementMapPrefix();
+            mappedElement.name.toString(ret.first);
+        }
+        else if (mapped)
+            ret.first = name;
+        if (ret.first.size()) {
+            if (auto dot = strrchr(ret.first.c_str(), '.'))
+                ret.first.resize(dot+1-ret.first.c_str());
+            else
+                ret.first += ".";
+            ret.first += ret.second;
+        }
+        if (!mappedElement.index || !mappedElement.name)
+            ret.second.insert(0, Data::ComplexGeoData::missingPrefix());
+        return ret;
+    }
 
+    if(!mapped) {
         auto occindex = Part::TopoShape::shapeTypeAndIndex(name);
         if (occindex.second)
             return Part2DObject::getElementName(name,type);
-
-        Data::IndexedName index = checkSubName(name);
-        ret.first = convertSubName(index, true);
-        if(!Data::ComplexGeoData::isMappedElement(ret.first.c_str()))
-            ret.first.clear();
-        index.toString(ret.second);
-        return ret;
     }
-        
-    Data::IndexedName index = checkSubName(name);
-    if(index) {
-        index.toString(ret.second);
-        ret.first = convertSubName(index, true);
-        if(type==ElementNameType::Export) {
-            if(boost::starts_with(ret.second,"Vertex"))
-                ret.second[0] = 'v';
-            else if(boost::starts_with(ret.second,"Edge"))
-                ret.second[0] = 'e';
-        }
+    else if(index && type==ElementNameType::Export) {
+        if(boost::starts_with(ret.second,"Vertex"))
+            ret.second[0] = 'v';
+        else if(boost::starts_with(ret.second,"Edge"))
+            ret.second[0] = 'e';
     }
+    ret.first = convertSubName(index, true);
+    if(!Data::ComplexGeoData::isMappedElement(ret.first.c_str()))
+        ret.first.clear();
     return ret;
 }
 
@@ -10275,9 +10298,10 @@ std::string SketchObject::convertSubName(const Data::IndexedName & indexedName, 
     if (auto realType = convertInternalName(indexedName.getType())) {
         auto mapped = InternalShape.getShape().getMappedName(
                 Data::IndexedName::fromConst(realType, indexedName.getIndex()));
-        if (!mapped)
-            ss << indexedName;
-        if (postfix)
+        if (!mapped) {
+            if (postfix)
+                ss << indexedName;
+        } else if (postfix)
             ss << Data::ComplexGeoData::elementMapPrefix() << mapped << '.' << indexedName;
         else
             ss << mapped;
