@@ -347,6 +347,11 @@ bool PropertyItem::isReadOnly() const
     return readonly;
 }
 
+void PropertyItem::disableEditor(QWidget *editor)
+{
+    editor->setDisabled(true);
+}
+
 void PropertyItem::setLinked(bool l)
 {
     linked = l;
@@ -4509,6 +4514,12 @@ PropertyLinkItem::PropertyLinkItem()
 {
 }
 
+void PropertyLinkItem::disableEditor(QWidget *editor)
+{
+    if (auto ll = qobject_cast<LinkLabel*>(editor))
+        ll->disableButton(true);
+}
+
 QVariant PropertyLinkItem::toString(const QVariant& prop) const
 {
     QString res;
@@ -4579,7 +4590,7 @@ QWidget* PropertyLinkItem::createEditor(QWidget* parent, const QObject* receiver
         return 0;
     LinkLabel *ll = new LinkLabel(parent, propertyItems.front());
     ll->setAutoFillBackground(true);
-    ll->setDisabled(isReadOnly());
+    ll->disableButton(isReadOnly());
     QObject::connect(ll, SIGNAL(linkChanged(const QVariant&)), receiver, method);
     return ll;
 }
