@@ -334,7 +334,7 @@ void SketchObject::buildShape() {
         Shape.setValue(Part::TopoShape());
         return;
     }
-    Part::TopoShape result(getID(), getDocument()->getStringHasher());
+    Part::TopoShape result(0, getDocument()->getStringHasher());
     if (vertices.empty()) {
         // Notice here we supply op code Part::OpCodes::Sketch to makEWires().
         result.makEWires(shapes,Part::OpCodes::Sketch);
@@ -357,6 +357,7 @@ void SketchObject::buildShape() {
         results.insert(results.end(), vertices.begin(), vertices.end());
         result.makECompound(results, Part::OpCodes::Sketch);
     }
+    result.Tag = getID();
     InternalShape.setValue(buildInternals(result.located()));
     // Must set Shape property after InternalShape so that
     // GeoFeature::updateElementReference() can run properly on change of Shape

@@ -393,10 +393,13 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
                 newsub += names.front();
                 GeoFeature::resolveElement(obj, newsub.c_str(), elementName,true,
                         GeoFeature::ElementNameType::Export,feature);
-                FC_WARN(propertyName(this) 
-                        << " auto change element reference " << ret->getFullName() << " "
-                        << (shadow.first.size()?shadow.first:shadow.second) << " -> "
-                        << (elementName.first.size()?elementName.first:elementName.second));
+                const auto &oldName = shadow.first.size()?shadow.first:shadow.second;
+                const auto &newName = elementName.first.size()?elementName.first:elementName.second;
+                if (oldName != newName) {
+                    FC_WARN(propertyName(this) 
+                            << " auto change element reference " << ret->getFullName() << " "
+                            << oldName << " -> " << newName);
+                }
             }
             // Note: the following code proves to be too risky. There is no way
             // (so far) to ensure the recompute do not change the geometry. If
