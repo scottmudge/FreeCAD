@@ -1014,11 +1014,8 @@ int SelectionSingleton::setPreselect(const char* pDocName, const char* pObjectNa
         return -1;
     }
 
-    auto tmp = ActiveGate;
-    // To prevent rmvPreselect() calling ActiveGate->restoreCursor() which will cause flash of cusor
-    ActiveGate = nullptr; 
-    rmvPreselect();
-    ActiveGate = tmp;
+    // Do not restore cursor to prevent causing flash of cursor
+    rmvPreselect(/*restoreCursor*/false);
 
     if (ActiveGate && signal!=1) {
         App::Document* pDoc = getDocument(pDocName);
@@ -1225,7 +1222,7 @@ void SelectionSingleton::setFormatDecimal(int d)
     fmtDecimal = d;
 }
 
-void SelectionSingleton::rmvPreselect()
+void SelectionSingleton::rmvPreselect(bool restoreCursor)
 {
     if (DocName == "")
         return;
@@ -1242,7 +1239,7 @@ void SelectionSingleton::rmvPreselect()
     hy = 0;
     hz = 0;
 
-    if (ActiveGate) {
+    if (restoreCursor && ActiveGate) {
         ActiveGate->restoreCursor();
     }
 

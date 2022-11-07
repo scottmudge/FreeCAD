@@ -87,14 +87,14 @@ Loft::getSectionShape(const char *name,
     if (subs.empty() || std::find(subs.begin(), subs.end(), std::string()) != subs.end()) {
         shapes.push_back(Part::Feature::getTopoShape(obj));
         if (shapes.back().isNull())
-            FC_THROWM(Part::NullShapeException, "Loft: failed to get shape of "
-                    << name << " " << App::SubObjectT(obj, "").getSubObjectFullName(getDocument()->getName()));
+            FC_THROWM(Part::NullShapeException, "Failed to get shape of "
+                    << name << " " << App::SubObjectT(obj, "").getSubObjectFullName(obj->getDocument()->getName()));
     } else {
         for (const auto &sub : subs) {
             shapes.push_back(Part::Feature::getTopoShape(obj, sub.c_str(), /*needSubElement*/true));
             if (shapes.back().isNull())
-                FC_THROWM(Part::NullShapeException, "Loft: failed to get shape of " << name << " "
-                        << App::SubObjectT(obj, sub.c_str()).getSubObjectFullName(getDocument()->getName()));
+                FC_THROWM(Part::NullShapeException, "Failed to get shape of " << name << " "
+                        << App::SubObjectT(obj, sub.c_str()).getSubObjectFullName(obj->getDocument()->getName()));
         }
     }
     auto compound = TopoShape().makECompound(shapes, "", false);
@@ -104,7 +104,7 @@ Loft::getSectionShape(const char *name,
         auto extra = TopoShape().makEWires(edges).getSubTopoShapes(TopAbs_WIRE);
         wires.insert(wires.end(), extra.begin(), extra.end());
     }
-    const char *msg = "Loft: Sections need to have the same amount of wires or vertices as the base section";
+    const char *msg = "Sections need to have the same amount of wires or vertices as the base section";
     if (!wires.empty()) {
         if (expected_size && expected_size != wires.size())
             FC_THROWM(Base::CADKernelError, msg);
@@ -112,7 +112,7 @@ Loft::getSectionShape(const char *name,
     }
     auto vertices = compound.getSubTopoShapes(TopAbs_VERTEX);
     if (vertices.empty())
-        FC_THROWM(Base::CADKernelError, "Loft: invalid " << name << " shape, expecting either wires or vertices");
+        FC_THROWM(Base::CADKernelError, "Invalid " << name << " shape, expecting either wires or vertices");
     if (expected_size && expected_size != vertices.size())
         FC_THROWM(Base::CADKernelError, msg);
     return vertices;

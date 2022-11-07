@@ -51,7 +51,7 @@ public:
     }
     //@}
 
-    std::vector<Part::TopoShape> getSectionShape(const char *name,
+    static std::vector<Part::TopoShape> getSectionShape(const char *name,
                                                  App::DocumentObject *obj,
                                                  const std::vector<std::string> &subname,
                                                  size_t expected_size = 0);

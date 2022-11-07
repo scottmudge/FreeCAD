@@ -1816,7 +1816,7 @@ CmdSketcherCreatePolyline::CmdSketcherCreatePolyline()
     sWhatsThis      = "Sketcher_CreatePolyline";
     sStatusTip      = sToolTipText;
     sPixmap         = "Sketcher_CreatePolyline";
-    sAccel          = "G, M";
+    sAccel          = "M";
     eType           = ForEdit;
 }
 

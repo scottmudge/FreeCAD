@@ -151,7 +151,12 @@ Feature::getElementName(const char *name, ElementNameType type) const
     if (!prop)
         return App::GeoFeature::getElementName(name, type);
 
-    TopoShape shape = prop->getShape();
+    return getExportElementName(prop->getShape(), name);
+}
+
+std::pair<std::string,std::string>
+Feature::getExportElementName(TopoShape shape, const char *name) const
+{
     Data::MappedElement mapped = shape.getElementName(name);
     auto res = shape.shapeTypeAndIndex(mapped.index);
     static const int MinLowerTopoNames = 3;
@@ -271,10 +276,8 @@ Feature::getElementName(const char *name, ElementNameType type) const
                 }
             }
         }
-        return App::GeoFeature::_getElementName(name, mapped);
     }
-
-    if (!res.second && mapped.name) {
+    else if (!res.second && mapped.name) {
         const char *dot = strchr(name,'.');
         if(dot) {
             ++dot;
@@ -331,13 +334,11 @@ Feature::getElementName(const char *name, ElementNameType type) const
                 if (ancestors.size() == 1) {
                     idxName.setIndex(ancestors.front());
                     mapped.index = idxName;
-                    return App::GeoFeature::_getElementName(name, mapped);
                 }
             }
         }
     }
-
-    return App::GeoFeature::getElementName(name, type);
+    return App::GeoFeature::_getElementName(name, mapped);
 }
 
 App::DocumentObject *Feature::getSubObject(const char *subname, 

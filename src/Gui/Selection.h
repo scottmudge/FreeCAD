@@ -481,7 +481,7 @@ public:
     int setPreselect(const char* pDocName, const char* pObjectName, const char* pSubName,
                      float x=0.f, float y=0.f, float z=0.f, int signal=0, bool msg=false);
     /// remove the present preselection
-    void rmvPreselect();
+    void rmvPreselect(bool restoreCursor = true);
     /// sets different coords for the preselection
     void setPreselectCoord(float x, float y, float z);
     /// returns the present preselection

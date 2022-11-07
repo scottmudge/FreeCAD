@@ -61,6 +61,7 @@
 #include <Mod/PartDesign/App/FeatureGroove.h>
 #include <Mod/PartDesign/App/FeatureSplit.h>
 #include <Mod/PartDesign/App/FeatureRevolution.h>
+#include <Mod/PartDesign/App/FeaturePipe.h>
 
 #include <Mod/PartDesign/App/FeatureTransformed.h>
 #include <Mod/PartDesign/App/FeatureMultiTransform.h>
@@ -944,10 +945,10 @@ void prepareProfileBased(PartDesign::Body *pcActiveBody, Gui::Command* cmd, cons
             for (unsigned i=1; i<sels.size(); ++i) {
                 if (!objSet.insert(sels[i].getSubObject()).second)
                     continue;
-                auto objT = PartDesignGui::importExternalElement(sels[i], false);
+                auto objT = PartDesignGui::importExternalObject(sels[i]);
                 if (objT.getObjectName().empty())
                     continue;
-                ss << objT.getObjectPython() << ", ";
+                ss << objT.getSubObjectPython() << ", ";
                 ++count;
             }
             if (count)
@@ -957,30 +958,9 @@ void prepareProfileBased(PartDesign::Body *pcActiveBody, Gui::Command* cmd, cons
         if (which.compare("AdditivePipe") == 0 || which.compare("SubtractivePipe") == 0) {
             if (sels.size() > 1) {
                 //treat additional selected object as spine
-                App::DocumentObject *spine = nullptr;
-                App::SubObjectT ref;
-                std::vector<std::string> subs;
-                for (unsigned i=1; i<sels.size(); ++i) {
-                    if (!spine) {
-                        ref = PartDesignGui::importExternalObject(sels[i], false);
-                        if (ref.getObjectName().empty())
-                            continue;
-                        spine = sels[i].getSubObject();
-                        if (!spine)
-                            continue;
-                    } else if (spine != sels[i].getSubObject())
-                        continue;
-                    auto sub = sels[i].getOldElementName();
-                    if (sub.size())
-                        subs.push_back(std::move(sub));
-                }
-                if (spine) {
-                    std::ostringstream ss;
-                    for(auto &s : subs)
-                        ss << "'" << s << "',";
-                    Gui::cmdAppObject(Feat, std::ostringstream()
-                            <<"Spine = (" << ref.getObjectPython() << ", [" << ss.str() << "])");
-                }
+                auto pcPipe = Base::freecad_dynamic_cast<PartDesign::Pipe>(Feat);
+                sels.erase(sels.begin());
+                PartDesignGui::importExternalElements(pcPipe->Spine, sels);
             }
         }
         // for Revolution and Groove allow the user to preselect the axis

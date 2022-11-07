@@ -304,11 +304,13 @@ void SketchObject::buildShape() {
         if(GeometryFacade::getConstruction(geo))
             continue;
         if (geo->isDerivedFrom(Part::GeomPoint::getClassTypeId())) {
-            vertices.emplace_back(TopoDS::Vertex(geo->toShape()));
+            Part::TopoShape vertex(TopoDS::Vertex(geo->toShape()));
             int idx = getVertexIndexGeoPos(i-1, Sketcher::start);
             std::string name = convertSubName(Data::IndexedName::fromConst("Vertex", idx+1), false);
-            vertices.back().setElementName(Data::IndexedName::fromConst("Vertex", 1), 
-                                           Data::MappedName::fromRawData(name.c_str()));
+            vertex.setElementName(Data::IndexedName::fromConst("Vertex", 1), 
+                                  Data::MappedName::fromRawData(name.c_str()));
+            vertices.push_back(vertex);
+            vertices.back().copyElementMap(vertex, Part::OpCodes::Sketch);
         } else {
             auto indexedName = Data::IndexedName::fromConst("Edge", i);
             shapes.push_back(getEdge(geo,convertSubName(indexedName, false).c_str()));
@@ -336,26 +338,21 @@ void SketchObject::buildShape() {
     }
     Part::TopoShape result(0, getDocument()->getStringHasher());
     if (vertices.empty()) {
-        // Notice here we supply op code Part::OpCodes::Sketch to makEWires().
         result.makEWires(shapes,Part::OpCodes::Sketch);
     } else {
         std::vector<Part::TopoShape> results;
         if (!shapes.empty()) {
-            // This call of makEWires() does not have the op code, in order to
-            // avoid duplication. Because we'll going to make a compound (to
-            // include the vertices) below with the same op code.
-            //
-            // Note, that we HAVE TO add the Part::OpCodes::Sketch op code to all
-            // geometry exposed through the Shape property, because
+            // Note, that we HAVE TO add the Part::OpCodes::Sketch op code to
+            // all geometry exposed through the Shape property, because
             // SketchObject::getElementName() relies on this op code to
             // differentiate geometries that are exposed with those in edit
             // mode.
-            auto wires = Part::TopoShape().makEWires(shapes);
+            auto wires = Part::TopoShape().makEWires(shapes, Part::OpCodes::Sketch);
             for (const auto &wire : wires.getSubTopoShapes(TopAbs_WIRE))
                 results.push_back(wire);
         }
         results.insert(results.end(), vertices.begin(), vertices.end());
-        result.makECompound(results, Part::OpCodes::Sketch);
+        result.makECompound(results);
     }
     result.Tag = getID();
     InternalShape.setValue(buildInternals(result.located()));
@@ -387,7 +384,12 @@ Part::TopoShape SketchObject::buildInternals(const Part::TopoShape &edges) const
                                      /*op*/"",
                                      /*maker*/"Part::FaceMakerRing",
                                      /*pln*/nullptr,
-                                     /*minElementNames*/2);
+#if 1
+                                     /*minElementNames (revert to 1 for now, see how it fairs)*/1
+#else
+                                     /*minElementNames*/2
+#endif
+                                    );
         }
         Part::TopoShape openWires(getID(), getDocument()->getStringHasher());
         joiner.getOpenWires(openWires, "SKF");
@@ -10057,18 +10059,24 @@ std::pair<std::string,std::string> SketchObject::getElementName(
         Data::MappedElement mappedElement;
         if (mapped)
             mappedElement = InternalShape.getShape().getElementName(name);
+        else if (type == ElementNameType::Export)
+            ret.first = getExportElementName(InternalShape.getShape(), realName).first;
         else
             mappedElement = InternalShape.getShape().getElementName(realName);
-        if (mappedElement.index) {
-            ret.second = internalPrefix();
-            mappedElement.index.toString(ret.second);
+
+        if (mapped || type != ElementNameType::Export) {
+            if (mappedElement.index) {
+                ret.second = internalPrefix();
+                mappedElement.index.toString(ret.second);
+            }
+            if (mappedElement.name) {
+                ret.first = Data::ComplexGeoData::elementMapPrefix();
+                mappedElement.name.toString(ret.first);
+            }
+            else if (mapped)
+                ret.first = name;
         }
-        if (mappedElement.name) {
-            ret.first = Data::ComplexGeoData::elementMapPrefix();
-            mappedElement.name.toString(ret.first);
-        }
-        else if (mapped)
-            ret.first = name;
+
         if (ret.first.size()) {
             if (auto dot = strrchr(ret.first.c_str(), '.'))
                 ret.first.resize(dot+1-ret.first.c_str());
@@ -10076,7 +10084,7 @@ std::pair<std::string,std::string> SketchObject::getElementName(
                 ret.first += ".";
             ret.first += ret.second;
         }
-        if (!mappedElement.index || !mappedElement.name)
+        if (mapped && (!mappedElement.index || !mappedElement.name))
             ret.second.insert(0, Data::ComplexGeoData::missingPrefix());
         return ret;
     }

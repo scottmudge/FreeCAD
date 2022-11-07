@@ -1531,8 +1531,7 @@ static std::vector<TopoShape> prepareProfiles(const std::vector<TopoShape> &shap
         if (shape.ShapeType() == TopAbs_FACE) {
             shape = sh.splitWires().getShape();
         } else if (shape.ShapeType() == TopAbs_WIRE) {
-            BRepBuilderAPI_MakeWire mkWire(TopoDS::Wire(shape));
-            shape = mkWire.Wire();
+            // do nothing
         } else if (shape.ShapeType() == TopAbs_EDGE) {
             BRepBuilderAPI_MakeWire mkWire(TopoDS::Edge(shape));
             shape = mkWire.Wire();
@@ -3090,7 +3089,7 @@ TopoShape &TopoShape::makEFace(const std::vector<TopoShape> &shapes,
     std::unique_ptr<FaceMaker> mkFace = FaceMaker::ConstructFromType(maker);
     mkFace->MyHasher = Hasher;
     mkFace->MyOp = op;
-    // mkFace->setMinimumElementName(minElementNames);
+    mkFace->setMinimumElementName(minElementNames);
     if (pln)
         mkFace->setPlane(*pln);
 

@@ -62,10 +62,8 @@ TaskPocketParameters::TaskPocketParameters(ViewProviderPocket *PocketView,QWidge
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
     ui->setupUi(proxy);
-#if QT_VERSION >= 0x040700
     ui->lineFaceName->setPlaceholderText(tr("No face selected"));
-    addBlinkEditor(ui->lineFaceName);
-#endif
+    addBlinkWidget(ui->lineFaceName);
 
     ui->lineFaceName->installEventFilter(this);
     ui->lineFaceName->setMouseTracking(true);
@@ -370,35 +368,28 @@ void TaskPocketParameters::updateUI(int index)
     ui->labelInnerTaperAngle2->setVisible( angleVisible );
 }
 
-void TaskPocketParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
+void TaskPocketParameters::_onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     if (msg.Type == Gui::SelectionChanges::AddSelection) {
-        if (!selectingReference)
-            return;
-
-        QString refText = onAddSelection(msg);
+        QSignalBlocker guard(ui->lineFaceName);
+        QString refText = onSelectUpToFace(msg);
         if (refText.length() > 0) {
-            ui->lineFaceName->blockSignals(true);
             ui->lineFaceName->setText(refText);
             QStringList list(refText.split(QLatin1Char(':')));
             ui->lineFaceName->setProperty("FeatureName", list[0].toUtf8());
             ui->lineFaceName->setProperty("FaceName", list.size()>1 ? list[1].toLatin1() : QByteArray());
-            ui->lineFaceName->blockSignals(false);
             // Turn off reference selection mode
             onButtonFace(false);
         } else {
-            ui->lineFaceName->blockSignals(true);
             ui->lineFaceName->clear();
             ui->lineFaceName->setProperty("FeatureName", QVariant());
             ui->lineFaceName->setProperty("FaceName", QVariant());
-            ui->lineFaceName->blockSignals(false);
         }
     } else if (msg.Type == Gui::SelectionChanges::ClrSelection) {
-        ui->lineFaceName->blockSignals(true);
+        QSignalBlocker guard(ui->lineFaceName);
         ui->lineFaceName->clear();
         ui->lineFaceName->setProperty("FeatureName", QVariant());
         ui->lineFaceName->setProperty("FaceName", QVariant());
-        ui->lineFaceName->blockSignals(false);
     }
 }
 
@@ -524,12 +515,20 @@ void TaskPocketParameters::onModeChanged(int index)
 
 void TaskPocketParameters::onButtonFace(const bool pressed)
 {
-    this->blockConnection(!pressed);
+    if (!pressed) {
+        exitSelectionMode();
+        return;
+    }
+    TaskSketchBasedParameters::onSelectReference(ui->buttonFace);
+}
 
-    TaskSketchBasedParameters::onSelectReference(pressed, false, true, false);
-
-    // Update button if onButtonFace() is called explicitly
-    ui->buttonFace->setChecked(pressed);
+void TaskPocketParameters::onSelectionModeChanged(SelectionMode)
+{
+    if (getSelectionMode() == SelectionMode::refAdd) {
+        ui->buttonFace->setChecked(true);
+    } else {
+        ui->buttonFace->setChecked(false);
+    }
 }
 
 void TaskPocketParameters::onFaceName(const QString& text)
@@ -623,10 +622,9 @@ void TaskPocketParameters::changeEvent(QEvent *e)
         ui->changeMode->addItem(tr("Two dimensions"));
         ui->changeMode->setCurrentIndex(index);
 
-#if QT_VERSION >= 0x040700
         ui->lineFaceName->setPlaceholderText(tr("No face selected"));
-        addBlinkEditor(ui->lineFaceName);
-#endif
+        addBlinkWidget(ui->lineFaceName);
+        
         ui->lengthEdit->blockSignals(false);
         ui->lengthEdit2->blockSignals(false);
         ui->offsetEdit->blockSignals(false);
