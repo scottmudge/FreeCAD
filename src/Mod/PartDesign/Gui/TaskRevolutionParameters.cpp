@@ -68,12 +68,14 @@ TaskRevolutionParameters::TaskRevolutionParameters(PartDesignGui::ViewProvider* 
 
     connect(ui->revolveAngle, SIGNAL(valueChanged(double)),
             this, SLOT(onAngleChanged(double)));
-    connect(ui->axis, SIGNAL(activated(int)),
+    connect(ui->axis, SIGNAL(currentIndexChanged(int)),
             this, SLOT(onAxisChanged(int)));
     connect(ui->checkBoxMidplane, SIGNAL(toggled(bool)),
             this, SLOT(onMidplane(bool)));
     connect(ui->checkBoxReversed, SIGNAL(toggled(bool)),
             this, SLOT(onReversed(bool)));
+
+    QObject::connect(ui->buttonAxis, &QPushButton::clicked, [this](bool checked) {onAxisButton(checked);});
 
     ui->axis->setMouseTracking(true);
     ui->axis->installEventFilter(this);
@@ -102,7 +104,31 @@ TaskRevolutionParameters::TaskRevolutionParameters(PartDesignGui::ViewProvider* 
         } catch (const Base::Exception &ex) {
             ex.ReportException();
         }
-     }
+    }
+
+    onAxisButton(true);
+}
+
+void TaskRevolutionParameters::onAxisButton(bool checked)
+{
+    if (checked) {
+        ReferenceSelection::Config conf;
+        conf.edge = true;
+        conf.plane = false;
+        conf.planar = true;
+        conf.circle = true;
+        TaskSketchBasedParameters::onSelectReference(ui->buttonAxis, conf);
+    } else
+        exitSelectionMode();
+}
+
+void TaskRevolutionParameters::onSelectionModeChanged(SelectionMode)
+{
+    if (getSelectionMode() == SelectionMode::refAdd) {
+        ui->buttonAxis->setChecked(true);
+    } else {
+        ui->buttonAxis->setChecked(false);
+    }
 }
 
 void TaskRevolutionParameters::refresh()
@@ -244,7 +270,6 @@ void TaskRevolutionParameters::_onSelectionChanged(const Gui::SelectionChanges& 
 {
     if (msg.Type == Gui::SelectionChanges::AddSelection) {
         if (getSelectionMode() == SelectionMode::refAdd) {
-            exitSelectionMode();
             std::vector<std::string> axis;
             App::DocumentObject* selObj;
             if (getReferencedSelection(vp->getObject(), msg, selObj, axis) && selObj) {
@@ -262,7 +287,6 @@ void TaskRevolutionParameters::onAngleChanged(double len)
 {
     setupTransaction();
     propAngle->setValue(len);
-    exitSelectionMode();
     recomputeFeature();
 }
 
@@ -303,23 +327,13 @@ void TaskRevolutionParameters::onAxisChanged(int num)
         oldRefName = oldSubRefAxis.front();
 
     App::PropertyLinkSub &lnk = *(axesInList[num]);
-    if (lnk.getValue() == 0) {
-        // enter reference selection mode
-        ReferenceSelection::Config conf;
-        conf.edge = true;
-        conf.plane = false;
-        conf.planar = true;
-        conf.circle = true;
-        TaskSketchBasedParameters::onSelectReference(ui->labelAxis, conf);
-        return;
-    } else {
+    if (lnk.getValue()) {
         if (!pcRevolution->getDocument()->isIn(lnk.getValue())){
             Base::Console().Error("Object was deleted\n");
             return;
         }
         setupTransaction();
         propReferenceAxis->Paste(lnk);
-        exitSelectionMode();
     }
 
     try {

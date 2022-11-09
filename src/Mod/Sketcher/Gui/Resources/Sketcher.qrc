@@ -11,6 +11,7 @@
         <file>icons/Sketcher_Sync.svg</file>
         <file>icons/Sketcher_FixExternal.svg</file>
         <file>icons/Sketcher_Intersection.svg</file>
+        <file>icons/Sketcher_IntersectionDefining.svg</file>
         <file>icons/Sketcher_SketchExport.svg</file>
         <file>icons/Sketcher_SketchExportCompound.svg</file>
         <file>icons/Sketcher_SwapID.svg</file>

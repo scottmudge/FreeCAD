@@ -636,12 +636,15 @@ Feature::getElementFromSource(App::DocumentObject *obj,
 
     // Use the old style name to obtain the shape type
     auto type = TopoShape::shapeType(
-            Data::ComplexGeoData::findElementName(objElement.second.c_str()));
+            Data::ComplexGeoData::findElementName(objElement.second.c_str()), true);
+
     // If the given shape has the same number of sub shapes as the source (e.g.
     // a compound operation), then take a shortcut and assume the element index
     // remains the same. But we still need to trace the shape history to
     // confirm.
-    if (element.name && shape.countSubShapes(type) == srcShape.countSubShapes(type)) {
+    if (type != TopAbs_SHAPE
+            && element.name
+            && shape.countSubShapes(type) == srcShape.countSubShapes(type)) {
         tagChanges = 0;
         checkingSubname = element.index;
         auto mapped = shape.getMappedName(element.index);
@@ -651,7 +654,7 @@ Feature::getElementFromSource(App::DocumentObject *obj,
     }
 
     // Try geometry search first
-    auto subShape = srcShape.getSubShape(objElement.second.c_str());
+    auto subShape = getTopoShape(src, srcSub, /*needSubElement*/true);
     std::vector<std::string> names;
     shape.searchSubShape(subShape, &names);
     if (names.size()) {
@@ -666,7 +669,7 @@ Feature::getElementFromSource(App::DocumentObject *obj,
         return res;
     }
 
-    if (!element.name)
+    if (!element.name || type == TopAbs_SHAPE)
         return res;
 
     // No shortcut, need to search every element of the same type. This may
@@ -1136,6 +1139,23 @@ TopoShape Feature::getTopoShape(const App::DocumentObject *obj, const char *subn
     Base::Matrix4D mat;
     auto shape = _getTopoShape(obj, subname, needSubElement, &mat, 
             powner, resolveLink, noElementMap, hiddens, lastLink);
+
+    if (needSubElement && shape.shapeType(true) == TopAbs_COMPOUND) {
+        if (shape.countSubShapes(TopAbs_SOLID) == 1)
+            shape = shape.getSubTopoShape(TopAbs_SOLID, 1);
+        else if (shape.countSubShapes(TopAbs_COMPSOLID) == 1)
+            shape = shape.getSubTopoShape(TopAbs_COMPSOLID, 1);
+        else if (shape.countSubShapes(TopAbs_FACE) == 1)
+            shape = shape.getSubTopoShape(TopAbs_FACE, 1);
+        else if (shape.countSubShapes(TopAbs_SHELL) == 1)
+            shape = shape.getSubTopoShape(TopAbs_SHELL, 1);
+        else if (shape.countSubShapes(TopAbs_EDGE) == 1)
+            shape = shape.getSubTopoShape(TopAbs_EDGE, 1);
+        else if (shape.countSubShapes(TopAbs_WIRE) == 1)
+            shape = shape.getSubTopoShape(TopAbs_WIRE, 1);
+        else if (shape.countSubShapes(TopAbs_VERTEX) == 1)
+            shape = shape.getSubTopoShape(TopAbs_VERTEX, 1);
+    }
 
     Base::Matrix4D topMat;
     if(pmat || transform) {

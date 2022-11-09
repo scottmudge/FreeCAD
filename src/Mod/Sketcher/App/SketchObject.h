@@ -290,7 +290,7 @@ public:
     int setConstruction(int GeoId, bool on);
 
     int toggleFreeze(const std::vector<int> &);
-    int toggleIntersection(const std::vector<int> &);
+    int toggleIntersection(const std::vector<int> &, bool defining=false);
 
     /*!
      \brief Create a sketch fillet from the point at the intersection of two lines
@@ -619,7 +619,9 @@ public: // geometry extension functionalities for single element sketch object u
 
 protected:
 
-    int toggleExternalGeometryFlag(const std::vector<int> &, ExternalGeometryExtension::Flag flag);
+    // Only the first flag is toggled, the rest of the flags is set or cleared following the first flag.
+    int toggleExternalGeometryFlag(const std::vector<int> &geoIds,
+                                   const std::vector<ExternalGeometryExtension::Flag> &flags);
 
     void buildShape();
     /// get called by the container when a property has changed

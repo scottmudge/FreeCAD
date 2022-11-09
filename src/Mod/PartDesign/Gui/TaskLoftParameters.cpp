@@ -95,6 +95,9 @@ TaskLoftParameters::TaskLoftParameters(ViewProviderLoft *LoftView,bool /*newObj*
 
     // call updateUI until Gui::Document::setEdit() finishes;
     QMetaObject::invokeMethod(this, "updateUI", Qt::QueuedConnection);
+
+    if (!loft->Sections.getValue())
+        sectionWidget->onButton(true);
 }
 
 TaskLoftParameters::~TaskLoftParameters()

@@ -407,7 +407,7 @@ void Workbench::activated()
         "PartDesign_Extrusion",
         0};
     Watcher.push_back(new Gui::TaskView::TaskWatcherCommands(
-        "SELECT Sketcher::SketchObject COUNT 1",
+        "SELECT Sketcher::SketchObject COUNT 1..",
         Sketch,
         "Sketch tools",
         "Part_Box"

@@ -674,6 +674,13 @@ bool ViewProviderBody::canDragAndDropObject(App::DocumentObject * obj) const
                 && group->getGroupType() == PartDesign::AuxGroup::OtherGroup)
             return true;
     }
+
+    auto type = obj->getTypeId();
+    if (type.isDerivedFrom(Part::Datum::getClassTypeId())   ||
+        type.isDerivedFrom(Part::Part2DObject::getClassTypeId()) ||
+        type.isDerivedFrom(PartDesign::ShapeBinder::getClassTypeId()) ||
+        type.isDerivedFrom(Part::SubShapeBinder::getClassTypeId()))
+        return true;
     
     if (!body->getPrevSolidFeature()
              && !body->BaseFeature.getValue()
@@ -893,6 +900,9 @@ bool ViewProviderBody::_reorderObject(PartDesign::Body *body,
     if (!body->Group.find(oldObj->getNameInDocument(), &i)
             || !body->Group.find(newObj->getNameInDocument(), &j))
         return false;
+
+    if (i-1 == j)
+        return true;
 
     auto secondFeat = Base::freecad_dynamic_cast<PartDesign::Feature>(oldObj);
     auto firstFeat = Base::freecad_dynamic_cast<PartDesign::Feature>(newObj);

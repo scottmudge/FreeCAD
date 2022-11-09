@@ -1670,17 +1670,25 @@ int SketchObject::setConstruction(int GeoId, bool on)
 
 int SketchObject::toggleFreeze(const std::vector<int> &geoIds)
 {
-    return toggleExternalGeometryFlag(geoIds, ExternalGeometryExtension::Frozen);
+    return toggleExternalGeometryFlag(geoIds, {ExternalGeometryExtension::Frozen});
 }
 
-int SketchObject::toggleIntersection(const std::vector<int> &geoIds)
+int SketchObject::toggleIntersection(const std::vector<int> &geoIds, bool defining)
 {
-    return toggleExternalGeometryFlag(geoIds, ExternalGeometryExtension::Intersection);
+    std::vector<ExternalGeometryExtension::Flag> flags;
+    flags.push_back(ExternalGeometryExtension::Intersection);
+    if (defining)
+        flags.push_back(ExternalGeometryExtension::Defining);
+    return toggleExternalGeometryFlag(geoIds, flags);
 }
 
 int SketchObject::toggleExternalGeometryFlag(const std::vector<int> &geoIds,
-                                             ExternalGeometryExtension::Flag flag)
+                                             const std::vector<ExternalGeometryExtension::Flag> &flags)
 {
+    if (flags.empty())
+        return 0;
+    auto flag = flags.front();
+
     Base::StateLocker lock(managedoperation, true); // no need to check input data validity as this is an sketchobject managed operation.
 
     bool update = false;
@@ -1706,12 +1714,16 @@ int SketchObject::toggleExternalGeometryFlag(const std::vector<int> &geoIds,
                 g = g->clone();
                 auto egf = ExternalGeometryFacade::getFacade(g);
                 egf->setFlag(flag, value);
+                for (size_t i=1; i<flags.size(); ++i)
+                    egf->setFlag(flags[i], value);
                 idSet.erase(gid);
             }
         }
         geo = geo->clone();
         egf->setGeometry(geo);
         egf->setFlag(flag, value);
+        for (size_t i=1; i<flags.size(); ++i)
+            egf->setFlag(flags[i], value);
         if (value || flag != ExternalGeometryExtension::Frozen)
             update = true;
         touched = true;
@@ -8228,15 +8240,16 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
             FC_WARN("Duplicated external reference in " << getFullName() << ": " << key);
             continue;
         }
-        if (defining && i+1==(int)Objects.size()) {
+        if (intersection) {
+            for(auto &geo : geos) {
+                auto egf = ExternalGeometryFacade::getFacade(geo.get());
+                egf->setFlag(ExternalGeometryExtension::Intersection);
+                egf->setFlag(ExternalGeometryExtension::Defining, defining);
+            }
+        } else if (defining && i+1==(int)Objects.size()) {
             for(auto &geo : geos)
                 ExternalGeometryFacade::getFacade(geo.get())->setFlag(
                         ExternalGeometryExtension::Defining);
-        }
-        if (intersection) {
-            for(auto &geo : geos)
-                ExternalGeometryFacade::getFacade(geo.get())->setFlag(
-                        ExternalGeometryExtension::Intersection);
         }
         for(auto &geo : geos)
             ExternalGeometryFacade::getFacade(geo.get())->setRef(key);

@@ -323,7 +323,6 @@ void TaskHelixParameters::updateUI()
 void TaskHelixParameters::_onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     if (msg.Type == Gui::SelectionChanges::AddSelection) {
-        exitSelectionMode();
         std::vector<std::string> axis;
         App::DocumentObject* selObj;
         if (getReferencedSelection(vp->getObject(), msg, selObj, axis) && selObj) {
@@ -331,6 +330,7 @@ void TaskHelixParameters::_onSelectionChanged(const Gui::SelectionChanges& msg)
             recomputeFeature();
             updateUI();
         }
+        exitSelectionMode();
     }
 }
 

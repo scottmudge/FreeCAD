@@ -185,11 +185,16 @@ void LinkSubWidgetDelegate::setModelData(QWidget *editor, QAbstractItemModel *mo
 
 LinkSubWidget::LinkSubWidget(TaskSketchBasedParameters *parent,
                              const QString &title,
-                             App::PropertyLinkSub &prop)
+                             App::PropertyLinkSub &prop,
+                             bool singleElement,
+                             QPushButton *_button,
+                             QListWidget *_listWidget,
+                             QPushButton *_clearButton)
     :QWidget(parent)
     ,parentTask(parent)
     ,selectionMode(TaskSketchBasedParameters::SelectionMode::refAdd)
     ,linkProp(&prop)
+    ,singleElement(singleElement)
 {
     selectionConf.edge = true;
     selectionConf.plane = true;
@@ -198,26 +203,39 @@ LinkSubWidget::LinkSubWidget(TaskSketchBasedParameters *parent,
     selectionConf.wire = true;
     selectionConf.point = true;
 
-    QHBoxLayout *hlayout = new QHBoxLayout();
-    hlayout->setSpacing(2);
-    setLayout(hlayout);
-    hlayout->setContentsMargins(0,0,0,0);
-    setContentsMargins(0,0,0,0);
-    button = new QPushButton(this);
-    button->setToolTip(tr("Click to enter selection mode"));
+    if (_button && _listWidget) {
+        button = _button;
+        listWidget = _listWidget;
+        clearButton = _clearButton;
+        setVisible(false);
+    }
+    else {
+        QHBoxLayout *hlayout = new QHBoxLayout();
+        hlayout->setSpacing(2);
+        setLayout(hlayout);
+        hlayout->setContentsMargins(0,0,0,0);
+        setContentsMargins(0,0,0,0);
+        button = new QPushButton(this);
+        hlayout->addWidget(button);
+
+        listWidget = new QListWidget(this);
+        hlayout->addWidget(listWidget);
+
+        clearButton = new QPushButton(this);
+        hlayout->addWidget(clearButton);
+    }
     button->setText(title);
     button->setCheckable(true);
     QObject::connect(button, &QPushButton::clicked, [this](bool checked) {onButton(checked);});
-    hlayout->addWidget(button);
+    if (button->toolTip().isEmpty())
+        button->setToolTip(tr("Click to enter selection mode"));
 
-    listWidget = new QListWidget(this);
     listWidget->setViewMode(QListView::IconMode);
     listWidget->setWrapping(false);
     listWidget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     listWidget->setMouseTracking(true);
     listWidget->setSpacing(5);
     listWidget->horizontalScrollBar()->installEventFilter(this);
-    hlayout->addWidget(listWidget);
     QObject::connect(listWidget, &QListWidget::itemEntered, [this](QListWidgetItem *item) {
         App::DocumentObject *obj;
         auto prop = getProperty(&obj);
@@ -239,12 +257,12 @@ LinkSubWidget::LinkSubWidget(TaskSketchBasedParameters *parent,
     listWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
     QObject::connect(remove, &QAction::triggered, [this](){onDelete();});
 
-    clearButton = new QPushButton(this);
-    clearButton->setIcon(Gui::BitmapFactory().pixmap("edit-cleartext"));
-    clearButton->setToolTip(tr("Clear link references"));
-    // clearButton->setMinimumHeight(button->sizeHint().height());
-    hlayout->addWidget(clearButton);
-    QObject::connect(clearButton, &QPushButton::clicked, [this]() {onClear();});
+    if (clearButton) {
+        clearButton->setIcon(Gui::BitmapFactory().pixmap("edit-cleartext"));
+        if (clearButton->toolTip().isEmpty())
+            clearButton->setToolTip(tr("Temporary clear link references for new selection"));
+        QObject::connect(clearButton, &QPushButton::clicked, [this]() {onClear();});
+    }
 
     if (auto prop = getProperty()) {
         conn = prop->signalChanged.connect([this](const App::Property &) {toggleShowOnTop();});
@@ -254,7 +272,8 @@ LinkSubWidget::LinkSubWidget(TaskSketchBasedParameters *parent,
         if (parentTask->getSelectionMode() == selectionMode) {
             toggleShowOnTop(true);
             button->setChecked(true);
-        } else {
+        } else if (button->isChecked()) {
+            refresh();
             disableShowOnTop();
             button->setChecked(false);
         }
@@ -267,7 +286,8 @@ void LinkSubWidget::onSelectionChanged(const Gui::SelectionChanges& msg)
         return;
     if (msg.Type == Gui::SelectionChanges::AddSelection) {
         App::SubObjectT ref(msg.pOriginalMsg ? msg.pOriginalMsg->Object : msg.Object);
-        addLink(ref);
+        if (addLink(ref) && singleElement)
+            parentTask->exitSelectionMode();
     }
 }
 
@@ -314,8 +334,10 @@ void LinkSubWidget::onButton(bool checked)
             }
         }
         parentTask->onSelectReference(button, selectionMode, selectionConf);
-    } else 
+    } else {
         parentTask->exitSelectionMode();
+        refresh();
+    }
 }
 
 void LinkSubWidget::toggleShowOnTop(bool init)
@@ -422,7 +444,10 @@ bool LinkSubWidget::setLinks(const std::vector<App::SubObjectT> &objs)
         return false;
     try {
         parentTask->setupTransaction();
-        if (!PartDesignGui::importExternalElements(*prop, objs))
+        if (singleElement) {
+            auto ref = PartDesignGui::importExternalElement(objs.front());
+            prop->setValue(ref.getObject(), {ref.getSubName()});
+        } else if (!PartDesignGui::importExternalElements(*prop, objs))
             return false;
         parentTask->recomputeFeature();
         if (auto o = prop->getValue()) {
@@ -444,7 +469,7 @@ bool LinkSubWidget::addLink(const App::SubObjectT &objT)
     App::DocumentObject *obj;
     auto prop = getProperty(&obj);
     std::vector<App::SubObjectT> links;
-    if (listWidget->count() == 0 || !prop->getValue())
+    if (listWidget->count() == 0 || !prop->getValue() || singleElement)
         links.push_back(objT);
     else {
         auto obj = prop->getValue();
@@ -516,9 +541,10 @@ LinkSubListWidget::LinkSubListWidget(TaskSketchBasedParameters *parent,
         if (parentTask->getSelectionMode() == selectionMode) {
             toggleShowOnTop(true);
             button->setChecked(true);
-        } else {
+        } else if (button->isChecked()) {
             disableShowOnTop();
             button->setChecked(false);
+            refresh();
         }
     });
 }
@@ -726,6 +752,7 @@ void LinkSubListWidget::onButton(bool checked) {
         parentTask->onSelectReference(button, selectionMode, selectionConf);
     } else {
         parentTask->exitSelectionMode();
+        refresh();
     }
 }
 
@@ -774,6 +801,7 @@ void LinkSubListWidget::refresh()
         return;
 
     QSignalBlocker guard(listWidget);
+    listWidget->clear();
     for (const auto &v : prop->getSubListValues())
         addItem(v.first, v.second);
 }
@@ -1026,7 +1054,7 @@ void TaskSketchBasedParameters::onSelectReference(QWidget *blinkWidget,
                                                   SelectionMode mode,
                                                   const ReferenceSelection::Config &conf)
 {
-    exitSelectionMode();
+    exitSelectionMode(false);
     if (!vp || mode == SelectionMode::none)
         return;
     PartDesign::ProfileBased* pcSketchBased = dynamic_cast<PartDesign::ProfileBased*>(vp->getObject());
@@ -1061,13 +1089,15 @@ void TaskSketchBasedParameters::_exitSelectionMode()
     selectionGate = nullptr;
 }
 
-void TaskSketchBasedParameters::exitSelectionMode()
+void TaskSketchBasedParameters::exitSelectionMode(bool clearSelection)
 {
     if (selectionMode != SelectionMode::none) {
         auto oldMode = selectionMode;
         _exitSelectionMode();
         onSelectionModeChanged(oldMode);
         signalSelectionModeChanged();
+        if (clearSelection)
+            Gui::Selection().clearSelection();
     }
 }
 
@@ -1076,14 +1106,14 @@ void TaskSketchBasedParameters::setSelectionMode(SelectionMode mode, Gui::Select
     if (mode == selectionMode)
         return;
 
-    exitSelectionMode();
+    exitSelectionMode(false);
     if (mode == SelectionMode::none)
         return;
 
     auto oldMode = selectionMode;
+    Gui::Selection().clearSelection();
     selectionMode = mode;
     selectionGate = gate;
-    Gui::Selection().clearSelection();
     if (gate)
         Gui::Selection().addSelectionGate(gate);
     onSelectionModeChanged(oldMode);
@@ -1098,7 +1128,7 @@ TaskSketchBasedParameters::SelectionMode TaskSketchBasedParameters::getSelection
 void TaskSketchBasedParameters::onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     if (selectionGate && Gui::Selection().currentSelectionGate() != selectionGate)
-        exitSelectionMode();
+        exitSelectionMode(false);
     else if (vp && selectionMode != SelectionMode::none)
         _onSelectionChanged(msg);
 }
@@ -1190,6 +1220,7 @@ QString TaskSketchBasedParameters::getFaceReference(const QString& obj, const QS
 TaskSketchBasedParameters::~TaskSketchBasedParameters()
 {
     _exitSelectionMode();
+    Gui::Selection().clearSelection();
 }
 
 

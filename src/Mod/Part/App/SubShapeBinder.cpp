@@ -1151,9 +1151,7 @@ void SubShapeBinder::checkPropertyStatus() {
     // Shape.setStatus(App::Property::Transient, !PartialLoad.getValue() && BindMode.getValue()==BindModeEnum::Synchronized);
 }
 
-void SubShapeBinder::setLinks(std::map<App::DocumentObject *,
-                              std::vector<std::string> >&&values,
-                              bool reset)
+void SubShapeBinder::setLinks(std::map<App::DocumentObject *, std::vector<std::string> >&&values, bool reset)
 {
     if(values.empty()) {
         if(reset) {
@@ -1417,14 +1415,20 @@ SubShapeBinder::import(const App::SubObjectT &_feature,
                 || (!subs.empty() && resolvedSub != subs[0]))
             continue;
         if (element.size()) {
-            auto res = Part::Feature::getElementFromSource(
-                    binder, "", binderSupport.getValue(),
-                    (resolvedSub + element).c_str(), true);
-            if (res.size()) {
-                std::string tmp;
-                return App::SubObjectT(binder, res.front().index.toString(tmp));
+            try {
+                auto res = Part::Feature::getElementFromSource(
+                        binder, "", binderSupport.getValue(),
+                        (resolvedSub + element).c_str(), true);
+                if (res.size()) {
+                    std::string tmp;
+                    return App::SubObjectT(binder, res.front().index.toString(tmp));
+                }
+            } catch (Base::Exception &e) {
+                if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                    e.ReportException();
             }
-            FC_WARN("Failed to deduce bound geometry from existing import: " << binder->getFullName());
+            if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                FC_WARN("Failed to deduce bound geometry from existing import: " << binder->getFullName());
         } else
             return binder;
     }
@@ -1460,14 +1464,24 @@ SubShapeBinder::import(const App::SubObjectT &_feature,
     binder->setLinks(std::move(support));
     if (element.size()) {
         doc->recomputeFeature(binder);
-        auto res = Part::Feature::getElementFromSource(
-                binder, "", link, (resolvedSub + element).c_str(), true);
-        if (res.size()) {
-            std::string tmp;
-            guard.release();
-            return App::SubObjectT(binder, res.front().index.toString(tmp));
+        try {
+            auto res = Part::Feature::getElementFromSource(
+                    binder, "", link, (resolvedSub + element).c_str(), true);
+            if (res.size()) {
+                std::string tmp;
+                guard.release();
+                return App::SubObjectT(binder, res.front().index.toString(tmp));
+            }
+        } catch (Base::Exception &e) {
+            if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
+                e.ReportException();
         }
-        FC_THROWM(Base::RuntimeError, "Failed to deduce bound geometry");
+        // Cannot deduce bound geometry, ignore 'importWholeObject' and fall
+        // back to single element binding
+        support.clear();
+        support[link].push_back(resolvedSub + element);
+        binder->setLinks(std::move(support), true);
+        doc->recomputeFeature(binder);
     }
     guard.release();
     return binder;

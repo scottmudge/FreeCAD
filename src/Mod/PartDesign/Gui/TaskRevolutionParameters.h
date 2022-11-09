@@ -72,6 +72,7 @@ private Q_SLOTS:
     void onReversed(bool);
 
 protected:
+    void onSelectionModeChanged(SelectionMode) override;
     void _onSelectionChanged(const Gui::SelectionChanges& msg) override;
     void changeEvent(QEvent *e) override;
     bool updateView() const;
@@ -79,6 +80,7 @@ protected:
     double getAngle(void) const;
     bool getMidplane(void) const;
     bool getReversed(void) const;
+    void onAxisButton(bool checked);
 
     bool eventFilter(QObject *o, QEvent *ev);
 

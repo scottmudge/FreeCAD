@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>278</width>
-    <height>293</height>
+    <height>268</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,45 +33,49 @@
     </layout>
    </item>
    <item>
-    <widget class="QLabel" name="labelAxis">
-     <property name="text">
-      <string>Axis:</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QComboBox" name="axis">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <property name="text">
-       <string>Base X axis</string>
-      </property>
+      <widget class="QLabel" name="labelAxis">
+       <property name="text">
+        <string>Axis:</string>
+       </property>
+      </widget>
      </item>
      <item>
-      <property name="text">
-       <string>Base Y axis</string>
-      </property>
+      <widget class="QComboBox" name="axis">
+       <item>
+        <property name="text">
+         <string>Base X axis</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Base Y axis</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Base Z axis</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Horizontal sketch axis</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Vertical sketch axis</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Select reference...</string>
+        </property>
+       </item>
+      </widget>
      </item>
-     <item>
-      <property name="text">
-       <string>Base Z axis</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Horizontal sketch axis</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Vertical sketch axis</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Select reference...</string>
-      </property>
-     </item>
-    </widget>
+    </layout>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayoutMode">

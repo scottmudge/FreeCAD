@@ -126,6 +126,9 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView, bool /*newObj
     refresh();
 
     QMetaObject::invokeMethod(this, "updateUI", Qt::QueuedConnection);
+
+    if (!pcPipe->Spine.getValue())
+        spineWidget->onButton(true);
 }
 
 TaskPipeParameters::~TaskPipeParameters()

@@ -86,7 +86,7 @@ public:
     void onSelectReference(QWidget *blinkWidget,
                            SelectionMode mode,
                            const ReferenceSelection::Config &conf = ReferenceSelection::Config());
-    void exitSelectionMode();
+    void exitSelectionMode(bool clearSelection=true);
 
     SelectionMode getSelectionMode() const;
 
@@ -157,7 +157,11 @@ class LinkSubWidget: public QWidget
 public:
     LinkSubWidget(TaskSketchBasedParameters *parent,
                   const QString &title,
-                  App::PropertyLinkSub &prop);
+                  App::PropertyLinkSub &prop,
+                  bool singleElement=false,
+                  QPushButton *_button=nullptr,
+                  QListWidget *_listWidget=nullptr,
+                  QPushButton *_clearButton=nullptr);
 
     void onSelectionChanged(const Gui::SelectionChanges& msg) override;
 
@@ -194,12 +198,13 @@ protected:
     TaskSketchBasedParameters::SelectionMode selectionMode;
     QListWidget *listWidget;
     QPushButton *button;
-    QPushButton *clearButton;
+    QPushButton *clearButton = nullptr;
     boost::signals2::scoped_connection conn;
     App::SubObjectT lastReference;
     App::DocumentObjectT linkProp;
     ReferenceSelection::Config selectionConf;
     boost::signals2::scoped_connection connModeChange;
+    bool singleElement = false;
 };
 
 class LinkSubListWidget: public QGroupBox

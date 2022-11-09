@@ -536,7 +536,7 @@ PyObject* SketchObjectPy::addExternal(PyObject *args)
             return 0;
     }
 
-    if (PyUnicode_Check(mode)) {
+    auto checkMode = [&](PyObject *mode) {
         std::string strMode = static_cast<std::string>(Py::String(mode));
         if (strMode.size()) {
             if (strMode == "defining")
@@ -545,8 +545,22 @@ PyObject* SketchObjectPy::addExternal(PyObject *args)
                 intersection = true;
             else {
                 PyErr_Format(PyExc_ValueError, "Unknown external mode '%s'", strMode.c_str());
-                return nullptr;
+                return false;
             }
+        }
+        return true;
+    };
+
+    if (PyUnicode_Check(mode)) {
+        if (!checkMode(mode))
+            return nullptr;
+    } else if (PySequence_Check(mode)) {
+        Py::Sequence seq(mode);
+        for(int i=0;i<seq.size();++i) {
+            if (!PyUnicode_Check(seq[i].ptr()))
+                PyErr_Format(PyExc_ValueError, "Invalid external mode");
+            if (!checkMode(seq[i].ptr()))
+                return nullptr;
         }
     } else
         defining = PyObject_IsTrue(mode);

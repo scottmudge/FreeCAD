@@ -410,11 +410,11 @@ void TaskPadParameters::_onSelectionChanged(const Gui::SelectionChanges& msg)
             std::vector<std::string> edge;
             App::DocumentObject* selObj;
             if (getReferencedSelection(vp->getObject(), msg, selObj, edge) && selObj) {
-                exitSelectionMode();
                 propReferenceAxis->setValue(selObj, edge);
                 recomputeFeature();
                 // update direction combobox
                 fillDirectionCombo();
+                exitSelectionMode();
             }
         }
         else if (getSelectionMode() == SelectionMode::refAdd) {
