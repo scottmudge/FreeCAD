@@ -160,13 +160,13 @@ void ViewProviderShapeBinder::highlightReferences(const bool on, bool /*auxiliar
                 if(e.substr(4) == "Edge") {
                     int idx = std::stoi(e.substr(4)) - 1;
                     assert ( idx>=0 );
-                    if ( idx < (ssize_t) lcolors.size() )
+                    if ( idx < (int) lcolors.size() )
                         lcolors[idx] = App::Color(1.0,0.0,1.0); // magenta
                 }
                 else if(e.substr(4) == "Face")  {
                     int idx = std::stoi(e.substr(4)) - 1;
                     assert ( idx>=0 );
-                    if ( idx < (ssize_t) fcolors.size() )
+                    if ( idx < (int) fcolors.size() )
                         fcolors[idx] = App::Color(1.0,0.0,1.0); // magenta
                 }
             }

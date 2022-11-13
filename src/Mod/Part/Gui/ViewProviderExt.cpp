@@ -1126,12 +1126,12 @@ std::map<std::string,App::Color> ViewProviderPartExt::getElementColors(const cha
         }
     } else if (boost::starts_with(element,"Vertex")) {
         auto size = PointColorArray.getSize();
-        if(element[5]=='*') {
+        if(element[6]=='*') {
             auto color = PointColor.getValue();
             bool singleColor = true;
             for(int i=0;i<size;++i) {
                 if(PointColorArray[i]!=color)
-                    ret[std::string(element,5)+std::to_string(i+1)] = PointColorArray[i];
+                    ret[std::string(element,6)+std::to_string(i+1)] = PointColorArray[i];
                 singleColor = singleColor && PointColorArray[0]==PointColorArray[i];
             }
             if(singleColor && size) {
@@ -1140,7 +1140,7 @@ std::map<std::string,App::Color> ViewProviderPartExt::getElementColors(const cha
             }
             ret["Vertex"] = color;
         }else{
-            int idx = atoi(element+5);
+            int idx = atoi(element+6);
             if(idx>0 && idx<=size)
                 ret[element] = PointColorArray[idx-1];
             else
@@ -1262,6 +1262,7 @@ void ViewProviderPartExt::setHighlightedPoints(const std::vector<App::Color>& co
         for (; i < numpoints; ++i)
             ca[i].setValue(color.r, color.g, color.b);
         pcPointMaterial->diffuseColor.finishEditing();
+        return;
     }
 
     const auto &color = size==1?colors[0]:PointColor.getValue();

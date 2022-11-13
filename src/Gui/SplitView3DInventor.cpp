@@ -681,7 +681,7 @@ Py::Object AbstractSplitViewPy::getViewer(const Py::Tuple& args)
     }
 }
 
-Py::Object AbstractSplitViewPy::sequence_item(ssize_t viewIndex)
+Py::Object AbstractSplitViewPy::sequence_item(Py_ssize_t viewIndex)
 {
     testExistence();
     if (viewIndex >= _view->getSize() || viewIndex < 0)

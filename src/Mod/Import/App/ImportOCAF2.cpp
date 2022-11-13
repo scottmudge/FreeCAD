@@ -1246,7 +1246,8 @@ TDF_Label ExportOCAF2::exportObject(App::DocumentObject* parentObj,
         const char *sub, TDF_Label parent, const char *name) 
 {
     App::DocumentObject *obj;
-    auto shape = Part::Feature::getTopoShape(parentObj,sub,false,0,&obj,false,!sub);
+    bool needSubElement = sub && Data::ComplexGeoData::findElementName(sub) == sub;
+    auto shape = Part::Feature::getTopoShape(parentObj,sub,needSubElement,0,&obj,false,!sub);
     if(!obj || shape.isNull()) {
         if (obj)
             FC_WARN(obj->getFullName() << " has null shape");
@@ -1314,7 +1315,9 @@ TDF_Label ExportOCAF2::exportObject(App::DocumentObject* parentObj,
         links.push_back(linked);
     }
 
-    auto subs = obj->getSubObjects();
+    std::vector<std::string> subs;
+    if (!needSubElement)
+        subs = obj->getSubObjects();
     // subs empty means obj is not a container.
     if(subs.empty()) {
 

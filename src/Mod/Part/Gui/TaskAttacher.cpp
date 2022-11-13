@@ -578,7 +578,7 @@ void TaskAttacher::onSelectionChanged(const Gui::SelectionChanges& msg)
                     if (refnames[r] == selElement)
                         return;
                     if (selElement.empty() || refnames[r].empty()) {
-                        if (autoNext && iActiveRef > 0 && iActiveRef == (ssize_t) refnames.size()) {
+                        if (autoNext && iActiveRef > 0 && iActiveRef == (int) refnames.size()) {
                             --iActiveRef;
                             refs.pop_back();
                             refnames.pop_back();
@@ -587,7 +587,7 @@ void TaskAttacher::onSelectionChanged(const Gui::SelectionChanges& msg)
                     }
                 }
             }
-            if (iActiveRef < (ssize_t) refs.size()) {
+            if (iActiveRef < (int) refs.size()) {
                 refs[iActiveRef] = selObj;
                 refnames[iActiveRef] = selElement;
             } else {

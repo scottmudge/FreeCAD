@@ -10,19 +10,16 @@
 find_package(VTK REQUIRED)
 
 # If this definition is not set, linker errors will occur against SMESH on 64 bit machines.
-if(CMAKE_SIZEOF_VOID_P STREQUAL 8)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	add_definitions(-DSALOME_USE_64BIT_IDS)
-endif(CMAKE_SIZEOF_VOID_P STREQUAL 8)
+endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
  
-IF (CMAKE_COMPILER_IS_GNUCC)
-    FIND_PATH(SMESH_INCLUDE_DIR SMESH_Mesh.hxx
-    # These are default search paths, why specify them?
-    PATH_SUFFIXES smesh SMESH smesh/SMESH
-    )
-    FIND_LIBRARY(SMESH_LIBRARY SMESH)
-ELSE (CMAKE_COMPILER_IS_GNUCC)
-    # Not yet implemented
-ENDIF (CMAKE_COMPILER_IS_GNUCC)
+FIND_PATH(SMESH_INCLUDE_DIR SMESH_Mesh.hxx
+# These are default search paths, why specify them?
+PATH_SUFFIXES smesh SMESH smesh/SMESH
+)
+FIND_LIBRARY(SMESH_LIBRARY SMESH)
+
 
 IF(SMESH_INCLUDE_DIR)
 	SET(SMESH_INC_ROOT "${SMESH_INCLUDE_DIR}/..")
