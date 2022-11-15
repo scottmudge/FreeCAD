@@ -92,12 +92,15 @@ int TopoShapeWirePy::PyInit(PyObject* args, PyObject* /*kwd*/)
     PyErr_Clear();
     PyObject *pcObj;
 
-#if 0
-// #ifndef FC_NO_ELEMENT_MAP
     if (!PyArg_ParseTuple(args, "O", &pcObj))
         return -1;
     PY_TRY {
         auto shapes = getPyShapes(pcObj);
+        if (shapes.size() == 1 && shapes[0].shapeType(true)==TopAbs_WIRE) {
+            *getTopoShapePtr() = shapes[0];
+            return 0;
+        }
+
         BRepBuilderAPI_MakeWire mkWire;
         std::vector<TopoShape> edges;
         for (const auto &s : shapes) {
@@ -107,84 +110,24 @@ int TopoShapeWirePy::PyInit(PyObject* args, PyObject* /*kwd*/)
                 edges.back().setShape(mkWire.Edge(), false);
             }
         }
-        getTopoShapePtr()->setShape(mkWire.Wire());
-        getTopoShapePtr()->mapSubElement(edges);
+        if (mkWire.IsDone()) {
+            getTopoShapePtr()->setShape(mkWire.Wire());
+            getTopoShapePtr()->mapSubElement(edges);
+        } else {
+            TopoShape wire;
+            wire.makEWires(shapes);
+            int count = wire.countSubShapes(TopAbs_WIRE);
+            if (count > 1)
+                PyErr_SetString(PyExc_TypeError, "The input edges form more than one wire");
+            else if(count == 0)
+                PyErr_SetString(PyExc_TypeError, "No wire can be formed");
+            if (wire.shapeType() == TopAbs_WIRE)
+                *getTopoShapePtr() = wire;
+            else
+                *getTopoShapePtr() = wire.getSubTopoShape(TopAbs_WIRE, 1);
+        }
         return 0;
     } _PY_CATCH_OCC(return(-1))
-#else
-    if (PyArg_ParseTuple(args, "O!", &(Part::TopoShapePy::Type), &pcObj)) {
-        BRepBuilderAPI_MakeWire mkWire;
-        const TopoDS_Shape& sh = static_cast<Part::TopoShapePy*>(pcObj)->getTopoShapePtr()->getShape();
-        if (sh.IsNull()) {
-            PyErr_SetString(PyExc_TypeError, "given shape is invalid");
-            return -1;
-        }
-        if (sh.ShapeType() == TopAbs_EDGE)
-            mkWire.Add(TopoDS::Edge(sh));
-        else if (sh.ShapeType() == TopAbs_WIRE)
-            mkWire.Add(TopoDS::Wire(sh));
-        else {
-            PyErr_SetString(PyExc_TypeError, "shape is neither edge nor wire");
-            return -1;
-        }
-
-        try {
-            getTopoShapePtr()->setShape(mkWire.Wire());
-            return 0;
-        }
-        catch (Standard_Failure& e) {
-
-            PyErr_SetString(PartExceptionOCCError, e.GetMessageString());
-            return -1;
-        }
-    }
-
-    PyErr_Clear();
-    if (PyArg_ParseTuple(args, "O", &pcObj)) {
-        if(!Py::Object(pcObj).isList() && !Py::Object(pcObj).isTuple()) {
-            PyErr_SetString(PyExc_TypeError, "object is neither a list nor a tuple");
-            return -1;
-        }
-
-        BRepBuilderAPI_MakeWire mkWire;
-        Py::Sequence list(pcObj);
-        for (Py::Sequence::iterator it = list.begin(); it != list.end(); ++it) {
-            PyObject* item = (*it).ptr();
-            if (PyObject_TypeCheck(item, &(Part::TopoShapePy::Type))) {
-                const TopoDS_Shape& sh = static_cast<Part::TopoShapePy*>(item)->getTopoShapePtr()->getShape();
-                if (sh.IsNull()) {
-                    PyErr_SetString(PyExc_TypeError, "given shape is invalid");
-                    return -1;
-                }
-                if (sh.ShapeType() == TopAbs_EDGE)
-                    mkWire.Add(TopoDS::Edge(sh));
-                else if (sh.ShapeType() == TopAbs_WIRE)
-                    mkWire.Add(TopoDS::Wire(sh));
-                else {
-                    PyErr_SetString(PyExc_TypeError, "shape is neither edge nor wire");
-                    return -1;
-                }
-            }
-            else {
-                PyErr_SetString(PyExc_TypeError, "item is not a shape");
-                return -1;
-            }
-        }
-
-        try {
-            getTopoShapePtr()->setShape(mkWire.Wire());
-            return 0;
-        }
-        catch (Standard_Failure& e) {
-
-            PyErr_SetString(PartExceptionOCCError, e.GetMessageString());
-            return -1;
-        }
-    }
-
-    PyErr_SetString(PartExceptionOCCError, "edge or wire or list of edges and wires expected");
-    return -1;
-#endif
 }
 
 PyObject* TopoShapeWirePy::add(PyObject *args)

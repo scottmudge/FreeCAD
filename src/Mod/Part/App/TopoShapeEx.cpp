@@ -946,7 +946,7 @@ void TopoShape::mapSubElement(const std::vector<TopoShape> &shapes, const char *
     if (shapeType(true) == TopAbs_COMPOUND) {
         int count = 0;
         for (auto & s : shapes) {
-            if (s.isNull())
+            if (!canMapElement(s))
                 continue;
             if (!getSubShape(TopAbs_SHAPE, ++count, true).IsPartner(s._Shape)) {
                 count = 0;
@@ -960,7 +960,7 @@ void TopoShape::mapSubElement(const std::vector<TopoShape> &shapes, const char *
             for (unsigned i=0; i<sizeof(types)/sizeof(types[0]); ++i) {
                 int offset = 0;
                 for (auto & s : shapes) {
-                    if (s.isNull())
+                    if (!canMapElement(s))
                         continue;
                     int count = s.countSubShapes(types[i]);
                     if (!count)
@@ -2926,7 +2926,7 @@ TopoShape::sortEdges(std::list<TopoShape>& edges, bool keepOrder, double tol)
             }
             else if (pEI->v1.SquareDistance(first) <= tol3d) {
                 first = pEI->v2;
-                sorted.push_back(reverseEdge(pEI->edge));
+                sorted.push_front(reverseEdge(pEI->edge));
                 edges.erase(pEI->it);
                 edge_points.erase(pEI);
                 pEI = edge_points.begin();
