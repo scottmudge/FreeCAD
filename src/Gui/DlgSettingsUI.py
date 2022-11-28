@@ -30,7 +30,7 @@ import params_utils
 from params_utils import auto_comment
 
 sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'Gui'))
-import ViewParams, TreeParams, ExprParams
+import ViewParams, TreeParams, ExprParams, OverlayParams
 
 Title = 'UI'
 NameSpace = 'Gui'
@@ -41,6 +41,7 @@ UserInit = 'init();'
 _ViewParams = { param.name : param for param in ViewParams.Params }
 _TreeParams = { param.name : param for param in TreeParams.Params }
 _ExprParams = { param.name : param for param in ExprParams.Params }
+_OverlayParams = { param.name : param for param in OverlayParams.Params }
 
 ParamGroup = (
     ('General', [_ViewParams[name] for name in (
@@ -78,7 +79,7 @@ ParamGroup = (
         'PieMenuPopup',
     )]),
 
-    ('Overlay', [_ViewParams[name] for name in (
+    ('Overlay', [_OverlayParams[name] for name in (
         'DockOverlayHideTabBar',
         'DockOverlayHidePropertyViewScrollBar',
         'DockOverlayAutoView',
@@ -89,6 +90,14 @@ ParamGroup = (
         'DockOverlayCheckNaviCube',
         'DockOverlayHintTriggerSize',
         'DockOverlayHintSize',
+        'DockOverlayHintLeftOffset',
+        'DockOverlayHintLeftLength',
+        'DockOverlayHintRightOffset',
+        'DockOverlayHintRightLength',
+        'DockOverlayHintTopOffset',
+        'DockOverlayHintTopLength',
+        'DockOverlayHintBottomOffset',
+        'DockOverlayHintBottomLength',
         'DockOverlayHintTabBar',
         'DockOverlayHintDelay',
         'DockOverlaySplitterHandleTimeout',

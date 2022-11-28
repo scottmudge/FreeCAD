@@ -269,6 +269,7 @@ protected:
 private:
     bool _Busy = false;
     bool _Showable = true;
+    bool _VisibilityRestored = false;
 
     std::vector<App::DocumentObject*> claimedChildren;
     std::set<App::DocumentObject*> childSet;

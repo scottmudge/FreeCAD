@@ -209,40 +209,6 @@ Params = [
         "Map child object into parent's coordinate space when showing on top.\n"
         "Note that once activated, this option will also activate option ShowOnTop.\n"
         "WARNING! This is an experimental option. Please use with caution."),
-    ParamInt('CornerNaviCube', 1, on_change=True),
-    ParamBool('DockOverlayAutoView', True, on_change=True, title="Auto hide in non 3D view"),
-    ParamInt('DockOverlayDelay', 200, "Overlay dock (re),layout delay.", title="Layout delay (ms)", proxy=ParamSpinBox(0, 5000, 100)),
-    ParamInt('DockOverlayRevealDelay', 2000),
-    ParamInt('DockOverlaySplitterHandleTimeout', 0, title="Splitter auto hide delay (ms)", proxy=ParamSpinBox(0, 99999, 100),
-         doc="Overlay splitter handle auto hide delay. Set zero to disable auto hiding."),
-    ParamBool('DockOverlayActivateOnHover', True, title="Activate on hover",
-         doc="Show auto hidden dock overlay on mouse over.\n"
-             "If disabled, then show on mouse click."),
-    ParamBool('DockOverlayAutoMouseThrough', True,
-         "Auto mouse click through transparent part of dock overlay.", title="Auto mouse pass through"),
-    ParamBool('DockOverlayWheelPassThrough', True,
-         "Auto pass through mouse wheel event on transparent dock overlay.", title="Auto mouse wheel pass through"),
-    ParamInt('DockOverlayWheelDelay', 1000, title="Delay mouse wheel pass through (ms)", proxy=ParamSpinBox(0, 99999, 1),
-         doc="Delay capturing mouse wheel event for passing through if it is\n"
-              "previously handled by other widget."),
-    ParamInt('DockOverlayAlphaRadius', 2, title="Alpha test radius", proxy=ParamSpinBox(1, 100, 1), doc=\
-         "If auto mouse click through is enabled, then this radius\n"
-         "defines a region of alpha test under the mouse cursor.\n"
-         "Auto click through is only activated if all pixels within\n"
-         "the region are non-opaque."),
-    ParamBool('DockOverlayCheckNaviCube', True, on_change=True, title="Check Navigation Cube",
-         doc="Leave space for Navigation Cube in dock overlay"),
-    ParamInt('DockOverlayHintTriggerSize', 16, title="Hint trigger size", proxy=ParamSpinBox(1, 100, 1),
-         doc="Auto hide hint visual display triggering width"),
-    ParamInt('DockOverlayHintSize', 8, title="Hint width", proxy=ParamSpinBox(1, 100, 1),
-         doc="Auto hide hint visual display size"),
-    ParamBool('DockOverlayHintTabBar', True, "Show tab bar on mouse over when auto hide", title="Hint show tab bar"),
-    ParamBool('DockOverlayHideTabBar', True, on_change=True, doc="Hide tab bar in dock overlay", title='Hide tab bar'),
-    ParamInt('DockOverlayHintDelay', 200, "Delay before show hint visual", title="Hint delay (ms)", proxy=ParamSpinBox(0, 1000, 100)),
-    ParamInt('DockOverlayAnimationDuration', 200, "Auto hide animation duration, 0 to disable",
-         title="Animation duration (ms)", proxy=ParamSpinBox(0, 5000, 100)),
-    ParamInt('DockOverlayAnimationCurve', 7, "Auto hide animation curve type", title="Animation curve type", proxy=ParamAnimationCurve()),
-    ParamBool('DockOverlayHidePropertyViewScrollBar', False, "Hide property view scroll bar in dock overlay", title="Hide property view scroll bar"),
     ParamFloat('EditingTransparency', 0.5,
         "Automatically make all object transparent except the one in edit"),
     ParamFloat('HiddenLineTransparency', 0.4,

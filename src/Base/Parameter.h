@@ -316,6 +316,10 @@ protected:
 
     XERCES_CPP_NAMESPACE_QUALIFIER DOMElement *CreateElement(XERCES_CPP_NAMESPACE_QUALIFIER DOMElement *Start, const char* Type, const char* Name);
 
+    /** Find an attribute specified by Name
+     */
+    XERCES_CPP_NAMESPACE_QUALIFIER DOMNode *FindAttribute(XERCES_CPP_NAMESPACE_QUALIFIER DOMNode *Node, const char* Name) const;
+
     /// DOM Node of the Base node of this group
     XERCES_CPP_NAMESPACE_QUALIFIER DOMElement *_pGroupNode;
     /// the own name

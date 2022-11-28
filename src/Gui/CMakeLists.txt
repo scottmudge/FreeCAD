@@ -1136,12 +1136,14 @@ SET(Params_CPP_SRCS
     ViewParams.cpp
     ExprParams.cpp
     ReportViewParams.cpp
+    OverlayParams.cpp
 )
 
 SET(Params_HPP_SRCS
     ViewParams.h
     ExprParams.h
     ReportViewParams.h
+    OverlayParams.h
 )
 
 SET(Params_SRCS

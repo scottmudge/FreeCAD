@@ -183,15 +183,15 @@ void ViewProviderDocumentObject::getTaskViewContent(std::vector<Gui::TaskView::T
 
 void ViewProviderDocumentObject::startRestoring()
 {
-    // In case the document is saved without loading Gui module, we rely on
-    // DocumentObject.Visibility to preserve the visibility settings.
-    //
-    // hide();
+    _VisibilityRestored = false;
+    hide();
     callExtension(&ViewProviderExtension::extensionStartRestoring);
 }
 
 void ViewProviderDocumentObject::finishRestoring()
 {
+    if (!_VisibilityRestored)
+        Visibility.setValue(getObject()->Visibility.getValue());
     callExtension(&ViewProviderExtension::extensionFinishRestoring);
 }
 
@@ -278,6 +278,8 @@ void ViewProviderDocumentObject::onChanged(const App::Property* prop)
         }
     }
     else if (prop == &Visibility) {
+        if (isRestoring())
+            _VisibilityRestored = true;
         // use this bit to check whether show() or hide() must be called
         if (Visibility.testStatus(App::Property::User2) == false) {
             Visibility.setStatus(App::Property::User2, true);
@@ -485,7 +487,8 @@ void ViewProviderDocumentObject::update(const App::Property* prop)
     // bypass view provider update to always allow changing visibility from
     // document object
     if(prop == &getObject()->Visibility) {
-        Visibility.setValue(getObject()->Visibility.getValue());
+        if(!isRestoring() && Visibility.getValue()!=getObject()->Visibility.getValue())
+            Visibility.setValue(!Visibility.getValue());
     } else if (isUpdatesEnabled()) {
         // Disable object visibility syncing
         Base::ObjectStatusLocker<App::Property::Status,App::Property>

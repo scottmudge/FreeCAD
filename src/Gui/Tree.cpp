@@ -2362,10 +2362,13 @@ void TreeWidgetItemDelegate::paint(QPainter *painter,
                 && (trimBG || (opt.backgroundBrush.style() == Qt::NoBrush
                                 && _TreeItemBackground.style() != Qt::NoBrush)))
         {
-            int width = opt.fontMetrics.boundingRect(opt.text).width()
+            const int margin = style->pixelMetric(QStyle::PM_FocusFrameHMargin, &option, tree) + 1;
+            // 2 margin for text, 2 margin for decoration (icon)
+            int width = 4*margin + opt.fontMetrics.boundingRect(opt.text).width()
                 + opt.decorationSize.width() + TreeParams::getItemBackgroundPadding();
             if (TreeParams::getCheckBoxesSelection()) {
-                width += style->pixelMetric(QStyle::PM_IndicatorWidth)
+                // another 2 margin for checkbox
+                width += 2*margin + style->pixelMetric(QStyle::PM_IndicatorWidth)
                     + style->pixelMetric(QStyle::PM_LayoutHorizontalSpacing);
             }
             if (width < rect.width())

@@ -76,6 +76,10 @@ public:
         TransparentAll,
         TransparentNone,
         ToggleTransparentAll,
+        ToggleLeft,
+        ToggleRight,
+        ToggleTop,
+        ToggleBottom,
     };
     void setOverlayMode(OverlayMode mode);
 
@@ -129,11 +133,6 @@ private:
     Private * d;
 };
 
-#if QT_VERSION  >= 0x050000
-#   define FC_HAS_DOCK_OVERLAY
-#endif
-
-#ifdef FC_HAS_DOCK_OVERLAY
 
 class OverlayTitleBar;
 class OverlayProxyWidget;
@@ -243,6 +242,7 @@ public:
         State_Normal,
         State_Hint,
         State_HintHidden,
+        State_Hidden,
     };
     void setState(State);
     State getState() const {return _state;}
@@ -453,18 +453,20 @@ public:
     OverlayProxyWidget(OverlayTabWidget *);
 
     OverlayTabWidget *getOwner() const {return owner;}
-    bool hitTest(QPoint, bool delay=true);
+    int hitTest(const QPoint &, bool delay=true);
     bool isActivated() const;
 
     QBrush hintColor() const;
     void setHintColor(const QBrush &);
+
+    QRect getRect() const;
+    void onMousePress();
 
 protected:
     void enterEvent(QEvent*);
     void leaveEvent(QEvent*);
     void hideEvent(QHideEvent*);
     void paintEvent(QPaintEvent*);
-    void mousePressEvent(QMouseEvent *);
 
 protected Q_SLOTS:
     void onTimer();
@@ -516,8 +518,6 @@ private:
     QColor _color;
     QPointF _offset;
 };
-
-#endif // FC_HAS_DOCK_OVERLAY
 
 } // namespace Gui
 
