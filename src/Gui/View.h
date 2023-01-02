@@ -83,6 +83,10 @@ public:
 
     virtual void onChanged(const App::Property *);
 
+    virtual App::Document *getOwnerDocument() const {
+        return getAppDocument();
+    }
+
     /** @name methods to override
      */
     //@{

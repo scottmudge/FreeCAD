@@ -196,6 +196,7 @@ PropertyView::~PropertyView()
     this->connectChangedDocument.disconnect();
     this->connectChangedView.disconnect();
     this->connectDetachView.disconnect();
+    this->connectActivateView.disconnect();
 }
 
 static bool _ShowAll;

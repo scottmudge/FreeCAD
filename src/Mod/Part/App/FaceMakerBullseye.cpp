@@ -80,6 +80,11 @@ std::string FaceMakerBullseye::getBriefExplanation() const
     return std::string(QT_TRANSLATE_NOOP("Part_FaceMaker","Supports making planar faces with holes with islands."));
 }
 
+bool FaceMakerBullseye::WireInfo::operator<(const WireInfo &other) const
+{
+    return extent - other.extent > Precision::Confusion();
+}
+
 void FaceMakerBullseye::Build_Essence()
 {
     if(myWires.empty())

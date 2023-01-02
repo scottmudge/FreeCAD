@@ -446,8 +446,8 @@ void TaskCheckGeometryResults::goCheck()
             continue;
         QString baseName;
         QTextStream baseStream(&baseName);
-        baseStream << sel.DocName;
-        baseStream << "." << sel.FeatName;
+        baseStream << QString::fromUtf8(sel.DocName);
+        baseStream << "." << QString::fromUtf8(sel.FeatName);
         checkedCount++;
         checkedMap.Clear();
 

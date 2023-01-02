@@ -74,6 +74,8 @@ Params = [
     ParamBool("AutoHideOrigins", True),
     ParamBool("SplitEllipsoid", True),
     ParamInt("ParallelRunThreshold", 100),
+    ParamBool("ValidateShape", True),
+    ParamBool("FixShape", False),
     _MinimumDeviation,
     _MeshDeviation,
     _MeshAngularDeflection,

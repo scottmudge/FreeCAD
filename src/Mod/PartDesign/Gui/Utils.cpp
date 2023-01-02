@@ -1289,7 +1289,7 @@ public:
                 FC_THROWM(Base::RuntimeError, "Invalid property");
             auto editObj = Base::freecad_dynamic_cast<App::DocumentObject>(prop.getContainer());
             if (!editObj)
-                FC_THROWM(Base::RuntimeError, "Editting object not found");
+                FC_THROWM(Base::RuntimeError, "Editing object not found");
             auto body = PartDesign::Body::findBodyOf(editObj);
             if (!body)
                 FC_THROWM(Base::RuntimeError, "No body for editing object: " << editObj->getNameInDocument());
@@ -1306,7 +1306,7 @@ public:
                 if (inList.count(sobj))
                     FC_THROWM(Base::RuntimeError, "Cyclic dependency on object " << sobjT.getSubObjectFullName(docName));
                 sobjT.normalized();
-                // Make sure that if a subelement is choosen for some object,
+                // Make sure that if a subelement is chosen for some object,
                 // we exclude whole object reference for that object.
                 auto &subs = links[sobj];
                 std::string element = sobjT.getOldElementName();

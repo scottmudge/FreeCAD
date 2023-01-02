@@ -255,7 +255,7 @@ parts:
       - python3-pyside2.qtwidgets
       - python3-pyside2.qtnetwork
       - python3-pyside2.qtuitools
-      - python3-qtpy
+      - python3-qtpy # Nodes addon
       - calculix-ccx # FEM
       - libfreeimage3
       - libtbb2

@@ -125,6 +125,8 @@ void DlgSettingsGeneral::saveSettings()
     ui->checkAutoGroupSolids->onSave();
     ui->checkBoxAuxGroup->onSave();
     ui->checkSplitEllipsoid->onSave();
+    ui->checkBoxValidateShape->onSave();
+    ui->checkBoxFixShape->onSave();
     ui->checkAutoAuxiliaryGrouping->onSave();
     ui->checkAutoHideOrigins->onSave();
 }
@@ -142,6 +144,8 @@ void DlgSettingsGeneral::loadSettings()
     ui->checkAutoGroupSolids->onRestore();
     ui->checkBoxAuxGroup->onRestore();
     ui->checkSplitEllipsoid->onRestore();
+    ui->checkBoxValidateShape->onRestore();
+    ui->checkBoxFixShape->onRestore();
     ui->checkAutoAuxiliaryGrouping->onRestore();
     ui->checkAutoHideOrigins->onRestore();
 }

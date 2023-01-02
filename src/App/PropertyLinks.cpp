@@ -1300,9 +1300,10 @@ void PropertyLinkSub::setValue(App::DocumentObject * lValue,
 #endif
     _pcLinkSub=lValue;
     _cSubList=std::move(subs);
-    if(shadows.size()==_cSubList.size())
+    if(shadows.size()==_cSubList.size()) {
         _ShadowSubList = std::move(shadows);
-    else
+        onContainerRestored(); // re-register element references
+    } else
         updateElementReference(0);
     checkLabelReferences(_cSubList);
     hasSetValue();
@@ -2305,9 +2306,10 @@ void PropertyLinkSubList::setValues(std::vector<DocumentObject*>&& lValue,
     aboutToSetValue();
     _lValueList = std::move(lValue);
     _lSubList = std::move(lSubNames);
-    if(ShadowSubList.size()==_lSubList.size())
+    if(ShadowSubList.size()==_lSubList.size()) {
         _ShadowSubList = std::move(ShadowSubList);
-    else
+        onContainerRestored(); // re-register element references
+    } else
         updateElementReference(0);
     checkLabelReferences(_lSubList);
     hasSetValue();
@@ -3673,7 +3675,7 @@ void PropertyXLink::touch() {
 }
 
 std::string PropertyXLink::getFullName(bool python) const {
-    if(getName() || python || !parentProp)
+    if((getName() && getName()[0]) || python || !parentProp)
         return inherited::getFullName(python);
 
     std::ostringstream ss;
@@ -3706,13 +3708,14 @@ void PropertyXLink::setSubName(const char *subname)
 }
 
 void PropertyXLink::setSubValues(std::vector<std::string> &&subs,
-        std::vector<ShadowSub> &&shadows)
+                                 std::vector<ShadowSub> &&shadows)
 {
     _SubList = std::move(subs);
     _ShadowSubList.clear();
-    if(shadows.size() == _SubList.size())
+    if(shadows.size() == _SubList.size()) {
         _ShadowSubList = std::move(shadows);
-    else
+        onContainerRestored(); // re-register element references
+    } else
         updateElementReference(0);
     checkLabelReferences(_SubList);
 }

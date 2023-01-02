@@ -368,9 +368,9 @@ void LinkSubWidget::onClear()
 void LinkSubWidget::setListWidgetHeight(bool expand)
 {
     auto scrollbar = listWidget->horizontalScrollBar();
-    listWidget->setMinimumHeight(button->sizeHint().height()
-            + listWidget->frameWidth()
-            + (expand?scrollbar->height():0));
+    int height = button->sizeHint().height() + listWidget->frameWidth() + (expand?scrollbar->height():0);
+    listWidget->setMinimumHeight(height);
+    listWidget->setMaximumHeight(height);
 }
 
 bool LinkSubWidget::eventFilter(QObject *o, QEvent *ev)

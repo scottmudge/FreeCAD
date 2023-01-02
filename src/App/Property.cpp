@@ -299,7 +299,8 @@ void Property::aboutToSetValue(void)
     if (father) {
         if (auto doc = father->getOwnerDocument()) {
             if(!_old && DocumentParams::getOptimizeRecompute()
-                     && !doc->testStatus(Document::Restoring))
+                     && !doc->testStatus(Document::Restoring)
+                     && !doc->isPerformingTransaction())
             {
                 _old.reset(copyBeforeChange());
             }

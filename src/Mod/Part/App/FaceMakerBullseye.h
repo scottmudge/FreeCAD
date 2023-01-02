@@ -78,9 +78,7 @@ protected:
         {
             extent = bound.SquareExtent();
         }
-        bool operator<(const WireInfo &other) const {
-            return extent > other.extent;
-        }
+        bool operator<(const WireInfo &other) const;
     };
 
     /**
