@@ -3365,8 +3365,11 @@ TopoShape &TopoShape::makEBoolean(const char *maker,
         BRep_Builder builder;
         TopoDS_Shell shell;
         builder.MakeShell(shell);
-        for(auto &s : shapes)
-            builder.Add(shell,s.getShape());
+        for(auto &s : shapes) {
+            for (auto &face : s.getSubShapes(TopAbs_FACE)) {
+                builder.Add(shell,face);
+            }
+        }
         setShape(shell);
         mapSubElement(shapes,op);
         BRepCheck_Analyzer check(shell);
