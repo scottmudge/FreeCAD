@@ -905,7 +905,7 @@ void prepareProfileBased(PartDesign::Body *pcActiveBody, Gui::Command* cmd, cons
                 Gui::cmdAppObject(Feat, ss << "]");
         }
         if (which.compare("AdditivePipe") == 0 || which.compare("SubtractivePipe") == 0) {
-            if (sels.size() > 1) {
+            if (!sels.empty()) {
                 // for additive and subtractive pipes, treat the first extra
                 // selection as spine, and the remaining selection as multi
                 // sections
@@ -913,21 +913,21 @@ void prepareProfileBased(PartDesign::Body *pcActiveBody, Gui::Command* cmd, cons
                 App::SubObjectT spineT;
                 std::vector<std::string> subs;
                 std::vector<App::SubObjectT> sections;
-                for (unsigned i=1; i<sels.size(); ++i) {
+                for (const auto &sel : sels) {
                     if (!spine) {
-                        spineT = PartDesignGui::importExternalObject(sels[i], false);
+                        spineT = PartDesignGui::importExternalObject(sel, false);
                         if (spineT.getObjectName().empty())
                             continue;
-                        spine = sels[i].getSubObject();
+                        spine = sel.getSubObject();
                         if (!spine)
                             continue;
-                    } else if (spine != sels[i].getSubObject()) {
-                        auto ref = PartDesignGui::importExternalObject(sels[i], false);
+                    } else if (spine != sel.getSubObject()) {
+                        auto ref = PartDesignGui::importExternalObject(sel, false);
                         if (ref.getObjectName().size())
                             sections.push_back(ref);
                         continue;
                     }
-                    auto sub = sels[i].getOldElementName();
+                    auto sub = sel.getOldElementName();
                     if (sub.size())
                         subs.push_back(std::move(sub));
                 }

@@ -208,7 +208,7 @@ public:
         }
         Geometry *geometry() {
             if (!geo)
-                geo = Geometry::fromShape(edge);
+                geo = Geometry::fromShape(edge, /*silent*/true);
             return geo.get();
         }
         void reset() {
@@ -673,10 +673,10 @@ public:
                     aHistory->Remove(e);
                     return false;
                 }
-                else {
+                else if (auto geoEdge = vinfo.edgeInfo()->geometry()) {
                     if (!geo)
-                        geo = Geometry::fromShape(e);
-                    if (geo->isSame(*vinfo.edgeInfo()->geometry(), myTol, myAngularTol)) {
+                        geo = Geometry::fromShape(e, /*silent*/true);
+                    if (geo && geo->isSame(*geoEdge, myTol, myAngularTol)) {
                         showShape(e, "duplicate");
                         aHistory->Remove(e);
                         return false;

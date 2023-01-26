@@ -640,15 +640,19 @@ void ToolBarManager::setup(ToolBarItem* toolBarItems)
 
         bool toolbar_added = toolbar->windowTitle().isEmpty();
 
+        // Mark view action as visible to bypass handling of toolbar's
+        // ChildAdded event in eventFilter
+        toolbar->toggleViewAction()->setVisible(true);
+
         // setup the toolbar
         setup(item, toolbar);
         if (isToolBarEmpty(toolbar)) {
+            toolbar->toggleViewAction()->setVisible(false);
             FC_LOG("Empty toolbar " << name.toUtf8().constData());
             continue;
         }
 
         toolbar->setWindowTitle(QApplication::translate("Workbench", toolbarName.c_str())); // i18n
-        toolbar->toggleViewAction()->setVisible(true);
         setToolBarVisible(toolbar, visible);
 
         for (auto action : toolbar->actions())
@@ -1141,6 +1145,23 @@ bool ToolBarManager::eventFilter(QObject *o, QEvent *e)
     // fall through
     case QEvent::MouseMove:
         res = addToolbarToStatusBar(o, static_cast<QMouseEvent*>(e));
+        break;
+    case QEvent::ChildAdded:
+        if (auto tb = qobject_cast<QToolBar*>(o)) {
+            if (tb->toggleViewAction()->isVisible()
+                || !globalToolBarNames.count(tb->objectName()))
+                break;
+            QByteArray name = tb->objectName().toUtf8();
+            if (!hGlobal->HasGroup(name.constData()))
+                break;
+            std::string toolbarName = hGlobal->GetGroup(name.constData())->GetASCII("Name");
+
+            tb->toggleViewAction()->setVisible(true);
+            if (tb->windowTitle().isEmpty())
+                tb->setWindowTitle(QApplication::translate("Workbench", toolbarName.c_str()));
+            if (!tb->isVisible() && hPref->GetBool(toolbarName.c_str(), true))
+                tb->setVisible(true);
+        }
         break;
     default:
         break;

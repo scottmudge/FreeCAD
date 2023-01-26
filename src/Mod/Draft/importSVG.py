@@ -1045,19 +1045,12 @@ class svgHandler(xml.sax.ContentHandler):
                             #                angle1 - 0 * swapaxis * d90,
                             #                angle1 + angledelta
                             #                       - 0 * swapaxis * d90)
-                            _precision = 10**(-1*Draft.precision())
-                            if swapaxis or xrotation > _precision:
-                                m3 = FreeCAD.Matrix()
-                                m3.move(vcenter)
-                                # 90
-                                rot90 = FreeCAD.Matrix(0, -1, 0, 0, 1, 0)
-                                # swapaxism = FreeCAD.Matrix(0, 1, 0, 0, 1, 0)
-                                if swapaxis:
-                                    m3 = m3.multiply(rot90)
-                                m3.rotateZ(math.radians(-xrotation))
-                                m3.move(vcenter.multiply(-1))
-                                e1a.transform(m3)
                             seg = e1a.toShape()
+                            if swapaxis:
+                                seg.rotate(vcenter, Vector(0, 0, 1), 90)
+                            _precision = 10**(-1*Draft.precision())
+                            if abs(xrotation) > _precision:
+                                seg.rotate(vcenter, Vector(0, 0, 1), -xrotation)
                             if sweepflag:
                                 seg.reverse()
                                 # DEBUG
@@ -1381,14 +1374,7 @@ class svgHandler(xml.sax.ContentHandler):
                 sh = Part.Ellipse(c, rx, ry).toShape()
             else:
                 sh = Part.Ellipse(c, ry, rx).toShape()
-                m3 = FreeCAD.Matrix()
-                m3.move(c)
-                # 90
-                rot90 = FreeCAD.Matrix(0, -1, 0, 0, 1, 0)
-                m3 = m3.multiply(rot90)
-                m3.move(c.multiply(-1))
-                sh.transformShape(m3)
-                # sh = sh.transformGeometry(m3)
+                sh.rotate(c, Vector(0, 0, 1), 90)
             if self.fill:
                 sh = Part.Wire([sh])
                 sh = Part.Face(sh)
@@ -1605,14 +1591,15 @@ class svgHandler(xml.sax.ContentHandler):
                 cy = 0
                 angle = argsplit[0]
                 if len(argsplit) >= 3:
+                    # Rotate around a non-origin centerpoint (note: SVG y axis is opposite FreeCAD y axis)
                     cx = argsplit[1]
                     cy = argsplit[2]
-                    m.move(Vector(cx, -cy, 0))
+                    m.move(Vector(-cx, cy, 0)) # Reposition for rotation
                 # Mirroring one axis is equal to changing the direction
                 # of rotation
                 m.rotateZ(math.radians(-angle))
                 if len(argsplit) >= 3:
-                    m.move(Vector(-cx, cy, 0))
+                    m.move(Vector(cx, -cy, 0)) # Reverse repositioning
             elif transformation == 'skewX':
                 _m = FreeCAD.Matrix(1,
                                     -math.tan(math.radians(argsplit[0])))

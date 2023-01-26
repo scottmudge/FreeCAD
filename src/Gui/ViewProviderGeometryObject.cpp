@@ -86,10 +86,14 @@ ViewProviderGeometryObject::ViewProviderGeometryObject()
     float r,g,b;
 
     if (ViewParams::getRandomColor()){
-        float fMax = (float)RAND_MAX;
-        r = (float)rand()/fMax;
-        g = (float)rand()/fMax;
-        b = (float)rand()/fMax;
+        // compute a random color in the HSV space
+        SbColor color;
+        color.setHSVValue(((float)rand()/RAND_MAX), // [0-1]
+                          ((float)rand()/RAND_MAX) * 0.3 + 0.2, // [0.2-0.5]
+                          ((float)rand()/RAND_MAX) * 0.35 + 0.55); // [0.55-0.9]
+        r = color[0];
+        g = color[1];
+        b = color[2];
     }
     else {
         unsigned long shcol = ViewParams::getDefaultShapeColor();

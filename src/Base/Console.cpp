@@ -525,10 +525,12 @@ static const char *checkPyFrame(const char *msg, std::string &buf)
     PyFrameObject* frame = PyEval_GetFrame();
     if (frame) {
         int line = PyFrame_GetLineNumber(frame);
-#if PY_MAJOR_VERSION >= 3
+#if PY_VERSION_HEX < 0x030b0000
         buf = PyUnicode_AsUTF8(frame->f_code->co_filename);
 #else
-        buf = PyString_AsString(frame->f_code->co_filename);
+        PyCodeObject* code = PyFrame_GetCode(frame);
+        buf = PyUnicode_AsUTF8(code->co_filename);
+        Py_DECREF(code);
 #endif
         if (buf != "<string>") {
 #ifdef FC_OS_WIN32
@@ -979,7 +981,13 @@ std::stringstream &LogLevel::prefix(std::stringstream &str, const char *src, int
         PyFrameObject* frame = PyEval_GetFrame();
         if (frame) {
             line = PyFrame_GetLineNumber(frame);
+#if PY_VERSION_HEX < 0x030b0000
             _src = PyUnicode_AsUTF8(frame->f_code->co_filename);
+#else
+            PyCodeObject* code = PyFrame_GetCode(frame);
+            _src = PyUnicode_AsUTF8(code->co_filename);
+            Py_DECREF(code);
+#endif
             src = _src.c_str();
             if (src && strcmp(src,"<string>")==0) {
                 src = c_src;

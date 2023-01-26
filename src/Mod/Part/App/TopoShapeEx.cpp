@@ -724,7 +724,7 @@ std::vector<TopoShape> TopoShape::searchSubShape(
             vertices = subshape.getSubShapes(TopAbs_VERTEX);
 
         if(vertices.empty() || checkGeometry) {
-            g = Geometry::fromShape(subshape.getShape());
+            g = Geometry::fromShape(subshape.getShape(), /*silent*/true);
             if(!g)
                 return res;
             if (shapeType == TopAbs_EDGE)
@@ -735,7 +735,7 @@ std::vector<TopoShape> TopoShape::searchSubShape(
         }
 
         auto compareGeometry = [&](const TopoShape &s, bool strict) {
-            std::unique_ptr<Geometry> g2(Geometry::fromShape(s.getShape()));
+            std::unique_ptr<Geometry> g2(Geometry::fromShape(s.getShape(), /*silent*/true));
             if (!g2)
                 return false;
             if (isLine && !strict) {
@@ -828,7 +828,7 @@ std::vector<TopoShape> TopoShape::searchSubShape(
                     unsigned i = 0;
                     auto edges = wire.getSubShapes(TopAbs_EDGE);
                     for(auto &e : edges) {
-                        std::unique_ptr<Geometry> g(Geometry::fromShape(e));
+                        std::unique_ptr<Geometry> g(Geometry::fromShape(e, /*silent*/true));
                         if(!g) {
                             matched = false;
                             break;
@@ -850,7 +850,7 @@ std::vector<TopoShape> TopoShape::searchSubShape(
                             if (++i >= otherEdges.size())
                                 i = 0;
                             if (!g1) {
-                                g1 = Geometry::fromShape(e1);
+                                g1 = Geometry::fromShape(e1, /*silent*/true);
                                 if (!g1)
                                     break;
                             }
@@ -2052,11 +2052,11 @@ void GenericShapeMapper::init(const TopoShape &src, const TopoDS_Shape &dst)
         if (found) continue;
 
         // if no face matches, try search by geometry surface
-        std::unique_ptr<Geometry> g(Geometry::fromShape(dstFace));
+        std::unique_ptr<Geometry> g(Geometry::fromShape(dstFace, /*silent*/true));
         if (!g) continue;
 
         for (auto &v : map) {
-            std::unique_ptr<Geometry> g2(Geometry::fromShape(v.first));
+            std::unique_ptr<Geometry> g2(Geometry::fromShape(v.first, /*silent*/true));
             if (g2 && g2->isSame(*g,1e-7,1e-12)) {
                 this->insert(false, v.first, dstFace);
                 break;
@@ -3537,6 +3537,7 @@ TopoShape &TopoShape::makEBoolean(const char *maker,
     mk->SetTools(shapeTools);
     if (tol > 0.0)
         mk->SetFuzzyValue(tol);
+    mk->SetNonDestructive(Standard_True);
     mk->Build();
     makEShape(*mk,inputs,op);
 
@@ -5834,7 +5835,8 @@ bool TopoShape::linearize(bool face, bool edge)
             if (!face.isPlanarFace())
                 continue;
             std::unique_ptr<Geometry> geo(
-                    Geometry::fromShape(f.Located(TopLoc_Location()).Oriented(TopAbs_FORWARD)));
+                    Geometry::fromShape(f.Located(TopLoc_Location()).Oriented(TopAbs_FORWARD),
+                                        /*silent*/true));
             std::unique_ptr<Geometry> gplane(static_cast<GeomSurface*>(geo.get())->toPlane());
             if (gplane) {
                 touched = true;
@@ -5859,7 +5861,7 @@ bool TopoShape::getRotation(Base::Rotation& rot) const
         if (edgecount == 0)
             return false;
         if (edgecount == 1 && isLinearEdge()) {
-            if (std::unique_ptr<Geometry> geo = Geometry::fromShape(getSubShape(TopAbs_EDGE, 1))) {
+            if (std::unique_ptr<Geometry> geo = Geometry::fromShape(getSubShape(TopAbs_EDGE, 1), /*silent*/true)) {
                 std::unique_ptr<GeomLine> gline(static_cast<GeomCurve*>(geo.get())->toLine());
                 if (gline) {
                     rot = Base::Rotation(Base::Vector3d(0,0,1), gline->getDir());
@@ -5868,7 +5870,7 @@ bool TopoShape::getRotation(Base::Rotation& rot) const
             }
         }
     } else if (facecount == 1) {
-        if (std::unique_ptr<Geometry> geo = Geometry::fromShape(getSubShape(TopAbs_FACE, 1))) {
+        if (std::unique_ptr<Geometry> geo = Geometry::fromShape(getSubShape(TopAbs_FACE, 1), /*silent*/true)) {
             if (geo->isDerivedFrom(GeomElementarySurface::getClassTypeId())) {
                 Handle(Geom_ElementarySurface) s = Handle(Geom_ElementarySurface)::DownCast(geo->handle());
                 gp_Trsf trsf;

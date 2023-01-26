@@ -87,21 +87,24 @@ static void inline setRandomColor(const char *name, bool force)
         App::AutoTransaction guard(name, false, true); 
         // get the complete selection
         for (const auto &sel : Selection().getCompleteSelection()) {
-            float fMax = (float)RAND_MAX;
-            float fRed = (float)rand()/fMax;
-            float fGrn = (float)rand()/fMax;
-            float fBlu = (float)rand()/fMax;
+            // compute a random color in the HSV space
+            SbColor color;
+            color.setHSVValue(((float)rand()/RAND_MAX), // [0-1]
+                              ((float)rand()/RAND_MAX) * 0.3 + 0.2, // [0.2-0.5]
+                              ((float)rand()/RAND_MAX) * 0.35 + 0.55); // [0.55-0.9]
 
             ViewProvider* view = Application::Instance->getViewProvider(sel.pObject);
             if (auto vpLink = Base::freecad_dynamic_cast<ViewProviderLink>(view)) {
                 if(!vpLink->OverrideMaterial.getValue())
                     cmdGuiObjectArgs(sel.pObject, "OverrideMaterial = True");
-                cmdGuiObjectArgs(sel.pObject, "ShapeMaterial.DiffuseColor=(%.2f,%.2f,%.2f)", fRed, fGrn, fBlu);
+                cmdGuiObjectArgs(sel.pObject, "ShapeMaterial.DiffuseColor=(%.2f,%.2f,%.2f)",
+                                 color[0], color[1], color[2]);
                 continue;
             }
             if (Base::freecad_dynamic_cast<App::PropertyColor>(view->getPropertyByName("ShapeColor"))) {
                 // get the view provider of the selected object and set the shape color
-                cmdGuiObjectArgs(sel.pObject, "ShapeColor=(%.2f,%.2f,%.2f)", fRed, fGrn, fBlu);
+                cmdGuiObjectArgs(sel.pObject, "ShapeColor=(%.2f,%.2f,%.2f)",
+                                 color[0], color[1], color[2]);
             }
             if (force && Base::freecad_dynamic_cast<App::PropertyBool>(view->getPropertyByName("MapFaceColor"))) {
                 cmdGuiObjectArgs(sel.pObject, "MapFaceColor = False");

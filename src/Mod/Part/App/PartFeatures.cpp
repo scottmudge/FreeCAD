@@ -279,6 +279,9 @@ App::DocumentObjectExecReturn *RuledSurface::execute(void)
 #endif
         return Part::Feature::execute();
     }
+    catch (Base::Exception& e) {
+        return new App::DocumentObjectExecReturn(e.what());
+    }
     catch (Standard_Failure& e) {
 
         return new App::DocumentObjectExecReturn(e.GetMessageString());
