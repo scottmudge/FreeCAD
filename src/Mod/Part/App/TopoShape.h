@@ -38,6 +38,7 @@
 #include <TopTools_ListOfShape.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <App/ComplexGeoData.h>
+#include <Base/Bitmask.h>
 #include <Base/Exception.h>
 
 #include <QVector>
@@ -2441,6 +2442,7 @@ public:
     TopoDS_Shape findAncestorShape(const TopoDS_Shape &subshape, TopAbs_ShapeEnum type) const;
     std::vector<int> findAncestors(const TopoDS_Shape &subshape, TopAbs_ShapeEnum type) const;
     std::vector<TopoDS_Shape> findAncestorsShapes(const TopoDS_Shape &subshape, TopAbs_ShapeEnum type) const;
+
     /** Search sub shape 
      *
      * unlike findShape(), the input shape does not have to be an actual
@@ -2454,7 +2456,7 @@ public:
      */
     std::vector<TopoShape> searchSubShape(const TopoShape &subshape,
                                           std::vector<std::string> *names=nullptr,
-                                          bool checkGeometry=true,
+                                          Data::SearchOptions options = Data::SearchOption::CheckGeometry,
                                           double tol=1e-7, double atol=1e-12) const;
     //@}
 

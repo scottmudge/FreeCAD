@@ -969,7 +969,7 @@ then return (None, 0)
     <Methode Name="searchSubShape" Const="true" Keyword="true">
       <Documentation>
           <UserDocu>
-searchSubShape(shape, needName=False, checkGeometry=True, tol=1e-7, atol=1e-12) -> Shape
+searchSubShape(shape, needName=False, checkGeometry=True, tol=1e-7, atol=1e-12, singleResult=False) -> Shape
 
 shape: input elementary shape, currently only support Face, Edge, or Vertex
 
@@ -981,6 +981,8 @@ checkGeometry: whether to compare geometry
 tol: distance tolerance
 
 atol: angular tolerance
+
+singleResult: return only single result if found
 
 Search sub shape by checking vertex coordinates and comparing the underlying
 geometries, This can find shapes that are copied. It currently only works with

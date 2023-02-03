@@ -1317,6 +1317,15 @@ GeomBSplineCurve::GeomBSplineCurve(const Handle(Geom_BSplineCurve)& b)
     setHandle(b);
 }
 
+GeomBSplineCurve::GeomBSplineCurve(const Adaptor3d_Curve &curve)
+{
+    setHandle(curve.BSpline());
+    if (getFirstParameter() != curve.FirstParameter()
+        || getLastParameter() != curve.LastParameter()) {
+        Trim(curve.FirstParameter(), curve.LastParameter());
+    }
+}
+
 GeomBSplineCurve::GeomBSplineCurve( const std::vector<Base::Vector3d>& poles, const std::vector<double>& weights,
                   const std::vector<double>& knots, const std::vector<int>& multiplicities,
                   int degree, bool periodic, bool checkrational)
@@ -4844,8 +4853,40 @@ GeomBSplineSurface::GeomBSplineSurface(const Handle(Geom_BSplineSurface)& b)
     setHandle(b);
 }
 
+GeomBSplineSurface::GeomBSplineSurface(const Adaptor3d_Surface &surface)
+{
+    setHandle(surface.BSpline());
+    double u1, u2, v1, v2;
+    mySurface->Bounds(u1, u2, v1, v2);
+    if (u1 != surface.FirstUParameter()
+        || u2 != surface.FirstVParameter()
+        || v1 != surface.LastUParameter()
+        || v2 != surface.LastVParameter())
+    {
+        Trim(surface.FirstUParameter(), surface.LastUParameter(),
+             surface.LastUParameter(), surface.LastVParameter());
+    }
+}
+
 GeomBSplineSurface::~GeomBSplineSurface()
 {
+}
+
+void GeomBSplineSurface::Trim(double u1, double u2, double v1, double v2)
+{
+    try {
+        if(mySurface->IsUPeriodic() && u2 < u1) {
+            // wraps over origin
+            u2 = u1 + 1.0;
+        }
+        if(mySurface->IsVPeriodic() && v2 < v1) {
+            v2 = v1 + 1.0;
+        }
+        mySurface = GeomConvert::SplitBSplineSurface (mySurface, u1, u2, v1, v2);
+    }
+    catch (Standard_Failure& e) {
+        THROWM(Base::CADKernelError,e.GetMessageString())
+    }
 }
 
 void GeomBSplineSurface::setHandle(const Handle(Geom_BSplineSurface)& s)
@@ -5975,7 +6016,7 @@ std::unique_ptr<GeomSurface> makeFromSurfaceAdaptor(const BRepAdaptor_Surface& a
         }
     case GeomAbs_BSplineSurface:
         {
-            geoSurf.reset(new GeomBSplineSurface(adapt.BSpline()));
+            geoSurf.reset(new GeomBSplineSurface(adapt));
             break;
         }
     case GeomAbs_SurfaceOfRevolution:
@@ -6239,7 +6280,7 @@ std::unique_ptr<GeomCurve> makeFromCurveAdaptor(const Adaptor3d_Curve& adapt, bo
         }
     case GeomAbs_BSplineCurve:
         {
-            geoCurve.reset(new GeomBSplineCurve(adapt.BSpline()));
+            geoCurve.reset(new GeomBSplineCurve(adapt));
             break;
         }
 #if OCC_VERSION_HEX >= 0x070000

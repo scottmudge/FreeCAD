@@ -1349,7 +1349,7 @@ bool Feature::shouldApplyPlacement()
 
 const std::vector<std::string> &
 Feature::searchElementCache(const std::string &element,
-                            bool checkGeometry,
+                            Data::SearchOptions options,
                             double tol,
                             double atol) const
 {
@@ -1371,7 +1371,7 @@ Feature::searchElementCache(const std::string &element,
         }
         it->second.searched = true;
         propShape->getShape().searchSubShape(
-                it->second.shape, &it->second.names, checkGeometry, tol, atol);
+                it->second.shape, &it->second.names, options, tol, atol);
         if (prefix) {
             for (auto &name : it->second.names) {
                 if (auto dot = strrchr(name.c_str(), '.'))

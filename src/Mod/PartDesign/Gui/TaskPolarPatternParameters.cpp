@@ -105,18 +105,6 @@ void TaskPolarPatternParameters::setupUI()
 {
     TaskTransformedParameters::setupUI();
 
-    connect(ui->comboAxis, SIGNAL(activated(int)),
-            this, SLOT(onAxisChanged(int)));
-    connect(ui->checkReverse, SIGNAL(toggled(bool)),
-            this, SLOT(onCheckReverse(bool)));
-    connect(ui->polarAngle, SIGNAL(valueChanged(double)),
-            this, SLOT(onAngle(double)));
-    connect(ui->spinOccurrences, SIGNAL(valueChanged(uint)),
-            this, SLOT(onOccurrences(uint)));
-    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
-            this, SLOT(onUpdateView(bool)));
-    // ---------------------
-
     PartDesign::PolarPattern* pcPolarPattern = static_cast<PartDesign::PolarPattern*>(getObject());
     ui->polarAngle->bind(pcPolarPattern->Angle);
     ui->spinOccurrences->bind(pcPolarPattern->Occurrences);
@@ -152,6 +140,17 @@ void TaskPolarPatternParameters::setupUI()
     }
 
     updateUI();
+
+    connect(ui->comboAxis, SIGNAL(activated(int)),
+            this, SLOT(onAxisChanged(int)));
+    connect(ui->checkReverse, SIGNAL(toggled(bool)),
+            this, SLOT(onCheckReverse(bool)));
+    connect(ui->polarAngle, SIGNAL(valueChanged(double)),
+            this, SLOT(onAngle(double)));
+    connect(ui->spinOccurrences, SIGNAL(valueChanged(uint)),
+            this, SLOT(onOccurrences(uint)));
+    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
+            this, SLOT(onUpdateView(bool)));
 }
 
 void TaskPolarPatternParameters::updateUI()

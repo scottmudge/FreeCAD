@@ -35,6 +35,7 @@
 #include <Base/Persistence.h>
 #include <Base/Handle.h>
 #include <Base/Matrix.h>
+#include <Base/Bitmask.h>
 #include <Base/BoundBox.h>
 #include <Base/Rotation.h>
 #include "StringHasher.h"
@@ -46,6 +47,14 @@
 
 namespace Data
 {
+
+/// Option for App::GeoFeature::searchElementCache()
+enum class SearchOption {
+    /// Whether to compare shape geometry
+    CheckGeometry = 1,
+    SingleResult = 2,
+};
+typedef Base::Flags<SearchOption> SearchOptions;
 
 class ElementMap;
 typedef std::shared_ptr<ElementMap> ElementMapPtr;
@@ -484,7 +493,9 @@ private:
     ElementMapPtr _ElementMap;
 };
 
-} //namespace App
+} //namespace Data
 
+
+ENABLE_BITMASK_OPERATORS(Data::SearchOption)
 
 #endif

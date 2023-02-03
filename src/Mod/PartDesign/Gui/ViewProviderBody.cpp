@@ -921,6 +921,11 @@ bool ViewProviderBody::_reorderObject(PartDesign::Body *body,
         }
     }
 
+    if (auto next = Base::freecad_dynamic_cast<PartDesign::Feature>(body->getNextSolidFeature(firstFeat))) {
+        if (next != secondFeat && next->BaseFeature.getValue() == firstFeat)
+            next->BaseFeature.setValue(firstFeat->BaseFeature.getValue());
+    }
+
     // This function is used by both reorderObjects() and replaceObject().
     // 'first', 'second' here refers to the order after replaceObject()
     // operation

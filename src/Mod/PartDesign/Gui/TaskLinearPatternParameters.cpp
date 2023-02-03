@@ -108,17 +108,6 @@ void TaskLinearPatternParameters::setupUI()
     TaskTransformedParameters::setupUI();
     ui->spinOccurrences->setMinimum(1);
 
-    connect(ui->comboDirection, SIGNAL(activated(int)),
-            this, SLOT(onDirectionChanged(int)));
-    connect(ui->checkReverse, SIGNAL(toggled(bool)),
-            this, SLOT(onCheckReverse(bool)));
-    connect(ui->spinLength, SIGNAL(valueChanged(double)),
-            this, SLOT(onLength(double)));
-    connect(ui->spinOccurrences, SIGNAL(valueChanged(uint)),
-            this, SLOT(onOccurrences(uint)));
-    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
-            this, SLOT(onUpdateView(bool)));
-
     PartDesign::LinearPattern* pcLinearPattern = static_cast<PartDesign::LinearPattern*>(getObject());
     ui->spinLength->bind(pcLinearPattern->Length);
     ui->spinOccurrences->bind(pcLinearPattern->Occurrences);
@@ -156,6 +145,17 @@ void TaskLinearPatternParameters::setupUI()
     }
 
     updateUI();
+
+    connect(ui->comboDirection, SIGNAL(activated(int)),
+            this, SLOT(onDirectionChanged(int)));
+    connect(ui->checkReverse, SIGNAL(toggled(bool)),
+            this, SLOT(onCheckReverse(bool)));
+    connect(ui->spinLength, SIGNAL(valueChanged(double)),
+            this, SLOT(onLength(double)));
+    connect(ui->spinOccurrences, SIGNAL(valueChanged(uint)),
+            this, SLOT(onOccurrences(uint)));
+    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
+            this, SLOT(onUpdateView(bool)));
 }
 
 void TaskLinearPatternParameters::updateUI()

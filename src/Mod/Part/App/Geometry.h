@@ -25,6 +25,7 @@
 #define PART_GEOMETRY_H
 
 #include <Adaptor3d_Curve.hxx>
+#include <BRepAdaptor_Surface.hxx>
 #include <Geom_CartesianPoint.hxx>
 #include <Geom_BezierCurve.hxx>
 #include <Geom_BSplineCurve.hxx>
@@ -68,8 +69,6 @@
 #include <boost/uuid/uuid_generators.hpp>
 
 #include "GeometryExtension.h"
-
-class BRepAdaptor_Surface;
 
 namespace Part {
 
@@ -272,6 +271,7 @@ class PartExport GeomBSplineCurve : public GeomBoundedCurve
 public:
     GeomBSplineCurve();
     GeomBSplineCurve(const Handle(Geom_BSplineCurve)&);
+    explicit GeomBSplineCurve(const Adaptor3d_Curve &);
 
     GeomBSplineCurve( const std::vector<Base::Vector3d>& poles, const std::vector<double>& weights,
                       const std::vector<double>& knots, const std::vector<int>& multiplicities,
@@ -879,6 +879,7 @@ class PartExport GeomBSplineSurface : public GeomSurface
 public:
     GeomBSplineSurface();
     GeomBSplineSurface(const Handle(Geom_BSplineSurface)&);
+    explicit GeomBSplineSurface(const Adaptor3d_Surface&);
     virtual ~GeomBSplineSurface();
     virtual Geometry *copy(void) const;
 
@@ -893,6 +894,8 @@ public:
 
     void setHandle(const Handle(Geom_BSplineSurface)&);
     const Handle(Geom_Geometry)& handle() const;
+
+    void Trim(double u1, double u2, double v1, double v2);
 
 private:
     Handle(Geom_BSplineSurface) mySurface;

@@ -684,15 +684,97 @@ TopoDS_Shape TopoShape::findShape(TopAbs_ShapeEnum type, int idx) const {
 
 std::vector<TopoShape> TopoShape::searchSubShape(
         const TopoShape &subshape, std::vector<std::string> *names,
-        bool checkGeometry, double tol, double atol) const
+        Data::SearchOptions options, double tol, double atol) const
 {
+    bool checkGeometry = options.testFlag(Data::SearchOption::CheckGeometry);
+    bool singleSearch = options.testFlag(Data::SearchOption::SingleResult);
     std::vector<TopoShape> res;
     if(subshape.isNull() || this->isNull())
         return res;
     double tol2 = tol*tol;
     int i=0;
     TopAbs_ShapeEnum shapeType = subshape.shapeType();
+
+    auto searchCompositeShape = [&](TopAbs_ShapeEnum childType) {
+        unsigned long count = subshape.countSubShapes(childType);
+        if (!count)
+            return;
+        auto first = subshape.getSubTopoShape(childType, 1);
+        for (const auto &child : searchSubShape(first, nullptr, options, tol, atol)) {
+            for (int idx : findAncestors(child.getShape(), shapeType)) {
+                auto shape = getSubTopoShape(shapeType, idx);
+                if (shape.countSubShapes(childType) != count)
+                    continue;
+                bool found = true;
+                for (unsigned long i=2; i<count; ++i) {
+                    if (shape.searchSubShape(subshape.getSubTopoShape(childType, i), nullptr, options, tol, atol).empty()) {
+                        found = false;
+                        break;
+                    }
+                }
+                if (found) {
+                    res.push_back(shape);
+                    if (names)
+                        names->push_back(shapeName(shapeType) + std::to_string(idx));
+                    if (singleSearch)
+                        return;
+                }
+            }
+        }
+    };
+
     switch(shapeType) {
+    case TopAbs_WIRE:
+        searchCompositeShape(TopAbs_EDGE);
+        break;
+    case TopAbs_SHELL:
+        searchCompositeShape(TopAbs_FACE);
+        break;
+    case TopAbs_SOLID:
+        searchCompositeShape(TopAbs_SHELL);
+        break;
+    case TopAbs_COMPSOLID:
+        searchCompositeShape(TopAbs_SOLID);
+        break;
+    case TopAbs_COMPOUND:
+        // special treatment of single sub-shape compound, that is, search
+        // its extracting the compound
+        if (countSubShapes(TopAbs_SHAPE) == 1) {
+            return searchSubShape(subshape.getSubTopoShape(TopAbs_SHAPE, 1), names, options, tol, atol);
+        }
+        else if (unsigned long count = countSubShapes(TopAbs_SHAPE)) {
+            // For multi-sub-shape compound, only search for compound with the same
+            // structure
+            int idx = 0;
+            for (const auto &compound : getSubTopoShapes(shapeType)) {
+                ++idx;
+                if (compound.countSubShapes(TopAbs_SHAPE) != count)
+                    continue;
+                int i=0;
+                bool found = true;
+                for (const auto &s : compound.getSubTopoShapes(TopAbs_SHAPE)) {
+                    ++i;
+                    auto ss = subshape.getSubTopoShape(TopAbs_SHAPE, i);
+                    if (ss.isNull() && s.isNull())
+                        continue;
+                    if (ss.isNull() || s.isNull()
+                                    || ss.shapeType() != s.shapeType()
+                                    || ss.searchSubShape(s,nullptr,options|Data::SearchOption::SingleResult,tol,atol).empty())
+                    {
+                        found = false;
+                        break;
+                    }
+                }
+                if (found) {
+                    if (names)
+                        names->push_back(shapeName(shapeType) + std::to_string(idx));
+                    res.push_back(compound);
+                    if (singleSearch)
+                        return res;
+                }
+            }
+        }
+        break;
     case TopAbs_VERTEX: {
         // Vertex search will do comparison with tolerance to account for
         // rounding error inccured through transformation.
@@ -705,6 +787,8 @@ std::vector<TopoShape> TopoShape::searchSubShape(
                 if(names)
                     names->push_back(std::string("Vertex")+std::to_string(i));
                 res.push_back(s);
+                if (singleSearch)
+                    return res;
             }
         }
         break;
@@ -765,6 +849,8 @@ std::vector<TopoShape> TopoShape::searchSubShape(
                     if(names)
                         names->push_back(shapeName(shapeType) + std::to_string(idx));
                     res.push_back(s);
+                    if (singleSearch)
+                        return res;
                 }
             }
             break;
@@ -777,7 +863,7 @@ std::vector<TopoShape> TopoShape::searchSubShape(
         // * Perform geometry comparison of the ancestor and input shape.
         //      * For face, perform addition geometry comparison of each edges.
         std::unordered_set<TopoShape> shapeSet;
-        for(auto &v : searchSubShape(vertices[0],nullptr,checkGeometry,tol,atol)) {
+        for(auto &v : searchSubShape(vertices[0],nullptr,options,tol,atol)) {
             for(auto idx : findAncestors(v.getShape(), shapeType)) {
                 auto s = getSubTopoShape(shapeType, idx);
                 if(!shapeSet.insert(s).second)
@@ -888,6 +974,8 @@ std::vector<TopoShape> TopoShape::searchSubShape(
                 if(names)
                     names->push_back(shapeName(shapeType) + std::to_string(idx));
                 res.push_back(s);
+                if (singleSearch)
+                    return res;
             }
         }
         break;

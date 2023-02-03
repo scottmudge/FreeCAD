@@ -613,6 +613,9 @@ public:
 
     Part::TopoShape buildInternals(const Part::TopoShape &edges) const;
 
+    /// Get a map from internal element to the same geometry in normal shape
+    const std::map<std::string, std::string> getInternalElementMap() const;
+
 public: // geometry extension functionalities for single element sketch object user convenience
     int setGeometryId(int GeoId, long id);
     int getGeometryId(int GeoId, long &id) const;
@@ -788,6 +791,8 @@ private:
 
     class GeoHistory;
     std::unique_ptr<GeoHistory> geoHistory;
+
+    mutable std::map<std::string, std::string> internalElementMap;
 };
 
 inline int SketchObject::initTemporaryMove(int geoId, PointPos pos, bool fine/*=true*/)

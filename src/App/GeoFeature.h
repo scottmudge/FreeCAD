@@ -136,7 +136,7 @@ public:
     /** Search sub element using internal cached geometry
      *
      * @param element: element name
-     * @param checkGeometry: search element by comparing geometry
+     * @param options: search options
      * @param tol: coordinate tolerance
      * @param atol: angle tolerance
      *
@@ -149,7 +149,7 @@ public:
      * reference to the same geometry of the old element.
      */
     virtual const std::vector<std::string>& searchElementCache(const std::string &element,
-                                                               bool checkGeometry = true,
+                                                               Data::SearchOptions options = Data::SearchOption::CheckGeometry,
                                                                double tol = 1e-7,
                                                                double atol = 1e-10) const;
 
@@ -175,6 +175,5 @@ private:
 };
 
 } //namespace App
-
 
 #endif // APP_GEOFEATURE_H

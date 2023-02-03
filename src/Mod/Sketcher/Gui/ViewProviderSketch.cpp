@@ -1382,6 +1382,10 @@ bool ViewProviderSketch::getElementPicked(const SoPickedPoint *pp, std::string &
                 return false;
             }
             subname = SketchObject::internalPrefix() + subname;
+            auto &elementMap = getSketchObject()->getInternalElementMap();
+            auto it = elementMap.find(subname);
+            if (it != elementMap.end())
+                subname = it->second;
             return true;
         }
     }

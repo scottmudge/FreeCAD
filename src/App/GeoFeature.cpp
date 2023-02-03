@@ -231,13 +231,13 @@ void GeoFeature::onDocumentRestored() {
 
 const std::vector<std::string>&
 GeoFeature::searchElementCache(const std::string &element,
-                               bool checkGeometry,
+                               Data::SearchOptions options,
                                double tol,
                                double atol) const
 {
     static std::vector<std::string> none;
     (void)element;
-    (void)checkGeometry;
+    (void)options;
     (void)tol;
     (void)atol;
     return none;

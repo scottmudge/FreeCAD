@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
+#include <memory>
 #ifndef _PreComp_
 # include <TopoDS_Shape.hxx>
 # include <TopoDS_Face.hxx>
@@ -331,6 +332,9 @@ void SketchObject::buildShape() {
             FC_WARN("Edge too small: " << indexedName);
         }
     }
+
+    internalElementMap.clear();
+
     if(shapes.empty() && vertices.empty()) {
         InternalShape.setValue(Part::TopoShape());
         Shape.setValue(Part::TopoShape());
@@ -360,6 +364,38 @@ void SketchObject::buildShape() {
     // GeoFeature::updateElementReference() can run properly on change of Shape
     // property, because some reference may pointing to the InternalShape
     Shape.setValue(result);
+}
+
+const std::map<std::string,std::string> SketchObject::getInternalElementMap() const
+{
+    if (!internalElementMap.empty() || !MakeInternals.getValue())
+        return internalElementMap;
+
+    auto internalShape = InternalShape.getShape();
+    auto shape = Shape.getShape().located();
+    if (!internalShape.isNull() && !shape.isNull()) {
+        std::vector<std::string> names;
+        std::string prefix;
+        const std::array<TopAbs_ShapeEnum, 2> types = {TopAbs_VERTEX, TopAbs_EDGE};
+        for (const auto &type : types) {
+            prefix = internalPrefix() + Part::TopoShape::shapeName(type);
+            std::size_t len = prefix.size();
+            int i=0;
+            for (const auto &v : internalShape.getSubTopoShapes(type)) {
+                ++i;
+                shape.searchSubShape(v, &names, Data::SearchOption::CheckGeometry
+                                                |Data::SearchOption::SingleResult);
+                if (names.empty())
+                    continue;
+                prefix += std::to_string(i);
+                internalElementMap[prefix] = names.front();
+                internalElementMap[names.front()] = prefix;
+                prefix.resize(len);
+                names.clear();
+            }
+        }
+    }
+    return internalElementMap;
 }
 
 Part::TopoShape SketchObject::buildInternals(const Part::TopoShape &edges) const
@@ -7930,15 +7966,23 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                     Part::TopoShape projShape;
                     gp_Pln pln;
                     if (Part::TopoShape(edge).findPlane(pln)
-                            && pln.Axis().Direction().IsParallel(
-                                sketchPlane.Axis().Direction(), Precision::Confusion())) {
-                        double d = pln.Distance(sketchPlane);
+                            && pln.Position().Direction().IsParallel(
+                                sketchPlane.Position().Direction(), Precision::Confusion())) {
+                        // We can't use gp_Pln::Distance() because we need to
+                        // know which side the plane is regarding the sketch
+                        // plane, i.e. we need the returned distance to be
+                        // signed.
+                        // double d = pln.Distance(sketchPlane);
+                        const gp_Pnt& aP = sketchPlane.Location();
+                        const gp_Pnt& aLoc = pln.Location ();
+                        const gp_Dir& aDir = pln.Position().Direction();
+                        double d = (aDir.X() * (aP.X() - aLoc.X()) +
+                                aDir.Y() * (aP.Y() - aLoc.Y()) +
+                                aDir.Z() * (aP.Z() - aLoc.Z()));
                         gp_Trsf trsf;
-                        trsf.SetTranslation(gp_Vec(pln.Axis().Direction()) * d);
+                        trsf.SetTranslation(gp_Vec(aDir) * d);
                         projShape.setShape(edge);
-                        // Must copy the edge to make the transformation work
-                        // for some reason.
-                        projShape.transformShape(Part::TopoShape::convert(trsf), /*copy*/true);
+                        projShape.transformShape(Part::TopoShape::convert(trsf), /*copy*/false);
                     } else {
                         BRepOffsetAPI_NormalProjection mkProj(aProjFace);
                         mkProj.Add(edge);
@@ -7949,11 +7993,11 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                             return;
                         }
                     }
-                    for (const auto &e : projShape.getSubShapes(TopAbs_EDGE)) {
-                        TopoDS_Edge projEdge = TopoDS::Edge(e);
-                        TopLoc_Location loc(mov);
-                        projEdge.Location(loc);
-
+                    for (auto &e : projShape.getSubTopoShapes(TopAbs_EDGE)) {
+                        // Must copy the edge to make the transformation work
+                        // for some reason.
+                        e.transformShape(invMat, /*copy*/true, /*checkScale*/true);
+                        TopoDS_Edge projEdge = TopoDS::Edge(e.getShape());
                         BRepAdaptor_Curve projCurve(projEdge);
 
                         gp_Pnt P1 = BRep_Tool::Pnt(TopExp::FirstVertex(projEdge));
@@ -8002,8 +8046,11 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                                 geos.emplace_back(arc);
                             }
                         } else if (projCurve.GetType() == GeomAbs_BSplineCurve) {
+
+                            std::unique_ptr<Part::GeomBSplineCurve> bspline;
+
                             if (ArcFitTolerance.getValue() >= Precision::Confusion()) {
-                                std::unique_ptr<Part::GeomBSplineCurve> bspline(new Part::GeomBSplineCurve(projCurve.BSpline()));
+                                bspline.reset(new Part::GeomBSplineCurve(projCurve));
                                 std::vector<std::unique_ptr<Part::Geometry>> arcs;
                                 for (auto arc : bspline->toBiArcs(ArcFitTolerance.getValue()))
                                     arcs.emplace_back(arc);
@@ -8014,46 +8061,51 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                                 }
                             }
 
-                            // Unfortunately, a normal projection of a circle can also give a Bspline
-                            // Split the spline into arcs
-                            GeomConvert_BSplineCurveKnotSplitting bSplineSplitter(projCurve.BSpline(), 2);
                             //int s = bSplineSplitter.NbSplits();
-                            if ((curve.GetType() == GeomAbs_Circle) && (bSplineSplitter.NbSplits() == 2)) {
-                                // Result of projection is actually a circle...
-                                TColStd_Array1OfInteger splits(1, 2);
-                                bSplineSplitter.Splitting(splits);
-                                gp_Pnt p1 = projCurve.Value(splits(1));
-                                gp_Pnt p2 = projCurve.Value(splits(2));
-                                gp_Pnt p3 = projCurve.Value(0.5 * (splits(1) + splits(2)));
-                                GC_MakeCircle circleMaker(p1, p2, p3);
-                                Handle(Geom_Circle) circ = circleMaker.Value();
-                                Part::GeomCircle* circle = new Part::GeomCircle();
-                                circle->setRadius(circ->Radius());
-                                gp_Pnt center = circ->Axis().Location();
-                                circle->setCenter(Base::Vector3d(center.X(), center.Y(), center.Z()));
+                            if (curve.GetType() == GeomAbs_Circle) {
+                                // Unfortunately, a normal projection of a circle can also give a Bspline
+                                // Split the spline into arcs
+                                GeomConvert_BSplineCurveKnotSplitting bSplineSplitter(projCurve.BSpline(), 2);
+                                if (bSplineSplitter.NbSplits() == 2) {
+                                    // Result of projection is actually a circle...
+                                    TColStd_Array1OfInteger splits(1, 2);
+                                    bSplineSplitter.Splitting(splits);
+                                    gp_Pnt p1 = projCurve.Value(splits(1));
+                                    gp_Pnt p2 = projCurve.Value(splits(2));
+                                    gp_Pnt p3 = projCurve.Value(0.5 * (splits(1) + splits(2)));
+                                    GC_MakeCircle circleMaker(p1, p2, p3);
+                                    Handle(Geom_Circle) circ = circleMaker.Value();
+                                    Part::GeomCircle* circle = new Part::GeomCircle();
+                                    circle->setRadius(circ->Radius());
+                                    gp_Pnt center = circ->Axis().Location();
+                                    circle->setCenter(Base::Vector3d(center.X(), center.Y(), center.Z()));
 
-                                GeometryFacade::setConstruction(circle, true);
-                                geos.emplace_back(circle);
-                            } else {
-                                Part::GeomBSplineCurve* bspline = new Part::GeomBSplineCurve(projCurve.BSpline());
-                                if (int maxDegree = ExternalBSplineMaxDegree.getValue()) {
-                                    if (bspline->getDegree() > maxDegree) {
-                                        std::string err;
-                                        try {
-                                            if (!bspline->approximate(ExternalBSplineTolerance.getValue(), 20,
-                                                                    ExternalBSplineMaxDegree.getValue(), 0))
-                                                err = "not done";
-                                        } catch (Base::Exception &e) {
-                                            err = e.what();
-                                        }
-                                        if (err.size())
-                                            FC_WARN("Failed to simplify external imported bspline "
-                                                    << getFullName() << ": " << key << ", " << err);
-                                    }
+                                    GeometryFacade::setConstruction(circle, true);
+                                    geos.emplace_back(circle);
+                                    return;
                                 }
-                                GeometryFacade::setConstruction(bspline, true);
-                                geos.emplace_back(bspline);
                             }
+
+                            if (!bspline)
+                                bspline.reset(new Part::GeomBSplineCurve(projCurve));
+                            if (int maxDegree = ExternalBSplineMaxDegree.getValue()) {
+                                if (bspline->getDegree() > maxDegree) {
+                                    std::string err;
+                                    try {
+                                        if (!bspline->approximate(ExternalBSplineTolerance.getValue(), 20,
+                                                                ExternalBSplineMaxDegree.getValue(), 0))
+                                            err = "not done";
+                                    } catch (Base::Exception &e) {
+                                        err = e.what();
+                                    }
+                                    if (err.size())
+                                        FC_WARN("Failed to simplify external imported bspline "
+                                                << getFullName() << ": " << key << ", " << err);
+                                }
+                            }
+                            GeometryFacade::setConstruction(bspline.get(), true);
+                            geos.emplace_back(bspline.release());
+
                         } else if (projCurve.GetType() == GeomAbs_Hyperbola) {
                             gp_Hypr e = projCurve.Hyperbola();
                             gp_Pnt p = e.Location();
@@ -10007,20 +10059,28 @@ SketchObject::getHigherElements(const char *element, bool silent) const
         }
         return res;
     }
-    bool internal = boost::starts_with(element, internalPrefix());
-    const auto &shape = internal ? InternalShape.getShape() : Shape.getShape();
-    auto res = shape.getHigherElements(element+(internal?internalPrefix().size():0), silent);
-    for (auto it=res.begin(); it!=res.end();) {
-        auto &indexedName = *it;
-        if (boost::equals(indexedName.getType(), "Face")
-                || boost::equals(indexedName.getType(), "Edge")
-                || boost::equals(indexedName.getType(), "Wire")) {
-            if (internal)
-                indexedName = Data::IndexedName((internalPrefix() + indexedName.getType()).c_str(), indexedName.getIndex());
-            ++it;
+
+    std::vector<Data::IndexedName> res;
+    auto getNames = [&](const char *element) {
+        bool internal = boost::starts_with(element, internalPrefix());
+        const auto &shape = internal ? InternalShape.getShape() : Shape.getShape();
+        for (const auto &indexedName : shape.getHigherElements(element+(internal?internalPrefix().size():0), silent)) {
+            if (!internal) {
+                res.push_back(indexedName);
+            }
+            else if (boost::equals(indexedName.getType(), "Face")
+                    || boost::equals(indexedName.getType(), "Edge")
+                    || boost::equals(indexedName.getType(), "Wire")) {
+                res.emplace_back((internalPrefix() + indexedName.getType()).c_str(), indexedName.getIndex());
+            }
         }
-        else
-            it = res.erase(it);
+    };
+    getNames(element);
+    const auto &elementMap = getInternalElementMap();
+    auto it = elementMap.find(element);
+    if (it != elementMap.end()) {
+        res.emplace_back(it->second.c_str());
+        getNames(it->second.c_str());
     }
     return res;
 }
