@@ -1685,7 +1685,7 @@ public:
                         if (idxEnd == 0)
                             idxEnd = (int)wireVertices.size();
                         ++idxV;
-                        assertCheck(idxV<idxEnd);
+                        assertCheck(idxV<=idxEnd);
                         int idxStart = idxV;
                         for (int idx=idxV; idx!=idxEnd; ++idx) {
                             auto info = wireVertices[idx].edgeInfo();
