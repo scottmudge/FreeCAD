@@ -493,3 +493,13 @@ PyObject *ViewProviderSavedView::getPyObject() {
     return pyViewObject;
 }
 
+void ViewProviderSavedView::finishRestoring()
+{
+    if (auto obj = Base::freecad_dynamic_cast<App::SavedView>(getObject())) {
+        if (auto prop = Base::freecad_dynamic_cast<App::PropertyEnumeration>(
+                    obj->getPropertyByName("DrawStyle"))) {
+            prop->setEnums(Gui::drawStyleNames());
+        }
+    }
+    inherited::finishRestoring();
+}

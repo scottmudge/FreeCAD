@@ -156,8 +156,15 @@ App::DocumentObjectExecReturn *Boolean::execute(void)
         shapes.push_back(shape);
     }
 
+    TopoShape result(0,getDocument()->getStringHasher());
     if (shapes.size() == 1) {
-        this->Shape.setValue(shapes.front());
+        if (shapes.front().getPlacement().isIdentity()) {
+            this->Shape.setValue(shapes.front());
+        }
+        else {
+            // use compound to contain the placement
+            this->Shape.setValue(result.makECompound(shapes));
+        }
         return App::DocumentObject::StdReturn;
     }
 
@@ -175,7 +182,6 @@ App::DocumentObjectExecReturn *Boolean::execute(void)
     else
         return new App::DocumentObjectExecReturn("Unsupported boolean operation");
 
-    TopoShape result(0,getDocument()->getStringHasher());
     try {
         result.makEBoolean(op, shapes);
     } catch (Standard_Failure &e) {

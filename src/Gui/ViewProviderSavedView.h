@@ -45,6 +45,7 @@ public:
     void getExtraIcons(std::vector<std::pair<QByteArray, QPixmap> > &) const override;
     bool iconMouseEvent(QMouseEvent *, const QByteArray &tag) override;
     QString getToolTip(const QByteArray &tag) const override;
+    void finishRestoring() override;
 
     enum CaptureOption {
         Clippings       = 0x01,
