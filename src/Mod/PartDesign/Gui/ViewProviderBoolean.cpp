@@ -117,3 +117,10 @@ void ViewProviderBoolean::onChanged(const App::Property* prop) {
             Display.setValue((long)0);
     }
 }
+
+void ViewProviderBoolean::extensionModeSwitchChange()
+{
+    // Skip ViewProviderGeoFeatureExtension::extensionModeSwitchChange() so
+    // that GroupExtension::extensionGetSubObjects(GS_SELECT) can work
+    // TODO: find a better work around
+}

@@ -2563,7 +2563,6 @@ void CmdPartDesignBoolean::activated(int iMsg)
 
     std::string support;
     std::set<App::DocumentObject*> objSet;
-    std::vector<App::DocumentObject*> objs;
     std::map<std::pair<App::DocumentObject*,std::string>, std::vector<std::string> > binderLinks;
 
     for(auto &sel : Gui::Selection().getSelectionT("*",0)) {
@@ -2627,6 +2626,10 @@ void CmdPartDesignBoolean::activated(int iMsg)
         break;
     }
 
+    // If we don't add an object to the boolean group then don't update the body
+    // as otherwise this will fail and it will be marked as invalid
+    bool updateDocument = false;
+
     std::set<App::SubObjectT> boundObjects;
     for(auto &v : binderLinks) {
         std::string FeatName = getUniqueObjectName("Reference",pcActiveBody);
@@ -2637,8 +2640,7 @@ void CmdPartDesignBoolean::activated(int iMsg)
         if(!binder)
             continue;
 
-        std::map<App::DocumentObject*, std::vector<std::string> > links;
-        auto &subs = links[v.first.first];
+        std::vector<std::string> subs;
         if(v.second.empty())
             v.second.push_back("");
         for(auto &s : v.second) {
@@ -2647,17 +2649,12 @@ void CmdPartDesignBoolean::activated(int iMsg)
             sobjT.setSubName(sobjT.getSubNameNoElement());
             boundObjects.insert(sobjT);
         }
-        binder->setLinks(std::move(links));
-        objs.push_back(binder);
-    }
 
-    // If we don't add an object to the boolean group then don't update the body
-    // as otherwise this will fail and it will be marked as invalid
-    bool updateDocument = false;
-    if (objs.size()) {
         updateDocument = true;
-        std::string bodyString = PartDesignGui::buildLinkListPythonStr(objs);
-        Gui::cmdAppObject(Feat, std::ostringstream() <<"addObjects("<<bodyString<<")");
+        Gui::cmdAppObject(Feat, std::ostringstream() <<"addObject("
+                << binder->getFullName(true) << ")");
+        Gui::cmdAppObject(binder, std::ostringstream() << "Support = "
+                << PartDesignGui::buildLinkSubPythonStr(v.first.first, subs));
     }
 
     for (auto sobjT : boundObjects) {

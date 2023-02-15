@@ -371,25 +371,29 @@ void TaskPocketParameters::updateUI(int index)
 void TaskPocketParameters::_onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     if (msg.Type == Gui::SelectionChanges::AddSelection) {
-        QSignalBlocker guard(ui->lineFaceName);
-        QString refText = onSelectUpToFace(msg);
-        if (refText.length() > 0) {
-            ui->lineFaceName->setText(refText);
-            QStringList list(refText.split(QLatin1Char(':')));
-            ui->lineFaceName->setProperty("FeatureName", list[0].toUtf8());
-            ui->lineFaceName->setProperty("FaceName", list.size()>1 ? list[1].toLatin1() : QByteArray());
-            // Turn off reference selection mode
-            onButtonFace(false);
-        } else {
+        if (getSelectionMode() == SelectionMode::refAdd) {
+            QSignalBlocker guard(ui->lineFaceName);
+            QString refText = onSelectUpToFace(msg);
+            if (refText.length() > 0) {
+                ui->lineFaceName->setText(refText);
+                QStringList list(refText.split(QLatin1Char(':')));
+                ui->lineFaceName->setProperty("FeatureName", list[0].toUtf8());
+                ui->lineFaceName->setProperty("FaceName", list.size()>1 ? list[1].toLatin1() : QByteArray());
+                // Turn off reference selection mode
+                onButtonFace(false);
+            } else {
+                ui->lineFaceName->clear();
+                ui->lineFaceName->setProperty("FeatureName", QVariant());
+                ui->lineFaceName->setProperty("FaceName", QVariant());
+            }
+        }
+    } else if (msg.Type == Gui::SelectionChanges::ClrSelection) {
+        if (getSelectionMode() == SelectionMode::refAdd) {
+            QSignalBlocker guard(ui->lineFaceName);
             ui->lineFaceName->clear();
             ui->lineFaceName->setProperty("FeatureName", QVariant());
             ui->lineFaceName->setProperty("FaceName", QVariant());
         }
-    } else if (msg.Type == Gui::SelectionChanges::ClrSelection) {
-        QSignalBlocker guard(ui->lineFaceName);
-        ui->lineFaceName->clear();
-        ui->lineFaceName->setProperty("FeatureName", QVariant());
-        ui->lineFaceName->setProperty("FaceName", QVariant());
     }
 }
 

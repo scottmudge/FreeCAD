@@ -434,10 +434,12 @@ void TaskPadParameters::_onSelectionChanged(const Gui::SelectionChanges& msg)
             }
         }
     } else if (msg.Type == Gui::SelectionChanges::ClrSelection) {
-        QSignalBlocker guard(ui->lineFaceName);
-        ui->lineFaceName->clear();
-        ui->lineFaceName->setProperty("FeatureName", QVariant());
-        ui->lineFaceName->setProperty("FaceName", QVariant());
+        if (getSelectionMode() == SelectionMode::refAdd) {
+            QSignalBlocker guard(ui->lineFaceName);
+            ui->lineFaceName->clear();
+            ui->lineFaceName->setProperty("FeatureName", QVariant());
+            ui->lineFaceName->setProperty("FaceName", QVariant());
+        }
     }
 }
 

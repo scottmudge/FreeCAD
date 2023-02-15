@@ -50,6 +50,8 @@ public:
     virtual void attach(App::DocumentObject*) override;
     virtual void onChanged(const App::Property* prop) override;
 
+    void extensionModeSwitchChange() override;
+
 protected:
     virtual TaskDlgFeatureParameters *getEditDialog() override;
     
