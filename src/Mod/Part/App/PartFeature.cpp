@@ -97,7 +97,7 @@ PROPERTY_SOURCE(Part::Feature, App::GeoFeature)
 Feature::Feature(void)
 {
     ADD_PROPERTY(Shape, (TopoDS_Shape()));
-    ADD_PROPERTY_TYPE(ValidateShape, (PartParams::getValidateShape()), "", App::Prop_None,
+    ADD_PROPERTY_TYPE(ValidateShape, (false), "", App::Prop_None,
             "Validate shape content and warn about invalid shape");
     ADD_PROPERTY_TYPE(InvalidShape, (false), "", App::Prop_Hidden,
             "Indicate the shape is invalid");

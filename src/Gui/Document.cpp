@@ -128,7 +128,7 @@ struct DocumentP
     std::map<const App::DocumentObject*,ViewProviderDocumentObject*> _ViewProviderMap;
     std::map<SoSeparator *,ViewProviderDocumentObject*> _CoinMap;
     std::map<std::string,ViewProvider*> _ViewProviderMapAnnotation;
-    std::list<ViewProviderDocumentObject*> _redoViewProviders;
+    std::vector<const App::DocumentObject*> _redoObjects;
 
     // cache map from view provider to its 3D claimed children
     std::unordered_map<const ViewProvider*,std::vector<App::DocumentObject*> > _ChildrenMap;
@@ -891,7 +891,7 @@ void Document::slotNewObject(const App::DocumentObject& Obj)
         // it is possible that a new viewprovider already claims children
         handleChildren3D(pcProvider);
         if (d->_isTransacting) {
-            d->_redoViewProviders.push_back(pcProvider);
+            d->_redoObjects.push_back(&Obj);
         }
     }
 }
@@ -2764,9 +2764,14 @@ void Document::redo(int iSteps)
             getDocument()->redo();
         }
     }
-    for (auto it : d->_redoViewProviders)
-        handleChildren3D(it);
-    d->_redoViewProviders.clear();
+
+    // Use index for iteration so that we can handle possible changes of _redoObjects while iterating.
+    for (size_t i=0; i < d->_redoObjects.size(); ++i) {
+        if (auto vp = Application::Instance->getViewProvider(d->_redoObjects[i])) {
+            handleChildren3D(vp);
+        }
+    }
+    d->_redoObjects.clear();
 }
 
 PyObject* Document::getPyObject(void)

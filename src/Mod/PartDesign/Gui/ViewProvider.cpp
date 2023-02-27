@@ -859,9 +859,39 @@ bool ViewProvider::reorderObjects(const std::vector<App::DocumentObject *> &objs
 {
     auto vp = Gui::Application::Instance->getViewProvider(
             PartDesign::Body::findBodyOf(getObject()));
-    if (vp)
-        return vp->reorderObjects(objs, before);
-    return false;
+    if (!vp)
+        return false;
+
+    auto feature = Base::freecad_dynamic_cast<PartDesign::Feature>(getObject());
+    if (!feature)
+        return false;
+    const auto &siblings = feature->_Siblings.getValues();
+    if (siblings.empty())
+        return false;
+
+    // Siblings are grouped in reverse order, so must adjust 'before'
+    if (!before)
+        before = siblings.back();
+    else {
+        auto it = std::find(siblings.begin(), siblings.end(), before);
+        if (it == siblings.end())
+            return false;
+        for (--it; it != siblings.begin(); --it) {
+            if (std::find(objs.begin(), objs.end(), *it) == objs.end()) {
+                before = *it;
+                break;
+            }
+        }
+        if (it == siblings.begin())
+            before = getObject();
+    }
+
+    if (objs.size() > 1) {
+        auto reversed = objs;
+        std::reverse(reversed.begin(), reversed.end());
+        return vp->reorderObjects(reversed, before);
+    }
+    return vp->reorderObjects(objs, before);
 }
 
 std::vector<App::DocumentObject*> ViewProvider::claimChildren(void) const
@@ -871,7 +901,7 @@ std::vector<App::DocumentObject*> ViewProvider::claimChildren(void) const
     res.insert(res.end(), children.begin(), children.end());
     auto feature = Base::freecad_dynamic_cast<PartDesign::Feature>(getObject());
     if (feature) {
-        auto siblings = feature->_Siblings.getValues();
+        const auto &siblings = feature->_Siblings.getValues();
         res.insert(res.end(), siblings.begin(), siblings.end());
     }
     return res;

@@ -1006,6 +1006,8 @@ public:
             if (feat)
                 feat->setPauseRecompute(false);
             vp->setPreviewDisplayMode(false);
+            if (hideEditObject)
+                vp->Visibility.setValue(false);
         }
 
         for (auto & objs : visibleFeatures) {
@@ -1143,6 +1145,7 @@ public:
         auto body = PartDesign::Body::findBodyOf(editingObj);
         if (!body)
             return;
+        hideEditObject = !editingObj->Visibility.getValue();
         visibleFeatures.clear();
         if (!body->isSolidFeature(editingObj)) {
             editingObj->Visibility.setValue(true);
@@ -1443,6 +1446,7 @@ public:
     bool editPreview = false;
 
     std::vector<std::vector<App::DocumentObjectT> > visibleFeatures;
+    bool hideEditObject = false;
 };
 
 static Monitor *_MonitorInstance;

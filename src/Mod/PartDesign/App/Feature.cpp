@@ -38,12 +38,13 @@
 #include "App/Document.h"
 #include <App/FeaturePythonPyImp.h>
 #include <App/MappedElement.h>
-#include "App/OriginFeature.h"
+#include <App/OriginFeature.h>
+#include <Mod/Part/App/DatumFeature.h>
+#include <Mod/Part/App/PartParams.h>
 #include "Body.h"
 #include "ShapeBinder.h"
 #include "Feature.h"
 #include "FeaturePy.h"
-#include "Mod/Part/App/DatumFeature.h"
 
 #include <Base/Console.h>
 
@@ -68,6 +69,8 @@ Feature::Feature()
 
     Placement.setStatus(App::Property::Hidden, true);
     BaseFeature.setStatus(App::Property::Hidden, true);
+
+    ValidateShape.setValue(Part::PartParams::getValidateShape());
 
     ADD_PROPERTY_TYPE(NewSolid,(false),"Base",App::Prop_None,
                      "Create a new separated solid from this feature");
