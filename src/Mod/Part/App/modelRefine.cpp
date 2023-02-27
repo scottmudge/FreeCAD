@@ -1089,22 +1089,28 @@ bool FaceUniter::process()
                                               std::fabs(zMax-zMax1)});
                     if (tbound > tol) {
                         bool proceed = false;
-                        if (tbound <= GetPrecision()*10.0) {
+                        if (tbound <= tol*10.0) {
                             Part::TopoShape s(newFace, -1);
                             if (s.fix(tbound, tbound, tbound)) {
                                 newFace = TopoDS::Face(s.getShape());
                                 proceed = true;
                                 if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
-                                    FC_WARN("Face refine auto correct precision to "
+                                    FC_WARN("Face refine auto correct precision "
                                             << std::setprecision(std::numeric_limits<double>::digits10 + 1)
-                                            << tbound);
+                                            << tol << " -> " << tbound);
+                            }
+                            else if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG)) {
+                                FC_WARN("Face refine fix failed because of bounding box mismatch, "
+                                        << std::setprecision(std::numeric_limits<double>::digits10 + 1)
+                                        << tol << " -> " << tbound);
+                                continue;
                             }
                         }
-                        if (!proceed) {
+                        else if (!proceed) {
                             if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
                                 FC_WARN("Face refine failed because of bounding box mismatch, "
                                         << std::setprecision(std::numeric_limits<double>::digits10 + 1)
-                                        << tbound);
+                                        << tol << " -> " << tbound);
                             continue;
                         }
                     }

@@ -705,11 +705,16 @@ void Application::importFrom(const char* FileName, const char* DocName, const ch
 
                 appDoc = App::GetApplication().getDocument(dname.c_str());
                 if (appDoc) {
-                    if (!doc && appDoc->getObjects().empty())
+                    // Must copy the returned object array, because calling
+                    // 'afterImport' below may possibily add new objects, thus
+                    // invalidating the returned constant object array.
+                    auto objs = appDoc->getObjects();
+
+                    if (!doc && objs.empty())
                         App::GetApplication().closeDocument(dname.c_str());
                     else {
                         auto gdoc = getDocument(appDoc);
-                        for (auto obj : appDoc->getObjects()) {
+                        for (auto obj : objs) {
                             if (!ids.count(obj->getID())) {
                                 appDoc->afterImport(obj);
                                 auto vp = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(gdoc->getViewProvider(obj));
