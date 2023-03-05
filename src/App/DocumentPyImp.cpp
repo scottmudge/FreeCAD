@@ -929,3 +929,38 @@ Py::Tuple DocumentPy::getTreeRanks() const
     return Py::TupleN(Py::Int(getDocumentPtr()->treeRanks().first),
                       Py::Int(getDocumentPtr()->treeRanks().second));
 }
+
+Py::Object DocumentPy::getGui() const
+{
+    try {
+        PyObject *dict = PySys_GetObject("modules");
+        if (!dict) {
+            return Py::None();
+        }
+
+        // check if the FreeCADGui module is already loaded, if not then don't try to load it
+        Py::Dict sysmod(dict);
+        if (!sysmod.hasKey("FreeCADGui")) {
+            return Py::None();
+        }
+
+        // double-check that the module doesn't have a null pointer
+        Py::Module module(PyImport_ImportModule("FreeCADGui"),true);
+        if (module.isNull() || !module.hasAttr("getDocument"))
+            return Py::None();
+
+        Py::Callable method(module.getAttr("getDocument"));
+        Py::Tuple arg(1);
+        arg.setItem(0, Py::String(getDocumentPtr()->getName()));
+        return method.apply(arg);
+    }
+    catch (Py::Exception& e) {
+        if (PyErr_ExceptionMatches(PyExc_ImportError)) {
+            // the GUI is not up, hence None is returned
+            e.clear();
+            return Py::None();
+        }
+        // FreeCADGui is loaded, so there must be wrong something else
+        throw; // re-throw
+    }
+}

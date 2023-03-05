@@ -87,6 +87,8 @@ public:
         return getAppDocument();
     }
 
+    virtual std::string getFullName(bool python=false) const;
+
     /** @name methods to override
      */
     //@{
@@ -109,10 +111,15 @@ public:
     virtual void deleteSelf();
     //@}
 
+    /** ID of this view
+     */
+    int getID() const {return _id;}
+
 protected:
     Gui::Document*  _pcDocument;
     bool bIsDetached;
     bool bIsPassive;
+    int _id;
 };
 
 } // namespace Gui

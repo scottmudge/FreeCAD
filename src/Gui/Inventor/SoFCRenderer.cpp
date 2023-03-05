@@ -1416,6 +1416,20 @@ SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
         || draw_entry.material->type != Material::Triangle)
       continue;
 
+    if (this->material.clippers != draw_entry.material->clippers) {
+      state->pop();
+      state->push();
+
+      for(auto & info : draw_entry.material->clippers.getData()) {
+        if (!info.identity)
+          SoModelMatrixElement::set(state, NULL, info.matrix);
+        state->setCacheOpen(false);
+        info.node->GLRender(action);
+        if (!info.identity)
+          SoModelMatrixElement::makeIdentity(state, NULL);
+      }
+      this->material.clippers = draw_entry.material->clippers;
+    }
     setupMatrix(action, draw_entry);
 
     draw_entry.ventry->cache->renderTriangles(state,
@@ -1428,6 +1442,7 @@ SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
 
   for (const auto &draw_entry : this->drawentries) {
     if (draw_entry.skip > 0
+        || draw_entry.material->drawstyle == SoDrawStyleElement::INVISIBLE
         || draw_entry.material->type != Material::Triangle)
       continue;
 
@@ -1891,6 +1906,9 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
         renderPoints(action, array, draw_entry);
         break;
       }
+      if (draw_entry.ventry->partidx < 0) {
+          renderOutline(action, draw_entry, &draw_entries == &this->hlentries);
+      }
     }
     if (pushed)
       glPopAttrib();
@@ -2020,6 +2038,9 @@ SoFCRendererP::renderTransparency(SoGLRenderAction * action,
             pauseShadowRender(state, pauseshadow
                 || !(draw_entry.material->shadowstyle & SoShadowStyleElement::SHADOWED));
 
+            if (draw_entry.ventry->partidx < 0)
+              renderOutline(action, draw_entry, highlight);
+
             bool restoreDepthTest = false;
             if (((highlight && ViewParams::getShowPreSelectedFaceOutline())
                   || (sel_highlight && ViewParams::getShowSelectedFaceOutline()))
@@ -2124,7 +2145,7 @@ SoFCRenderer::render(SoGLRenderAction * action)
                                 PRIVATE(this)->opaqueselections,
                                 RenderPassHighlight);
 
-  PRIVATE(this)->renderSectionGrouped(action, false);
+    PRIVATE(this)->renderSectionGrouped(action, false);
 
     PRIVATE(this)->recheckmaterial = true;
     PRIVATE(this)->notexture = false;
@@ -2315,6 +2336,18 @@ SoFCRenderer::render(SoGLRenderAction * action)
                                 RenderPassHighlight);
   }
 
+  PRIVATE(this)->renderOpaque(action,
+                              PRIVATE(this)->slentries,
+                              PRIVATE(this)->selspointontop,
+                              RenderPassHighlight);
+
+  PRIVATE(this)->renderOpaque(action,
+                              PRIVATE(this)->hlentries,
+                              PRIVATE(this)->highlightlinesontop,
+                              RenderPassHighlight);
+
+  PRIVATE(this)->renderSceneOutline(action);
+
   if (ViewParams::getShowSelectedFaceOutline()) {
     PRIVATE(this)->renderOpaque(action,
                                 PRIVATE(this)->slentries,
@@ -2328,19 +2361,6 @@ SoFCRenderer::render(SoGLRenderAction * action)
                                 PRIVATE(this)->preseloutline,
                                 RenderPassSelectionOutline);
   }
-
-
-  PRIVATE(this)->renderOpaque(action,
-                              PRIVATE(this)->slentries,
-                              PRIVATE(this)->selspointontop,
-                              RenderPassHighlight);
-
-  PRIVATE(this)->renderOpaque(action,
-                              PRIVATE(this)->hlentries,
-                              PRIVATE(this)->highlightlinesontop,
-                              RenderPassHighlight);
-
-  PRIVATE(this)->renderSceneOutline(action);
 
   state->pop();
   glPopAttrib();

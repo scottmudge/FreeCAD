@@ -117,3 +117,8 @@ PyObject* MDIViewPy::getActiveObject(PyObject *args)
                 Py::String(subname.c_str())));
     } PY_CATCH
 }
+
+Py::Int MDIViewPy::getID() const
+{
+    return Py::Int(getMDIViewPtr()->getID());
+}

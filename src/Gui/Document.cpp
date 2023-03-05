@@ -2418,6 +2418,15 @@ std::list<MDIView*> Document::getMDIViews() const
     return views;
 }
 
+BaseView *Document::getViewByID(int id) const
+{
+    for (auto view : d->baseViews) {
+        if (view->getID() == id)
+            return view;
+    }
+    return nullptr;
+}
+
 std::list<MDIView*> Document::getMDIViewsOfType(const Base::Type& typeId) const
 {
     std::list<MDIView*> views;

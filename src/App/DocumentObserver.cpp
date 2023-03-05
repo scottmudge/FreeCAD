@@ -293,23 +293,30 @@ std::string DocumentObjectT::getPropertyPython() const
 }
 
 Property *DocumentObjectT::getProperty() const {
-    if (object.empty()) {
-        auto doc = getDocument();
-        return doc ? doc->getPropertyByName(property.c_str()) : nullptr;
-    }
-    auto obj = getObject();
-    if (!obj)
+    if (property.empty())
         return nullptr;
 
+    Document *doc = nullptr;
+    DocumentObject *obj = nullptr;
     const char *prop = property.c_str();
     const char *dot = strchr(prop, '.');
-    if (!dot)
-        return obj->getPropertyByName(property.c_str());
 
-    App::Property *res = nullptr;
+    if (!object.empty()) {
+        auto obj = getObject();
+        if (!obj)
+            return nullptr;
+        if (!dot)
+            return obj->getPropertyByName(property.c_str());
+    }
+    else {
+        doc = getDocument();
+        if (!doc)
+            return nullptr;
+    }
+
     Base::PyGILStateLocker lock;
     try {
-        Py::Object pyobj(obj->getPyObject(), true);
+        Py::Object pyobj(obj ? obj->getPyObject() : doc->getPyObject(), true);
         std::string _name;
         for (;;) {
             const char *name;
@@ -317,14 +324,14 @@ Property *DocumentObjectT::getProperty() const {
                 _name = std::string(prop, dot);
                 name = _name.c_str();
             }
-            else
+            else {
                 name = prop;
-            if (PyObject_TypeCheck(pyobj.ptr(), &PropertyContainerPy::Type)) {
-                auto p = static_cast<PropertyContainerPy*>(pyobj.ptr())->getPropertyContainerPtr()->getPropertyByName(name);
-                if (p)
-                    res = p;
+                if (PyObject_TypeCheck(pyobj.ptr(), &PropertyContainerPy::Type))
+                    return static_cast<PropertyContainerPy*>(
+                            pyobj.ptr())->getPropertyContainerPtr()->getPropertyByName(name);
+                break;
             }
-            if(!dot || !pyobj.hasAttr(name))
+            if(!pyobj.hasAttr(name))
                 break;
             pyobj = pyobj.getAttr(name);
             prop = dot+1;
@@ -333,11 +340,9 @@ Property *DocumentObjectT::getProperty() const {
 
     } catch (Py::Exception &) {
         PyErr_Clear();
-        return nullptr;
     } catch (Base::Exception &) {
-        return nullptr;
     }
-    return res;
+    return nullptr;
 }
 
 // -----------------------------------------------------------------------------

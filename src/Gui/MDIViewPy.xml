@@ -41,6 +41,12 @@ Returns the active object for the given type
         </UserDocu>
       </Documentation>
     </Methode>
+    <Attribute Name="ID" ReadOnly="true">
+        <Documentation>
+            <UserDocu>The unique identifier of this view</UserDocu>
+        </Documentation>
+        <Parameter Name="ID" Type="Int"/>
+    </Attribute>
     <CustomAttributes />
   </PythonExport>
 </GenerateModel>

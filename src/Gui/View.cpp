@@ -39,6 +39,9 @@ PROPERTY_SOURCE_ABSTRACT(Gui::BaseView,App::PropertyContainer)
 BaseView::BaseView( Gui::Document* pcDocument)
   :_pcDocument(pcDocument), bIsDetached(false)
 {
+    static std::atomic<int> _nextID;
+    _id = ++_nextID;
+
     if (pcDocument){
         pcDocument->attachView(this);
         bIsPassive = false;
@@ -106,4 +109,18 @@ void BaseView::onChanged(const App::Property *prop)
     }
     Application::Instance->signalChangedView(*this, *prop);
     App::PropertyContainer::onChanged(prop);
+}
+
+std::string BaseView::getFullName(bool python) const
+{
+    auto doc = getAppDocument();
+    if (!doc)
+        return python ? "" : "?";
+
+    std::ostringstream ss;
+    ss << doc->getFullName(python);
+    if (!python)
+        ss << "#";
+    ss << ".Gui.View" << getID();
+    return ss.str();
 }
