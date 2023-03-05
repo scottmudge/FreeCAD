@@ -4201,9 +4201,48 @@ VIEW_CMD_DEF(PreSelFaceOnTop, ShowPreSelectedFaceOnTop)
 VIEW_CMD_DEF(PreSelFaceOutline, ShowPreSelectedFaceOutline)
 {
   sGroup        = "View";
-  sMenuText     = QT_TR_NOOP("&Draw pre-selection outline");
+  sMenuText     = QT_TR_NOOP("Draw pre-selection &outline");
   sToolTipText  = ViewParams::docShowPreSelectedFaceOutline();
   sWhatsThis    = "Std_PreSelFaceOutline";
+  sStatusTip    = sToolTipText;
+  eType         = NoDefaultAction;
+}
+
+//======================================================================
+// Std_SelFaceOutline
+//======================================================================
+VIEW_CMD_DEF(SelFaceOutline, ShowSelectedFaceOutline)
+{
+  sGroup        = "View";
+  sMenuText     = QT_TR_NOOP("Draw selection outline");
+  sToolTipText  = ViewParams::docShowSelectedFaceOutline();
+  sWhatsThis    = "Std_SelFaceOutline";
+  sStatusTip    = sToolTipText;
+  eType         = NoDefaultAction;
+}
+
+//======================================================================
+// Std_NoSelFaceHighlightWithOutline
+//======================================================================
+VIEW_CMD_DEF(NoSelFaceHighlightWithOutline, NoSelFaceHighlightWithOutline)
+{
+  sGroup        = "View";
+  sMenuText     = QT_TR_NOOP("No selection face highlight with outline");
+  sToolTipText  = ViewParams::docNoSelFaceHighlightWithOutline();
+  sWhatsThis    = "Std_NoSelFaceHighlightWithOutline";
+  sStatusTip    = sToolTipText;
+  eType         = NoDefaultAction;
+}
+
+//======================================================================
+// Std_NoPreSelFaceHighlightWithOutline
+//======================================================================
+VIEW_CMD_DEF(NoPreSelFaceHighlightWithOutline, NoPreSelFaceHighlightWithOutline)
+{
+  sGroup        = "View";
+  sMenuText     = QT_TR_NOOP("No pre-selection face highlight with outline");
+  sToolTipText  = ViewParams::docNoPreSelFaceHighlightWithOutline();
+  sWhatsThis    = "Std_NoPreSelFaceHighlightWithOutline";
   sStatusTip    = sToolTipText;
   eType         = NoDefaultAction;
 }
@@ -4325,6 +4364,9 @@ public:
         addCommand(new StdCmdSelOnTop());
         addCommand(new StdCmdPreSelFaceOnTop());
         addCommand(new StdCmdPreSelFaceOutline());
+        addCommand(new StdCmdSelFaceOutline());
+        addCommand(new StdCmdNoSelFaceHighlightWithOutline());
+        addCommand(new StdCmdNoPreSelFaceHighlightWithOutline());
         addCommand(new StdCmdPartialHighlightOnFullSelect());
         // addCommand(new StdCmdSelectionFaceWire());
         addCommand(new StdCmdAutoTransparentPick());

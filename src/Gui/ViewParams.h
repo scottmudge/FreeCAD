@@ -34,7 +34,7 @@ import ViewParams
 ViewParams.declare_begin()
 ]]]*/
 
-// Auto generated code (Gui/ViewParams.py:423)
+// Auto generated code (Gui/ViewParams.py:433)
 #include <QString>
 
 // Auto generated code (Tools/params_utils.py:72)
@@ -347,6 +347,54 @@ public:
     static void removeShowPreSelectedFaceOutline();
     static void setShowPreSelectedFaceOutline(const bool &v);
     static const char *docShowPreSelectedFaceOutline();
+    //@}
+
+    // Auto generated code (Tools/params_utils.py:122)
+    //@{
+    /// Accessor for parameter ShowSelectedFaceOutline
+    ///
+    /// Show selected face outline
+    static const bool & getShowSelectedFaceOutline();
+    static const bool & defaultShowSelectedFaceOutline();
+    static void removeShowSelectedFaceOutline();
+    static void setShowSelectedFaceOutline(const bool &v);
+    static const char *docShowSelectedFaceOutline();
+    //@}
+
+    // Auto generated code (Tools/params_utils.py:122)
+    //@{
+    /// Accessor for parameter OutlineThicken
+    ///
+    /// Muplication factor to increase outline width of the selected face.
+    static const double & getOutlineThicken();
+    static const double & defaultOutlineThicken();
+    static void removeOutlineThicken();
+    static void setOutlineThicken(const double &v);
+    static const char *docOutlineThicken();
+    //@}
+
+    // Auto generated code (Tools/params_utils.py:122)
+    //@{
+    /// Accessor for parameter NoSelFaceHighlightWithOutline
+    ///
+    /// Do not highlight selected face if outline is enabled
+    static const bool & getNoSelFaceHighlightWithOutline();
+    static const bool & defaultNoSelFaceHighlightWithOutline();
+    static void removeNoSelFaceHighlightWithOutline();
+    static void setNoSelFaceHighlightWithOutline(const bool &v);
+    static const char *docNoSelFaceHighlightWithOutline();
+    //@}
+
+    // Auto generated code (Tools/params_utils.py:122)
+    //@{
+    /// Accessor for parameter NoPreSelFaceHighlightWithOutline
+    ///
+    /// Do not highlight pre-selected face if outline is enabled
+    static const bool & getNoPreSelFaceHighlightWithOutline();
+    static const bool & defaultNoPreSelFaceHighlightWithOutline();
+    static void removeNoPreSelFaceHighlightWithOutline();
+    static void setNoPreSelFaceHighlightWithOutline(const bool &v);
+    static const char *docNoPreSelFaceHighlightWithOutline();
     //@}
 
     // Auto generated code (Tools/params_utils.py:122)
@@ -1895,7 +1943,7 @@ public:
     static const char *docToolTipDisable();
     //@}
 
-    // Auto generated code (Gui/ViewParams.py:429)
+    // Auto generated code (Gui/ViewParams.py:439)
     static const std::vector<QString> AnimationCurveTypes;
 //[[[end]]]
 
@@ -1921,7 +1969,7 @@ ViewParams.declare_end()
 }; // class ViewParams
 } // namespace Gui
 
-// Auto generated code (Gui/ViewParams.py:437)
+// Auto generated code (Gui/ViewParams.py:447)
 namespace Gui {
 /// Obtain all draw style names, terminated by nullptr entry.
 GuiExport const char **drawStyleNames();

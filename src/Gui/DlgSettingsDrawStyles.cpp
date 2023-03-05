@@ -163,6 +163,15 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     SelectionHiddenLineWidth->setEntryName("SelectionHiddenLineWidth");
     SelectionHiddenLineWidth->setParamGrpPath("View");
 
+    // Auto generated code (Tools/params_utils.py:353)
+    labelOutlineThicken = new QLabel(this);
+    layoutSelection->addWidget(labelOutlineThicken, 8, 0);
+    OutlineThicken = new Gui::PrefDoubleSpinBox(this);
+    layoutSelection->addWidget(OutlineThicken, 8, 1);
+    OutlineThicken->setValue(Gui::ViewParams::defaultOutlineThicken());
+    OutlineThicken->setEntryName("OutlineThicken");
+    OutlineThicken->setParamGrpPath("View");
+
 
     // Auto generated code (Tools/params_utils.py:342)
     groupHiddenLines = new QGroupBox(this);
@@ -580,6 +589,7 @@ void DlgSettingsDrawStyles::saveSettings()
     SelectionLinePattern->onSave();
     SelectionLinePatternScale->onSave();
     SelectionHiddenLineWidth->onSave();
+    OutlineThicken->onSave();
     HiddenLineFaceColor->onSave();
     HiddenLineOverrideFaceColor->onSave();
     HiddenLineColor->onSave();
@@ -637,6 +647,7 @@ void DlgSettingsDrawStyles::loadSettings()
     SelectionLinePattern->onRestore();
     SelectionLinePatternScale->onRestore();
     SelectionHiddenLineWidth->onRestore();
+    OutlineThicken->onRestore();
     HiddenLineFaceColor->onRestore();
     HiddenLineOverrideFaceColor->onRestore();
     HiddenLineColor->onRestore();
@@ -734,6 +745,9 @@ void DlgSettingsDrawStyles::retranslateUi()
     SelectionHiddenLineWidth->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docSelectionHiddenLineWidth()));
     labelSelectionHiddenLineWidth->setText(QObject::tr("Selected hidden line width"));
     labelSelectionHiddenLineWidth->setToolTip(SelectionHiddenLineWidth->toolTip());
+    OutlineThicken->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docOutlineThicken()));
+    labelOutlineThicken->setText(QObject::tr("Outline width multiplier"));
+    labelOutlineThicken->setToolTip(OutlineThicken->toolTip());
     groupHiddenLines->setTitle(QObject::tr("Hidden Lines"));
     HiddenLineFaceColor->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docHiddenLineFaceColor()));
     HiddenLineOverrideFaceColor->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docHiddenLineOverrideFaceColor()));

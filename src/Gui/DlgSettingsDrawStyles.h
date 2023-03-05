@@ -92,6 +92,8 @@ private:
     Gui::PrefSpinBox *SelectionLinePatternScale = nullptr;
     QLabel *labelSelectionHiddenLineWidth = nullptr;
     Gui::PrefDoubleSpinBox *SelectionHiddenLineWidth = nullptr;
+    QLabel *labelOutlineThicken = nullptr;
+    Gui::PrefDoubleSpinBox *OutlineThicken = nullptr;
 
     // Auto generated code (Tools/params_utils.py:327)
     QGroupBox * groupHiddenLines = nullptr;

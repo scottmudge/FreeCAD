@@ -53,6 +53,7 @@ ParamGroup = (
         'SelectionLinePattern',
         'SelectionLinePatternScale',
         'SelectionHiddenLineWidth',
+        'OutlineThicken',
     )]),
 
     ('Hidden Lines', [_ViewParams[name] for name in (
