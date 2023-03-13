@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
+#include <boost/signals2/connection.hpp>
 
 #ifndef _PreComp_
 # include <QPointer>
@@ -35,6 +36,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include <Base/Console.h>
+#include <Base/Tools.h>
+#include <Base/ExceptionSafeCall.h>
 #include <App/Part.h>
 #include <App/Origin.h>
 #include <App/OriginFeature.h>
@@ -1425,6 +1428,8 @@ public:
         }
     }
 
+    QGridLayout *addCheckBox(Gui::ViewProviderDocumentObject *vp, QWidget * parent, int index = 0);
+    
 public:
     std::map<const App::Document*, Connections> conns;
     boost::signals2::scoped_connection connDeleteDocument;
@@ -1462,7 +1467,56 @@ void beforeEdit(App::DocumentObject *obj)
     _MonitorInstance->beforeEdit(obj);
 }
 
-QGridLayout *MonitorProxy::addCheckBox(QWidget * widget, int index)
+static QCheckBox *hookPropertyBool(App::DocumentObject *obj,
+                                   const char *propName,
+                                   QWidget *widget,
+                                   const char *label,
+                                   QTimer *timer)
+{
+    App::DocumentObjectT objT(obj, propName);
+    auto propBool = Base::freecad_dynamic_cast<App::PropertyBool>(objT.getProperty());
+    if (!propBool)
+        return nullptr;
+
+    auto checkbox = new QCheckBox(widget);
+    checkbox->setText(QObject::tr(label));
+    checkbox->setToolTip(QApplication::translate("PartDesign",
+                        propBool->getDocumentation()));
+    checkbox->setChecked(propBool->getValue());
+
+    auto conn= propBool->signalChanged.connect(
+        [checkbox](const App::Property &prop) {
+            if (auto propBool = Base::freecad_dynamic_cast<const App::PropertyBool>(&prop)) {
+                if (!prop.testStatus(App::Property::User3)) {
+                    QSignalBlocker blocker(checkbox);
+                    checkbox->setChecked(propBool->getValue());
+                }
+            }
+        });
+
+    // Auto disconnect boost signals when the following QObject signal gets
+    // disconnected when the QObject is destroied.
+    std::shared_ptr<boost::signals2::scoped_connection> pconn(
+            new boost::signals2::scoped_connection(conn));
+
+    Base::connect(static_cast<QAbstractButton*>(checkbox), &QAbstractButton::toggled,
+        [timer, objT, pconn](bool checked) {
+            auto propBool = Base::freecad_dynamic_cast<App::PropertyBool>(objT.getProperty());
+            if (!propBool)
+                return;
+            if (!App::GetApplication().getActiveTransaction()) {
+                std::string n("Edit ");
+                n += objT.getObjectLabel();
+                App::GetApplication().setActiveTransaction(n.c_str());
+            }
+            Base::ObjectStatusLocker<App::Property::Status, App::Property> guard(App::Property::User3, propBool);
+            propBool->setValue(checked);
+            timer->start(PartGui::PartParams::getEditRecomputeWait());
+        });
+    return checkbox;
+}
+
+QGridLayout *Monitor::addCheckBox(Gui::ViewProviderDocumentObject *vp, QWidget * widget, int index)
 {
     QBoxLayout * layout = qobject_cast<QBoxLayout*>(widget->layout());
     assert(layout);
@@ -1472,25 +1526,32 @@ QGridLayout *MonitorProxy::addCheckBox(QWidget * widget, int index)
     QGridLayout *grid = new QGridLayout;
 
     checkbox = new QCheckBox(widget);
-    checkbox->setText(tr("Show preview"));
-    checkbox->setToolTip(tr("Show base feature with preview shape"));
+    checkbox->setText(QObject::tr("Show preview"));
+    checkbox->setToolTip(QObject::tr("Show base feature with preview shape"));
     checkbox->setChecked(PartGui::PartParams::getPreviewOnEdit());
-    connect(checkbox, SIGNAL(toggled(bool)), this, SLOT(onPreview(bool)));
+    QObject::connect(checkbox, SIGNAL(toggled(bool)), &proxy, SLOT(onPreview(bool)));
     grid->addWidget(checkbox, 0, 0);
 
     checkbox = new QCheckBox(widget);
-    checkbox->setText(tr("Transparent preview"));
-    checkbox->setToolTip(tr("Show preview shape with transarency"));
+    checkbox->setText(QObject::tr("Transparent preview"));
+    checkbox->setToolTip(QObject::tr("Show preview shape with transarency"));
     checkbox->setChecked(PartGui::PartParams::getPreviewWithTransparency());
-    connect(checkbox, SIGNAL(toggled(bool)), this, SLOT(onPreviewTransparency(bool)));
+    QObject::connect(checkbox, SIGNAL(toggled(bool)), &proxy, SLOT(onPreviewTransparency(bool)));
     grid->addWidget(checkbox, 0, 1);
 
     checkbox = new QCheckBox(widget);
-    checkbox->setText(tr("Show on top"));
-    checkbox->setToolTip(tr("Show the editing feature always on top"));
+    checkbox->setText(QObject::tr("Show on top"));
+    checkbox->setToolTip(QObject::tr("Show the editing feature always on top"));
     checkbox->setChecked(PartGui::PartParams::getEditOnTop());
-    connect(checkbox, SIGNAL(toggled(bool)), this, SLOT(onShowOnTop(bool)));
+    QObject::connect(checkbox, SIGNAL(toggled(bool)), &proxy, SLOT(onShowOnTop(bool)));
     grid->addWidget(checkbox, 1, 0);
+
+    if (vp) {
+        checkbox = hookPropertyBool(vp->getObject(), "Refine", widget, "Refine shape", &editTimer);
+        if (checkbox) {
+            grid->addWidget(checkbox, 1, 1);
+        }
+    }
 
     layout->insertLayout(index, grid);
     return grid;
@@ -1551,11 +1612,11 @@ void MonitorProxy::onEditTimer()
     }
 }
 
-QGridLayout *addTaskCheckBox(QWidget * widget, int index)
+QGridLayout *addTaskCheckBox(Gui::ViewProviderDocumentObject *vp, QWidget * widget, int index)
 {
     initMonitor();
     _MonitorInstance->hasEditCheckBox = true;
-    return _MonitorInstance->proxy.addCheckBox(widget, index);
+    return _MonitorInstance->addCheckBox(vp, widget, index);
 }
 
 void showObjectOnTop(const App::SubObjectT &objT)

@@ -22,6 +22,7 @@
 
 
 #include "PreCompiled.h"
+#include "ShapeBinder.h"
 #ifndef _PreComp_
 # include <BRepAlgoAPI_Fuse.hxx>
 # include <BRepAlgoAPI_Cut.hxx>
@@ -217,4 +218,62 @@ void Boolean::handleChangedPropertyName(Base::XMLReader &reader, const char * Ty
     }
 }
 
+}
+
+void Boolean::onNewSolidChanged()
+{
+    App::DocumentObject * base = getBaseObject(true);
+    if (base && NewSolid.getValue()) {
+        // Here means this feature just changed to `NewSolid`, add the current
+        // base object to tools before it is nullified.
+        auto findBase = [base](App::DocumentObject *tool) -> bool {
+            if (tool == base)
+                return true;
+            if (auto binder = Base::freecad_dynamic_cast<PartDesign::SubShapeBinder>(tool)) {
+                for (auto & link : binder->Support.getSubListValues()) {
+                    auto linked = link.getValue();
+                    if (!linked)
+                        continue;
+                    if (base == linked)
+                        return true;
+                    for (auto & sub : link.getSubValues()) {
+                        auto sobj = linked->getSubObject(sub.c_str());
+                        if (sobj == base)
+                            return true;
+                    }
+                }
+            }
+            return false;
+        };
+        bool found = false;
+        for (auto tool : Group.getValues()) {
+            if ((found = findBase(tool)))
+                break;
+        }
+        if (!found) {
+            auto binder = static_cast<PartDesign::SubShapeBinder*>(
+                    getDocument()->addObject("PartDesign::SubShapeBinder", "Reference"));
+            auto grp = Group.getValues();
+            binder->Support.setValue(base);
+            std::string label = std::string(binder->getNameInDocument()) + "(" + base->Label.getValue() + ")";
+            binder->Label.setValue(label.c_str());
+            grp.insert(grp.begin(), binder);
+            Group.setValue(grp);
+        }
+    }
+    inherited::onNewSolidChanged();
+}
+
+void Boolean::unsetupObject() {
+    std::vector<App::DocumentObjectT> objsT;
+    for (auto obj : Group.getValues()) {
+        if (!obj->isRemoving() && obj->getInList().size() <= 1) {
+            objsT.emplace_back(obj);
+        }
+    }
+    for (const auto &objT : objsT) {
+        if (auto obj = objT.getObject()) {
+            obj->getDocument()->removeObject(obj->getNameInDocument());
+        }
+    }
 }

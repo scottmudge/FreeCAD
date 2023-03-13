@@ -171,7 +171,6 @@ public:
         selectAll = false;
         preSelection = -1;
 
-        preselTime = SbTime::getTimeOfDay();
         preselTimer.setData(this);
         preselTimer.setFunction([](void *data, SoSensor*){
             reinterpret_cast<Private*>(data)->onPreselectTimer();
@@ -699,13 +698,12 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
         getPickedInfo(ret,this->rayPickAction.getPrioPickedPointList(),singlePick,false,filter);
     }
 
-    if(singlePick && pickBackFace) {
-        if(pickBackFace > 1 && this->rayPickAction.getBackFaceCount() < pickBackFace)
-            pickBackFace = std::max(1, this->rayPickAction.getBackFaceCount());
-        else if (pickBackFace < -1 && this->rayPickAction.getBackFaceCount() < -pickBackFace+1) {
-            // Note pickBackFace == -1 is reserved for picking hidden
-            // edge/vertex. So we start from -2 for picking actual back face
-            pickBackFace = std::min(-2, -this->rayPickAction.getBackFaceCount()-1);
+    if(singlePick) {
+        int count = this->rayPickAction.getBackFaceCount();
+        if (pickBackFace > 1 && count < pickBackFace) {
+            pickBackFace = -count;
+        } else  if (pickBackFace < -1 && count < -pickBackFace) {
+            pickBackFace = 1;
         }
     }
 

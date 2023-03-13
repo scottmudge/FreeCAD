@@ -63,7 +63,7 @@ TaskThicknessParameters::TaskThicknessParameters(ViewProviderDressUp *DressUpVie
     double a = pcThickness->Value.getValue();
 
     ui->Value->setMinimum(0.0);
-    ui->Value->setMaximum(89.99);
+    ui->Value->setMaximum(DBL_MAX);
     ui->Value->setValue(a);
     ui->Value->selectAll();
     QMetaObject::invokeMethod(ui->Value, "setFocus", Qt::QueuedConnection);
@@ -74,16 +74,18 @@ TaskThicknessParameters::TaskThicknessParameters(ViewProviderDressUp *DressUpVie
     bool r = pcThickness->Reversed.getValue();
     ui->checkReverse->setChecked(r);
 
-    bool i = pcThickness->Intersection.getValue();
-    ui->checkIntersection->setChecked(i);
+    bool i = pcThickness->MakeOffset.getValue();
+    ui->checkMakeOffset->setToolTip(QApplication::translate("PartDesign", pcThickness->MakeOffset.getDocumentation()));
+
+    ui->checkMakeOffset->setChecked(i);
     QMetaObject::connectSlotsByName(this);
 
     connect(ui->Value, SIGNAL(valueChanged(double)),
             this, SLOT(onValueChanged(double)));
     connect(ui->checkReverse, SIGNAL(toggled(bool)),
             this, SLOT(onReversedChanged(bool)));
-    connect(ui->checkIntersection, SIGNAL(toggled(bool)),
-            this, SLOT(onIntersectionChanged(bool)));
+    connect(ui->checkMakeOffset, SIGNAL(toggled(bool)),
+            this, SLOT(onMakeOffsetChanged(bool)));
     connect(ui->modeComboBox, SIGNAL(currentIndexChanged(int)),
             this, SLOT(onModeChanged(int)));
     connect(ui->joinComboBox, SIGNAL(currentIndexChanged(int)),
@@ -111,10 +113,10 @@ void TaskThicknessParameters::refresh()
         ui->checkReverse->setChecked(r);
     }
 
-    bool i = pcThickness->Intersection.getValue();
+    bool i = pcThickness->MakeOffset.getValue();
     {
-        QSignalBlocker blocker(ui->checkIntersection);
-        ui->checkIntersection->setChecked(i);
+        QSignalBlocker blocker(ui->checkMakeOffset);
+        ui->checkMakeOffset->setChecked(i);
     }
 
     int mode = pcThickness->Mode.getValue();
@@ -176,17 +178,17 @@ bool TaskThicknessParameters::getReversed(void) const
     return ui->checkReverse->isChecked();
 }
 
-void TaskThicknessParameters::onIntersectionChanged(const bool on) {
+void TaskThicknessParameters::onMakeOffsetChanged(const bool on) {
     clearButtons(none);
     PartDesign::Thickness* pcThickness = static_cast<PartDesign::Thickness*>(DressUpView->getObject());
     setupTransaction();
-    pcThickness->Intersection.setValue(on);
+    pcThickness->MakeOffset.setValue(on);
     recompute();
 }
 
-bool TaskThicknessParameters::getIntersection(void) const
+bool TaskThicknessParameters::getMakeOffset(void) const
 {
-    return ui->checkIntersection->isChecked();
+    return ui->checkMakeOffset->isChecked();
 }
 
 int TaskThicknessParameters::getJoinType(void) const {
@@ -209,6 +211,10 @@ void TaskThicknessParameters::changeEvent(QEvent *e)
     TaskBox::changeEvent(e);
     if (e->type() == QEvent::LanguageChange) {
         ui->retranslateUi(proxy);
+        if (DressUpView) {
+            PartDesign::Thickness* pcThickness = static_cast<PartDesign::Thickness*>(DressUpView->getObject());
+            ui->checkMakeOffset->setToolTip(QApplication::translate("PartDesign", pcThickness->MakeOffset.getDocumentation()));
+        }
     }
 }
 
@@ -256,7 +262,7 @@ bool TaskDlgThicknessParameters::accept()
     FCMD_OBJ_CMD(obj,"Value = " << draftparameter->getValue());
     FCMD_OBJ_CMD(obj,"Reversed = " << draftparameter->getReversed());
     FCMD_OBJ_CMD(obj,"Mode = " << draftparameter->getMode());
-    FCMD_OBJ_CMD(obj,"Intersection = " << draftparameter->getIntersection());
+    FCMD_OBJ_CMD(obj,"MakeOffset = " << draftparameter->getMakeOffset());
     FCMD_OBJ_CMD(obj,"Join = " << draftparameter->getJoinType());
 
     return TaskDlgDressUpParameters::accept();

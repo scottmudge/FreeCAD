@@ -23,6 +23,7 @@
 #ifndef UTILS_H_CS5LK2ZQ
 #define UTILS_H_CS5LK2ZQ
 
+#include "Workbench.h"
 #include <Gui/ActiveObjectList.h>
 
 class QTreeWidget;
@@ -158,9 +159,6 @@ class MonitorProxy: public QObject
 {
     Q_OBJECT
 
-public:
-    QGridLayout *addCheckBox(QWidget * parent, int index = 0);
-    
 protected Q_SLOTS:
     void onPreview(bool);
     void onPreviewTransparency(bool);
@@ -168,7 +166,7 @@ protected Q_SLOTS:
     void onEditTimer();
 };
 
-QGridLayout *addTaskCheckBox(QWidget * widget, int index = 0);
+QGridLayout *addTaskCheckBox(Gui::ViewProviderDocumentObject *vp, QWidget * widget, int index = 0);
 
 void fitViewWithDelay(int);
 

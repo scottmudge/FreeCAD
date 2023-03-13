@@ -2853,9 +2853,6 @@ TopoShape &TopoShape::makEThickSolid(const TopoShape &shape,
     if(shape.isNull())
         HANDLE_NULL_SHAPE;
 
-    if(faces.empty())
-        HANDLE_NULL_INPUT;
-
     if(fabs(offset) <= 2*tol) {
         *this = shape;
         return *this;

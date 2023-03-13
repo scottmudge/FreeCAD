@@ -1112,23 +1112,31 @@ void Command::setActionIcon(Action *action, const QIcon &icon)
 void Command::setup(Action *pcAction) {
     if (!pcAction)
         return;
-    if (auto action = _getChildAction(pcAction)) {
-        if (auto cmd = action->command()) {
-            pcAction->setText(QCoreApplication::translate(className(), getMenuText()));
-            setActionIcon(pcAction, commandIcon(cmd));
-            const char *context = dynamic_cast<PythonCommand*>(cmd) ? cmd->getName() : cmd->className();
-            const char *tooltip = cmd->getToolTipText();
-            const char *statustip = cmd->getStatusTip();
-            if (!statustip || '\0' == *statustip)
-                statustip = tooltip;
-            pcAction->setToolTip(QCoreApplication::translate(context,tooltip),
-                    QCoreApplication::translate(cmd->className(), cmd->getMenuText()));
-            pcAction->setStatusTip(QCoreApplication::translate(context,statustip));
+    if (auto qaction = _getChildQAction(pcAction)) {
+        if (auto action = qobject_cast<Action*>(qaction->parent())) {
+            if (auto cmd = action->command()) {
+                pcAction->setText(QCoreApplication::translate(className(), getMenuText()));
+                setActionIcon(pcAction, commandIcon(cmd));
+                const char *context = dynamic_cast<PythonCommand*>(cmd) ? cmd->getName() : cmd->className();
+                const char *tooltip = cmd->getToolTipText();
+                const char *statustip = cmd->getStatusTip();
+                if (!statustip || '\0' == *statustip)
+                    statustip = tooltip;
+                pcAction->setToolTip(QCoreApplication::translate(context,tooltip),
+                        QCoreApplication::translate(cmd->className(), cmd->getMenuText()));
+                pcAction->setStatusTip(QCoreApplication::translate(context,statustip));
+            } else {
+                pcAction->setText(action->text());
+                setActionIcon(pcAction, action->icon());
+                pcAction->setToolTip(action->toolTip());
+                pcAction->setStatusTip(action->statusTip());
+            }
         } else {
-            pcAction->setText(action->text());
-            setActionIcon(pcAction, action->icon());
-            pcAction->setToolTip(action->toolTip());
-            pcAction->setStatusTip(action->statusTip());
+            setActionIcon(_pcAction, qaction->icon());
+            _pcAction->setChecked(qaction->isChecked(),true);
+            _pcAction->setText(qaction->text());
+            _pcAction->setToolTip(qaction->toolTip());
+            _pcAction->setStatusTip(qaction->statusTip());
         }
         return;
     }

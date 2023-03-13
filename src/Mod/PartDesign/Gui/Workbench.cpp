@@ -310,7 +310,7 @@ void Workbench::activated()
         "SELECT PartDesign::Body COUNT 1..",
         Body2,
         "Start Boolean",
-        "Part_Box"
+        "PartDesign_Boolean"
     ));
 
     const char* Plane1[] = {
@@ -426,6 +426,23 @@ void Workbench::activated()
         Transformed,
         "Transformation tools",
         "PartDesign_MultiTransform"
+    ));
+
+    Watcher.push_back(new Gui::TaskView::TaskWatcherCommands(
+        "SELECT PartDesign::Feature COUNT 1..",
+        Body2,
+        "Start Boolean",
+        "PartDesign_Boolean"
+    ));
+
+    const char* Offset[] = {
+        "PartDesign_Thickness",
+        0};
+    Watcher.push_back(new Gui::TaskView::TaskWatcherCommands(
+        "SELECT PartDesign::Feature COUNT 1",
+        Offset,
+        "Make Thickness",
+        "PartDesign_Thickness"
     ));
 
     // make the previously used active Body active again

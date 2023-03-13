@@ -116,9 +116,11 @@ DocumentObjectT::DocumentObjectT(DocumentObjectT &&other)
     *this = std::move(other);
 }
 
-DocumentObjectT::DocumentObjectT(const DocumentObject* obj)
+DocumentObjectT::DocumentObjectT(const DocumentObject* obj, const char *propertyName)
 {
     *this = obj;
+    if (propertyName)
+        property = propertyName;
 }
 
 DocumentObjectT::DocumentObjectT(const Property* prop)
@@ -233,6 +235,11 @@ bool DocumentObjectT::operator<(const DocumentObjectT &other) const {
     if(getObjectName() > other.getObjectName())
         return false;
     return getPropertyName() < other.getPropertyName();
+}
+
+void DocumentObjectT::setPropertyName(const char *name)
+{
+    property = name ? name : "";
 }
 
 Document* DocumentObjectT::getDocument() const

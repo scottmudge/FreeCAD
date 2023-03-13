@@ -45,7 +45,9 @@
 #include <App/OriginFeature.h>
 #include <App/Part.h>
 #include <App/AutoTransaction.h>
+#include <Gui/Action.h>
 #include <Gui/Application.h>
+#include <Gui/BitmapFactory.h>
 #include <Gui/Command.h>
 #include <Gui/CommandT.h>
 #include <Gui/Control.h>
@@ -2527,7 +2529,7 @@ bool CmdPartDesignMultiTransform::isActive(void)
 //===========================================================================
 
 /* Boolean commands =======================================================*/
-DEF_STD_CMD_A(CmdPartDesignBoolean)
+DEF_STD_CMD_ACL(CmdPartDesignBoolean)
 
 CmdPartDesignBoolean::CmdPartDesignBoolean()
   :Command("PartDesign_Boolean")
@@ -2535,7 +2537,7 @@ CmdPartDesignBoolean::CmdPartDesignBoolean()
     sAppModule      = "PartDesign";
     sGroup          = QT_TR_NOOP("PartDesign");
     sMenuText       = QT_TR_NOOP("Boolean operation");
-    sToolTipText    = QT_TR_NOOP("Boolean operation with two or more bodies");
+    sToolTipText    = QT_TR_NOOP("Boolean operation with two or more solids/bodies");
     sWhatsThis      = "PartDesign_Boolean";
     sStatusTip      = sToolTipText;
     sPixmap         = "PartDesign_Boolean";
@@ -2544,12 +2546,83 @@ CmdPartDesignBoolean::CmdPartDesignBoolean()
             boost::bind(&commandOverride, this, 0, bp::_1, bp::_2), "Part_Boolean");
 
     Gui::Application::Instance->commandManager().registerCallback(
+            boost::bind(&commandOverride, this, 0, bp::_1, bp::_2), "Part_Fuse");
+
+    Gui::Application::Instance->commandManager().registerCallback(
             boost::bind(&commandOverride, this, 1, bp::_1, bp::_2), "Part_Cut");
 
     Gui::Application::Instance->commandManager().registerCallback(
             boost::bind(&commandOverride, this, 2, bp::_1, bp::_2), "Part_Common");
+
+    Gui::Application::Instance->commandManager().registerCallback(
+            boost::bind(&commandOverride, this, 3, bp::_1, bp::_2), "Part_Compound");
+
+    Gui::Application::Instance->commandManager().registerCallback(
+            boost::bind(&commandOverride, this, 4, bp::_1, bp::_2), "Part_Section");
 }
 
+Gui::Action * CmdPartDesignBoolean::createAction()
+{
+    Gui::ActionGroup* pcAction = new Gui::ActionGroup(this, Gui::getMainWindow());
+    pcAction->setDropDownMenu(true);
+    applyCommandData(this->className(), pcAction);
+
+    QAction* cmd0 = pcAction->addAction(QString());
+    cmd0->setIcon(Gui::BitmapFactory().iconFromTheme("PartDesign_Boolean"));
+    QAction* cmd1 = pcAction->addAction(QString());
+    cmd1->setIcon(Gui::BitmapFactory().iconFromTheme("Part_Cut"));
+    QAction* cmd2 = pcAction->addAction(QString());
+    cmd2->setIcon(Gui::BitmapFactory().iconFromTheme("Part_Common"));
+    QAction* cmd3 = pcAction->addAction(QString());
+    cmd3->setIcon(Gui::BitmapFactory().iconFromTheme("Part_Compound"));
+    QAction* cmd4 = pcAction->addAction(QString());
+    cmd4->setIcon(Gui::BitmapFactory().iconFromTheme("Part_Section"));
+
+    _pcAction = pcAction;
+    languageChange();
+
+    pcAction->setIcon(cmd0->icon());
+    int defaultId = 0;
+    pcAction->setProperty("defaultAction", QVariant(defaultId));
+
+    return pcAction;
+}
+
+void CmdPartDesignBoolean::languageChange()
+{
+    Command::languageChange();
+
+    if (!_pcAction)
+        return;
+
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+
+    QAction* cmd0 = a[0];
+    cmd0->setText(QApplication::translate("PartDesign", "Boolean operation"));
+    cmd0->setToolTip(QApplication::translate("PartDesign", "Configurable boolean operation. Default to fuse"));
+    cmd0->setStatusTip(cmd0->toolTip());
+
+    QAction* cmd1 = a[1];
+    cmd1->setText(QApplication::translate("PartDesign", "Cut"));
+    cmd1->setToolTip(QApplication::translate("PartDesign", "Make a cut of two or more solids/bodies"));
+    cmd1->setStatusTip(cmd1->toolTip());
+
+    QAction* cmd2 = a[2];
+    cmd2->setText(QApplication::translate("PartDesign", "Intersection"));
+    cmd2->setToolTip(QApplication::translate("PartDesign", "Make an intersection of two or more solids/bodies"));
+    cmd2->setStatusTip(cmd2->toolTip());
+
+    QAction* cmd3 = a[3];
+    cmd3->setText(QApplication::translate("PartDesign", "Compound"));
+    cmd3->setToolTip(QApplication::translate("PartDesign", "Make a compound of two or more solids/bodies"));
+    cmd3->setStatusTip(cmd3->toolTip());
+
+    QAction* cmd4 = a[4];
+    cmd4->setText(QApplication::translate("PartDesign", "Section"));
+    cmd4->setToolTip(QApplication::translate("PartDesign", "Make a section using another shape"));
+    cmd4->setStatusTip(cmd4->toolTip());
+}
 
 void CmdPartDesignBoolean::activated(int iMsg)
 {
@@ -2623,6 +2696,12 @@ void CmdPartDesignBoolean::activated(int iMsg)
         break;
     case 2:
         Gui::cmdAppObject(Feat, "Type = 'Common'");
+        break;
+    case 3:
+        Gui::cmdAppObject(Feat, "Type = 'Compound'");
+        break;
+    case 4:
+        Gui::cmdAppObject(Feat, "Type = 'Section'");
         break;
     }
 

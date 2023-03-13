@@ -155,7 +155,7 @@ void TaskDressUpParameters::setup(QLabel *label, QTreeWidget *widget, QCheckBox 
     if(!pcDressUp || !pcDressUp->Base.getValue())
         return;
 
-    PartDesignGui::addTaskCheckBox(proxy);
+    PartDesignGui::addTaskCheckBox(DressUpView, proxy);
 
     // Remember the initial transaction ID
     App::GetApplication().getActiveTransaction(&transactionID);

@@ -154,6 +154,15 @@ void ViewProviderSubShapeBinder::onChanged(const App::Property *prop) {
     ViewProviderPart::onChanged(prop);
 }
 
+static const std::vector<std::string> getLinkSubValues(const App::PropertyXLink &link)
+{
+    const std::vector<std::string> dummy = {""};
+    const auto &subs = link.getSubValues();
+    if (subs.empty())
+        return dummy;
+    return subs;
+}
+
 void ViewProviderSubShapeBinder::updateData(const App::Property *prop)
 {
     auto binder = Base::freecad_dynamic_cast<Part::SubShapeBinder>(getObject());
@@ -162,7 +171,7 @@ void ViewProviderSubShapeBinder::updateData(const App::Property *prop)
             iconChangeConns.clear();
             std::set<App::SubObjectT> objs;
             for(auto &l : binder->Support.getSubListValues()) {
-                for (auto & sub : l.getSubValues()) {
+                for (const auto & sub : getLinkSubValues(l)) {
                     auto res = objs.emplace(l.getValue(), sub.c_str());
                     if (!res.second)
                         continue;
@@ -294,13 +303,8 @@ void ViewProviderSubShapeBinder::setupContextMenu(QMenu* menu, QObject* receiver
                 auto obj = link.getValue();
                 if(!obj || !obj->getNameInDocument())
                     continue;
-                const auto &subs = link.getSubValues();
-                if(subs.size())
-                    Gui::Selection().addSelections(obj->getDocument()->getName(),
-                            obj->getNameInDocument(),subs);
-                else
-                    Gui::Selection().addSelection(obj->getDocument()->getName(),
-                            obj->getNameInDocument());
+                Gui::Selection().addSelections(obj->getDocument()->getName(),
+                        obj->getNameInDocument(), getLinkSubValues(link));
             }
             Gui::Selection().selStackPush();
         });
@@ -332,13 +336,8 @@ bool ViewProviderSubShapeBinder::setEdit(int ModNum) {
             auto obj = link.getValue();
             if(!obj || !obj->getNameInDocument())
                 continue;
-            const auto &subs = link.getSubValues();
-            if(subs.size())
-                Gui::Selection().addSelections(obj->getDocument()->getName(),
-                        obj->getNameInDocument(),subs);
-            else
-                Gui::Selection().addSelection(obj->getDocument()->getName(),
-                        obj->getNameInDocument());
+            Gui::Selection().addSelections(obj->getDocument()->getName(),
+                    obj->getNameInDocument(),getLinkSubValues(link));
         }
         Gui::Selection().selStackPush();
         break;
@@ -408,13 +407,7 @@ std::vector<App::DocumentObject*> ViewProviderSubShapeBinder::claimChildren(void
             auto obj = l.getValue();
             if(!obj)
                 continue;
-            const auto &subs = l.getSubValues();
-            if(subs.empty()) {
-                if(objSet.insert(obj).second)
-                    ret.push_back(obj);
-                continue;
-            }
-            for(auto &sub : subs) {
+            for(auto &sub : getLinkSubValues(l)) {
                 auto sobj = obj->getSubObject(sub.c_str());
                 if(sobj && objSet.insert(sobj).second)
                     ret.push_back(sobj);
@@ -527,21 +520,12 @@ QString ViewProviderSubShapeBinder::getToolTip(const QByteArray &tag) const
             auto obj = link.getValue();
             if(!obj || !obj->getNameInDocument())
                 continue;
-            const auto &subs = link.getSubValues();
-            if(subs.size()) {
-                for (auto &sub : subs) {
-                    if (++count > limit) {
-                        ss << "\n...";
-                        break;
-                    }
-                    ss << "\n" << App::SubObjectT(obj, sub.c_str()).getSubObjectFullName(doc);
-                }
-            } else {
+            for (auto &sub : getLinkSubValues(link)) {
                 if (++count > limit) {
                     ss << "\n...";
                     break;
                 }
-                ss << "\n" << App::SubObjectT(obj, "").getObjectFullName(doc);
+                ss << "\n" << App::SubObjectT(obj, sub.c_str()).getSubObjectFullName(doc);
             }
         }
     }
@@ -587,12 +571,8 @@ bool ViewProviderSubShapeBinder::iconMouseEvent(QMouseEvent *ev, const QByteArra
                 auto obj = link.getValue();
                 if(!obj || !obj->getNameInDocument())
                     continue;
-                const auto &subs = link.getSubValues(false);
-                if(subs.size()) {
-                    for (auto &sub : subs)
-                        _objs.emplace_back(obj, sub.c_str());
-                } else
-                    _objs.emplace_back(obj, "");
+                for (const auto &sub : getLinkSubValues(link))
+                    _objs.emplace_back(obj, sub.c_str());
             }
             objs = &_objs;
         } else {
@@ -630,7 +610,7 @@ void ViewProviderSubShapeBinder::generateIcons() const
 
     std::unordered_map<qint64, PixmapInfo> cacheKeys;
     for(auto &l : binder->Support.getSubListValues()) {
-        for (auto & sub : l.getSubValues(false)) {
+        for (auto & sub : getLinkSubValues(l)) {
             App::SubObjectT sobjT(l.getValue(), sub.c_str());
             auto sobj = sobjT.getSubObject();
             if (!sobj)

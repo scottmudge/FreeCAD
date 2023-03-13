@@ -487,6 +487,7 @@ void TaskBooleanParameters::onNewSolidChanged(bool on)
         PartDesign::Boolean* pcBoolean = static_cast<PartDesign::Boolean*>(BooleanView->getObject());
         setupTransaction();
         pcBoolean->NewSolid.setValue(on);
+        populate();
         pcBoolean->recomputeFeature();
     } catch (Base::Exception &e) {
         e.ReportException();

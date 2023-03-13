@@ -1186,8 +1186,14 @@ bool TopoShape::isNull() const
 
 bool TopoShape::isValid() const
 {
-    BRepCheck_Analyzer aChecker(this->_Shape);
-    return aChecker.IsValid() ? true : false;
+    if (isNull())
+        return false;
+    try {
+        BRepCheck_Analyzer aChecker(this->_Shape);
+        return aChecker.IsValid() ? true : false;
+    } catch (Standard_Failure &) {
+        return false;
+    }
 }
 
 namespace Part {

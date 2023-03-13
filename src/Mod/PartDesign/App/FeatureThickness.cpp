@@ -51,15 +51,10 @@ Thickness::Thickness()
     ADD_PROPERTY_TYPE(Join,(long(0)),"Thickness",App::Prop_None,"Join type");
     Join.setEnums(JoinEnums);
     ADD_PROPERTY_TYPE(Reversed,(false),"Thickness",App::Prop_None,"Apply the thickness towards the solids interior");
-    ADD_PROPERTY_TYPE(Refine,(false),"Thickness",(App::PropertyType)(App::Prop_None),"Refine shape (clean up redundant edges)");
     ADD_PROPERTY_TYPE(Intersection,(false),"Thickness",App::Prop_None,"Enable intersection-handling");
-}
+    ADD_PROPERTY_TYPE(MakeOffset,(false),"Thickness",App::Prop_None,"Make a thicken or shrunken solid instead of a thin shell");
 
-void Thickness::setupObject() {
-    DressUp::setupObject();
-    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
-        .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/PartDesign");
-    this->Refine.setValue(hGrp->GetBool("RefineModel", false));
+    AddSubType.setStatus(App::Property::ReadOnly, false);
 }
 
 short Thickness::mustExecute() const
@@ -114,32 +109,56 @@ App::DocumentObjectExecReturn *Thickness::execute(void)
     if (fabs(thickness) > 2*tol) {
         auto it = closeFaces.begin();
         for(int i=1;i<=count;++i) {
-            if(it==closeFaces.end() || i<it->first) {
-                shapes.push_back(baseShape.getSubTopoShape(TopAbs_SOLID,i));
-                continue;
+            std::vector<TopoShape> dummy;
+            const auto *faces = &dummy;
+            TopoShape solid = baseShape;
+            if(it!=closeFaces.end() && i>=it->first) {
+                faces = &it->second;
+                solid = baseShape.getSubTopoShape(TopAbs_SOLID,it->first);
             }
-            shapes.emplace_back(0,getDocument()->getStringHasher());
+            TopoShape res(0,getDocument()->getStringHasher());
             try {
-                shapes.back().makEThickSolid(
-                        baseShape.getSubTopoShape(TopAbs_SOLID,it->first), 
-                        it->second, thickness, tol, intersection, false, mode,
-                        static_cast<Part::TopoShape::JoinType>(join));
-                this->fixShape(shapes.back());
+                res = solid.makEThickSolid(*faces, thickness, tol, intersection, false, mode,
+                                           static_cast<Part::TopoShape::JoinType>(join));
+                this->fixShape(res);
+
+                // When no face to remove, OCC makeThickSolid actually behave
+                // the same as makeOffset. We slightly change that behavior to
+                // always create thick shell unless `MakeOffset` is active. So if
+                // face is empty, and MakeOffset is not active, we'll do a cut to
+                // make the shell.
+                if (faces->empty() && !MakeOffset.getValue()) {
+                    if (thickness < 0.)
+                        res = solid.makECut(res);
+                    else
+                        res = res.makECut(solid);
+                }
+                else if (!faces->empty() && MakeOffset.getValue()) {
+                    if (thickness < 0.)
+                        res = solid.makECut(res);
+                    else
+                        res = solid.makEFuse(res);
+                }
+                this->fixShape(res);
+                shapes.push_back(res);
             }catch(Standard_Failure &e) {
                 FC_ERR("Exception on making thick solid: " << e.GetMessageString());
                 return new App::DocumentObjectExecReturn("Failed to make thick solid");
             }
-            ++it;
+            if (it !=closeFaces.end()) {
+                ++it;
+            }
         }
     }
+
     TopoShape result(0,getDocument()->getStringHasher());
     if(shapes.size()>1) {
         result.makEFuse(shapes);
-        result = refineShapeIfActive(result);
     }else if (shapes.empty())
         result = baseShape;
     else
         result = shapes.front();
+    result = refineShapeIfActive(result);
     this->Shape.setValue(getSolid(result));
     return App::DocumentObject::StdReturn;
 }

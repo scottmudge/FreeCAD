@@ -39,6 +39,7 @@ namespace PartDesign
 class PartDesignExport Boolean : public PartDesign::Feature, public App::GeoFeatureGroupExtension
 {
     PROPERTY_HEADER_WITH_EXTENSIONS(PartDesign::Boolean);
+    using inherited = PartDesign::Feature;
 
 public:
     Boolean();
@@ -57,8 +58,11 @@ public:
     const char* getViewProviderName(void) const override {
         return "PartDesignGui::ViewProviderBoolean";
     }
-    virtual void onChanged(const App::Property* prop) override;
+    void onChanged(const App::Property* prop) override;
     //@}
+
+    void onNewSolidChanged() override;
+    void unsetupObject() override;
 
 protected:
     void handleChangedPropertyName(Base::XMLReader &reader, const char * TypeName, const char *PropName) override;

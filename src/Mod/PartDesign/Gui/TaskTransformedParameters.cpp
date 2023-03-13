@@ -278,7 +278,7 @@ void TaskTransformedParameters::setupUI() {
     auto layout = qobject_cast<QBoxLayout*>(proxy->layout());
     assert(layout);
 
-    auto grid = PartDesignGui::addTaskCheckBox(proxy);
+    auto grid = PartDesignGui::addTaskCheckBox(TransformedView, proxy);
     grid->addWidget(checkBoxParallel, 1, 1);
     grid->addWidget(checkBoxNewSolid, 2, 0);
     grid->addWidget(checkBoxSubTransform, 2, 1);
