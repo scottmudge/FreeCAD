@@ -1743,7 +1743,7 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
                         ppFace = _ppFace.get();
                     }
                 } else {
-                    if(-backFace+1 == (int)faceDistances.size()) {
+                    if(-backFace == (int)faceDistances.size()) {
                         auto itLast = --faceDistances.end();
                         if(dist >= itLast->first)
                             continue;
@@ -1816,7 +1816,9 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
         } else {
             ppList->append(pp->copy());
             lastDist = dist;
-            skipFace = true;
+            if (backFace == -1) {
+                skipFace = true;
+            }
         }
         reset();
         return;
@@ -1834,7 +1836,9 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
         if((p > lastPriority && pos.equals((*ppList)[0]->getPoint(),0.01f))
                 || dist < lastDist)
         {
-            skipFace = true;
+            if (backFace == -1) {
+                skipFace = true;
+            }
             lastPriority = p;
             lastDist = dist;
             ppList->set(0,pp->copy());

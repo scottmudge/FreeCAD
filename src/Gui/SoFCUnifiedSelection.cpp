@@ -649,6 +649,25 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
 
     SoFCDisplayModeElement::set(this->rayPickAction.getState(),0,SbName::empty(),false);
 
+    this->rayPickAction.cleanup();
+
+#if 1
+    // Only if back face picking is inactive, shall we pick objects in on top
+    // group first. If back face picking, then do pick through all objects in
+    // order to let user choose all ray hitting faces.
+    if (!pickBackFace) {
+        if (ViewParams::hiddenLineSelectionOnTop())
+            this->rayPickAction.setPickBackFace(-1);
+        else
+            this->rayPickAction.setPickBackFace(0);
+
+        this->rayPickAction.setResetClipPlane(ViewParams::getNoSectionOnTop());
+
+        getPickedInfoOnTop(ret, singlePick, filter);
+
+        this->rayPickAction.setResetClipPlane(false);
+    }
+#else
     if (ViewParams::hiddenLineSelectionOnTop())
         this->rayPickAction.setPickBackFace(singlePick ? (pickBackFace ? pickBackFace : -1) : 0);
     else
@@ -656,7 +675,6 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
 
     this->rayPickAction.setResetClipPlane(ViewParams::getNoSectionOnTop());
 
-    this->rayPickAction.cleanup();
     getPickedInfoOnTop(ret, singlePick, filter);
 
     this->rayPickAction.setResetClipPlane(false);
@@ -690,9 +708,13 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
             }
         }
     }
-    else if(ret.empty() || !singlePick) {
+    else 
+#endif
+        if(ret.empty() || !singlePick) {
         applyOverrideMode(this->rayPickAction.getState());
         SoOverrideElement::setPickStyleOverride(this->rayPickAction.getState(),0,false);
+
+        this->rayPickAction.setPickBackFace(singlePick ? pickBackFace : 0);
         this->rayPickAction.apply(pcViewer->getSoRenderManager()->getSceneGraph());
 
         getPickedInfo(ret,this->rayPickAction.getPrioPickedPointList(),singlePick,false,filter);
@@ -702,7 +724,7 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
         int count = this->rayPickAction.getBackFaceCount();
         if (pickBackFace > 1 && count < pickBackFace) {
             pickBackFace = -count;
-        } else  if (pickBackFace < -1 && count < -pickBackFace) {
+        } else if (pickBackFace < -1 && count < -pickBackFace-1) {
             pickBackFace = 1;
         }
     }
