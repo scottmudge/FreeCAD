@@ -723,9 +723,9 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
     if(singlePick) {
         int count = this->rayPickAction.getBackFaceCount();
         if (pickBackFace > 1 && count < pickBackFace) {
-            pickBackFace = -count;
-        } else if (pickBackFace < -1 && count < -pickBackFace-1) {
             pickBackFace = 1;
+        } else if (pickBackFace < -1 && count < -pickBackFace-1) {
+            pickBackFace = -2;
         }
     }
 
@@ -1582,8 +1582,26 @@ SoFCUnifiedSelection::Private::handleEvent(SoHandleEventAction * action)
                 auto wev = static_cast<const SoMouseWheelEvent*>(event);
                 if (wev->getDelta() > 0) {
                     if(pickBackFace == 1) {
-                        // Note pickBackFace == -1 is reserved for picking hidden
-                        // edge/vertex. So we start from -2 for picking actual back face
+                        // Note, we want the wheel to loop around and start
+                        // from the top (pickBackFace == 1 means the bottom
+                        // face). We could have set pickBackFace ==
+                        // total_hitted_face_count, but we don't know the face
+                        // count until we perform the hit test. And since we
+                        // don't call SoRayPickAction::setPickAll(true), which
+                        // is extermemly memory consuming with complex geometry
+                        // big relative picking radius, we don't really know
+                        // the total face count.  SoFCRayPickACtion will go
+                        // through all objects, but only keep at most
+                        // pickBackFace number of faces.
+                        //
+                        // So, here is what we do. If pickBackFace is positive,
+                        // say 4, SoFCRayPickAction will keep the furthest 4
+                        // faces, and it will eventually pick the closest face
+                        // of these 4 faces after go through the entire scene.
+                        // If it is negative (we start with -2, as -1 is
+                        // reserved for picking hidden edge/vertex), say -4,
+                        // then SoFCRayPickAction will keep the closest 3
+                        // faces, and pick the furthest face of these 3 faces. 
                         pickBackFace = -2;
                     } else
                         --pickBackFace;

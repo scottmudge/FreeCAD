@@ -1733,23 +1733,25 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
                 float dist = getDistance(this,pps[i]->getPoint());
                 if(backFace > 1) {
                     if(backFace == (int)faceDistances.size()) {
-                        if(dist <= faceDistances.begin()->first)
+                        if(dist < faceDistances.begin()->first)
                             continue;
                         faceDistances.erase(faceDistances.begin());
                     }
-                    faceDistances[dist].reset(pps[i]->copy());
+                    faceDistances.emplace(dist, pps[i]->copy());
+
                     if(faceDistances.begin()->second) {
                         _ppFace.reset(faceDistances.begin()->second.release());
                         ppFace = _ppFace.get();
                     }
                 } else {
-                    if(-backFace == (int)faceDistances.size()) {
+                    if(-backFace-1 == (int)faceDistances.size()) {
                         auto itLast = --faceDistances.end();
-                        if(dist >= itLast->first)
+                        if(dist > itLast->first)
                             continue;
                         faceDistances.erase(itLast);
                     }
-                    faceDistances[dist].reset(pps[i]->copy());
+                    faceDistances.emplace(dist,pps[i]->copy());
+
                     auto itLast = --faceDistances.end();
                     if(itLast->second) {
                         _ppFace.reset(itLast->second.release());
@@ -1806,10 +1808,11 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
     if(ppList->getLength() == 0) {
         lastPriority = p;
         if(backFace && pp == ppFace) {
-            if(pp == _ppFace.get())
+            if(pp == _ppFace.get()) {
                 ppList->append(_ppFace.release());
-            else
+            } else {
                 ppList->append(pp->copy());
+            }
             skipFace = false;
             lastBackDist = dist;
             lastDist = std::numeric_limits<float>::max();
@@ -1824,13 +1827,16 @@ void SoFCRayPickAction::afterPick(const SoPickedPointList &pps) {
         return;
     }
 
-    if(backFace && pp == ppFace) {
-        if(!skipFace && (backFace!=1 || lastBackDist < dist)) {
+    if(backFace) {
+        if (pp == ppFace
+                && !skipFace
+                && (backFace!=1 || lastBackDist < dist)) {
             lastBackDist = dist;
-            if(pp == _ppFace.get())
+            if(pp == _ppFace.get()) {
                 ppList->set(0,_ppFace.release());
-            else
+            } else {
                 ppList->set(0,pp->copy());
+            }
         }
     } else {
         if((p > lastPriority && pos.equals((*ppList)[0]->getPoint(),0.01f))

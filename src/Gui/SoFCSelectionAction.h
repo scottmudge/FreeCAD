@@ -428,7 +428,7 @@ protected:
 private:
     std::unique_ptr<SoPickedPointList> ppList;
     std::unique_ptr<SoPickedPointList> tempList;
-    std::map<float, std::unique_ptr<SoPickedPoint> > faceDistances;
+    std::multimap<float, std::unique_ptr<SoPickedPoint> > faceDistances;
     int lastPriority;
     float lastDist;
     float lastBackDist;
