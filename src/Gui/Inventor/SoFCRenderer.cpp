@@ -2042,14 +2042,16 @@ SoFCRendererP::renderTransparency(SoGLRenderAction * action,
               renderOutline(action, draw_entry, highlight);
 
             bool restoreDepthTest = false;
-            if (((highlight && ViewParams::getShowPreSelectedFaceOutline())
-                  || (sel_highlight && ViewParams::getShowSelectedFaceOutline()))
-                && (!this->material.depthtest
-                  || this->material.depthfunc != SoDepthBuffer::LEQUAL))
-            {
-              restoreDepthTest = true;
-              glEnable(GL_DEPTH_TEST);
-              glDepthFunc(GL_LEQUAL);
+            if (draw_entry.ventry->partidx>=0) {
+              if (((highlight && ViewParams::getShowPreSelectedFaceOutline())
+                    || (sel_highlight && ViewParams::getShowSelectedFaceOutline()))
+                  && (!this->material.depthtest
+                    || this->material.depthfunc != SoDepthBuffer::LEQUAL))
+              {
+                restoreDepthTest = true;
+                glEnable(GL_DEPTH_TEST);
+                glDepthFunc(GL_LEQUAL);
+              }
             }
             
             draw_entry.ventry->cache->renderTriangles(state,
