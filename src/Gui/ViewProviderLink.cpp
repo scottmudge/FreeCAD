@@ -1340,7 +1340,7 @@ void LinkView::setChildren(const std::vector<App::DocumentObject*> &children,
         else if (children.size() == nodeArray.size() + 1) {
             // Adding an object
             int i = -1;
-            int idx = (int)children.size()-1;
+            idx = (int)children.size()-1;
             for (const auto &pinfo : nodeArray) {
                 auto &info = *pinfo;
                 if (!info.isLinked()) {
@@ -1362,16 +1362,33 @@ void LinkView::setChildren(const std::vector<App::DocumentObject*> &children,
             }
             if (idx >= 0) {
                 auto obj = children[idx];
-                if (!App::GeoFeatureGroupExtension::isNonGeoGroup(obj)) {
-                    nodeArray.emplace(nodeArray.begin()+idx, new Element(*this));
-                    auto &info = *nodeArray[idx];
-                    info.groupIndex = -1;
-                    info.link(obj);
-                    auto node = info.getTopNode();
-                    for (auto it = nodeArray.begin()+idx; it != nodeArray.end(); ++it) {
-                        nodeMap[(*it)->getTopNode()] = it - nodeArray.begin();
+                if (App::GeoFeatureGroupExtension::isNonGeoGroup(obj)
+                        || App::GroupExtension::getGroupOfObject(obj)) {
+                    idx = -1;
+                } else {
+                    int pos = -1;
+                    if (idx < static_cast<int>(nodeArray.size())) {
+                        pos = pcLinkRoot->findChild((*nodeArray.begin())->getTopNode());
+                        if (pos < 0 || pos + idx >= pcLinkRoot->getNumChildren())
+                            idx = -1;
+                        else
+                            pos += idx;
                     }
-                    pcLinkRoot->insertChild(node, idx);
+                    if (idx >= 0) {
+                        nodeArray.emplace(nodeArray.begin()+idx, new Element(*this));
+                        auto &info = *nodeArray[idx];
+                        info.groupIndex = -1;
+                        info.link(obj);
+                        auto node = info.getTopNode();
+                        for (auto it = nodeArray.begin()+idx; it != nodeArray.end(); ++it) {
+                            auto n = (*it)->getTopNode();
+                            nodeMap[n] = it - nodeArray.begin();
+                        }
+                        if (pos < 0)
+                            pcLinkRoot->addChild(node);
+                        else
+                            pcLinkRoot->insertChild(node, pos);
+                    }
                 }
             }
         }

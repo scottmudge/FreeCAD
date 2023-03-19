@@ -80,7 +80,7 @@
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
 
-#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <App/Application.h>
 #include <App/Document.h>
@@ -9961,7 +9961,10 @@ App::DocumentObject *SketchObject::getSubObject(
             return nullptr;
     }
     else if (!pyObj || !mapped) {
-        if (!pyObj || index > 0)
+        if (!pyObj 
+                || (index > 0
+                    && !boost::algorithm::contains(subname, "edge") 
+                    && !boost::algorithm::contains(subname, "vertex")))
             return Part2DObject::getSubObject(subname,pyObj,pmat,transform,depth);
     } else {
         subshape = Shape.getShape().getSubTopoShape(subname, true);
@@ -10167,7 +10170,7 @@ std::pair<std::string,std::string> SketchObject::getElementName(
         if (occindex.second)
             return Part2DObject::getElementName(name,type);
     }
-    else if(index && type==ElementNameType::Export) {
+    if(index && type==ElementNameType::Export) {
         if(boost::starts_with(ret.second,"Vertex"))
             ret.second[0] = 'v';
         else if(boost::starts_with(ret.second,"Edge"))

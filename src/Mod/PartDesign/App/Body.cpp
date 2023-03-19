@@ -567,6 +567,7 @@ void Body::onChanged (const App::Property* prop) {
     // we neither load a project nor perform undo/redo
     if (!this->isRestoring()
             && this->getDocument()
+            && !this->getDocument()->testStatus(App::Document::Restoring)
             && !this->getDocument()->isPerformingTransaction()) {
         if (prop == &BaseFeature) {
             FeatureBase* bf = nullptr;
