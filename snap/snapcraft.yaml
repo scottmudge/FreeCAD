@@ -266,6 +266,9 @@ parts:
       - povray-includes # Raytracing
     override-build: |
       kde_sdk_dir="/snap/kde-frameworks-5-99-qt-5-15-7-core20-sdk/current"
+      mkdir -p "/snap/kde-frameworks-5-96-qt-5-15-5-core20-sdk"
+      # qtchooser wrapper scripts in 5-99 release seem broken and hard code path to 5-96 directory causing build failure
+      ln -s "/snap/kde-frameworks-5-99-qt-5-15-7-core20-sdk/9" "/snap/kde-frameworks-5-96-qt-5-15-5-core20-sdk/current"
       mkdir -p /etc/xdg/qtchooser
       cp "$kde_sdk_dir/etc/xdg/qtchooser/default.conf" "/etc/xdg/qtchooser/default.conf"
       mkdir -p /workspace/usr/bin
