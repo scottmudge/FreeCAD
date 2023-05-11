@@ -32,50 +32,46 @@
 
 #include <atomic>
 #include <boost/algorithm/string.hpp>
-#include <boost/io/ios_state.hpp>
 #include <boost/intrusive/list.hpp>
-
-#include <Base/Console.h>
-#include "Base/Exception.h"
-#include <Base/Interpreter.h>
-#include <Base/Sequencer.h>
-#include <App/Application.h>
-#include <App/Document.h>
-#include <App/DocumentPy.h>
-#include <App/DocumentObject.h>
-#include <App/PropertyUnits.h>
-#include <Base/QuantityPy.h>
-#include <Base/MatrixPy.h>
-#include <Base/PlacementPy.h>
-#include <Base/RotationPy.h>
-#include <Base/VectorPy.h>
-#include <Base/Tools.h>
-#include <QStringList>
-#include <string>
-#include <sstream>
-#include <math.h>
-#include <stdio.h>
-#include <stack>
-#include <deque>
-#include <cctype>
-#include <algorithm>
-#include <climits>
-#include "Expression.h"
-#include "ExpressionParser.h"
-#include "ExpressionVisitors.h"
-#include <Base/Unit.h>
-#include <App/PropertyUnits.h>
-#include <App/ObjectIdentifier.h>
+#include <boost/io/ios_state.hpp>
 #include <boost/math/special_functions/round.hpp>
 #include <boost/math/special_functions/trunc.hpp>
+
+#include <sstream>
+#include <stack>
+#include <string>
+#include <cctype>
+
+#include <App/Application.h>
+#include <App/DocumentObject.h>
+#include <App/ObjectIdentifier.h>
+#include <App/PropertyUnits.h>
+#include <Base/Console.h>
+#include <Base/Exception.h>
+#include <Base/Interpreter.h>
+#include <Base/MatrixPy.h>
+#include <Base/PlacementPy.h>
+#include <Base/QuantityPy.h>
+#include <Base/RotationPy.h>
+#include <Base/Sequencer.h>
+#include <Base/Tools.h>
+#include <Base/Unit.h>
+#include <Base/VectorPy.h>
+#include "ExpressionParser.h"
+#include "ExpressionVisitors.h"
 #include "ExpressionPy.h"
 #include "DocumentObjectPy.h"
+
+/** \defgroup Expression Expressions framework
+    \ingroup APP
+    \brief The expression system allows users to write expressions and formulas that produce values
+*/
 
 using namespace Base;
 using namespace App;
 namespace bi = boost::intrusive;
 
-FC_LOG_LEVEL_INIT("Expression",true,true)
+FC_LOG_LEVEL_INIT("Expression", true, true)
 
 #ifndef M_PI
 #define M_PI       3.14159265358979323846
@@ -134,13 +130,13 @@ static inline void printExpression(std::ostream &os, const App::Expression *expr
 
 #define EXPR_THROW(_msg) _EXPR_THROW(_msg,this)
 
-#define RUNTIME_THROW(_msg) __EXPR_THROW(Base::RuntimeError,_msg, (Expression*)0)
+#define RUNTIME_THROW(_msg) __EXPR_THROW(Base::RuntimeError,_msg, static_cast<Expression*>(nullptr))
 
-#define TYPE_THROW(_msg) __EXPR_THROW(Base::TypeError,_msg, (Expression*)0)
+#define TYPE_THROW(_msg) __EXPR_THROW(Base::TypeError,_msg, static_cast<Expression*>(nullptr))
 
-#define PARSER_THROW(_msg) __EXPR_THROW(Base::ParserError,_msg, (Expression*)0)
+#define PARSER_THROW(_msg) __EXPR_THROW(Base::ParserError,_msg, static_cast<Expression*>(nullptr))
 
-#define PY_THROW(_msg) __EXPR_THROW(Py::RuntimeError,_msg, (Expression*)0)
+#define PY_THROW(_msg) __EXPR_THROW(Py::RuntimeError,_msg, static_cast<Expression*>(nullptr))
 
 #define EXPR_NEW(_t,...) \
     ExpressionPtr(::new(ExpressionFastAlloc(_t)().allocate(1)) _t(__VA_ARGS__))
@@ -399,11 +395,11 @@ bool ExpressionVisitor::renameObjectIdentifier(Expression &e,
     return e._renameObjectIdentifier(paths,path,*this);
 }
 
-void ExpressionVisitor::collectReplacement(Expression &e, 
-        std::map<ObjectIdentifier,ObjectIdentifier> &pathes,
+void ExpressionVisitor::collectReplacement(Expression &e,
+        std::map<ObjectIdentifier,ObjectIdentifier> &paths,
         const App::DocumentObject *parent, App::DocumentObject *oldObj, App::DocumentObject *newObj) const
 {
-    return e._collectReplacement(pathes,parent,oldObj,newObj);
+    return e._collectReplacement(paths,parent,oldObj,newObj);
 }
 
 void ExpressionVisitor::moveCells(Expression &e, const CellAddress &address, int rowCount, int colCount) {
@@ -512,9 +508,9 @@ static inline bool essentiallyInteger(double a, long &l) {
 // without holding Python global lock
 struct PyObjectWrapper {
 public:
-    typedef std::shared_ptr<PyObjectWrapper> Pointer;
+    using Pointer = std::shared_ptr<PyObjectWrapper>;
 
-    PyObjectWrapper(PyObject *obj):pyobj(obj) {
+    explicit PyObjectWrapper(PyObject *obj):pyobj(obj) {
         Py::_XINCREF(pyobj);
     }
     ~PyObjectWrapper() {
@@ -577,7 +573,7 @@ static Py::Object _pyObjectFromAny(const App::any &value, const Expression *e) {
 
 namespace App {
 Py::Object pyObjectFromAny(const App::any &value) {
-    return _pyObjectFromAny(value,0);
+    return _pyObjectFromAny(value,nullptr);
 }
 
 App::any pyObjectToAny(Py::Object value, bool check) {
@@ -626,8 +622,8 @@ bool pyToQuantity(Quantity &q, const Py::Object &pyobj) {
     return true;
 }
 
-static inline Quantity pyToQuantity(const Py::Object &pyobj, 
-        const Expression *e, const char *msg=0) 
+static inline Quantity pyToQuantity(const Py::Object &pyobj,
+        const Expression *e, const char *msg=nullptr) 
 {
     Quantity q;
     if(!pyToQuantity(q,pyobj)) {
@@ -856,9 +852,9 @@ Expression::Component::Component(const ObjectIdentifier::Component &comp)
 
 Expression::Component::Component(const Component &other)
     :comp(other.comp)
-    ,e1(other.e1?other.e1->copy():0)
-    ,e2(other.e2?other.e2->copy():0)
-    ,e3(other.e3?other.e3->copy():0)
+    ,e1(other.e1?other.e1->copy():nullptr)
+    ,e2(other.e2?other.e2->copy():nullptr)
+    ,e3(other.e3?other.e3->copy():nullptr)
 {}
 
 Expression::Component::~Component() 
@@ -1408,16 +1404,25 @@ ExpressionDeps Expression::getDeps(int option)  const {
 }
 
 void Expression::getDepObjects(
-        std::map<App::DocumentObject*,bool> &deps, std::vector<std::string> *labels)  const 
+        std::map<App::DocumentObject*,bool> &deps, std::vector<std::string> *labels) const
 {
     for(auto &v : getIdentifiers()) {
         bool hidden = v.second;
         const ObjectIdentifier &var = v.first;
-        for(auto &dep : var.getDep(false,labels)) {
+        std::vector<std::string> strings;
+        for(auto &dep : var.getDep(false, &strings)) {
             DocumentObject *obj = dep.first;
-            auto res = deps.insert(std::make_pair(obj,hidden));
-            if(!hidden || res.second)
-                res.first->second = hidden;
+            if (!obj->testStatus(ObjectStatus::Remove)) {
+                if (labels) {
+                    std::copy(strings.begin(), strings.end(), std::back_inserter(*labels));
+                }
+
+                auto res = deps.insert(std::make_pair(obj, hidden));
+                if (!hidden || res.second)
+                    res.first->second = hidden;
+            }
+
+            strings.clear();
         }
     }
 }
@@ -1430,11 +1435,11 @@ std::map<App::DocumentObject*,bool> Expression::getDepObjects(std::vector<std::s
 
 class GetIdentifiersExpressionVisitor : public ExpressionVisitor {
 public:
-    GetIdentifiersExpressionVisitor(std::map<App::ObjectIdentifier,bool> &deps)
+    explicit GetIdentifiersExpressionVisitor(std::map<App::ObjectIdentifier,bool> &deps)
         :deps(deps)
     {}
 
-    virtual void visit(Expression &e) {
+    void visit(Expression &e) override {
         this->getIdentifiers(e,deps);
     }
 
@@ -1454,11 +1459,11 @@ std::map<App::ObjectIdentifier,bool> Expression::getIdentifiers()  const {
 
 class AdjustLinksExpressionVisitor : public ExpressionVisitor {
 public:
-    AdjustLinksExpressionVisitor(const std::set<App::DocumentObject*> &inList)
+    explicit AdjustLinksExpressionVisitor(const std::set<App::DocumentObject*> &inList)
         :inList(inList),res(false)
     {}
 
-    virtual void visit(Expression &e) {
+    void visit(Expression &e) override {
         if(this->adjustLinks(e,inList))
             res = true;
     }
@@ -1475,11 +1480,11 @@ bool Expression::adjustLinks(const std::set<App::DocumentObject*> &inList) {
 
 class ImportSubNamesExpressionVisitor : public ExpressionVisitor {
 public:
-    ImportSubNamesExpressionVisitor(const ObjectIdentifier::SubNameMap &subNameMap)
+    explicit ImportSubNamesExpressionVisitor(const ObjectIdentifier::SubNameMap &subNameMap)
         :subNameMap(subNameMap)
     {}
 
-    virtual void visit(Expression &e) {
+    void visit(Expression &e) override {
         this->importSubNames(e,subNameMap);
     }
 
@@ -1488,7 +1493,7 @@ public:
 
 ExpressionPtr Expression::importSubNames(const std::map<std::string,std::string> &nameMap) const {
     if(!owner || !owner->getDocument())
-        return 0;
+        return nullptr;
     ObjectIdentifier::SubNameMap subNameMap;
     for(auto &dep : getDeps(DepAll)) {
         for(auto &info : dep.second) {
@@ -1504,7 +1509,7 @@ ExpressionPtr Expression::importSubNames(const std::map<std::string,std::string>
                     continue;
                 std::string imported = PropertyLinkBase::tryImportSubName(
                                obj,key.second.c_str(),owner->getDocument(), nameMap);
-                if(imported.size())
+                if(!imported.empty())
                     subNameMap.emplace(std::move(key),std::move(imported));
             }
         }
@@ -1523,7 +1528,7 @@ public:
         :obj(obj),ref(ref),newLabel(newLabel)
     {}
 
-    virtual void visit(Expression &e) {
+    void visit(Expression &e) override {
         this->updateLabelReference(e,obj,ref,newLabel);
     }
 
@@ -1560,23 +1565,23 @@ public:
     {
     }
 
-    void visit(Expression &e) {
-        if(collect) 
-            this->collectReplacement(e,pathes,parent,oldObj,newObj);
-        else 
-            this->renameObjectIdentifier(e,pathes,dummy);
+    void visit(Expression &e) override {
+        if(collect)
+            this->collectReplacement(e,paths,parent,oldObj,newObj);
+        else
+            this->renameObjectIdentifier(e,paths,dummy);
     }
 
     const DocumentObject *parent;
     DocumentObject *oldObj;
     DocumentObject *newObj;
     ObjectIdentifier dummy;
-    std::map<ObjectIdentifier, ObjectIdentifier> pathes;
+    std::map<ObjectIdentifier, ObjectIdentifier> paths;
     bool collect = true;
 };
 
-ExpressionPtr Expression::replaceObject(const DocumentObject *parent, 
-        DocumentObject *oldObj, DocumentObject *newObj) const 
+ExpressionPtr Expression::replaceObject(const DocumentObject *parent,
+        DocumentObject *oldObj, DocumentObject *newObj) const
 {
     ReplaceObjectExpressionVisitor v(parent,oldObj,newObj);
 
@@ -1584,7 +1589,7 @@ ExpressionPtr Expression::replaceObject(const DocumentObject *parent,
     // not const. This is ugly...
     const_cast<Expression*>(this)->visit(v);
 
-    if(v.pathes.empty())
+    if(v.paths.empty())
         return 0;
 
     // Now make a copy and do the actual replacement
@@ -1617,7 +1622,7 @@ Py::Object Expression::getPyValue(int options, int *jumpCode) const {
 
     try {
         Py::Object pyobj = _getPyValue(jumpCode);
-        if(components.size()) {
+        if(!components.empty()) {
             for(auto &c : components)
                 pyobj = c->get(this,pyobj);
         }
@@ -1792,7 +1797,7 @@ void UnitExpression::setQuantity(const Quantity &_quantity)
     if(cache) {
         Base::PyGILStateLocker lock;
         Py::_XDECREF(cache);
-        cache = 0;
+        cache = nullptr;
     }
 }
 
@@ -2176,7 +2181,7 @@ void OperatorExpression::_toString(std::ostream &s, bool persistent,int) const
         leftOperator = static_cast<OperatorExpression*>(left.get())->op;
     if (left->priority() < priority()) // Check on operator priority first
         needsParens = true;
-    else if (leftOperator == op) { // Equal priority?
+    else if (leftOperator == op) { // Same operator ?
         if (!isLeftAssociative())
             needsParens = true;
         //else if (!isCommutative())
@@ -2277,14 +2282,14 @@ void OperatorExpression::_toString(std::ostream &s, bool persistent,int) const
         rightOperator = static_cast<OperatorExpression*>(right.get())->op;
     if (right->priority() < priority()) // Check on operator priority first
         needsParens = true;
-    else if (rightOperator == op) { // Equal priority?
+    else if (rightOperator == op) { // Same operator ?
         if (!isRightAssociative())
             needsParens = true;
         else if (!isCommutative())
             needsParens = true;
     }
-    else if (right->priority() == priority()) {
-        if (!isRightAssociative())
+    else if (right->priority() == priority()) { // Same priority ?
+        if (!isRightAssociative() || rightOperator == OP_MOD)
             needsParens = true;
     }
 
@@ -2893,10 +2898,8 @@ bool FunctionExpression::isTouched() const
 class Collector {
 public:
     Collector() : first(true) { }
-    virtual ~Collector() {}
-
+    virtual ~Collector() = default;
     virtual void collect(Quantity value) {
-    ObjectIdentifier dummy;
         if (first)
             q.setUnit(value.getUnit());
     }
@@ -2924,7 +2927,7 @@ public:
     SumCollector() : Collector() { }
     COLLECTOR_ALLOC(SumCollector)
 
-    void collect(Quantity value) {
+    void collect(Quantity value) override {
         Collector::collect(value);
         q += value;
         first = false;
@@ -2937,14 +2940,14 @@ public:
     AverageCollector() : Collector(), n(0) { }
     COLLECTOR_ALLOC(AverageCollector)
 
-    void collect(Quantity value) {
+    void collect(Quantity value) override {
         Collector::collect(value);
         q += value;
         ++n;
         first = false;
     }
 
-    virtual Quantity getQuantity() const { return q/(double)n; }
+    Quantity getQuantity() const override { return q/(double)n; }
 
 private:
     unsigned int n;
@@ -2955,7 +2958,7 @@ public:
     StdDevCollector() : Collector(), n(0) { }
     COLLECTOR_ALLOC(StdDevCollector)
 
-    void collect(Quantity value) {
+    void collect(Quantity value) override {
         Collector::collect(value);
         if (first) {
             M2 = Quantity(0, value.getUnit() * value.getUnit());
@@ -2970,7 +2973,7 @@ public:
         first = false;
     }
 
-    virtual Quantity getQuantity() const {
+    Quantity getQuantity() const override {
         if (n < 2)
             throw ExpressionError("Invalid number of entries: at least two required.");
         else
@@ -2988,13 +2991,13 @@ public:
     CountCollector() : Collector(), n(0) { }
     COLLECTOR_ALLOC(CountCollector)
 
-    void collect(Quantity value) {
+    void collect(Quantity value) override {
         Collector::collect(value);
         ++n;
         first = false;
     }
 
-    virtual Quantity getQuantity() const { return Quantity(n); }
+    Quantity getQuantity() const override { return Quantity(n); }
 
 private:
     unsigned int n;
@@ -3005,7 +3008,7 @@ public:
     MinCollector() : Collector() { }
     COLLECTOR_ALLOC(MinCollector)
 
-    void collect(Quantity value) {
+    void collect(Quantity value) override {
         Collector::collect(value);
         if (first || value < q)
             q = value;
@@ -3018,7 +3021,7 @@ public:
     MaxCollector() : Collector() { }
     COLLECTOR_ALLOC(MaxCollector)
 
-    void collect(Quantity value) {
+    void collect(Quantity value) override {
         Collector::collect(value);
         if (first || value > q)
             q = value;
@@ -3026,7 +3029,8 @@ public:
     }
 };
 
-Py::Object FunctionExpression::evalAggregate(const Expression *owner, int f, const ExpressionList &args)
+Py::Object FunctionExpression::evalAggregate(
+        const Expression *owner, int f, const ExpressionList &args)
 {
     std::unique_ptr<Collector> c;
 
@@ -3066,11 +3070,11 @@ Py::Object FunctionExpression::evalAggregate(const Expression *owner, int f, con
                 if (!p)
                     continue;
 
-                if ((qp = freecad_dynamic_cast<PropertyQuantity>(p)) != 0)
+                if ((qp = freecad_dynamic_cast<PropertyQuantity>(p)))
                     c->collect(qp->getQuantityValue());
-                else if ((fp = freecad_dynamic_cast<PropertyFloat>(p)) != 0)
+                else if ((fp = freecad_dynamic_cast<PropertyFloat>(p)))
                     c->collect(Quantity(fp->getValue()));
-                else if ((ip = freecad_dynamic_cast<PropertyInteger>(p)) != 0)
+                else if ((ip = freecad_dynamic_cast<PropertyInteger>(p)))
                     c->collect(Quantity(ip->getValue()));
                 else
                     _EXPR_THROW("Invalid property type for aggregate.", owner);
@@ -3859,7 +3863,7 @@ Py::Object VariableExpression::_getPyValue(int *) const {
 
 void VariableExpression::addComponent(ComponentPtr &&c) {
     do {
-        if(components.size())
+        if(!components.empty())
             break;
         if(!c->e1 && !c->e2) {
             var << std::move(c->comp);
@@ -4037,13 +4041,13 @@ void VariableExpression::_updateLabelReference(
 }
 
 bool VariableExpression::_updateElementReference(
-        App::DocumentObject *feature, bool reverse, ExpressionVisitor &v) 
+        App::DocumentObject *feature, bool reverse, ExpressionVisitor &v)
 {
     return var.updateElementReference(v,feature,reverse);
 }
 
 bool VariableExpression::_renameObjectIdentifier(
-        const std::map<ObjectIdentifier,ObjectIdentifier> &paths, 
+        const std::map<ObjectIdentifier,ObjectIdentifier> &paths,
         const ObjectIdentifier &path, ExpressionVisitor &v)
 {
     const auto &oldPath = var.canonicalPath();
@@ -4060,18 +4064,18 @@ bool VariableExpression::_renameObjectIdentifier(
 }
 
 void VariableExpression::_collectReplacement(
-        std::map<ObjectIdentifier,ObjectIdentifier> &pathes,
-        const App::DocumentObject *parent, 
-        App::DocumentObject *oldObj, 
+        std::map<ObjectIdentifier,ObjectIdentifier> &paths,
+        const App::DocumentObject *parent,
+        App::DocumentObject *oldObj,
         App::DocumentObject *newObj) const
 {
     ObjectIdentifier path;
     if(var.replaceObject(path,parent,oldObj,newObj))
-        pathes[var.canonicalPath()] = std::move(path);
+        paths[var.canonicalPath()] = std::move(path);
 }
 
-void VariableExpression::_moveCells(const CellAddress &address, 
-        int rowCount, int colCount, ExpressionVisitor &v) 
+void VariableExpression::_moveCells(const CellAddress &address,
+        int rowCount, int colCount, ExpressionVisitor &v)
 {
     if(var.hasDocumentObjectName(true))
         return;
@@ -7006,7 +7010,7 @@ Py::Object FromStatement::_getPyValue(int *) const {
 
 ////////////////////////////////////////////////////////////////////////////////////
 
-static Base::XMLReader *_Reader = 0;
+static Base::XMLReader *_Reader = nullptr;
 ExpressionParser::ExpressionImporter::ExpressionImporter(Base::XMLReader &reader) {
     assert(!_Reader);
     _Reader = &reader;
@@ -7014,7 +7018,7 @@ ExpressionParser::ExpressionImporter::ExpressionImporter(Base::XMLReader &reader
 
 ExpressionParser::ExpressionImporter::~ExpressionImporter() {
     assert(_Reader);
-    _Reader = 0;
+    _Reader = nullptr;
 }
 
 Base::XMLReader *ExpressionParser::ExpressionImporter::reader() {
@@ -7034,7 +7038,7 @@ bool isModuleImported(PyObject *module) {
 }
 
 bool check_text(const char *txt, const char *prefix) {
-    for(;*txt && std::isspace((unsigned char)txt[0]);++txt);
+    for(;*txt && std::isspace(static_cast<unsigned char>(txt[0]));++txt);
     return boost::starts_with(txt,prefix);
 }
 
@@ -7053,12 +7057,13 @@ double num_change(char* yytext,char dez_delim,char grp_delim)
         else
             temp[i++] = *c;
         // check buffer overflow
-        if (i>39) return 0.0;
+        if (i>39)
+            return 0.0;
     }
     temp[i] = '\0';
 
     errno = 0;
-    ret_val = strtod( temp, NULL );
+    ret_val = strtod( temp, nullptr );
     if (ret_val == 0 && errno == ERANGE)
         throw Base::UnderflowError("Number underflow.");
     if (ret_val == HUGE_VAL || ret_val == -HUGE_VAL)
@@ -7121,13 +7126,13 @@ typedef long long int                               Integer;
 
 #define ExpressionParserStack std::vector<T,ExpressionAllocator(T) >
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #include "ExpressionParser.tab.cc"
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 namespace App {
 namespace ExpressionParser {
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-// Scanner, defined in ExpressionParser.l
 #if defined(__clang__)
 # pragma clang diagnostic push
 # pragma clang diagnostic ignored "-Wsign-compare"
@@ -7135,14 +7140,20 @@ namespace ExpressionParser {
 #elif defined (__GNUC__)
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wsign-compare"
+# pragma GCC diagnostic ignored "-Wfree-nonheap-object"
 #endif
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+// Scanner, defined in ExpressionParser.l
 #include "lex.ExpressionParser.c"
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 #if defined(__clang__)
 # pragma clang diagnostic pop
 #elif defined (__GNUC__)
 # pragma GCC diagnostic pop
 #endif
-#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 #ifdef _MSC_VER
 # define strdup _strdup
 #endif
@@ -7229,7 +7240,7 @@ std::vector<std::tuple<int, int, std::string> > tokenize(const char *str)
     int token;
     try {
         while ( (token  = yylex(0,ctx)) != 0)
-            result.push_back(std::make_tuple(token, ctx.last_column, yytext));
+            result.emplace_back(token, ctx.last_column, yytext);
     }
     catch (...) {
         // Ignore all exceptions

@@ -28,8 +28,8 @@
 #endif
 
 #include "WhatsThis.h"
-#include "MainWindow.h"
 #include "Action.h"
+#include "MainWindow.h"
 
 
 using namespace Gui;
@@ -54,7 +54,7 @@ StdCmdDescription::~StdCmdDescription()
 {
 }
 
-Action * StdCmdDescription::createAction(void)
+Action * StdCmdDescription::createAction()
 {
   Action *pcAction = Command::createAction();
   pcAction->setCheckable( true );

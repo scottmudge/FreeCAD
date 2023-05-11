@@ -20,21 +20,22 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <memory>
+
 # include <BRepAlgoAPI_BooleanOperation.hxx>
 # include <BRepCheck_Analyzer.hxx>
 # include <Standard_Failure.hxx>
-# include <memory>
 #endif
 
-#include "FeaturePartBoolean.h"
-#include "modelRefine.h"
 #include <App/Application.h>
 #include <App/Document.h>
 #include <Base/Parameter.h>
 #include "TopoShapeOpCode.h"
+
+#include "FeaturePartBoolean.h"
+#include "modelRefine.h"
 
 
 using namespace Part;
@@ -42,10 +43,10 @@ using namespace Part;
 PROPERTY_SOURCE_ABSTRACT(Part::Boolean, Part::Feature)
 
 
-Boolean::Boolean(void)
+Boolean::Boolean()
 {
-    ADD_PROPERTY(Base,(0));
-    ADD_PROPERTY(Tool,(0));
+    ADD_PROPERTY(Base,(nullptr));
+    ADD_PROPERTY(Tool,(nullptr));
     ADD_PROPERTY_TYPE(History,(ShapeHistory()), "Boolean", (App::PropertyType)
         (App::Prop_Output|App::Prop_Transient|App::Prop_Hidden), "Shape history");
     History.setSize(0);
@@ -73,7 +74,7 @@ const char *Boolean::opCode() const {
     return Part::OpCodes::Boolean;
 }
 
-App::DocumentObjectExecReturn *Boolean::execute(void)
+App::DocumentObjectExecReturn *Boolean::execute()
 {
     try {
 #if defined(__GNUC__) && defined (FC_OS_LINUX)

@@ -21,45 +21,37 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <sstream>
-# include <QRegExp>
-# include <QTextStream>
 # include <QMessageBox>
-# include <Precision.hxx>
+# include <QRegularExpression>
+# include <QRegularExpressionMatch>
 # include <Standard_Failure.hxx>
-# include <boost_bind_bind.hpp>
 #endif
 
-#include <Base/Console.h>
-#include <Base/Interpreter.h>
 #include <App/Application.h>
 #include <App/Document.h>
-#include <Gui/DocumentObserver.h>
-#include <Gui/ViewProviderOrigin.h>
 #include <App/Origin.h>
+#include <App/ObjectIdentifier.h>
 #include <App/OriginFeature.h>
 #include <App/Part.h>
-#include <App/ObjectIdentifier.h>
-#include <App/PropertyExpressionEngine.h>
 #include <Gui/Application.h>
-#include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Gui/Selection.h>
 #include <Gui/CommandT.h>
-#include <Mod/Part/Gui/TaskAttacher.h>
-#include <Mod/Part/Gui/AttacherTexts.h>
+#include <Gui/Document.h>
+#include <Gui/DocumentObserver.h>
+#include <Gui/Selection.h>
+#include <Gui/ViewProviderOrigin.h>
 #include <Mod/Part/App/AttachExtension.h>
 #include <Mod/Part/App/DatumFeature.h>
 #include <Mod/Part/App/SubShapeBinder.h>
+#include <Mod/Part/Gui/AttacherTexts.h>
 
-#include "ui_TaskAttacher.h"
 #include "TaskAttacher.h"
+#include "ui_TaskAttacher.h"
+
 
 using namespace PartGui;
 using namespace Gui;
@@ -97,7 +89,7 @@ public:
 // Create reference name from PropertyLinkSub values in a translatable fashion
 const QString makeRefString(const App::DocumentObject* obj, const std::string& sub)
 {
-    if (obj == NULL)
+    if (!obj)
         return QObject::tr("No reference selected");
 
     if (obj->getTypeId().isDerivedFrom(App::OriginFeature::getClassTypeId()) ||
@@ -136,14 +128,14 @@ void TaskAttacher::makeRefStrings(std::vector<QString>& refstrings, std::vector<
     }
 
     for (size_t r = 0; r < 4; r++) {
-        if ((r < refs.size()) && (refs[r] != NULL)) {
+        if ((r < refs.size()) && (refs[r])) {
             refstrings.push_back(makeRefString(refs[r], refnames[r]));
             // for Origin or Datum features refnames is empty but we need a non-empty return value
             if (refnames[r].empty())
                 refnames[r] = refs[r]->getNameInDocument();
         } else {
             refstrings.push_back(QObject::tr("No reference selected"));
-            refnames.push_back("");
+            refnames.emplace_back("");
         }
     }
 }
@@ -155,6 +147,7 @@ TaskAttacher::TaskAttacher(Gui::ViewProviderDocumentObject *ViewProvider, QWidge
     , isBase(isBase)
     , ui(new Ui_TaskAttacher)
     , visibilityFunc(visFunc)
+    , completed(false)
 {
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
@@ -426,7 +419,7 @@ void TaskAttacher::updateReferencesUI()
     }
 
     if (this->lastSuggestResult.message != SuggestResult::srOK) {
-        if(this->lastSuggestResult.nextRefTypeHint.size() > 0){
+        if(!this->lastSuggestResult.nextRefTypeHint.empty()){
             //message = "Need more references";
         }
     } else {
@@ -509,7 +502,7 @@ QLineEdit* TaskAttacher::getLine(unsigned idx)
         case 1: return ui->lineRef2;
         case 2: return ui->lineRef3;
         case 3: return ui->lineRef4;
-        default: return NULL;
+        default: return nullptr;
     }
 }
 
@@ -609,7 +602,7 @@ void TaskAttacher::onSelectionChanged(const Gui::SelectionChanges& msg)
             updatePreview();
 
             QLineEdit* line = getLine(iActiveRef);
-            if (line != NULL) {
+            if (line) {
                 line->blockSignals(true);
                 line->setText(makeRefString(selObj, selElement));
                 line->setProperty("RefName", QByteArray(selElement.c_str()));
@@ -787,7 +780,8 @@ void TaskAttacher::onRefName(const QString& text, unsigned idx)
         return;
 
     QLineEdit* line = getLine(idx);
-    if (line == NULL) return;
+    if (!line)
+        return;
 
     Part::AttachExtension* pcAttach = ViewProvider->getObject()->getExtensionByType<Part::AttachExtension>();
 
@@ -836,49 +830,60 @@ void TaskAttacher::onRefName(const QString& text, unsigned idx)
             parts.push_back(QStringLiteral(""));
         // Check whether this is the name of an App::Plane or Part::Datum feature
         App::DocumentObject* obj = ViewProvider->getObject()->getDocument()->getObject(parts[0].toUtf8());
-        if (obj == NULL) return;
+        if (!obj)
+            return;
 
         std::string subElement;
+        auto linked = obj->getLinkedObject(true);
 
-        if (obj->getLinkedObject(true)->isDerivedFrom(App::Plane::getClassTypeId())) {
+        if (linked->isDerivedFrom(App::Plane::getClassTypeId())) {
             // everything is OK (we assume a Part can only have exactly 3 App::Plane objects located at the base of the feature tree)
             subElement = "";
-        } else if (obj->getLinkedObject(true)->isDerivedFrom(App::Line::getClassTypeId())) {
+        } else if (linked->isDerivedFrom(App::Line::getClassTypeId())) {
             // everything is OK (we assume a Part can only have exactly 3 App::Line objects located at the base of the feature tree)
             subElement = "";
-        } else if (obj->getLinkedObject(true)->isDerivedFrom(Part::Datum::getClassTypeId())) {
+        } else if (linked->isDerivedFrom(Part::Datum::getClassTypeId())) {
             subElement = "";
         } else {
             // TODO: check validity of the text that was entered: Does subElement actually reference to an element on the obj?
 
-            // We must expect that "text" is the translation of "Face", "Edge" or "Vertex" followed by an ID.
-            QRegExp rx;
-            std::stringstream ss;
+            auto getSubshapeName = [](const QString& part) -> std::string {
+                // We must expect that "text" is the translation of "Face", "Edge" or "Vertex" followed by an ID.
+                QRegularExpression rx;
+                QRegularExpressionMatch match;
+                std::stringstream ss;
 
-            rx.setPattern(QStringLiteral("^") + tr("Face") + QStringLiteral("(\\d+)$"));
-            if (parts[1].indexOf(rx) >= 0) {
-                int faceId = rx.cap(1).toInt();
-                ss << "Face" << faceId;
-            } else {
-                rx.setPattern(QStringLiteral("^") + tr("Edge") + QStringLiteral("(\\d+)$"));
-                if (parts[1].indexOf(rx) >= 0) {
-                    int lineId = rx.cap(1).toInt();
-                    ss << "Edge" << lineId;
-                } else {
-                    rx.setPattern(QStringLiteral("^") + tr("Vertex") + QStringLiteral("(\\d+)$"));
-                    if (parts[1].indexOf(rx) >= 0) {
-                        int vertexId = rx.cap(1).toInt();
-                        ss << "Vertex" << vertexId;
-                    } else {
-                        //none of Edge/Vertex/Face. May be empty string.
-                        //Feed in whatever user supplied, even if invalid.
-                        ss << parts[1].toLatin1().constData();
-                    }
+                rx.setPattern(QStringLiteral("^") + tr("Face") + QStringLiteral("(\\d+)$"));
+                if (part.indexOf(rx, 0, &match) >= 0) {
+                    int faceId = match.captured(1).toInt();
+                    ss << "Face" << faceId;
+                    return ss.str();
                 }
-            }
 
-            line->setProperty("RefName", QByteArray(ss.str().c_str()));
-            subElement = ss.str();
+                rx.setPattern(QStringLiteral("^") + tr("Edge") + QStringLiteral("(\\d+)$"));
+                if (part.indexOf(rx, 0, &match) >= 0) {
+                    int lineId = match.captured(1).toInt();
+                    ss << "Edge" << lineId;
+                    return ss.str();
+                }
+
+                rx.setPattern(QStringLiteral("^") + tr("Vertex") + QStringLiteral("(\\d+)$"));
+                if (part.indexOf(rx, 0, &match) >= 0) {
+                    int vertexId = match.captured(1).toInt();
+                    ss << "Vertex" << vertexId;
+                    return ss.str();
+                }
+
+                //none of Edge/Vertex/Face. May be empty string.
+                //Feed in whatever user supplied, even if invalid.
+                ss << part.toUtf8().constData();
+                return ss.str();
+            };
+
+            auto name = getSubshapeName(parts[1]);
+
+            line->setProperty("RefName", QByteArray(name.c_str()));
+            subElement = name;
         }
 
         setupTransaction();
@@ -941,7 +946,7 @@ void TaskAttacher::updateRefButton(int idx)
     bool enable = true;
     if (idx > numrefs)
         enable = false;
-    if (idx == numrefs && this->lastSuggestResult.nextRefTypeHint.size() == 0)
+    if (idx == numrefs && this->lastSuggestResult.nextRefTypeHint.empty())
         enable = false;
     b->setEnabled(enable);
 
@@ -1064,7 +1069,7 @@ void TaskAttacher::updateListOfModes()
     //populate list
     ui->listOfModes->blockSignals(true);
     ui->listOfModes->clear();
-    if (modesInList.size()>0) {
+    if (!modesInList.empty()) {
         for (size_t i = 0  ;  i < modesInList.size()  ;  ++i){
             eMapMode mmode = modesInList[i];
             std::vector<QString> mstr = AttacherGui::getUIStrings(attacher.getTypeId(),mmode);
@@ -1239,7 +1244,7 @@ void TaskAttacher::visibilityAutomation(bool opening_not_closing)
                     QString::fromUtf8(editSubName.c_str()),
                     QString::fromUtf8(postfix.c_str()));
             Gui::Command::runCommand(Gui::Command::Gui,code.toUtf8().constData());
-        } else if(postfix.size()) {
+        } else if(!postfix.empty()) {
             QString code = QStringLiteral(
                 "_tv_%1.restore()\n"
                 "del(_tv_%1)"
@@ -1262,14 +1267,14 @@ void TaskAttacher::visibilityAutomation(bool opening_not_closing)
         auto editDoc = Gui::Application::Instance->editDocument();
         App::DocumentObject *editObj = ViewProvider->getObject();
         std::string editSubName;
-        auto sels = Gui::Selection().getSelection(0,0,true);
-        if(sels.size() && sels[0].pResolvedObject 
-                       && sels[0].pResolvedObject->getLinkedObject()==editObj) 
+        auto sels = Gui::Selection().getSelection(nullptr, Gui::ResolveMode::NoResolve, true);
+        if(!sels.empty() && sels[0].pResolvedObject
+                       && sels[0].pResolvedObject->getLinkedObject()==editObj)
         {
             editObj = sels[0].pObject;
             editSubName = sels[0].SubName;
         } else {
-            ViewProviderDocumentObject *editVp = 0;
+            ViewProviderDocumentObject *editVp = nullptr;
             if (editDoc) {
                 editDoc->getInEdit(&editVp,&editSubName);
                 if (editVp)
@@ -1459,7 +1464,7 @@ bool TaskAttacher::eventFilter(QObject *o, QEvent *ev)
                             objT.getDocumentName().c_str(),
                             objT.getObjectName().c_str(),
                             objT.getSubName().c_str(),
-                            0,0,0,2,true);
+                            0,0,0,Gui::SelectionChanges::MsgSource::TreeView,true);
                 }
             }
         }

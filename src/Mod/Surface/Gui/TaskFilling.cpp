@@ -21,30 +21,33 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
-#include <QAction>
-#include <QMenu>
-#include <QMessageBox>
-#include <QTimer>
-#include <GeomAbs_Shape.hxx>
-#include <TopExp.hxx>
-#include <TopTools_IndexedMapOfShape.hxx>
-#include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
-#include <TopTools_ListIteratorOfListOfShape.hxx>
+#ifndef _PreComp_
+# include <QAction>
+# include <QMenu>
+# include <QMessageBox>
+# include <QTimer>
 
-#include <Gui/ViewProvider.h>
+# include <GeomAbs_Shape.hxx>
+# include <TopExp.hxx>
+# include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
+# include <TopTools_IndexedMapOfShape.hxx>
+# include <TopTools_ListIteratorOfListOfShape.hxx>
+#endif
+
+#include <App/Document.h>
 #include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/Command.h>
-#include <Gui/SelectionObject.h>
-#include <Base/Console.h>
-#include <Gui/Control.h>
 #include <Gui/BitmapFactory.h>
+#include <Gui/Command.h>
+#include <Gui/Control.h>
+#include <Gui/Document.h>
+#include <Gui/SelectionObject.h>
+#include <Gui/Widgets.h>
 #include <Mod/Part/Gui/ViewProvider.h>
 
 #include "TaskFilling.h"
+#include "ui_TaskFilling.h"
 #include "TaskFillingEdge.h"
 #include "TaskFillingVertex.h"
-#include "ui_TaskFilling.h"
 
 
 using namespace SurfaceGui;
@@ -94,14 +97,14 @@ void ViewProviderFilling::unsetEdit(int ModNum)
     PartGui::ViewProviderSpline::unsetEdit(ModNum);
 }
 
-QIcon ViewProviderFilling::getIcon(void) const
+QIcon ViewProviderFilling::getIcon() const
 {
     return Gui::BitmapFactory().pixmap("Surface_Filling");
 }
 
 void ViewProviderFilling::highlightReferences(ShapeType type, const References& refs, bool on)
 {
-    for (auto it : refs) {
+    for (const auto& it : refs) {
         Part::Feature* base = dynamic_cast<Part::Feature*>(it.first);
         if (base) {
             PartGui::ViewProviderPartExt* svp = dynamic_cast<PartGui::ViewProviderPartExt*>(
@@ -115,7 +118,7 @@ void ViewProviderFilling::highlightReferences(ShapeType type, const References& 
                         TopExp::MapShapes(base->Shape.getValue(), TopAbs_VERTEX, vMap);
                         colors.resize(vMap.Extent(), svp->PointColor.getValue());
 
-                        for (auto jt : it.second) {
+                        for (const auto& jt : it.second) {
                             // check again that the index is in range because it's possible that the
                             // sub-names are invalid
                             std::size_t idx = static_cast<std::size_t>(std::stoi(jt.substr(6)) - 1);
@@ -136,7 +139,7 @@ void ViewProviderFilling::highlightReferences(ShapeType type, const References& 
                         TopExp::MapShapes(base->Shape.getValue(), TopAbs_EDGE, eMap);
                         colors.resize(eMap.Extent(), svp->LineColor.getValue());
 
-                        for (auto jt : it.second) {
+                        for (const auto& jt : it.second) {
                             std::size_t idx = static_cast<std::size_t>(std::stoi(jt.substr(4)) - 1);
                             // check again that the index is in range because it's possible that the
                             // sub-names are invalid
@@ -157,7 +160,7 @@ void ViewProviderFilling::highlightReferences(ShapeType type, const References& 
                         TopExp::MapShapes(base->Shape.getValue(), TopAbs_FACE, fMap);
                         colors.resize(fMap.Extent(), svp->ShapeColor.getValue());
 
-                        for (auto jt : it.second) {
+                        for (const auto& jt : it.second) {
                             std::size_t idx = static_cast<std::size_t>(std::stoi(jt.substr(4)) - 1);
                             // check again that the index is in range because it's possible that the
                             // sub-names are invalid
@@ -183,19 +186,19 @@ class FillingPanel::ShapeSelection : public Gui::SelectionFilterGate
 {
 public:
     ShapeSelection(FillingPanel::SelectionMode& mode, Surface::Filling* editedObject)
-        : Gui::SelectionFilterGate(static_cast<Gui::SelectionFilter*>(nullptr))
+        : Gui::SelectionFilterGate(nullPointer())
         , mode(mode)
         , editedObject(editedObject)
     {
     }
-    ~ShapeSelection()
+    ~ShapeSelection() override
     {
         mode = FillingPanel::None;
     }
     /**
       * Allow the user to pick only edges.
       */
-    bool allow(App::Document*, App::DocumentObject* pObj, const char* sSubName)
+    bool allow(App::Document*, App::DocumentObject* pObj, const char* sSubName) override
     {
         // don't allow references to itself
         if (pObj == editedObject)
@@ -233,9 +236,9 @@ private:
             return false;
 
         auto links = editedObject->BoundaryEdges.getSubListValues();
-        for (auto it : links) {
+        for (const auto& it : links) {
             if (it.first == pObj) {
-                for (auto jt : it.second) {
+                for (const auto& jt : it.second) {
                     if (jt == sSubName)
                         return !appendEdges;
                 }
@@ -253,6 +256,7 @@ private:
 // ----------------------------------------------------------------------------
 
 FillingPanel::FillingPanel(ViewProviderFilling* vp, Surface::Filling* obj)
+    : editedObject(obj)
 {
     ui = new Ui_TaskFilling();
     ui->setupUi(this);
@@ -284,6 +288,13 @@ FillingPanel::~FillingPanel()
     delete ui;
 }
 
+void FillingPanel::appendButtons(Gui::ButtonGroup* buttonGroup)
+{
+    buttonGroup->addButton(ui->buttonInitFace, int(SelectionMode::InitFace));
+    buttonGroup->addButton(ui->buttonEdgeAdd, int(SelectionMode::AppendEdge));
+    buttonGroup->addButton(ui->buttonEdgeRemove, int(SelectionMode::RemoveEdge));
+}
+
 // stores object pointer, its old fill type and adjusts radio buttons according to it.
 void FillingPanel::setEditedObject(Surface::Filling* fea)
 {
@@ -294,8 +305,8 @@ void FillingPanel::setEditedObject(Surface::Filling* fea)
     const std::vector<std::string>& subList = editedObject->InitialFace.getSubValues();
     if (initFace && subList.size() == 1) {
         QString text = QStringLiteral("%1.%2")
-                .arg(QString::fromUtf8(initFace->Label.getValue()))
-                .arg(QString::fromStdString(subList.front()));
+                .arg(QString::fromUtf8(initFace->Label.getValue()),
+                     QString::fromStdString(subList.front()));
         ui->lineInitFaceName->setText(text);
     }
 
@@ -328,8 +339,8 @@ void FillingPanel::setEditedObject(Surface::Filling* fea)
         ui->listBoundary->addItem(item);
 
         QString text = QStringLiteral("%1.%2")
-                .arg(QString::fromUtf8(obj->Label.getValue()))
-                .arg(QString::fromStdString(edge));
+                .arg(QString::fromUtf8(obj->Label.getValue()),
+                     QString::fromStdString(edge));
         item->setText(text);
 
         // The user data field of a list widget item
@@ -372,15 +383,15 @@ void FillingPanel::open()
 
     // highlight the referenced face
     std::vector<App::PropertyLinkSubList::SubSet> links;
-    links.push_back(std::make_pair(editedObject->InitialFace.getValue(),
-                                   editedObject->InitialFace.getSubValues()));
+    links.emplace_back(editedObject->InitialFace.getValue(),
+                                   editedObject->InitialFace.getSubValues());
     this->vp->highlightReferences(ViewProviderFilling::Face, links, true);
 
     Gui::Selection().clearSelection();
 
     // if the surface is not yet created then automatically start "AppendEdge" mode
     if (editedObject->Shape.getShape().isNull()) {
-        on_buttonEdgeAdd_clicked();
+        ui->buttonEdgeAdd->setChecked(true);
     }
 }
 
@@ -419,8 +430,8 @@ void FillingPanel::slotDeletedObject(const Gui::ViewProviderDocumentObject& Obj)
 
         // unhighlight the referenced face
         std::vector<App::PropertyLinkSubList::SubSet> links;
-        links.push_back(std::make_pair(editedObject->InitialFace.getValue(),
-                                       editedObject->InitialFace.getSubValues()));
+        links.emplace_back(editedObject->InitialFace.getValue(),
+                                       editedObject->InitialFace.getSubValues());
         this->vp->highlightReferences(ViewProviderFilling::Face, links, false);
     }
 }
@@ -443,8 +454,8 @@ bool FillingPanel::accept()
 
     // unhighlight the referenced face
     std::vector<App::PropertyLinkSubList::SubSet> links;
-    links.push_back(std::make_pair(editedObject->InitialFace.getValue(),
-                                   editedObject->InitialFace.getSubValues()));
+    links.emplace_back(editedObject->InitialFace.getValue(),
+                                   editedObject->InitialFace.getSubValues());
     this->vp->highlightReferences(ViewProviderFilling::Face, links, false);
 
     return true;
@@ -452,14 +463,16 @@ bool FillingPanel::accept()
 
 bool FillingPanel::reject()
 {
-    this->vp->highlightReferences(ViewProviderFilling::Edge,
-        editedObject->BoundaryEdges.getSubListValues(), false);
+    if (!editedObject.expired()) {
+        this->vp->highlightReferences(ViewProviderFilling::Edge,
+            editedObject->BoundaryEdges.getSubListValues(), false);
 
-    // unhighlight the referenced face
-    std::vector<App::PropertyLinkSubList::SubSet> links;
-    links.push_back(std::make_pair(editedObject->InitialFace.getValue(),
-                                   editedObject->InitialFace.getSubValues()));
-    this->vp->highlightReferences(ViewProviderFilling::Face, links, false);
+        // unhighlight the referenced face
+        std::vector<App::PropertyLinkSubList::SubSet> links;
+        links.emplace_back(editedObject->InitialFace.getValue(),
+                                       editedObject->InitialFace.getSubValues());
+        this->vp->highlightReferences(ViewProviderFilling::Face, links, false);
+    }
 
     selectionMode = None;
     Gui::Selection().rmvSelectionGate();
@@ -474,8 +487,8 @@ void FillingPanel::on_lineInitFaceName_textChanged(const QString& text)
 
         // unhighlight the referenced face
         std::vector<App::PropertyLinkSubList::SubSet> links;
-        links.push_back(std::make_pair(editedObject->InitialFace.getValue(),
-                                       editedObject->InitialFace.getSubValues()));
+        links.emplace_back(editedObject->InitialFace.getValue(),
+                                       editedObject->InitialFace.getSubValues());
         this->vp->highlightReferences(ViewProviderFilling::Face, links, false);
 
         editedObject->InitialFace.setValue(nullptr);
@@ -486,22 +499,32 @@ void FillingPanel::on_lineInitFaceName_textChanged(const QString& text)
 void FillingPanel::on_buttonInitFace_clicked()
 {
     // 'selectionMode' is passed by reference and changed when the filter is deleted
-    Gui::Selection().addSelectionGate(new ShapeSelection(selectionMode, editedObject));
+    Gui::Selection().addSelectionGate(new ShapeSelection(selectionMode, editedObject.get()));
     selectionMode = InitFace;
 }
 
-void FillingPanel::on_buttonEdgeAdd_clicked()
+void FillingPanel::on_buttonEdgeAdd_toggled(bool checked)
 {
-    // 'selectionMode' is passed by reference and changed when the filter is deleted
-    Gui::Selection().addSelectionGate(new ShapeSelection(selectionMode, editedObject));
-    selectionMode = AppendEdge;
+    if (checked) {
+        // 'selectionMode' is passed by reference and changed when the filter is deleted
+        Gui::Selection().addSelectionGate(new ShapeSelection(selectionMode, editedObject.get()));
+        selectionMode = AppendEdge;
+    }
+    else if (selectionMode == AppendEdge) {
+        exitSelectionMode();
+    }
 }
 
-void FillingPanel::on_buttonEdgeRemove_clicked()
+void FillingPanel::on_buttonEdgeRemove_toggled(bool checked)
 {
-    // 'selectionMode' is passed by reference and changed when the filter is deleted
-    Gui::Selection().addSelectionGate(new ShapeSelection(selectionMode, editedObject));
-    selectionMode = RemoveEdge;
+    if (checked) {
+        // 'selectionMode' is passed by reference and changed when the filter is deleted
+        Gui::Selection().addSelectionGate(new ShapeSelection(selectionMode, editedObject.get()));
+        selectionMode = RemoveEdge;
+    }
+    else if (selectionMode == RemoveEdge) {
+        exitSelectionMode();
+    }
 }
 
 void FillingPanel::on_listBoundary_itemDoubleClicked(QListWidgetItem* item)
@@ -532,7 +555,7 @@ void FillingPanel::on_listBoundary_itemDoubleClicked(QListWidgetItem* item)
                 const TopTools_ListOfShape& adj_faces = edge2Face.FindFromKey(edge);
                 if (adj_faces.Extent() > 0) {
                     int n = adj_faces.Extent();
-                    ui->statusLabel->setText(tr("Edge has %n adjacent faces", 0, n));
+                    ui->statusLabel->setText(tr("Edge has %n adjacent faces", nullptr, n));
 
                     // fill up the combo boxes
                     modifyBoundary(true);
@@ -580,17 +603,17 @@ void FillingPanel::onSelectionChanged(const Gui::SelectionChanges& msg)
         if (selectionMode == InitFace) {
             Gui::SelectionObject sel(msg);
             QString text = QStringLiteral("%1.%2")
-                    .arg(QString::fromUtf8(sel.getObject()->Label.getValue()))
-                    .arg(QString::fromUtf8(msg.pSubName));
+                    .arg(QString::fromUtf8(sel.getObject()->Label.getValue()),
+                         QString::fromUtf8(msg.pSubName));
             ui->lineInitFaceName->setText(text);
 
             std::vector<std::string> subList;
-            subList.push_back(msg.pSubName);
+            subList.emplace_back(msg.pSubName);
             editedObject->InitialFace.setValue(sel.getObject(), subList);
 
             // highlight the referenced face
             std::vector<App::PropertyLinkSubList::SubSet> links;
-            links.push_back(std::make_pair(sel.getObject(), subList));
+            links.emplace_back(sel.getObject(), subList);
             this->vp->highlightReferences(ViewProviderFilling::Face, links, true);
 
             Gui::Selection().rmvSelectionGate();
@@ -602,8 +625,8 @@ void FillingPanel::onSelectionChanged(const Gui::SelectionChanges& msg)
 
             Gui::SelectionObject sel(msg);
             QString text = QStringLiteral("%1.%2")
-                    .arg(QString::fromUtf8(sel.getObject()->Label.getValue()))
-                    .arg(QString::fromUtf8(msg.pSubName));
+                    .arg(QString::fromUtf8(sel.getObject()->Label.getValue()),
+                         QString::fromUtf8(msg.pSubName));
             item->setText(text);
 
             QList<QVariant> data;
@@ -618,7 +641,7 @@ void FillingPanel::onSelectionChanged(const Gui::SelectionChanges& msg)
             std::size_t count = objects.size();
             objects.push_back(sel.getObject());
             auto element = editedObject->BoundaryEdges.getSubValues();
-            element.push_back(msg.pSubName);
+            element.emplace_back(msg.pSubName);
             editedObject->BoundaryEdges.setValues(objects, element);
 
             // extend faces and continuities lists if needed
@@ -851,30 +874,44 @@ void FillingPanel::modifyBoundary(bool on)
     ui->buttonIgnore->setEnabled(on);
 }
 
+void FillingPanel::exitSelectionMode()
+{
+    // 'selectionMode' is passed by reference to the filter and changed when the filter is deleted
+    Gui::Selection().clearSelection();
+    Gui::Selection().rmvSelectionGate();
+}
+
 // ----------------------------------------------------------------------------
 
 TaskFilling::TaskFilling(ViewProviderFilling* vp, Surface::Filling* obj)
 {
+    // Set up button group
+    buttonGroup = new Gui::ButtonGroup(this);
+    buttonGroup->setExclusive(true);
+
     // first task box
     widget1 = new FillingPanel(vp, obj);
+    widget1->appendButtons(buttonGroup);
     Gui::TaskView::TaskBox* taskbox1 = new Gui::TaskView::TaskBox(
         Gui::BitmapFactory().pixmap("Surface_Filling"),
-        widget1->windowTitle(), true, 0);
+        widget1->windowTitle(), true, nullptr);
     taskbox1->groupLayout()->addWidget(widget1);
     Content.push_back(taskbox1);
 
     // second task box
     widget2 = new FillingEdgePanel(vp, obj);
+    widget2->appendButtons(buttonGroup);
     Gui::TaskView::TaskBox* taskbox2 = new Gui::TaskView::TaskBox(
-        QPixmap(), widget2->windowTitle(), true, 0);
+        QPixmap(), widget2->windowTitle(), true, nullptr);
     taskbox2->groupLayout()->addWidget(widget2);
     Content.push_back(taskbox2);
     taskbox2->hideGroupBox();
 
     // third task box
     widget3 = new FillingVertexPanel(vp, obj);
+    widget3->appendButtons(buttonGroup);
     Gui::TaskView::TaskBox* taskbox3 = new Gui::TaskView::TaskBox(
-        QPixmap(), widget3->windowTitle(), true, 0);
+        QPixmap(), widget3->windowTitle(), true, nullptr);
     taskbox3->groupLayout()->addWidget(widget3);
     Content.push_back(taskbox3);
     taskbox3->hideGroupBox();

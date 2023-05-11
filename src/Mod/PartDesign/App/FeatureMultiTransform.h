@@ -24,7 +24,6 @@
 #ifndef PARTDESIGN_FeatureMultiTransform_H
 #define PARTDESIGN_FeatureMultiTransform_H
 
-#include <App/PropertyStandard.h>
 #include "FeatureTransformed.h"
 
 
@@ -33,7 +32,7 @@ namespace PartDesign
 
 class PartDesignExport MultiTransform : public PartDesign::Transformed
 {
-    PROPERTY_HEADER(PartDesign::MultiTransform);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::MultiTransform);
 
 public:
     MultiTransform();
@@ -42,10 +41,10 @@ public:
 
    /** @name methods override feature */
     //@{
-    short mustExecute() const;
+    short mustExecute() const override;
 
     /// returns the type name of the view provider
-    const char* getViewProviderName(void) const {
+    const char* getViewProviderName() const override {
         return "PartDesignGui::ViewProviderMultiTransform";
     }
     //@}
@@ -55,11 +54,11 @@ public:
       * by the Transformations property. Subfeatures can be Mirrored, LinearPattern, PolarPattern and
       * Scaled.
       */
-    virtual std::list<gp_Trsf> getTransformations(const std::vector<Part::TopoShape> &);
+    std::list<gp_Trsf> getTransformations(const std::vector<Part::TopoShape> &) override;
 
 protected:
-    virtual void positionBySupport(void);
-    void onChanged(const App::Property *);
+    void positionBySupport() override;
+    void onChanged(const App::Property *) override;
 };
 
 } //namespace PartDesign

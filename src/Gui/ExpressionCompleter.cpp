@@ -24,30 +24,27 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-#include <QContextMenuEvent>
-#include <QStandardItem>
-#include <QStandardItemModel>
-#include <QLineEdit>
-#include <QAbstractItemView>
-#include <QMenu>
-#include <QTextBlock>
-#include <QApplication>
+# include <boost/algorithm/string/predicate.hpp>
+# include <QAbstractItemView>
+# include <QApplication>
+# include <QLineEdit>
+# include <QMenu>
+# include <QStandardItem>
+# include <QStandardItemModel>
+# include <QTextBlock>
 #endif
 
-#include <boost/algorithm/string/predicate.hpp>
-
-#include <Base/Tools.h>
-#include <Base/Console.h>
 #include <App/Application.h>
+#include <App/ComplexGeoData.h>
 #include <App/Document.h>
 #include <App/DocumentObject.h>
-#include <App/DocumentObserver.h>
-#include <App/ObjectIdentifier.h>
+#include <App/ExpressionParser.h>
 #include <App/GeoFeature.h>
-#include <App/ComplexGeoData.h>
-#include "ExpressionCompleter.h"
+#include <App/ObjectIdentifier.h>
 #include <App/ExpressionParser.h>
 #include <App/PropertyLinks.h>
+#include <Base/Tools.h>
+#include "ExpressionCompleter.h"
 #include "Application.h"
 #include "ViewProvider.h"
 #include "BitmapFactory.h"
@@ -1894,7 +1891,7 @@ public:
         return nullptr;
     }
 
-    QModelIndex parent(const QModelIndex & index) const {
+    QModelIndex parent(const QModelIndex & index) const override {
         if(!index.isValid())
             return QModelIndex();
         Info info;
@@ -1984,7 +1981,7 @@ public:
         return Level2Data(parent(index)).childData(row, role);
     }
 
-    virtual QModelIndex index(int row, int, const QModelIndex &parent = QModelIndex()) const {
+    QModelIndex index(int row, int, const QModelIndex &parent = QModelIndex()) const override {
         if(row<0)
             return QModelIndex();
 
@@ -2010,7 +2007,7 @@ public:
             return Level3Data(parent).childIndex(row);
     }
 
-    virtual int rowCount(const QModelIndex & parent = QModelIndex()) const {
+    int rowCount(const QModelIndex & parent = QModelIndex()) const override {
         if(!parent.isValid())
             return RootData(this).childCount();
 
@@ -2033,7 +2030,7 @@ public:
             return Level3Data(parent).childCount();
     }
 
-    virtual int columnCount(const QModelIndex &) const {
+    int columnCount(const QModelIndex &) const override {
         return 1;
     }
 
@@ -2321,7 +2318,7 @@ void ExpressionCompleter::slotUpdate(const QString & prefix, int pos)
     std::vector<std::tuple<int, int, std::string> > tokens = ExpressionParser::tokenize(expression);
 
     // No tokens
-    if (tokens.size() == 0) {
+    if (tokens.empty()) {
         if (auto p = popup())
             p->setVisible(false);
         return;
@@ -2377,7 +2374,7 @@ void ExpressionCompleter::slotUpdate(const QString & prefix, int pos)
     }
 
     int trim = 0;
-    if(prefixEnd > pos)
+    if (prefixEnd > pos)
         trim = prefixEnd - pos;
 
     // Extract last tokens that can be rebuilt to a variable
@@ -2611,14 +2608,12 @@ void ExpressionCompleter::setupContextMenu(QMenu *menu)
 {
     QAction *action;
     menu->addSeparator();
-#if QT_VERSION >= QT_VERSION_CHECK(5,2,0)
     action = menu->addAction(tr("Exact match"), [this](bool checked) {
         ExprParams::setCompleterMatchExact(checked);
         setFilterMode(checked ? Qt::MatchStartsWith : Qt::MatchContains);
     });
     action->setCheckable(true);
     action->setChecked(ExprParams::getCompleterMatchExact());
-#endif
 
     action = menu->addAction(tr("Case sensitive match"), [this](bool checked) {
         ExprParams::setCompleterCaseSensitive(checked);
@@ -2760,7 +2755,7 @@ void ExpressionTextEdit::setDocumentObject(const App::DocumentObject * currentDo
         return;
     }
 
-    if (currentDocObj != nullptr) {
+    if (currentDocObj) {
         completer = new ExpressionCompleter(currentDocObj, this);
         completer->setLeadChar(leadChar);
         completer->setWidget(this);

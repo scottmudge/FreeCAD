@@ -70,6 +70,19 @@
        <item row="0" column="3">
         <widget class="QtColorPicker" name="backgroundColor"/>
        </item>
+       <item row="0" column="4">
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>240</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
        <item row="1" column="2">
         <spacer name="verticalSpacer_2">
          <property name="orientation">

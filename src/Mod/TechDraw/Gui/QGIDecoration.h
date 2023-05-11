@@ -23,9 +23,12 @@
 #ifndef DRAWINGGUI_QGIDECORATION_H
 #define DRAWINGGUI_QGIDECORATION_H
 
+#include <Mod/TechDraw/TechDrawGlobal.h>
+
+#include <QBrush>
 #include <QGraphicsItemGroup>
 #include <QPen>
-#include <QBrush>
+
 
 QT_BEGIN_NAMESPACE
 class QPainter;
@@ -35,6 +38,7 @@ QT_END_NAMESPACE
 #include <Base/Parameter.h>
 #include <Base/Console.h>
 #include <Base/Vector3D.h>
+#include <Mod/TechDraw/TechDrawGlobal.h>
 
 namespace TechDrawGui
 {
@@ -48,9 +52,10 @@ public:
     int type() const { return Type;}
 
     virtual QRectF boundingRect() const;
-    virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0 );
+    virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = nullptr );
     virtual void draw();
     void setWidth(double w);
+    double getWidth() { return m_width; }
     void setStyle(Qt::PenStyle s);
     void setColor(QColor c);
     QColor getColor(void) { return m_colNormal; }

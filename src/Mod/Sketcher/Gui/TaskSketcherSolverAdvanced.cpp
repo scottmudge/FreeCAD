@@ -20,26 +20,19 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
 # include <QString>
 #endif
 
-#include "ui_TaskSketcherSolverAdvanced.h"
-#include "TaskSketcherSolverAdvanced.h"
 #include <Gui/Application.h>
-#include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Gui/Selection.h>
-#include <Gui/Command.h>
-
 #include <Mod/Sketcher/App/SketchObject.h>
 
+#include "ui_TaskSketcherSolverAdvanced.h"
+#include "TaskSketcherSolverAdvanced.h"
 #include "ViewProviderSketch.h"
+
 
 #define LM_EPS  1E-10
 #define LM_EPS1 1E-80
@@ -61,7 +54,7 @@ using namespace SketcherGui;
 using namespace Gui::TaskView;
 
 TaskSketcherSolverAdvanced::TaskSketcherSolverAdvanced(ViewProviderSketch *sketchView) :
-    TaskBox(Gui::BitmapFactory().pixmap("document-new"), tr("Advanced solver control"), true, 0),
+    TaskBox(Gui::BitmapFactory().pixmap("document-new"), tr("Advanced solver control"), true, nullptr),
     sketchView(sketchView),
     ui(new Ui_TaskSketcherSolverAdvanced)
 {
@@ -92,7 +85,7 @@ TaskSketcherSolverAdvanced::~TaskSketcherSolverAdvanced()
 {
 }
 
-void TaskSketcherSolverAdvanced::updateDefaultMethodParameters(void)
+void TaskSketcherSolverAdvanced::updateDefaultMethodParameters()
 {
     ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/SolverAdvanced");
 
@@ -161,7 +154,7 @@ void TaskSketcherSolverAdvanced::updateDefaultMethodParameters(void)
     }
 }
 
-void TaskSketcherSolverAdvanced::updateRedundantMethodParameters(void)
+void TaskSketcherSolverAdvanced::updateRedundantMethodParameters()
 {
     ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/SolverAdvanced");
 
@@ -398,7 +391,7 @@ void TaskSketcherSolverAdvanced::on_lineEditRedundantSolverParam3_editingFinishe
 void TaskSketcherSolverAdvanced::on_comboBoxDefaultSolver_currentIndexChanged(int index)
 {
     ui->comboBoxDefaultSolver->onSave();
-    const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).defaultSolver=(GCS::Algorithm) index;
+    const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).defaultSolver = static_cast<GCS::Algorithm>(index);
     updateDefaultMethodParameters();
 }
 
@@ -478,7 +471,7 @@ void TaskSketcherSolverAdvanced::on_comboBoxQRMethod_currentIndexChanged(int ind
 void TaskSketcherSolverAdvanced::on_comboBoxRedundantDefaultSolver_currentIndexChanged(int index)
 {
     ui->comboBoxRedundantDefaultSolver->onSave();
-    const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).defaultSolverRedundant=(GCS::Algorithm) index;
+    const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).defaultSolverRedundant = static_cast<GCS::Algorithm>(index);
     updateRedundantMethodParameters();
 }
 
@@ -560,19 +553,19 @@ void TaskSketcherSolverAdvanced::on_pushButtonDefaults_clicked(bool checked/* = 
     updateSketchObject();
 }
 
-void TaskSketcherSolverAdvanced::updateSketchObject(void)
+void TaskSketcherSolverAdvanced::updateSketchObject()
 {
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setDebugMode((GCS::DebugMode) ui->comboBoxDebugMode->currentIndex());
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setSketchSizeMultiplierRedundant(ui->checkBoxRedundantSketchSizeMultiplier->isChecked());
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setMaxIterRedundant(ui->spinBoxRedundantSolverMaxIterations->value());
-    const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).defaultSolverRedundant=(GCS::Algorithm) ui->comboBoxRedundantDefaultSolver->currentIndex();
+    const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).defaultSolverRedundant = static_cast<GCS::Algorithm>(ui->comboBoxRedundantDefaultSolver->currentIndex());
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setQRAlgorithm((GCS::QRAlgorithm) ui->comboBoxQRMethod->currentIndex());
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setQRPivotThreshold(ui->lineEditQRPivotThreshold->text().toDouble());
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setConvergenceRedundant(ui->lineEditRedundantConvergence->text().toDouble());
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setConvergence(ui->lineEditConvergence->text().toDouble());
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setSketchSizeMultiplier(ui->checkBoxSketchSizeMultiplier->isChecked());
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setMaxIter(ui->spinBoxMaxIter->value());
-    const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).defaultSolver=(GCS::Algorithm) ui->comboBoxDefaultSolver->currentIndex();
+    const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).defaultSolver = static_cast<GCS::Algorithm>(ui->comboBoxDefaultSolver->currentIndex());
     const_cast<Sketcher::Sketch &>(sketchView->getSketchObject()->getSolvedSketch()).setDogLegGaussStep((GCS::DogLegGaussStep) ui->comboBoxDogLegGaussStep->currentIndex());
 
     updateDefaultMethodParameters();

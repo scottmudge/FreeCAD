@@ -20,14 +20,12 @@
  *                                                                         *
  ***************************************************************************/
 
-
-
 #ifndef GUI_DOCKWND_COMBOVIEW_H
 #define GUI_DOCKWND_COMBOVIEW_H
 
 #include <Base/Parameter.h>
 #include "DockWindow.h"
-#include "Selection.h"
+
 
 class QTabWidget;
 class QTreeView;
@@ -71,7 +69,7 @@ public:
      * A constructor.
      * A more elaborate description of the constructor.
      */
-    ComboView(bool showModel, Gui::Document*  pcDocument, QWidget *parent=0);
+    ComboView(bool showModel, Gui::Document*  pcDocument, QWidget *parent=nullptr);
 
     void setShowModel(bool);
 
@@ -79,9 +77,9 @@ public:
      * A destructor.
      * A more elaborate description of the destructor.
     */
-    virtual ~ComboView();
+    ~ComboView() override;
 
-    Gui::TaskView::TaskView *getTaskPanel(void){return taskPanel;}
+    Gui::TaskView::TaskView *getTaskPanel(){return taskPanel;}
     QTabWidget* getTabPanel() const { return tabs;}
 
 
@@ -100,7 +98,7 @@ protected:
     void showDialog(Gui::TaskView::TaskDialog *dlg);
     void closeDialog();
     void closedDialog();
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
 
 private:
     int oldTabIndex;

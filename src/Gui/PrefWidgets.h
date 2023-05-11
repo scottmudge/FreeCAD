@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_PREFWIDGETS_H
 #define GUI_PREFWIDGETS_H
 
@@ -30,17 +29,21 @@
 #include <QVector>
 #include <QCheckBox>
 #include <QComboBox>
-#include <QRadioButton>
 #include <QFontComboBox>
 #include <QFont>
 #include <QTimer>
 #include <QVariant>
+#include <QRadioButton>
+#include <QTextEdit>
+
 #include <Base/Parameter.h>
+
 #include "Widgets.h"
-#include "Window.h"
-#include "SpinBox.h"
 #include "FileDialog.h"
+#include "SpinBox.h"
 #include "QuantitySpinBox.h"
+#include "Window.h"
+
 
 class QSplitter;
 
@@ -67,11 +70,21 @@ class GuiExport PrefWidget : public WindowParameter
 public:
   virtual void setEntryName( const QByteArray& name );
   QByteArray entryName() const;
+  /** Does the same as setEntryName().
+   * This function is added for convenience because the ui compiler
+   * will use this function if the attribute stdset isn't set to 0 in a .ui file.
+   */
+  void setPrefEntry(const QByteArray& name);
 
   virtual void setParamGrpPath( const QByteArray& path );
   QByteArray paramGrpPath() const;
+  /** Does the same as setParamGrpPath().
+   * This function is added for convenience because the ui compiler
+   * will use this function if the attribute stdset isn't set to 0 in a .ui file.
+   */
+  void setPrefPath(const QByteArray& name);
 
-  virtual void OnChange(Base::Subject<const char*> &rCaller, const char * sReason);
+  void OnChange(Base::Subject<const char*> &rCaller, const char * sReason) override;
   void onSave();
   void onRestore();
 
@@ -126,8 +139,8 @@ public:
    */
   void initAutoSave(bool enable = true);
 
-  template<class F, class O>
-  void autoSave(bool enable, O *o, F f, int delay=100) {
+  template<class SignalT, class O>
+  void autoSave(bool enable, O *o, SignalT signal, int delay=100) {
     if (m_Conn) {
       QObject::disconnect(m_Conn);
       if (!enable)
@@ -139,12 +152,12 @@ public:
           m_Timer->setSingleShot(true);
           QObject::connect(m_Timer.get(), &QTimer::timeout, [this](){onSave();});
       }
-      m_Conn = QObject::connect(o, f, [this, delay](){
+      m_Conn = QObject::connect(o, signal, [this, delay](){
         if (!m_Busy && m_Restored)
             m_Timer->start(delay);
       });
     } else {
-      m_Conn = QObject::connect(o, f, [this](){
+      m_Conn = QObject::connect(o, signal, [this](){
         if (!m_Busy && m_Restored)
             onSave();
       });
@@ -175,7 +188,7 @@ protected:
   ParameterGrp::handle getEntryParameter();
 
   PrefWidget();
-  virtual ~PrefWidget();
+  ~PrefWidget() override;
 
 private:
   QObject *m_Base = nullptr;
@@ -222,10 +235,10 @@ class GuiExport PrefWidgetStates : public QObject
 {
   Q_OBJECT
 public:
-  PrefWidgetStates(QWidget *widget,
-                   bool manageSize=true,
-                   const char *name = nullptr,
-                   QObject *parent = nullptr);
+  explicit PrefWidgetStates(QWidget *widget,
+                            bool manageSize=true,
+                            const char *name = nullptr,
+                            QObject *parent = nullptr);
   virtual ~PrefWidgetStates();
   void addSplitter(QSplitter *, const char *name = nullptr);
 
@@ -251,21 +264,21 @@ class GuiExport PrefSpinBox : public IntSpinBox, public PrefWidget
 
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefSpinBox ( QWidget * parent = 0 );
-  virtual ~PrefSpinBox();
+  explicit PrefSpinBox ( QWidget * parent = nullptr );
+  ~PrefSpinBox() override;
 
-  virtual void setEntryName( const QByteArray& name );
-  virtual void setAutoSave(bool enable);
+  void setEntryName( const QByteArray& name ) override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
-  void contextMenuEvent(QContextMenuEvent *event);
+  void restorePreferences() override;
+  void savePreferences() override;
+  void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
   int m_Default;
@@ -280,21 +293,21 @@ class GuiExport PrefDoubleSpinBox : public DoubleSpinBox, public PrefWidget
 
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefDoubleSpinBox ( QWidget * parent = 0 );
-  virtual ~PrefDoubleSpinBox();
+  explicit PrefDoubleSpinBox ( QWidget * parent = nullptr );
+  ~PrefDoubleSpinBox() override;
 
-  virtual void setEntryName( const QByteArray& name );
-  virtual void setAutoSave(bool enable);
+  void setEntryName( const QByteArray& name ) override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
-  void contextMenuEvent(QContextMenuEvent *event);
+  void restorePreferences() override;
+  void savePreferences() override;
+  void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
   double m_Default;
@@ -308,18 +321,18 @@ class GuiExport PrefLineEdit : public QLineEdit, public PrefWidget
 {
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefLineEdit ( QWidget * parent = 0 );
-  virtual ~PrefLineEdit();
-  virtual void setAutoSave(bool enable);
+  explicit PrefLineEdit ( QWidget * parent = nullptr );
+  ~PrefLineEdit() override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
+  void restorePreferences() override;
+  void savePreferences() override;
 
 private:
   QString m_Default;
@@ -336,17 +349,46 @@ class GuiExport PrefAccelLineEdit : public AccelLineEdit, public PrefWidget
   Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
 
 public:
-  PrefAccelLineEdit ( QWidget * parent = 0 );
-  virtual ~PrefAccelLineEdit();
-  virtual void setAutoSave(bool enable);
+  explicit PrefAccelLineEdit ( QWidget * parent = nullptr );
+  ~PrefAccelLineEdit() override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
+  void restorePreferences() override;
+  void savePreferences() override;
 
 private:
   QString m_Default;
+};
+
+/**
+ * The PrefLineEdit class.
+ * \author Chris Hennes
+ */
+class GuiExport PrefTextEdit : public QTextEdit, public PrefWidget
+{
+Q_OBJECT
+
+    Q_PROPERTY(QByteArray prefEntry READ entryName     WRITE setEntryName) // clazy:exclude=qproperty-without-notify
+    Q_PROPERTY(QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath) // clazy:exclude=qproperty-without-notify
+
+public:
+    explicit PrefTextEdit(QWidget* parent = nullptr);
+    ~PrefTextEdit() override;
+    void setAutoSave(bool enable) override;
+
+Q_SIGNALS:
+    void focusChanged();
+
+protected:
+    // restore from/save to parameters
+    void restorePreferences() override;
+    void savePreferences() override;
+    void focusOutEvent(QFocusEvent *) override;
+
+private:
+    QString m_Default;
 };
 
 /**
@@ -357,13 +399,13 @@ class GuiExport PrefFileChooser : public FileChooser, public PrefWidget
 {
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefFileChooser ( QWidget * parent = 0 );
-  virtual ~PrefFileChooser();
-  virtual void setAutoSave(bool enable);
+  explicit PrefFileChooser ( QWidget * parent = nullptr );
+  ~PrefFileChooser() override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
@@ -391,18 +433,18 @@ class GuiExport PrefComboBox : public QComboBox, public PrefWidget
 {
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefComboBox ( QWidget * parent = 0 );
-  virtual ~PrefComboBox();
-  virtual void setAutoSave(bool enable);
+  explicit PrefComboBox ( QWidget * parent = nullptr );
+  ~PrefComboBox() override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
+  void restorePreferences() override;
+  void savePreferences() override;
   virtual QVariant::Type getParamType() const;
 
 private:
@@ -418,12 +460,12 @@ class GuiExport PrefLinePattern : public PrefComboBox
 {
   Q_OBJECT
 public:
-  PrefLinePattern ( QWidget * parent = 0 );
-  virtual ~PrefLinePattern();
+  explicit PrefLinePattern ( QWidget * parent = nullptr );
+  ~PrefLinePattern() override;
 protected:
-  void changeEvent(QEvent*);
+  void changeEvent(QEvent*) override;
   void updateLanguage();
-  virtual QVariant::Type getParamType() const;
+  QVariant::Type getParamType() const override;
 };
 
 /**
@@ -434,18 +476,18 @@ class GuiExport PrefCheckBox : public QCheckBox, public PrefWidget
 {
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefCheckBox ( QWidget * parent = 0 );
-  virtual ~PrefCheckBox();
-  virtual void setAutoSave(bool enable);
+  explicit PrefCheckBox ( QWidget * parent = nullptr );
+  ~PrefCheckBox() override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
+  void restorePreferences() override;
+  void savePreferences() override;
 
 private:
   bool m_Default;
@@ -459,18 +501,18 @@ class GuiExport PrefRadioButton : public QRadioButton, public PrefWidget
 {
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefRadioButton ( QWidget * parent = 0 );
-  virtual ~PrefRadioButton();
-  virtual void setAutoSave(bool enable);
+  explicit PrefRadioButton ( QWidget * parent = nullptr );
+  ~PrefRadioButton() override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
+  void restorePreferences() override;
+  void savePreferences() override;
 
 private:
   bool m_Default;
@@ -484,18 +526,18 @@ class GuiExport PrefSlider : public QSlider, public PrefWidget
 {
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefSlider ( QWidget * parent = 0 );
-  virtual ~PrefSlider();
-  virtual void setAutoSave(bool enable);
+  explicit PrefSlider ( QWidget * parent = nullptr );
+  ~PrefSlider() override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
+  void restorePreferences() override;
+  void savePreferences() override;
 
 private:
   int m_Default;
@@ -509,18 +551,18 @@ class GuiExport PrefColorButton : public ColorButton, public PrefWidget
 {
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefColorButton ( QWidget * parent = 0 );
-  virtual ~PrefColorButton();
-  virtual void setAutoSave(bool enable);
+  explicit PrefColorButton ( QWidget * parent = nullptr );
+  ~PrefColorButton() override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
+  void restorePreferences() override;
+  void savePreferences() override;
 
 private:
   QColor m_Default;
@@ -535,21 +577,21 @@ class GuiExport PrefUnitSpinBox : public QuantitySpinBox, public PrefWidget
 {
     Q_OBJECT
 
-    Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-    Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+    Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+    Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-    PrefUnitSpinBox ( QWidget * parent = 0 );
-    virtual ~PrefUnitSpinBox();
+    explicit PrefUnitSpinBox ( QWidget * parent = nullptr );
+    ~PrefUnitSpinBox() override;
 
-    virtual void setEntryName( const QByteArray& name );
-    virtual void setAutoSave(bool enable);
+    void setEntryName( const QByteArray& name ) override;
+    void setAutoSave(bool enable) override;
 
 protected:
     // restore from/save to parameters
-    void restorePreferences();
-    void savePreferences();
-    void contextMenuEvent(QContextMenuEvent *event);
+    void restorePreferences() override;
+    void savePreferences() override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
   double m_Default;
@@ -568,8 +610,8 @@ class GuiExport PrefQuantitySpinBox : public PrefUnitSpinBox
     Q_PROPERTY(int historySize READ historySize WRITE setHistorySize)
 
 public:
-    PrefQuantitySpinBox (QWidget * parent = 0);
-    virtual ~PrefQuantitySpinBox();
+    explicit PrefQuantitySpinBox (QWidget * parent = nullptr);
+    ~PrefQuantitySpinBox() override;
 
     /// set the input field to the last used value (works only if the setParamGrpPath() was called)
     void setToLastUsedValue();
@@ -586,12 +628,12 @@ public:
     QStringList getHistory() const;
     //@}
 
-    virtual void setParamGrpPath( const QByteArray& path );
+    void setParamGrpPath( const QByteArray& path ) override;
 
 protected:
-    virtual void contextMenuEvent(QContextMenuEvent * event);
-    void restorePreferences();
-    void savePreferences();
+    void contextMenuEvent(QContextMenuEvent * event) override;
+    void restorePreferences() override;
+    void savePreferences() override;
 
 private:
     int _historySize;
@@ -605,18 +647,18 @@ class GuiExport PrefFontBox : public QFontComboBox, public PrefWidget
 {
   Q_OBJECT
 
-  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     )
-  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  )
+  Q_PROPERTY( QByteArray prefEntry READ entryName     WRITE setEntryName     ) // clazy:exclude=qproperty-without-notify
+  Q_PROPERTY( QByteArray prefPath  READ paramGrpPath  WRITE setParamGrpPath  ) // clazy:exclude=qproperty-without-notify
 
 public:
-  PrefFontBox ( QWidget * parent = 0 );
-  virtual ~PrefFontBox();
-  virtual void setAutoSave(bool enable);
+  explicit PrefFontBox ( QWidget * parent = nullptr );
+  ~PrefFontBox() override;
+  void setAutoSave(bool enable) override;
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
+  void restorePreferences() override;
+  void savePreferences() override;
 
 private:
   QFont m_Default;

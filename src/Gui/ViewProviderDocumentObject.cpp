@@ -20,60 +20,53 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QByteArray>
-# include <QMouseEvent>
-# include <QMenu>
 # include <QAction>
-# include <qpixmap.h>
-# include <Inventor/actions/SoSearchAction.h>
-# include <Inventor/nodes/SoDrawStyle.h>
-# include <Inventor/nodes/SoMaterial.h>
-# include <Inventor/nodes/SoSeparator.h>
-# include <Inventor/nodes/SoSwitch.h>
-# include <Inventor/nodes/SoTransform.h>
-# include <Inventor/SoPickedPoint.h>
+# include <QByteArray>
+# include <QMenu>
+# include <QMouseEvent>
+# include <QPixmap>
 # include <Inventor/SoFullPath.h>
-# include <Inventor/misc/SoChildList.h>
+# include <Inventor/SoPickedPoint.h>
+# include <Inventor/actions/SoSearchAction.h>
 # include <Inventor/details/SoDetail.h>
+# include <Inventor/misc/SoChildList.h>
+# include <Inventor/nodes/SoSeparator.h>
 #endif
 
 #include <Inventor/annex/FXViz/nodes/SoShadowStyle.h>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-#include <Base/Tools.h>
-#include <Base/Console.h>
-#include <Base/Tools.h>
-#include <Base/BoundBox.h>
-#include <App/Material.h>
-#include <App/DocumentObjectGroup.h>
+#include <App/AutoTransaction.h>
+#include <App/Document.h>
 #include <App/DocumentObserver.h>
 #include <App/GeoFeatureGroupExtension.h>
+#include <App/Material.h>
 #include <App/Origin.h>
-#include <App/AutoTransaction.h>
+#include <Base/Console.h>
+#include <Base/Tools.h>
+
+#include "ViewProviderDocumentObjectPy.h"
+#include "ActionFunction.h"
 #include "Application.h"
+#include "Command.h"
 #include "Document.h"
-#include "Selection.h"
-#include "MainWindow.h"
+#include "SoFCUnifiedSelection.h"
+#include "SoFCSelection.h"
 #include "MDIView.h"
 #include "View3DInventor.h"
 #include "View3DInventorViewer.h"
-#include "TaskView/TaskAppearance.h"
-#include "ViewProviderDocumentObject.h"
-#include "ViewProviderExtension.h"
 #include "ViewProviderGeoFeatureGroupExtension.h"
-#include "SoFCUnifiedSelection.h"
-#include "SoFCSelection.h"
 #include "ViewParams.h"
-#include "Tree.h"
 #include "ViewProviderLink.h"
 #include "BitmapFactory.h"
 #include <Gui/ViewProviderDocumentObjectPy.h>
+#include "ViewProviderDocumentObject.h"
+#include "ViewProviderExtension.h"
+#include "TaskView/TaskAppearance.h"
 
-FC_LOG_LEVEL_INIT("Gui",true,true)
+FC_LOG_LEVEL_INIT("Gui", true, true)
 
 using namespace Gui;
 
@@ -144,13 +137,13 @@ ViewProviderDocumentObject::ViewProviderDocumentObject()
     ADD_PROPERTY_TYPE(ShowInTree, (true), dogroup, App::Prop_None, "Show the object in the tree view");
 
     ADD_PROPERTY_TYPE(SelectionStyle, ((long)0), sgroup, App::Prop_None, "Set the object selection style");
-    static const char *SelectionStyleEnum[] = {"Shape","BoundBox",0};
+    static const char *SelectionStyleEnum[] = {"Shape","BoundBox",nullptr};
     SelectionStyle.setEnums(SelectionStyleEnum);
 
     static const char *ShadowStyleEnum[] = {
-        "Cast shadow and shadowed","Cast shadow", "Shadowed", "No shadowing", 0};
+        "Cast shadow and shadowed","Cast shadow", "Shadowed", "No shadowing", nullptr};
     ShadowStyle.setEnums(ShadowStyleEnum);
-    ADD_PROPERTY_TYPE(ShadowStyle,((long)0), dogroup, App::Prop_None,
+    ADD_PROPERTY_TYPE(ShadowStyle,(0L), dogroup, App::Prop_None,
             "Cast shadow and shadowed: Cast shadow and receive shadows.\n"
             "Cast shadow: Only cast shadow, but not receive any shadow.\n"
             "Shadowed: Only receive shadow, but not cast any shadow.\n"
@@ -162,7 +155,7 @@ ViewProviderDocumentObject::ViewProviderDocumentObject()
     ADD_PROPERTY_TYPE(Selectable, (true), sgroup, App::Prop_None, "Set if the object is selectable in the 3d view");
     Selectable.setValue(ViewParams::getEnableSelection());
 
-    static const char* OnTopEnum[]= {"Disabled","Enabled","Object","Element",NULL};
+    static const char* OnTopEnum[]= {"Disabled","Enabled","Object","Element",nullptr};
     ADD_PROPERTY_TYPE(OnTopWhenSelected,((long int)0), sgroup, App::Prop_None,
             "Enabled: Display the object on top of any other object when selected\n"
             "Object: On top only if the whole object is selected\n"
@@ -242,7 +235,7 @@ void ViewProviderDocumentObject::onBeforeChange(const App::Property* prop)
 {
     if (isAttachedToDocument() && !testStatus(SecondaryView)) {
         App::DocumentObject* obj = getObject();
-        App::Document* doc = obj ? obj->getDocument() : 0;
+        App::Document* doc = obj ? obj->getDocument() : nullptr;
         if (doc) {
             onBeforeChangeProperty(doc, prop);
         }
@@ -281,10 +274,10 @@ void ViewProviderDocumentObject::onChanged(const App::Property* prop)
         if (isRestoring())
             _VisibilityRestored = true;
         // use this bit to check whether show() or hide() must be called
-        if (Visibility.testStatus(App::Property::User2) == false) {
-            Visibility.setStatus(App::Property::User2, true);
+        if (!Visibility.testStatus(App::Property::User2)) {
+            Base::ObjectStatusLocker<App::Property::Status,App::Property>
+                guard(App::Property::User2, &Visibility);
             Visibility.getValue() ? show() : hide();
-            Visibility.setStatus(App::Property::User2, false);
         }
         if (!Visibility.testStatus(App::Property::User1)
                 && !testStatus(SecondaryView)
@@ -297,7 +290,7 @@ void ViewProviderDocumentObject::onChanged(const App::Property* prop)
             // modified then it must be be reversed.
             if (!testStatus(Gui::ViewStatus::TouchDocument)) {
                 // Note: reverting document modified status like that is not
-                // appropreiate because we can't tell if there is any other
+                // appropriate because we can't tell if there is any other
                 // property being changed due to the change of Visibility here.
                 // Temporary setting the Visibility property as 'NoModify' is
                 // the proper way.
@@ -337,8 +330,7 @@ void ViewProviderDocumentObject::onChanged(const App::Property* prop)
     if (prop && !prop->testStatus(App::Property::NoModify)
              && pcDocument
              && !pcDocument->isModified()
-             && testStatus(Gui::ViewStatus::TouchDocument))
-    {
+             && testStatus(Gui::ViewStatus::TouchDocument)) {
         if (prop)
             FC_LOG(prop->getFullName() << " changed");
         pcDocument->setModified(true);
@@ -349,7 +341,7 @@ void ViewProviderDocumentObject::onChanged(const App::Property* prop)
         pcObject->ViewObject.touch();
 }
 
-void ViewProviderDocumentObject::hide(void)
+void ViewProviderDocumentObject::hide()
 {
     auto obj = getObject();
     if(obj && obj->getDocument() && obj->getNameInDocument()
@@ -362,11 +354,30 @@ void ViewProviderDocumentObject::hide(void)
     ViewProvider::hide();
 
     // use this bit to check whether 'Visibility' must be adjusted
-    if (Visibility.getValue() && Visibility.testStatus(App::Property::User2) == false) {
-        Visibility.setStatus(App::Property::User2, true);
+    if (Visibility.getValue() && !Visibility.testStatus(App::Property::User2)) {
+        Base::ObjectStatusLocker<App::Property::Status,App::Property>
+            guard(App::Property::User2, &Visibility);
         Visibility.setValue(false);
-        Visibility.setStatus(App::Property::User2, false);
     }
+}
+
+void ViewProviderDocumentObject::startDefaultEditMode()
+{
+    QString text = QObject::tr("Edit %1").arg(QString::fromUtf8(getObject()->Label.getValue()));
+    Gui::Command::openCommand(text.toUtf8());
+
+    Gui::Document* document = this->getDocument();
+    if (document) {
+        document->setEdit(this, ViewProvider::Default);
+    }
+}
+
+void ViewProviderDocumentObject::addDefaultAction(QMenu* menu, const QString& text)
+{
+    QAction* act = menu->addAction(text);
+    act->setData(QVariant((int)ViewProvider::Default));
+    auto func = new Gui::ActionFunction(menu);
+    func->trigger(act, std::bind(&ViewProviderDocumentObject::startDefaultEditMode, this));
 }
 
 void ViewProviderDocumentObject::setModeSwitch() {
@@ -376,7 +387,7 @@ void ViewProviderDocumentObject::setModeSwitch() {
         callExtension(&ViewProviderExtension::extensionModeSwitchChange);
 }
 
-void ViewProviderDocumentObject::show(void)
+void ViewProviderDocumentObject::show()
 {
     ViewProvider::show();
 
@@ -390,10 +401,10 @@ void ViewProviderDocumentObject::show(void)
     }
 
     // use this bit to check whether 'Visibility' must be adjusted
-    if (!Visibility.getValue() && Visibility.testStatus(App::Property::User2) == false) {
-        Visibility.setStatus(App::Property::User2, true);
+    if (!Visibility.getValue() && !Visibility.testStatus(App::Property::User2)) {
+        Base::ObjectStatusLocker<App::Property::Status,App::Property>
+            guard(App::Property::User2, &Visibility);
         Visibility.setValue(true);
-        Visibility.setStatus(App::Property::User2, false);
     }
 }
 
@@ -418,8 +429,8 @@ void ViewProviderDocumentObject::updateView()
     // Hide the object temporarily to speed up the update
     bool vis = ViewProvider::isShow();
     if (vis) ViewProvider::hide();
-    for (std::map<std::string, App::Property*>::iterator it = Map.begin(); it != Map.end(); ++it) {
-        updateData(it->second);
+    for (const auto & it : Map) {
+        updateData(it.second);
     }
     if (vis && Visibility.getValue()) ViewProvider::show();
 }
@@ -573,7 +584,7 @@ Gui::MDIView* ViewProviderDocumentObject::getViewOfNode(SoNode* node) const
 SoNode* ViewProviderDocumentObject::findFrontRootOfType(const SoType& type) const
 {
     if(!pcObject)
-        return 0;
+        return nullptr;
     // first get the document this object is part of and get its GUI counterpart
     App::Document* pAppDoc = pcObject->getDocument();
     Gui::Document* pGuiDoc = Gui::Application::Instance->getDocument(pAppDoc);
@@ -584,8 +595,8 @@ SoNode* ViewProviderDocumentObject::findFrontRootOfType(const SoType& type) cons
 
     // search in all view providers for the node type
     std::vector<App::DocumentObject*> obj = pAppDoc->getObjects();
-    for (std::vector<App::DocumentObject*>::iterator it = obj.begin(); it != obj.end(); ++it) {
-        const ViewProvider* vp = pGuiDoc->getViewProvider(*it);
+    for (auto & it : obj) {
+        const ViewProvider* vp = pGuiDoc->getViewProvider(it);
         // Ignore 'this' view provider. It could also happen that vp is 0, e.g. when
         // several objects have been added to the App::Document before notifying the
         // Gui::Document
@@ -602,7 +613,7 @@ SoNode* ViewProviderDocumentObject::findFrontRootOfType(const SoType& type) cons
         }
     }
 
-    return 0;
+    return nullptr;
 }
 
 void ViewProviderDocumentObject::setActiveMode()
@@ -774,18 +785,21 @@ bool ViewProviderDocumentObject::getDetailPath(
     if(queryExtension(&ViewProviderExtension::extensionGetDetailPath,subname,path,det))
         return true;
 
-    const char *dot = 0;
+    const char *dot = nullptr;
     if(Data::ComplexGeoData::isMappedElement(subname) || (dot=strchr(subname,'.')) == 0) {
         det = getDetail(subname);
         return true;
     }
 
     auto obj = getObject();
-    if(!obj || !obj->getNameInDocument()) return false;
+    if(!obj || !obj->getNameInDocument())
+        return false;
     auto sobj = obj->getSubObject(std::string(subname,dot-subname+1).c_str());
-    if(!sobj || !sobj->getNameInDocument()) return false;
+    if(!sobj || !sobj->getNameInDocument())
+        return false;
     auto vp = Application::Instance->getViewProvider(sobj);
-    if(!vp) return false;
+    if(!vp)
+        return false;
 
     auto childRoot = getChildRoot();
     if(!childRoot && ViewParams::getMapChildrenPlacement())

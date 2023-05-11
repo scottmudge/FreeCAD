@@ -25,14 +25,8 @@
 
 #ifndef _PreComp_
 #include <BRep_Tool.hxx>
-#include <BRepBuilderAPI_MakeFace.hxx>
-#include <BRepBuilderAPI_MakeWire.hxx>
-#include <BRepBuilderAPI_NurbsConvert.hxx>
-#include <TopoDS.hxx>
-#include <TopoDS_Edge.hxx>
-#include <TopoDS_Face.hxx>
-#include <TopoDS_Wire.hxx>
 #include <BRepBuilderAPI_Copy.hxx>
+#include <BRepBuilderAPI_MakeFace.hxx>
 #include <Geom_BezierCurve.hxx>
 #include <Geom_BezierSurface.hxx>
 #include <Geom_BSplineCurve.hxx>
@@ -49,13 +43,16 @@
 #include <Standard_ConstructionError.hxx>
 #include <StdFail_NotDone.hxx>
 #include <TopExp_Explorer.hxx>
+#include <TopoDS.hxx>
+#include <TopoDS_Edge.hxx>
+#include <TopoDS_Face.hxx>
+#include <TopoDS_Wire.hxx>
 #endif
 
-#include <Base/Exception.h>
-#include <Base/Tools.h>
 #include <App/Document.h>
 
 #include "FeatureGeomFillSurface.h"
+
 
 using namespace Surface;
 
@@ -64,7 +61,7 @@ ShapeValidator::ShapeValidator()
    initValidator();
 }
 
-void ShapeValidator::initValidator(void)
+void ShapeValidator::initValidator()
 {
     willBezier = true;
     edgeCount = 0;
@@ -95,7 +92,7 @@ void ShapeValidator::checkEdge(const TopoDS_Shape& shape)
 void ShapeValidator::checkAndAdd(const TopoDS_Shape &shape, Handle(ShapeExtend_WireData) *aWD)
 {
     checkEdge(shape);
-    if (aWD != NULL) {
+    if (aWD) {
         BRepBuilderAPI_Copy copier(shape);
         // make a copy of the shape and the underlying geometry to avoid to affect the input shapes
         (*aWD)->Add(TopoDS::Edge(copier.Shape()));
@@ -105,7 +102,7 @@ void ShapeValidator::checkAndAdd(const TopoDS_Shape &shape, Handle(ShapeExtend_W
 void ShapeValidator::checkAndAdd(const Part::TopoShape &ts, const char *subName, Handle(ShapeExtend_WireData) *aWD)
 {
     try {
-        if (subName != NULL && *subName != '\0') {
+        if (subName && *subName != '\0') {
             //we want only the subshape which is linked
             checkAndAdd(ts.getSubShape(subName), aWD);
         }
@@ -127,12 +124,12 @@ void ShapeValidator::checkAndAdd(const Part::TopoShape &ts, const char *subName,
 
 PROPERTY_SOURCE(Surface::GeomFillSurface, Part::Spline)
 
-const char* GeomFillSurface::FillTypeEnums[]    = {"Stretched", "Coons", "Curved", NULL};
+const char* GeomFillSurface::FillTypeEnums[]    = {"Stretched", "Coons", "Curved", nullptr};
 
 GeomFillSurface::GeomFillSurface(): Spline()
 {
     ADD_PROPERTY(FillType, ((long)0));
-    ADD_PROPERTY(BoundaryList, (0, "Dummy"));
+    ADD_PROPERTY(BoundaryList, (nullptr, "Dummy"));
     ADD_PROPERTY(ReversedList, (false));
     FillType.setEnums(FillTypeEnums);
     BoundaryList.setScope(App::LinkScope::Global);
@@ -163,7 +160,7 @@ void GeomFillSurface::onChanged(const App::Property* prop)
     Part::Spline::onChanged(prop);
 }
 
-App::DocumentObjectExecReturn *GeomFillSurface::execute(void)
+App::DocumentObjectExecReturn *GeomFillSurface::execute()
 {
 #ifndef FC_NO_ELEMENT_MAP
     Part::TopoShape result(0, getDocument()->getStringHasher());
@@ -278,7 +275,7 @@ bool GeomFillSurface::getWire(TopoDS_Wire& aWire)
         App::PropertyLinkSubList::SubSet set = boundary[i];
 
         if (set.first->getTypeId().isDerivedFrom(Part::Feature::getClassTypeId())) {
-            for (auto jt: set.second) {
+            for (const auto& jt: set.second) {
                 const Part::TopoShape &ts = static_cast<Part::Feature*>(set.first)->Shape.getShape();
                 validator.checkAndAdd(ts, jt.c_str(), &aWD);
             }

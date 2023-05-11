@@ -23,31 +23,29 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-#	include <cassert>
+# include <cassert>
 #endif
-
-#include <limits>
-#include <iomanip>
-#include <unordered_map>
 
 #include <boost/algorithm/string.hpp>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
+#include <App/DocumentObjectPy.h>
+#include <Base/Console.h>
+#include <Base/Interpreter.h>
 #include <Base/GeometryPyCXX.h>
 #include <Base/Tools.h>
-#include <Base/Interpreter.h>
 #include <Base/QuantityPy.h>
-#include <Base/Console.h>
-#include <App/DocumentObjectPy.h>
-#include "DocumentObserver.h"
-#include "ComplexGeoData.h"
-#include "Property.h"
-#include "Application.h"
-#include "Document.h"
-#include "DocumentObject.h"
+#include <Base/Reader.h>
+#include <CXX/Objects.hxx>
+
 #include "ObjectIdentifier.h"
+#include "Application.h"
+#include "ComplexGeoData.h"
+#include "DocumentObserver.h"
+#include "Document.h"
 #include "ExpressionParser.h"
 #include "Link.h"
+#include "Property.h"
+
 
 FC_LOG_LEVEL_INIT("Expression",true,true)
 
@@ -138,7 +136,7 @@ enum PseudoPropertyType {
 
 ObjectIdentifier::ObjectIdentifier(const App::PropertyContainer * _owner,
         const std::string & property, int index)
-    : owner(0)
+    : owner(nullptr)
     , subObjectName("",true)
     , documentNameSet(false)
     , documentObjectNameSet(false)
@@ -151,11 +149,11 @@ ObjectIdentifier::ObjectIdentifier(const App::PropertyContainer * _owner,
             FC_THROWM(Base::RuntimeError,"Property must be owned by a document object.");
         owner = const_cast<DocumentObject*>(docObj);
 
-        if (property.size() > 0) {
+        if (!property.empty()) {
             setDocumentObjectName(docObj);
         }
     }
-    if (property.size() > 0) {
+    if (!property.empty()) {
         addComponent(SimpleComponent(property));
         if(index!=INT_MAX)
             addComponent(ArrayComponent(index));
@@ -189,7 +187,7 @@ ObjectIdentifier::ObjectIdentifier(const App::PropertyContainer * _owner,
 }
 
 ObjectIdentifier::ObjectIdentifier(const App::PropertyContainer * _owner, bool localProperty)
-    : owner(0)
+    : owner(nullptr)
     , subObjectName("",true)
     , documentNameSet(false)
     , documentObjectNameSet(false)
@@ -210,7 +208,7 @@ ObjectIdentifier::ObjectIdentifier(const App::PropertyContainer * _owner, bool l
  */
 
 ObjectIdentifier::ObjectIdentifier(const Property &prop, int index)
-    : owner(0)
+    : owner(nullptr)
     , subObjectName("",true)
     , documentNameSet(false)
     , documentObjectNameSet(false)
@@ -383,20 +381,23 @@ int ObjectIdentifier::numSubComponents() const
 bool ObjectIdentifier::verify(const App::Property &prop, bool silent) const {
     ResolveResults result(*this);
     if(components.size() - result.propertyIndex != 1) {
-        if(silent) return false;
+        if(silent)
+            return false;
         FC_THROWM(Base::ValueError,"Invalid property path: single component expected");
     }
     if(!components[result.propertyIndex].isSimple()) {
-        if(silent) return false;
+        if(silent)
+            return false;
         FC_THROWM(Base::ValueError,"Invalid property path: simple component expected");
     }
     const std::string &name = components[result.propertyIndex].getName();
     CellAddress addr;
     bool isAddress = addr.parseAbsoluteAddress(name.c_str());
-    if((isAddress && addr.toString(true) != prop.getName()) ||
+    if((isAddress && addr.toString(CellAddress::Cell::ShowRowColumn) != prop.getName()) ||
        (!isAddress && name!=prop.getName()))
     {
-        if(silent) return false;
+        if(silent)
+            return false;
         FC_THROWM(Base::ValueError,"Invalid property path: name mismatch");
     }
     return true;
@@ -414,7 +415,7 @@ bool ObjectIdentifier::verify(const App::Property &prop, bool silent) const {
 
 const std::string &ObjectIdentifier::toString() const
 {
-    if(_cache.size() || !owner)
+    if(!_cache.empty() || !owner)
         return _cache;
 
     std::ostringstream s;
@@ -441,7 +442,7 @@ const std::string &ObjectIdentifier::toString() const
         s << documentObjectName << '.';
     }
 
-    if(subObjectName.getString().size())
+    if(!subObjectName.getString().empty())
         s << subObjectName << '.';
 
     bool first = true;
@@ -508,7 +509,7 @@ std::string ObjectIdentifier::toPersistentString() const {
         s << '.';
     }
 
-    if(subObjectName.getString().size()) {
+    if(!subObjectName.getString().empty()) {
         const char *subname = subObjectName.getString().c_str();
         std::string exportName;
         s << String(PropertyLinkBase::exportSubName(exportName,
@@ -528,7 +529,7 @@ std::string ObjectIdentifier::toPersistentString() const {
 
 std::size_t ObjectIdentifier::hash() const
 {
-    if(_hash && _cache.size())
+    if(_hash && !_cache.empty())
         return _hash;
     if (!owner || !owner->getNameInDocument())
         return 0;
@@ -590,10 +591,10 @@ bool ObjectIdentifier::updateLabelReference(
 
     ResolveResults result(*this);
 
-    if(subObjectName.getString().size() && result.resolvedDocumentObject) {
+    if(!subObjectName.getString().empty() && result.resolvedDocumentObject) {
         std::string sub = PropertyLinkBase::updateLabelReference(
                 result.resolvedDocumentObject, subObjectName.getString().c_str(), obj,ref,newLabel);
-        if(sub.size()) {
+        if(!sub.empty()) {
             subObjectName = String(sub,true);
             _cache.clear();
             return true;
@@ -603,7 +604,7 @@ bool ObjectIdentifier::updateLabelReference(
     if(result.resolvedDocument != obj->getDocument())
         return false;
 
-    if(documentObjectName.getString().size()) {
+    if(!documentObjectName.getString().empty()) {
         if(documentObjectName.isForceIdentifier())
             return false;
 
@@ -748,8 +749,8 @@ Py::Object ObjectIdentifier::Component::get(const Py::Object &pyobj) const {
         res = Py::Mapping(pyobj).getItem(getName());
     else if(isRange()){
         Py::Object slice(PySlice_New(Py::Int(begin).ptr(),
-                                    end!=INT_MAX?Py::Int(end).ptr():0,
-                                    step!=1?Py::Int(step).ptr():0),true);
+                                    end!=INT_MAX?Py::Int(end).ptr():nullptr,
+                                    step!=1?Py::Int(step).ptr():nullptr),true);
         PyObject *r = PyObject_GetItem(pyobj.ptr(),slice.ptr());
         if(!r)
             Base::PyException::ThrowException();
@@ -782,8 +783,8 @@ void ObjectIdentifier::Component::set(Py::Object &pyobj, const Py::Object &value
         Py::Mapping(pyobj).setItem(getName(),value);
     else if(isRange()) {
         Py::Object slice(PySlice_New(Py::Int(begin).ptr(),
-                                    end!=INT_MAX?Py::Int(end).ptr():0,
-                                    step!=1?Py::Int(step).ptr():0),true);
+                                    end!=INT_MAX?Py::Int(end).ptr():nullptr,
+                                    step!=1?Py::Int(step).ptr():nullptr),true);
         if(PyObject_SetItem(pyobj.ptr(),slice.ptr(),value.ptr())<0)
             Base::PyException::ThrowException();
     } else
@@ -804,8 +805,8 @@ void ObjectIdentifier::Component::del(Py::Object &pyobj) const {
         Py::Mapping(pyobj).delItem(getName());
     else if(isRange()) {
         Py::Object slice(PySlice_New(Py::Int(begin).ptr(),
-                                    end!=INT_MAX?Py::Int(end).ptr():0,
-                                    step!=1?Py::Int(step).ptr():0),true);
+                                    end!=INT_MAX?Py::Int(end).ptr():nullptr,
+                                    step!=1?Py::Int(step).ptr():nullptr),true);
         if(PyObject_DelItem(pyobj.ptr(),slice.ptr())<0)
             Base::PyException::ThrowException();
     }
@@ -988,8 +989,8 @@ enum ResolveFlags {
 App::DocumentObject * ObjectIdentifier::getDocumentObject(const App::Document * doc,
         const String & name, std::bitset<32> &flags)
 {
-    DocumentObject * objectById = 0;
-    DocumentObject * objectByLabel = 0;
+    DocumentObject * objectById = nullptr;
+    DocumentObject * objectByLabel = nullptr;
 
     if(!name.isRealString()) {
         // No object found with matching label, try using name directly
@@ -1002,28 +1003,28 @@ App::DocumentObject * ObjectIdentifier::getDocumentObject(const App::Document * 
             return objectById;
         }
         if(name.isForceIdentifier())
-            return 0;
+            return nullptr;
     }
 
     std::vector<DocumentObject*> docObjects = doc->getObjects();
     for (std::vector<DocumentObject*>::iterator j = docObjects.begin(); j != docObjects.end(); ++j) {
         if (strcmp((*j)->Label.getValue(), static_cast<const char*>(name)) == 0) {
             // Found object with matching label
-            if (objectByLabel != 0)  {
-                FC_WARN("duplicate object label " << doc->getName() << '#' << name);
-                return 0;
+            if (objectByLabel)  {
+                FC_WARN("duplicate object label " << doc->getName() << '#' << static_cast<const char*>(name));
+                return nullptr;
             }
             objectByLabel = *j;
         }
     }
 
-    if (objectByLabel == 0 && objectById == 0) // Not found at all
-        return 0;
-    else if (objectByLabel == 0) { // Found by name
+    if (!objectByLabel && !objectById) // Not found at all
+        return nullptr;
+    else if (!objectByLabel) { // Found by name
         flags.set(ResolveByIdentifier);
         return objectById;
     }
-    else if (objectById == 0) { // Found by label
+    else if (!objectById) { // Found by label
         flags.set(ResolveByLabel);
         return objectByLabel;
     }
@@ -1034,7 +1035,7 @@ App::DocumentObject * ObjectIdentifier::getDocumentObject(const App::Document * 
     }
     else {
         flags.set(ResolveAmbiguous);
-        return 0; // Found by both name and label, two different objects
+        return nullptr; // Found by both name and label, two different objects
     }
 }
 
@@ -1066,7 +1067,7 @@ void ObjectIdentifier::resolve(ResolveResults &results) const
     }
 
     /* Document name specified? */
-    if (documentName.getString().size() > 0) {
+    if (!documentName.getString().empty()) {
         results.resolvedDocument = getDocument(documentName,&docAmbiguous);
         results.resolvedDocumentName = documentName;
     }
@@ -1076,22 +1077,22 @@ void ObjectIdentifier::resolve(ResolveResults &results) const
     }
 
     // Assume document name and object name from owner if not found
-    if (results.resolvedDocument == 0) {
-        if (documentName.getString().size() > 0) {
+    if (!results.resolvedDocument) {
+        if (!documentName.getString().empty()) {
             if(docAmbiguous)
                 results.flags.set(ResolveAmbiguous);
             return;
         }
 
         results.resolvedDocument = owner->getDocument();
-        if (results.resolvedDocument == 0)
+        if (!results.resolvedDocument)
             return;
     }
 
     results.resolvedDocumentName = String(results.resolvedDocument->getName(), false, true);
 
     /* Document object name specified? */
-    if (documentObjectName.getString().size() > 0) {
+    if (!documentObjectName.getString().empty()) {
         results.resolvedDocumentObjectName = documentObjectName;
         results.resolvedDocumentObject = getDocumentObject(
                 results.resolvedDocument, documentObjectName, results.flags);
@@ -1203,44 +1204,45 @@ void ObjectIdentifier::resolve(ResolveResults &results) const
 
 Document * ObjectIdentifier::getDocument(String name, bool *ambiguous) const
 {
-    if (name.getString().size() == 0)
+    if (name.getString().empty())
         name = getDocumentName();
 
-    App::Document * docById = 0;
+    App::Document * docById = nullptr;
 
     if(!name.isRealString()) {
-        docById = App::GetApplication().getDocument(name);
+        docById = App::GetApplication().getDocument(name.toString().c_str());
         if (name.isForceIdentifier())
             return docById;
     }
 
-    App::Document * docByLabel = 0;
+    App::Document * docByLabel = nullptr;
     const std::vector<App::Document*> docs = App::GetApplication().getDocuments();
 
     for (std::vector<App::Document*>::const_iterator i = docs.begin(); i != docs.end(); ++i) {
         if ((*i)->Label.getValue() == name.getString()) {
             /* Multiple hits for same label? */
-            if (docByLabel != 0) {
+            if (docByLabel) {
                 if(ambiguous) *ambiguous = true;
-                return 0;
+                return nullptr;
             }
             docByLabel = *i;
         }
     }
 
     /* Not found on id? */
-    if (docById == 0)
+    if (!docById)
         return docByLabel; // Either not found at all, or on label
     else {
         /* Not found on label? */
-        if (docByLabel == 0) /* Then return doc by id */
+        if (!docByLabel) /* Then return doc by id */
             return docById;
 
         /* docByLabel and docById could be equal; that is ok */
-        if(docByLabel==docById)
+        if (docByLabel == docById)
             return docById;
-        if(ambiguous) *ambiguous = true;
-        return 0;
+        if (ambiguous)
+            *ambiguous = true;
+        return nullptr;
     }
 }
 
@@ -1255,7 +1257,7 @@ DocumentObject *ObjectIdentifier::getDocumentObject() const
     std::bitset<32> dummy;
 
     if (!doc)
-        return 0;
+        return nullptr;
 
     ResolveResults result(*this);
 
@@ -1269,12 +1271,12 @@ void ObjectIdentifier::getDepLabels(std::vector<std::string> &labels) const {
 void ObjectIdentifier::getDepLabels(
         const ResolveResults &result, std::vector<std::string> &labels) const
 {
-    if(documentObjectName.getString().size()) {
+    if(!documentObjectName.getString().empty()) {
         if(documentObjectName.isRealString())
             labels.push_back(documentObjectName.getString());
     } else if(result.propertyIndex == 1)
         labels.push_back(components[0].name.getString());
-    if(subObjectName.getString().size()) 
+    if(!subObjectName.getString().empty()) 
         PropertyLinkBase::getLabelReferences(labels,subObjectName.getString().c_str());
 }
 
@@ -1303,14 +1305,14 @@ void ObjectIdentifier::getDep(
     // }
 
     if(!result.resolvedProperty) {
-        if(result.propertyName.size())
+        if(!result.propertyName.empty())
             deps[result.resolvedDocumentObject].insert(result.propertyName);
         return;
     }
 
     Base::PyGILStateLocker lock;
     try {
-        access(result,0,&deps);
+        access(result, nullptr, &deps);
     }catch(Py::Exception &e) {
         e.clear();
     }catch(Base::Exception &) {
@@ -1334,7 +1336,7 @@ std::vector<std::string> ObjectIdentifier::getStringList() const
         } else if (documentObjectNameSet)
             l.push_back(documentObjectName.toString());
     }
-    if(subObjectName.getString().size()) {
+    if(!subObjectName.getString().empty()) {
         const std::string &s = subObjectName.getString();
         boost::iterator_range<std::string::const_iterator> range(s.begin(), s.end());
         std::vector<boost::iterator_range<std::string::const_iterator> > tokens;
@@ -1693,7 +1695,7 @@ Property *ObjectIdentifier::resolveProperty(const App::DocumentObject *obj,
                 ptype = it->second;
         }
 
-        if(!sobj && subname.size()) {
+        if(!sobj && !subname.empty()) {
             if(!obj)
                 return nullptr;
 
@@ -1766,7 +1768,7 @@ Property *ObjectIdentifier::resolveProperty(const App::DocumentObject *obj,
 
         ++propertyIndex;
 
-        if(propertyIndex == (int)components.size()) {
+        if(propertyIndex == static_cast<int>(components.size())) {
             prop = &sobj->Label;
             ptype = PseudoSubObject;
             return prop;
@@ -1810,7 +1812,7 @@ ObjectIdentifier::DocumentMapper::DocumentMapper(const std::map<std::string,std:
 
 ObjectIdentifier::DocumentMapper::~DocumentMapper()
 {
-    _DocumentMap = 0;
+    _DocumentMap = nullptr;
 }
 
 /**
@@ -1827,7 +1829,7 @@ void ObjectIdentifier::setDocumentName(ObjectIdentifier::String &&name, bool for
     if(name.getString().empty())
         force = false;
     _cache.clear();
-    if(name.getString().size() && _DocumentMap) {
+    if(!name.getString().empty() && _DocumentMap) {
         if(name.isRealString()) {
             auto iter = _DocumentMap->find(name.toString());
             if(iter!=_DocumentMap->end())
@@ -1876,7 +1878,7 @@ void ObjectIdentifier::setDocumentObjectName(ObjectIdentifier::String &&name, bo
 {
     if(checkImport) {
         name.checkImport(owner);
-        subname.checkImport(owner,0,&name);
+        subname.checkImport(owner,nullptr,&name);
     }
 
     documentObjectName = std::move(name);
@@ -1965,7 +1967,7 @@ void ObjectIdentifier::String::toString(std::ostream &s, bool toPython) const
 void ObjectIdentifier::String::checkImport(const App::DocumentObject *owner,
         const App::DocumentObject *obj, String *objName)
 {
-    if(owner && owner->getDocument() && str.size() &&
+    if(owner && owner->getDocument() && !str.empty() &&
        ExpressionParser::ExpressionImporter::reader()) {
         auto reader = ExpressionParser::ExpressionImporter::reader();
         if (obj || objName) {
@@ -2051,7 +2053,7 @@ Py::Object ObjectIdentifier::access(const ResolveResults &result,
         Py::Object *value, Dependencies *deps) const
 {
     if(!result.resolvedDocumentObject || !result.resolvedProperty ||
-       (subObjectName.getString().size() && !result.resolvedSubObject))
+       (!subObjectName.getString().empty() && !result.resolvedSubObject))
     {
         FC_THROWM(Base::RuntimeError, result.resolveErrorString()
            << " in '" << toString() << "'");
@@ -2136,7 +2138,7 @@ Py::Object ObjectIdentifier::access(const ResolveResults &result,
         case PseudoMatrix:
         case PseudoLinkPlacement:
         case PseudoLinkMatrix:
-            obj->getSubObject(result.subObjectName.getString().c_str(),0,&mat);
+            obj->getSubObject(result.subObjectName.getString().c_str(),nullptr,&mat);
             break;
         default:
             break;
@@ -2228,9 +2230,9 @@ Py::Object ObjectIdentifier::access(const ResolveResults &result,
             }
         }
         auto &propset = (*deps)[obj];
-        // inserting a null name in the propset indicates the dependency is
+        // inserting a blank name in the propset indicates the dependency is
         // on all properties of the corresponding object.
-        if(propset.size()!=1 || propset.begin()->size()) {
+        if(propset.size()!=1 || !propset.begin()->empty()) {
             if(!propName) {
                 propset.clear();
                 propName = "";
@@ -2242,14 +2244,14 @@ Py::Object ObjectIdentifier::access(const ResolveResults &result,
 
     App::DocumentObject *lastObj = result.resolvedDocumentObject;
     if(result.resolvedSubObject) {
-        setPropDep(lastObj,0,0);
+        setPropDep(lastObj,nullptr,nullptr);
         lastObj = result.resolvedSubObject;
     }
     if(ptype == PseudoNone)
         setPropDep(lastObj, result.resolvedProperty, result.resolvedProperty->getName());
     else
-        setPropDep(lastObj,0,0);
-    lastObj = 0;
+        setPropDep(lastObj,nullptr,nullptr);
+    lastObj = nullptr;
 
     if(idx >= components.size())
         return pyobj;
@@ -2267,7 +2269,7 @@ Py::Object ObjectIdentifier::access(const ResolveResults &result,
             const char *attr = components[idx].getName().c_str();
             auto prop = lastObj->getPropertyByName(attr);
             if(!prop && pyobj.hasAttr(attr))
-                attr = 0;
+                attr = nullptr;
             setPropDep(lastObj,prop,attr);
             if(value && prop && idx+1 < components.size()) {
                 ObjectIdentifier path(*prop);
@@ -2275,7 +2277,7 @@ Py::Object ObjectIdentifier::access(const ResolveResults &result,
                 if(prop->setPyPathValue(path, *value))
                     return Py::Object();
             }
-            lastObj = 0;
+            lastObj = nullptr;
         }
 
         notificationEnabler.attach(pyobj.ptr());
@@ -2400,9 +2402,9 @@ void ObjectIdentifier::setPyValue(Py::Object value) const
 }
 
 const std::string &ObjectIdentifier::getSubObjectName(bool newStyle) const {
-    if(newStyle && shadowSub.first.size())
+    if(newStyle && !shadowSub.first.empty())
         return shadowSub.first;
-    if(shadowSub.second.size())
+    if(!shadowSub.second.empty())
         return shadowSub.second;
     return subObjectName.getString();
 }
@@ -2500,7 +2502,7 @@ void ObjectIdentifier::resolveAmbiguity() {
 
     if(subObjectName.getString().empty() && components.size()==1) {
        if(isLocalProperty()
-               || (documentObjectNameSet && documentObjectName.getString().size()
+               || (documentObjectNameSet && !documentObjectName.getString().empty()
                    && (documentObjectName.isRealString() || documentObjectName.isForceIdentifier())))
         {
             return;
@@ -2553,12 +2555,12 @@ void ObjectIdentifier::resolveAmbiguity(ResolveResults &result) {
 
 ObjectIdentifier::ResolveResults::ResolveResults(const ObjectIdentifier &oi)
     : propertyIndex(0)
-    , resolvedDocument(0)
+    , resolvedDocument(nullptr)
     , resolvedDocumentName()
-    , resolvedDocumentObject(0)
+    , resolvedDocumentObject(nullptr)
     , resolvedDocumentObjectName()
-    , resolvedSubObject(0)
-    , resolvedProperty(0)
+    , resolvedSubObject(nullptr)
+    , resolvedProperty(nullptr)
     , propertyName()
     , propertyType(PseudoNone)
 {
@@ -2568,25 +2570,25 @@ ObjectIdentifier::ResolveResults::ResolveResults(const ObjectIdentifier &oi)
 std::string ObjectIdentifier::ResolveResults::resolveErrorString() const
 {
     std::ostringstream ss;
-    if (resolvedDocument == 0) {
+    if (!resolvedDocument) {
         if(flags.test(ResolveAmbiguous)) 
             ss << "Ambiguous document name/label '" 
                << resolvedDocumentName << "'";
         else
             ss << "Document '" << resolvedDocumentName << "' not found";
-    } else if (resolvedDocumentObject == 0) {
+    } else if (!resolvedDocumentObject) {
         if(flags.test(ResolveAmbiguous))
             ss << "Ambiguous document object name '" 
                 << resolvedDocumentObjectName << "'";
         else
             ss << "Document object '" << resolvedDocumentObjectName 
                 << "' not found";
-    } else if (subObjectName.getString().size() && resolvedSubObject == 0) {
+    } else if (!subObjectName.getString().empty() && !resolvedSubObject) {
         ss << "Sub-object '" << resolvedDocumentObjectName.getString()
             << '.' << subObjectName << "' not found";
-    } else if (resolvedProperty == 0) {
+    } else if (!resolvedProperty) {
         if(propertyType != PseudoShape &&
-           subObjectName.getString().size() &&
+           !subObjectName.getString().empty() &&
            !boost::ends_with(subObjectName.getString(),"."))
         {
             ss << "Non geometry subname reference must end with '.'\n"

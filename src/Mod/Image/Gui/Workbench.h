@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef IMAGE_WORKBENCH_H
 #define IMAGE_WORKBENCH_H
 
@@ -34,15 +33,15 @@ namespace ImageGui {
  */
 class ImageGuiExport Workbench : public Gui::StdWorkbench
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 
 public:
   Workbench();
-  virtual ~Workbench();
+  ~Workbench() override;
 
 protected:
-  Gui::ToolBarItem* setupToolBars() const;
-  Gui::ToolBarItem* setupCommandBars() const;
+  Gui::ToolBarItem* setupToolBars() const override;
+  Gui::ToolBarItem* setupCommandBars() const override;
 };
 
 } // namespace ImageGui

@@ -20,28 +20,25 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <float.h>
-# include <qcheckbox.h>
-# include <qcombobox.h>
+# include <cfloat>
 # include <qmessagebox.h>
 #endif
 
-#include <Base/PyObjectBase.h>
+#include <App/Document.h>
 #include <Base/Interpreter.h>
+#include <Base/PyObjectBase.h>
 #include <Base/UnitsApi.h>
 #include <Gui/Application.h>
 #include <Gui/Command.h>
 #include <Gui/Document.h>
-#include <Gui/MainWindow.h>
-#include <Gui/PrefWidgets.h>
 #include <Gui/WaitCursor.h>
 
 #include "DlgRegularSolidImp.h"
 #include "ui_DlgRegularSolid.h"
+
 
 using namespace MeshGui;
 
@@ -134,10 +131,10 @@ void DlgRegularSolidImp::on_createSolidButton_clicked()
                 "App.ActiveDocument.%1.Length=%2\n"
                 "App.ActiveDocument.%1.Width=%3\n"
                 "App.ActiveDocument.%1.Height=%4\n"))
-                .arg(QString::fromUtf8(name.c_str()))
-                .arg(Base::UnitsApi::toNumber(ui->boxLength->value()))
-                .arg(Base::UnitsApi::toNumber(ui->boxWidth->value()))
-                .arg(Base::UnitsApi::toNumber(ui->boxHeight->value()));
+                .arg(QString::fromUtf8(name.c_str()),
+                     Base::UnitsApi::toNumber(ui->boxLength->value()),
+                     Base::UnitsApi::toNumber(ui->boxWidth->value()),
+                     Base::UnitsApi::toNumber(ui->boxHeight->value()));
         }
         else if (ui->comboBox1->currentIndex() == 1) {  // cylinder
             name = doc->getUniqueObjectName("Cylinder");
@@ -148,11 +145,11 @@ void DlgRegularSolidImp::on_createSolidButton_clicked()
                 "App.ActiveDocument.%1.EdgeLength=%4\n"
                 "App.ActiveDocument.%1.Closed=%5\n"
                 "App.ActiveDocument.%1.Sampling=%6\n"))
-                .arg(QString::fromUtf8(name.c_str()))
-                .arg(Base::UnitsApi::toNumber(ui->cylinderRadius->value()))
-                .arg(Base::UnitsApi::toNumber(ui->cylinderLength->value()))
-                .arg(Base::UnitsApi::toNumber(ui->cylinderEdgeLength->value()))
-                .arg(ui->cylinderClosed->isChecked()?QStringLiteral("True"):QStringLiteral("False"))
+                .arg(QString::fromUtf8(name.c_str()),
+                     Base::UnitsApi::toNumber(ui->cylinderRadius->value()),
+                     Base::UnitsApi::toNumber(ui->cylinderLength->value()),
+                     Base::UnitsApi::toNumber(ui->cylinderEdgeLength->value()),
+                     ui->cylinderClosed->isChecked()?QStringLiteral("True"):QStringLiteral("False"))
                 .arg(ui->cylinderCount->value());
         }
         else if (ui->comboBox1->currentIndex() == 2) {  // cone
@@ -165,12 +162,12 @@ void DlgRegularSolidImp::on_createSolidButton_clicked()
                 "App.ActiveDocument.%1.EdgeLength=%5\n"
                 "App.ActiveDocument.%1.Closed=%6\n"
                 "App.ActiveDocument.%1.Sampling=%7\n"))
-                .arg(QString::fromUtf8(name.c_str()))
-                .arg(Base::UnitsApi::toNumber(ui->coneRadius1->value()))
-                .arg(Base::UnitsApi::toNumber(ui->coneRadius2->value()))
-                .arg(Base::UnitsApi::toNumber(ui->coneLength->value()))
-                .arg(Base::UnitsApi::toNumber(ui->coneEdgeLength->value()))
-                .arg(ui->coneClosed->isChecked()?QStringLiteral("True"):QStringLiteral("False"))
+                .arg(QString::fromUtf8(name.c_str()),
+                     Base::UnitsApi::toNumber(ui->coneRadius1->value()),
+                     Base::UnitsApi::toNumber(ui->coneRadius2->value()),
+                     Base::UnitsApi::toNumber(ui->coneLength->value()),
+                     Base::UnitsApi::toNumber(ui->coneEdgeLength->value()),
+                     ui->coneClosed->isChecked()?QStringLiteral("True"):QStringLiteral("False"))
                 .arg(ui->coneCount->value());
         }
         else if (ui->comboBox1->currentIndex() == 3) {  // sphere
@@ -179,8 +176,8 @@ void DlgRegularSolidImp::on_createSolidButton_clicked()
                 "App.ActiveDocument.addObject(\"Mesh::Sphere\",\"%1\")\n"
                 "App.ActiveDocument.%1.Radius=%2\n"
                 "App.ActiveDocument.%1.Sampling=%3\n"))
-                .arg(QString::fromUtf8(name.c_str()))
-                .arg(Base::UnitsApi::toNumber(ui->sphereRadius->value()))
+                .arg(QString::fromUtf8(name.c_str()),
+                     Base::UnitsApi::toNumber(ui->sphereRadius->value()))
                 .arg(ui->sphereCount->value());
         }
         else if (ui->comboBox1->currentIndex() == 4) {  // ellipsoid
@@ -190,9 +187,9 @@ void DlgRegularSolidImp::on_createSolidButton_clicked()
                 "App.ActiveDocument.%1.Radius1=%2\n"
                 "App.ActiveDocument.%1.Radius2=%3\n"
                 "App.ActiveDocument.%1.Sampling=%4\n"))
-                .arg(QString::fromUtf8(name.c_str()))
-                .arg(Base::UnitsApi::toNumber(ui->ellipsoidRadius1->value()))
-                .arg(Base::UnitsApi::toNumber(ui->ellipsoidRadius2->value()))
+                .arg(QString::fromUtf8(name.c_str()),
+                     Base::UnitsApi::toNumber(ui->ellipsoidRadius1->value()),
+                     Base::UnitsApi::toNumber(ui->ellipsoidRadius2->value()))
                 .arg(ui->ellipsoidCount->value());
         }
         else if (ui->comboBox1->currentIndex() == 5) {  // toroid
@@ -202,9 +199,9 @@ void DlgRegularSolidImp::on_createSolidButton_clicked()
                 "App.ActiveDocument.%1.Radius1=%2\n"
                 "App.ActiveDocument.%1.Radius2=%3\n"
                 "App.ActiveDocument.%1.Sampling=%4\n"))
-                .arg(QString::fromUtf8(name.c_str()))
-                .arg(Base::UnitsApi::toNumber(ui->toroidRadius1->value()))
-                .arg(Base::UnitsApi::toNumber(ui->toroidRadius2->value()))
+                .arg(QString::fromUtf8(name.c_str()),
+                     Base::UnitsApi::toNumber(ui->toroidRadius1->value()),
+                     Base::UnitsApi::toNumber(ui->toroidRadius2->value()))
                 .arg(ui->toroidCount->value());
         }
 

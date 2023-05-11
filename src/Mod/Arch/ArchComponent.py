@@ -31,7 +31,7 @@ __title__  = "FreeCAD Arch Component"
 __author__ = "Yorik van Havre"
 __url__    = "https://www.freecadweb.org"
 
-import FreeCAD,Draft,ArchCommands,sys,ArchIFC
+import FreeCAD,Draft,ArchCommands,ArchIFC
 if FreeCAD.GuiUp:
     import FreeCADGui
     from PySide import QtGui,QtCore
@@ -402,6 +402,11 @@ class Component(ArchIFC.IfcProduct):
         for parent in obj.InList:
             if hasattr(parent,"Group"):
                 if obj in parent.Group:
+                    return self.getParentHeight(parent)
+        # still not found? check if we are embedded
+        for parent in obj.InList:
+            if hasattr(parent,"Additions"):
+                if obj in parent.Additions:
                     return self.getParentHeight(parent)
         return 0
 
@@ -972,7 +977,7 @@ class Component(ArchIFC.IfcProduct):
             obj.PerimeterLength = 0
             return
 
-        import Drawing,Part
+        import TechDraw, Part
         fmax = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Arch").GetInt("MaxComputeAreas",20)
         if len(obj.Shape.Faces) > fmax:
             obj.VerticalArea = 0
@@ -1008,7 +1013,7 @@ class Component(ArchIFC.IfcProduct):
                     pset.append(f)
                 else:
                     try:
-                        pf = Part.Face(Part.Wire(Drawing.project(f,FreeCAD.Vector(0,0,1))[0].Edges))
+                        pf = Part.Face(Part.Wire(TechDraw.project(f,FreeCAD.Vector(0,0,1))[0].Edges))
                     except Part.OCCError:
                         # error in computing the areas. Better set them to zero than show a wrong value
                         if obj.HorizontalArea.Value != 0:
@@ -2085,11 +2090,7 @@ class ComponentTaskPanel:
                         if not ptype.startswith("Ifc"):
                             ptype = self.ptypes[self.plabels.index(ptype)]
                         pvalue = self.ifcModel.item(row,0).child(childrow,2).text()
-                        if sys.version_info.major >= 3:
-                            ifcdict[prop] = pset+";;"+ptype+";;"+pvalue
-                        else:
-                            # keys cannot be unicode
-                            ifcdict[prop.encode("utf8")] = pset+";;"+ptype+";;"+pvalue
+                        ifcdict[prop] = pset+";;"+ptype+";;"+pvalue
             ifcData = self.obj.IfcData
             ifcData["IfcUID"] = self.ifcEditor.labelUUID.text()
             ifcData["FlagForceBrep"] = str(self.ifcEditor.checkBrep.isChecked())
@@ -2132,7 +2133,7 @@ class ComponentTaskPanel:
             "New Property".
         ptype: str, optional
             The name of the property type the new property will be set as. If
-            not specified, the the property's type will be determined using the
+            not specified, the property's type will be determined using the
             idx parameter.
         """
 

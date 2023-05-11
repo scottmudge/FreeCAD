@@ -24,218 +24,277 @@
 # FreeCAD init module
 #
 # Gathering all the information to start FreeCAD.
-# This is the second of of three init scripts.
+# This is the second of three init scripts.
 # The third one runs when the gui is up,
 
 # imports the one and only
 import FreeCAD
 
 def removeFromPath(module_name):
-	"""removes the module from the sys.path. The entry point for imports
-		will therefore always be FreeCAD.
-		eg.: from FreeCAD.Module.submodule import function"""
-	import sys
-	paths = sys.path
-	for path in paths:
-		if module_name in path:
-			sys.path.remove(path)
-			return
-	Wrn(module_name + " not found in sys.path\n")
+    """removes the module from the sys.path. The entry point for imports
+        will therefore always be FreeCAD.
+        eg.: from FreeCAD.Module.submodule import function"""
+    import sys
+    paths = sys.path
+    for path in paths:
+        if module_name in path:
+            sys.path.remove(path)
+            return
+    Wrn(module_name + " not found in sys.path\n")
 
 def setupSearchPaths(PathExtension):
-	# DLL resolution in Python 3.8 on Windows has changed
-	import sys
-	if sys.platform == 'win32' and hasattr(os, "add_dll_directory"):
-		if "FREECAD_LIBPACK_BIN" in os.environ:
-			os.add_dll_directory(os.environ["FREECAD_LIBPACK_BIN"])
-		if "WINDIR" in os.environ:
-			os.add_dll_directory(os.environ["WINDIR"] + os.sep + "system32")
-		for path in PathExtension:
-			os.add_dll_directory(path)
+    # DLL resolution in Python 3.8 on Windows has changed
+    import sys
+    if sys.platform == 'win32' and hasattr(os, "add_dll_directory"):
+        if "FREECAD_LIBPACK_BIN" in os.environ:
+            os.add_dll_directory(os.environ["FREECAD_LIBPACK_BIN"])
+        if "WINDIR" in os.environ:
+            os.add_dll_directory(os.environ["WINDIR"] + os.sep + "system32")
+        for path in PathExtension:
+            os.add_dll_directory(path)
 
-	PathEnvironment = PathExtension.pop(0) + os.pathsep
-	for path in PathExtension:
-		try:
-			PathEnvironment += path + os.pathsep
-		except UnicodeDecodeError:
-			Wrn('Filter invalid module path: u{}\n'.format(repr(path)))
+    PathEnvironment = PathExtension.pop(0) + os.pathsep
+    for path in PathExtension:
+        try:
+            PathEnvironment += path + os.pathsep
+        except UnicodeDecodeError:
+            Wrn('Filter invalid module path: u{}\n'.format(repr(path)))
 
-	# new paths must be prepended to avoid to load a wrong version of a library
-	try:
-		os.environ["PATH"] = PathEnvironment + os.environ["PATH"]
-	except UnicodeDecodeError:
-		# See #0002238. FIXME: check again once ported to Python 3.x
-		Log('UnicodeDecodeError was raised when concatenating unicode string with PATH. Try to remove non-ascii paths...\n')
-		path = os.environ["PATH"].split(os.pathsep)
-		cleanpath=[]
-		for i in path:
-			if test_ascii(i):
-				cleanpath.append(i)
-		os.environ["PATH"] = PathEnvironment + os.pathsep.join(cleanpath)
-		Log('done\n')
-	except UnicodeEncodeError:
-		Log('UnicodeEncodeError was raised when concatenating unicode string with PATH. Try to replace non-ascii chars...\n')
-		os.environ["PATH"] = PathEnvironment.encode(errors='replace') + os.environ["PATH"]
-		Log('done\n')
-	except KeyError:
-		os.environ["PATH"] = PathEnvironment
+    # new paths must be prepended to avoid to load a wrong version of a library
+    try:
+        os.environ["PATH"] = PathEnvironment + os.environ["PATH"]
+    except UnicodeDecodeError:
+        # See #0002238. FIXME: check again once ported to Python 3.x
+        Log('UnicodeDecodeError was raised when concatenating unicode string with PATH. Try to remove non-ascii paths...\n')
+        path = os.environ["PATH"].split(os.pathsep)
+        cleanpath=[]
+        for i in path:
+            if test_ascii(i):
+                cleanpath.append(i)
+        os.environ["PATH"] = PathEnvironment + os.pathsep.join(cleanpath)
+        Log('done\n')
+    except UnicodeEncodeError:
+        Log('UnicodeEncodeError was raised when concatenating unicode string with PATH. Try to replace non-ascii chars...\n')
+        os.environ["PATH"] = PathEnvironment.encode(errors='replace') + os.environ["PATH"]
+        Log('done\n')
+    except KeyError:
+        os.environ["PATH"] = PathEnvironment
 
 FreeCAD._importFromFreeCAD = removeFromPath
 
 
 def InitApplications():
-	# Checking on FreeCAD module path ++++++++++++++++++++++++++++++++++++++++++
-	ModDir = FreeCAD.getHomePath()+'Mod'
-	ModDir = os.path.realpath(ModDir)
-	ExtDir = FreeCAD.getHomePath()+'Ext'
-	ExtDir = os.path.realpath(ExtDir)
-	BinDir = FreeCAD.getHomePath()+'bin'
-	BinDir = os.path.realpath(BinDir)
-	libpaths = []
-	LibDir = FreeCAD.getHomePath()+'lib'
-	LibDir = os.path.realpath(LibDir)
-	if os.path.exists(LibDir):
-		libpaths.append(LibDir)
-	Lib64Dir = FreeCAD.getHomePath()+'lib64'
-	Lib64Dir = os.path.realpath(Lib64Dir)
-	if os.path.exists(Lib64Dir):
-		libpaths.append(Lib64Dir)
-	if sys.version_info[0] == 3:
-		LibPyDir = FreeCAD.getHomePath()+'lib-py3'
-	else:
-		LibPyDir = FreeCAD.getHomePath()+'lib-py2'
-	LibPyDir = os.path.realpath(LibPyDir)
-	if (os.path.exists(LibPyDir)):
-		libpaths.append(LibPyDir)
-	AddPath = FreeCAD.ConfigGet("AdditionalModulePaths").split(";")
-	HomeMod = FreeCAD.getUserAppDataDir()+"Mod"
-	HomeMod = os.path.realpath(HomeMod)
-	MacroDir = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Macro").GetString("MacroPath")
-	MacroMod = os.path.realpath(MacroDir+"/Mod")
-	SystemWideMacroDir = FreeCAD.getHomePath()+'Macro'
-	SystemWideMacroDir = os.path.realpath(SystemWideMacroDir)
+    # Checking on FreeCAD module path ++++++++++++++++++++++++++++++++++++++++++
+    ModDir = FreeCAD.getHomePath()+'Mod'
+    ModDir = os.path.realpath(ModDir)
+    ExtDir = FreeCAD.getHomePath()+'Ext'
+    ExtDir = os.path.realpath(ExtDir)
+    BinDir = FreeCAD.getHomePath()+'bin'
+    BinDir = os.path.realpath(BinDir)
+    libpaths = []
+    LibDir = FreeCAD.getHomePath()+'lib'
+    LibDir = os.path.realpath(LibDir)
+    if os.path.exists(LibDir):
+        libpaths.append(LibDir)
+    Lib64Dir = FreeCAD.getHomePath()+'lib64'
+    Lib64Dir = os.path.realpath(Lib64Dir)
+    if os.path.exists(Lib64Dir):
+        libpaths.append(Lib64Dir)
+    LibPyDir = FreeCAD.getHomePath()+'lib-py3'
+    LibPyDir = os.path.realpath(LibPyDir)
+    if (os.path.exists(LibPyDir)):
+        libpaths.append(LibPyDir)
+    LibFcDir = FreeCAD.getLibraryDir()
+    LibFcDir = os.path.realpath(LibFcDir)
+    if (os.path.exists(LibFcDir) and not LibFcDir in libpaths):
+        libpaths.append(LibFcDir)
+    AddPath = FreeCAD.ConfigGet("AdditionalModulePaths").split(";")
+    HomeMod = FreeCAD.getUserAppDataDir()+"Mod"
+    HomeMod = os.path.realpath(HomeMod)
+    MacroStd = App.getUserMacroDir(False)
+    MacroDir = App.getUserMacroDir(True)
+    MacroMod = os.path.realpath(MacroDir+"/Mod")
+    SystemWideMacroDir = FreeCAD.getHomePath()+'Macro'
+    SystemWideMacroDir = os.path.realpath(SystemWideMacroDir)
 
-	#print FreeCAD.getHomePath()
-	if os.path.isdir(FreeCAD.getHomePath()+'src\\Tools'):
-		sys.path.append(FreeCAD.getHomePath()+'src\\Tools')
-
-
-
-	# Searching for module dirs +++++++++++++++++++++++++++++++++++++++++++++++++++
-	# Use dict to handle duplicated module names
-	ModDict = {}
-	if os.path.isdir(ModDir):
-		ModDirs = os.listdir(ModDir)
-		for i in ModDirs: ModDict[i.lower()] = os.path.join(ModDir,i)
-	else:
-		Wrn ("No modules found in " + ModDir + "\n")
-	# Search for additional modules in the home directory
-	if os.path.isdir(HomeMod):
-		HomeMods = os.listdir(HomeMod)
-		for i in HomeMods: ModDict[i.lower()] = os.path.join(HomeMod,i)
-	# Search for additional modules in the macro directory
-	if os.path.isdir(MacroMod):
-		MacroMods = os.listdir(MacroMod)
-		for i in MacroMods:
-			key = i.lower()
-			if key not in ModDict: ModDict[key] = os.path.join(MacroMod,i)
-	# Search for additional modules in command line
-	for i in AddPath:
-		if os.path.isdir(i): ModDict[i] = i
-	#AddModPaths = App.ParamGet("System parameter:AdditionalModulePaths")
-	#Err( AddModPaths)
-	# add also this path so that all modules search for libraries
-	# they depend on first here
-	PathExtension = []
-	PathExtension.append(BinDir)
-
-	# prepend all module paths to Python search path
-	Log('Init:   Searching for modules...\n')
+    #print FreeCAD.getHomePath()
+    if os.path.isdir(FreeCAD.getHomePath()+'src\\Tools'):
+        sys.path.append(FreeCAD.getHomePath()+'src\\Tools')
 
 
-	# to have all the module-paths available in FreeCADGuiInit.py:
-	FreeCAD.__ModDirs__ = list(ModDict.values())
 
-	# this allows importing with:
-	# from FreeCAD.Module import package
-	FreeCAD.__path__ = [ModDir] + libpaths + [HomeMod]
+    # Searching for module dirs +++++++++++++++++++++++++++++++++++++++++++++++++++
+    # Use dict to handle duplicated module names
+    ModDict = {}
+    if os.path.isdir(ModDir):
+        ModDirs = os.listdir(ModDir)
+        for i in ModDirs: ModDict[i.lower()] = os.path.join(ModDir,i)
+    else:
+        Wrn ("No modules found in " + ModDir + "\n")
+    # Search for additional modules in the home directory
+    if os.path.isdir(HomeMod):
+        HomeMods = os.listdir(HomeMod)
+        for i in HomeMods: ModDict[i.lower()] = os.path.join(HomeMod,i)
+    elif os.path.isdir(os.path.join(os.path.expanduser("~"),".FreeCAD","Mod")):
+        # Check if old location exists
+        Wrn ("User path has changed to " + FreeCAD.getUserAppDataDir() + ". Please move user modules and macros\n")
+    # Search for additional modules in the macro directory
+    if os.path.isdir(MacroMod):
+        MacroMods = os.listdir(MacroMod)
+        for i in MacroMods:
+            key = i.lower()
+            if key not in ModDict: ModDict[key] = os.path.join(MacroMod,i)
+    # Search for additional modules in command line
+    for i in AddPath:
+        if os.path.isdir(i): ModDict[i] = i
+    #AddModPaths = App.ParamGet("System parameter:AdditionalModulePaths")
+    #Err( AddModPaths)
+    # add also this path so that all modules search for libraries
+    # they depend on first here
+    PathExtension = []
+    PathExtension.append(BinDir)
 
-	# also add these directories to the sys.path to
-	# not change the old behaviour. once we have moved to
-	# proper python modules this can eventuelly be removed.
-	sys.path = [ModDir] + libpaths + [ExtDir] + sys.path
+    # prepend all module paths to Python search path
+    Log('Init:   Searching for modules...\n')
 
-	for Dir in ModDict.values():
-		if ((Dir != '') & (Dir != 'CVS') & (Dir != '__init__.py')):
-			sys.path.insert(0,Dir)
-			PathExtension.append(Dir)
-			InstallFile = os.path.join(Dir,"Init.py")
-			if (os.path.exists(InstallFile)):
-				try:
-					# XXX: This looks scary securitywise...
-					if sys.version_info.major < 3:
-						with open(InstallFile) as f:
-							exec(f.read())
-					else:
-						with open(file=InstallFile, encoding="utf-8") as f:
-							exec(f.read())
-				except Exception as inst:
-					Log('Init:      Initializing ' + Dir + '... failed\n')
-					Log('-'*100+'\n')
-					Log(traceback.format_exc())
-					Log('-'*100+'\n')
-					Err('During initialization the error "' + str(inst) + '" occurred in ' + InstallFile + '\n')
-					Err('Please look into the log file for further information\n')
-				else:
-					Log('Init:      Initializing ' + Dir + '... done\n')
-			else:
-				Log('Init:      Initializing ' + Dir + '(Init.py not found)... ignore\n')
 
-	extension_modules = []
+    # to have all the module-paths available in FreeCADGuiInit.py:
+    FreeCAD.__ModDirs__ = list(ModDict.values())
 
-	try:
-		import pkgutil
-		import importlib
-		import freecad
-		for _, freecad_module_name, freecad_module_ispkg in pkgutil.iter_modules(freecad.__path__, "freecad."):
-			if freecad_module_ispkg:
-				Log('Init: Initializing ' + freecad_module_name + '\n')
-				try:
-					freecad_module = importlib.import_module(freecad_module_name)
-					extension_modules += [freecad_module_name]
-					if any (module_name == 'init' for _, module_name, ispkg in pkgutil.iter_modules(freecad_module.__path__)):
-						importlib.import_module(freecad_module_name + '.init')
-						Log('Init: Initializing ' + freecad_module_name + '... done\n')
-					else:
-						Log('Init: No init module found in ' + freecad_module_name + ', skipping\n')
-				except Exception as inst:
-					Err('During initialization the error "' + str(inst) + '" occurred in ' + freecad_module_name + '\n')
-					Err('-'*80+'\n')
-					Err(traceback.format_exc())
-					Err('-'*80+'\n')
-					Log('Init:      Initializing ' + freecad_module_name + '... failed\n')
-					Log('-'*80+'\n')
-					Log(traceback.format_exc())
-					Log('-'*80+'\n')
-	except ImportError as inst:
-		Err('During initialization the error "' + str(inst) + '" occurred\n')
+    # this allows importing with:
+    # from FreeCAD.Module import package
+    FreeCAD.__path__ = [ModDir] + libpaths + [HomeMod]
 
-	Log("Using "+ModDir+" as module path!\n")
-	# In certain cases the PathExtension list can contain invalid strings. We concatenate them to a single string
-	# but check that the output is a valid string
-	setupSearchPaths(PathExtension)
-	path = os.environ["PATH"].split(os.pathsep)
-	Log("System path after init:\n")
-	for i in path:
-		Log("   " + i + "\n")
-	# add MacroDir to path (RFE #0000504)
-	sys.path.append(MacroDir)
-	# add SystemWideMacroDir to path
-	sys.path.append(SystemWideMacroDir)
-	# add special path for MacOSX (bug #0000307)
-	import platform
-	if len(platform.mac_ver()[0]) > 0:
-		sys.path.append(os.path.expanduser('~/Library/Application Support/FreeCAD/Mod'))
+    # also add these directories to the sys.path to
+    # not change the old behaviour. once we have moved to
+    # proper python modules this can eventually be removed.
+    sys.path = [ModDir] + libpaths + [ExtDir] + sys.path
+
+    # The AddonManager may install additional Python packages in
+    # these paths:
+    import platform
+    major,minor,_ = platform.python_version_tuple()
+    vendor_path = os.path.join(
+        FreeCAD.getUserAppDataDir(), "AdditionalPythonPackages",f"py{major}{minor}"
+    )
+    if os.path.isdir(vendor_path):
+        sys.path.append(vendor_path)
+
+    additional_packages_path = os.path.join(FreeCAD.getUserAppDataDir(),"AdditionalPythonPackages")
+    if os.path.isdir(additional_packages_path):
+        sys.path.append(additional_packages_path)
+
+    def RunInitPy(Dir):
+        InstallFile = os.path.join(Dir,"Init.py")
+        if (os.path.exists(InstallFile)):
+            try:
+                with open(file=InstallFile, encoding="utf-8") as f:
+                    exec(f.read())
+            except Exception as inst:
+                Log('Init:      Initializing ' + Dir + '... failed\n')
+                Log('-'*100+'\n')
+                Log(traceback.format_exc())
+                Log('-'*100+'\n')
+                Err('During initialization the error "' + str(inst) + '" occurred in ' + InstallFile + '\n')
+                Err('Please look into the log file for further information\n')
+            else:
+                Log('Init:      Initializing ' + Dir + '... done\n')
+        else:
+            Log('Init:      Initializing ' + Dir + '(Init.py not found)... ignore\n')
+
+    for Dir in ModDict.values():
+        if ((Dir != '') & (Dir != 'CVS') & (Dir != '__init__.py')):
+            stopFile = os.path.join(Dir, "ADDON_DISABLED")
+            if os.path.exists(stopFile):
+                Msg(f'NOTICE: Addon "{Dir}" disabled by presence of ADDON_DISABLED stopfile\n')
+                continue
+            sys.path.insert(0,Dir)
+            PathExtension.append(Dir)
+            MetadataFile = os.path.join(Dir, "package.xml")
+            if os.path.exists(MetadataFile):
+                meta = FreeCAD.Metadata(MetadataFile)
+                if not meta.supportsCurrentFreeCAD():
+                    Msg(f'NOTICE: {meta.Name} does not support this version of FreeCAD, so is being skipped\n')
+                    continue
+                content = meta.Content
+                if "workbench" in content:
+                    workbenches = content["workbench"]
+                    for workbench in workbenches:
+                        if not workbench.supportsCurrentFreeCAD():
+                            Msg(f'NOTICE: {meta.Name} content item {workbench.Name} does not support this version of FreeCAD, so is being skipped\n')
+                            continue
+                        subdirectory = workbench.Name if not workbench.Subdirectory else workbench.Subdirectory
+                        subdirectory = subdirectory.replace("/",os.path.sep)
+                        subdirectory = os.path.join(Dir, subdirectory)
+                        #classname = workbench.Classname
+                        sys.path.insert(0,subdirectory)
+                        PathExtension.append(subdirectory)
+                        RunInitPy(subdirectory)
+                else:
+                    pass # The package content says there are no workbenches here, so just skip
+            else:
+                RunInitPy(Dir)
+
+    extension_modules = []
+
+    try:
+        import pkgutil
+        import importlib
+        import freecad
+        for _, freecad_module_name, freecad_module_ispkg in pkgutil.iter_modules(freecad.__path__, "freecad."):
+            if freecad_module_ispkg:
+                Log('Init: Initializing ' + freecad_module_name + '\n')
+                try:
+                    # Check for a stopfile
+                    stopFile = os.path.join(FreeCAD.getUserAppDataDir(), "Mod", freecad_module_name[8:], "ADDON_DISABLED")
+                    if os.path.exists(stopFile):
+                        Msg(f'NOTICE: Addon "{freecad_module_name}" disabled by presence of ADDON_DISABLED stopfile\n')
+                        continue
+
+                    # Make sure that package.xml (if present) does not exclude this version of FreeCAD
+                    MetadataFile = os.path.join(FreeCAD.getUserAppDataDir(), "Mod", freecad_module_name[8:], "package.xml")
+                    if os.path.exists(MetadataFile):
+                        meta = FreeCAD.Metadata(MetadataFile)
+                        if not meta.supportsCurrentFreeCAD():
+                            Msg(f'NOTICE: Addon "{freecad_module_name}" does not support this version of FreeCAD, so is being skipped\n')
+                            continue
+
+                    freecad_module = importlib.import_module(freecad_module_name)
+                    extension_modules += [freecad_module_name]
+                    if any (module_name == 'init' for _, module_name, ispkg in pkgutil.iter_modules(freecad_module.__path__)):
+                        importlib.import_module(freecad_module_name + '.init')
+                        Log('Init: Initializing ' + freecad_module_name + '... done\n')
+                    else:
+                        Log('Init: No init module found in ' + freecad_module_name + ', skipping\n')
+                except Exception as inst:
+                    Err('During initialization the error "' + str(inst) + '" occurred in ' + freecad_module_name + '\n')
+                    Err('-'*80+'\n')
+                    Err(traceback.format_exc())
+                    Err('-'*80+'\n')
+                    Log('Init:      Initializing ' + freecad_module_name + '... failed\n')
+                    Log('-'*80+'\n')
+                    Log(traceback.format_exc())
+                    Log('-'*80+'\n')
+    except ImportError as inst:
+        Err('During initialization the error "' + str(inst) + '" occurred\n')
+
+    Log("Using "+ModDir+" as module path!\n")
+    # In certain cases the PathExtension list can contain invalid strings. We concatenate them to a single string
+    # but check that the output is a valid string
+    setupSearchPaths(PathExtension)
+    path = os.environ["PATH"].split(os.pathsep)
+    Log("System path after init:\n")
+    for i in path:
+        Log("   " + i + "\n")
+    # add MacroDir to path (RFE #0000504)
+    sys.path.append(MacroStd)
+    sys.path.append(MacroDir)
+    # add SystemWideMacroDir to path
+    sys.path.append(SystemWideMacroDir)
+    # add special path for MacOSX (bug #0000307)
+    import platform
+    if len(platform.mac_ver()[0]) > 0:
+        sys.path.append(os.path.expanduser('~/Library/Application Support/FreeCAD/Mod'))
 
 # some often used shortcuts (for lazy people like me  ;-)
 App = FreeCAD
@@ -259,12 +318,6 @@ try:
 except ImportError:
     FreeCAD.Console.PrintError("\n\nSeems the python standard libs are not installed, bailing out!\n\n")
     raise
-
-# Backward compatibility to Py2
-import sys
-if sys.version_info.major < 3:
-    import time
-    time.process_time = time.clock
 
 class FCADLogger(object):
     '''Convenient class for tagged logging.
@@ -305,8 +358,6 @@ class FCADLogger(object):
         By default any tag has a log level of 2 for release, and 3 for debug
         build.
     '''
-
-    _string_type = str if sys.version_info[0] >= 3 else basestring
 
     _levels = { 'Error':0, 'error':0,
                 'Warning':1, 'warn':1,
@@ -476,7 +527,7 @@ class FCADLogger(object):
                      string.format()
         '''
 
-        if (args or kargs) and isinstance(msg,self.__class__._string_type):
+        if (args or kargs) and isinstance(msg,str):
             if not kargs:
                 msg = msg.format(*args)
             else:
@@ -636,12 +687,12 @@ FreeCAD.Logger = FCADLogger
 
 # init every application by importing Init.py
 try:
-	InitApplications()
+    InitApplications()
 except Exception as e:
-	Err('Error in InitApplications ' + str(e) + '\n')
-	Err('-'*80+'\n')
-	Err(traceback.format_exc())
-	Err('-'*80+'\n')
+    Err('Error in InitApplications ' + str(e) + '\n')
+    Err('-'*80+'\n')
+    Err(traceback.format_exc())
+    Err('-'*80+'\n')
 
 FreeCAD.addImportType("FreeCAD document (*.FCStd)","FreeCAD")
 
@@ -657,10 +708,7 @@ for n,v in App.Units.listUnitTypes():
     setattr(App.Units,n,v)
 
 # Add an enum for the different unit schemes
-if sys.version_info.major < 3:
-    IntEnum = object
-else:
-    from enum import IntEnum
+from enum import IntEnum
 
 # The values must match with that of the
 # C++ enum class UnitSystem
@@ -676,6 +724,33 @@ class Scheme(IntEnum):
     FemMilliMeterNewton = 8
 
 App.Units.Scheme = Scheme
+
+class NumberFormat(IntEnum):
+    Default = 0
+    Fixed = 1
+    Scientific = 2
+
+App.Units.NumberFormat = NumberFormat
+
+class ScaleType(IntEnum):
+    Other = -1
+    NoScaling = 0
+    NonUniformRight = 1
+    NonUniformLeft = 2
+    Uniform = 3
+
+App.ScaleType = ScaleType
+
+class PropertyType(IntEnum):
+    Prop_None = 0
+    Prop_ReadOnly = 1
+    Prop_Transient = 2
+    Prop_Hidden = 4
+    Prop_Output = 8
+    Prop_NoRecompute = 16
+    Prop_NoPersist = 32
+
+App.PropertyType = PropertyType
 
 # clean up namespace
 del(InitApplications)

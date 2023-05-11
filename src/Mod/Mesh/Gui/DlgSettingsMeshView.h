@@ -20,15 +20,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef MESHGUI_DLGSETTINGSMESHVIEW_H
 #define MESHGUI_DLGSETTINGSMESHVIEW_H
 
 #ifndef MESH_GLOBAL_H
-#include <Mod/Mesh/MeshGlobal.h>
+# include <Mod/Mesh/MeshGlobal.h>
 #endif
-#include <Gui/PropertyPage.h>
 #include <memory>
+
+#include <Gui/PropertyPage.h>
+
 
 namespace MeshGui {
 class Ui_DlgSettingsMeshView;
@@ -38,17 +39,17 @@ class Ui_DlgSettingsMeshView;
  * @author Werner Mayer
  */
 class DlgSettingsMeshView : public Gui::Dialog::PreferencePage
-{ 
+{
     Q_OBJECT
 
 public:
-    DlgSettingsMeshView(QWidget* parent = nullptr);
-    ~DlgSettingsMeshView();
+    explicit DlgSettingsMeshView(QWidget* parent = nullptr);
+    ~DlgSettingsMeshView() override;
 
 protected:
-    void saveSettings();
-    void loadSettings();
-    void changeEvent(QEvent *e);
+    void saveSettings() override;
+    void loadSettings() override;
+    void changeEvent(QEvent *e) override;
 
 private:
     std::unique_ptr<Ui_DlgSettingsMeshView> ui;

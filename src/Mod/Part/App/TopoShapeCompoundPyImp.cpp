@@ -20,18 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #include "TopoShape.h"
 #ifndef _PreComp_
 # include <BRep_Builder.hxx>
+# include <Precision.hxx>
+# include <ShapeAnalysis_FreeBounds.hxx>
 # include <Standard_Failure.hxx>
+# include <TopExp_Explorer.hxx>
 # include <TopoDS_Compound.hxx>
 # include <TopTools_HSequenceOfShape.hxx>
-# include <ShapeAnalysis_FreeBounds.hxx>
-# include <Precision.hxx>
-# include <TopExp_Explorer.hxx>
 #endif
 
 #include "TopoShapeOpCode.h"
@@ -42,10 +41,11 @@
 #include "TopoShapeCompoundPy.h"
 #include "TopoShapeCompoundPy.cpp"
 
+
 using namespace Part;
 
 // returns a string which represents the object e.g. when printed in python
-std::string TopoShapeCompoundPy::representation(void) const
+std::string TopoShapeCompoundPy::representation() const
 {
     std::stringstream str;
     str << "<Compound object at " << getTopoShapePtr() << ">";
@@ -101,14 +101,14 @@ int TopoShapeCompoundPy::PyInit(PyObject* args, PyObject* /*kwd*/)
 PyObject*  TopoShapeCompoundPy::add(PyObject *args)
 {
     PyObject *obj;
-    if (!PyArg_ParseTuple(args, "O", &obj))
-        return NULL;
+    if (!PyArg_ParseTuple(args, "O!", &(Part::TopoShapePy::Type), &obj))
+        return nullptr;
 
     BRep_Builder builder;
     TopoDS_Shape comp = getTopoShapePtr()->getShape();
     auto shapes = getPyShapes(obj);
     
-    PY_TRY {
+    try {
         for(auto &s : shapes) {
             if(!s.isNull())
                 builder.Add(comp,s.getShape());
@@ -116,7 +116,7 @@ PyObject*  TopoShapeCompoundPy::add(PyObject *args)
     } PY_CATCH_OCC
 
 #ifndef FC_NO_ELEMENT_MAP
-    PY_TRY {
+    try {
         auto &self = *getTopoShapePtr();
         shapes.push_back(self);
         TopoShape tmp(self.Tag,self.Hasher,comp);
@@ -134,9 +134,9 @@ PyObject* TopoShapeCompoundPy::connectEdgesToWires(PyObject *args)
     PyObject *shared=Py_True;
     double tol = Precision::Confusion();
     if (!PyArg_ParseTuple(args, "|O!d",&PyBool_Type,&shared,&tol))
-        return 0;
+        return nullptr;
 
-    PY_TRY {
+    try {
 #ifndef FC_NO_ELEMENT_MAP
         return Py::new_reference_to(shape2pyshape(
                     getTopoShapePtr()->makEWires("", tol, PyObject_IsTrue(shared))));
@@ -148,7 +148,7 @@ PyObject* TopoShapeCompoundPy::connectEdgesToWires(PyObject *args)
         for (TopExp_Explorer xp(s, TopAbs_EDGE); xp.More(); xp.Next())
             hEdges->Append(xp.Current());
 
-        ShapeAnalysis_FreeBounds::ConnectEdgesToWires(hEdges, tol, PyObject_IsTrue(shared) ? Standard_True : Standard_False, hWires);
+        ShapeAnalysis_FreeBounds::ConnectEdgesToWires(hEdges, tol, Base::asBoolean(shared), hWires);
 
         TopoDS_Compound comp;
         BRep_Builder builder;
@@ -166,7 +166,7 @@ PyObject* TopoShapeCompoundPy::connectEdgesToWires(PyObject *args)
 
 PyObject *TopoShapeCompoundPy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int TopoShapeCompoundPy::setCustomAttributes(const char* /*attr*/, PyObject* /*obj*/)

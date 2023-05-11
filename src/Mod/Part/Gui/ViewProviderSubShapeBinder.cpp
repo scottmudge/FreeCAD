@@ -358,7 +358,7 @@ void ViewProviderSubShapeBinder::updatePlacement(bool transaction) {
     App::DocumentObject *parent = 0;
     std::string parentSub;
     if(relative && self->getParents().size()) {
-        const auto &sel = Gui::Selection().getSelection("",0);
+        const auto &sel = Gui::Selection().getSelection("", Gui::ResolveMode::NoResolve);
         if(sel.size()!=1 || !sel[0].pObject ||
             sel[0].pObject->getSubObject(sel[0].SubName)!=self) 
         {

@@ -39,7 +39,7 @@ namespace PartDesign
  */
 class PartDesignExport Transformed : public PartDesign::FeatureAddSub
 {
-    PROPERTY_HEADER(PartDesign::Transformed);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::Transformed);
 
 public:
     Transformed();
@@ -65,7 +65,7 @@ public:
      *               silently return a nullptr, otherwise throw Base::Exception.
      *               Default is false.
      */
-    virtual Part::Feature* getBaseObject(bool silent=false) const;
+    Part::Feature* getBaseObject(bool silent=false) const override;
 
     /// Return the sketch of the first original
     App::DocumentObject* getSketchObject() const;
@@ -85,12 +85,12 @@ public:
       * If Originals is empty, execute() returns immediately without doing anything as
       * the actual processing will happen in the MultiTransform feature
       */
-    App::DocumentObjectExecReturn *execute(void);
-    short mustExecute() const;
+    App::DocumentObjectExecReturn *execute() override;
+    short mustExecute() const override;
     //@}
 
-    virtual void onDocumentRestored();
-    virtual void onChanged(const App::Property *);
+    void onDocumentRestored() override;
+    void onChanged(const App::Property *) override;
 
     /** returns a list of the transformations that where rejected during the last execute
       * because they did not overlap with the support
@@ -98,20 +98,21 @@ public:
     typedef std::vector<std::pair<Part::TopoShape,std::vector<gp_Trsf> > > rejectedMap;
     const rejectedMap getRejectedTransformations(void) { return rejected; }
 
-    virtual bool isElementGenerated(const TopoShape &shape, const Data::MappedName &name) const;
+    bool isElementGenerated(const TopoShape &shape, const Data::MappedName &name) const override;
 
-    virtual void getAddSubShape(std::vector<std::pair<Part::TopoShape, Type> > &shapes);
+    void getAddSubShape(std::vector<std::pair<Part::TopoShape, Type> > &shapes) override;
 
 protected:
-    void handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, App::Property * prop);
-    virtual void positionBySupport(void);
+    void handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, App::Property * prop) override;
+    virtual void positionBySupport();
     TopoShape refineShapeIfActive(const TopoShape&) const;
     void divideTools(const std::vector<TopoDS_Shape> &toolsIn, std::vector<TopoDS_Shape> &individualsOut,
                      TopoDS_Compound &compoundOut) const;
     static TopoDS_Shape getRemainingSolids(const TopoDS_Shape&);
 
-    virtual void setupObject ();
+    void setupObject() override;
 
+protected:
     rejectedMap rejected;
     bool forceSkipFirst = false;
 };

@@ -86,12 +86,18 @@
        </widget>
       </item>
       <item row="0" column="3">
-       <widget class="QComboBox" name="naviCubeCorner">
+       <widget class="Gui::PrefComboBox" name="naviCubeCorner">
         <property name="toolTip">
          <string>Corner where navigation cube is shown</string>
         </property>
         <property name="currentIndex">
          <number>1</number>
+        </property>
+        <property name="prefEntry" stdset="0">
+         <cstring>CornerNaviCube</cstring>
+        </property>
+        <property name="prefPath" stdset="0">
+         <cstring>NaviCube</cstring>
         </property>
         <item>
          <property name="text">
@@ -137,7 +143,7 @@
       <item row="2" column="0">
        <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>Size</string>
+         <string>Cube size</string>
         </property>
        </widget>
       </item>
@@ -483,7 +489,7 @@ If ALT key is down, then does the oppsite of the above long press action.</strin
         <item row="5" column="0">
          <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>New document scale</string>
+           <string>Camera zoom</string>
           </property>
          </widget>
         </item>
@@ -596,6 +602,11 @@ Select a set and then press the button to view said configurations.</string>
    <extends>QWidget</extends>
    <header>Gui/PrefWidgets.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Gui::PrefComboBox</class>
+   <extends>QCombobBox</extends>
+   <header>Gui/PrefWidgets.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -29,7 +29,6 @@ __url__ = "https://www.freecadweb.org"
 
 import os
 import subprocess
-import sys
 
 import FreeCAD
 from FreeCAD import Console
@@ -319,8 +318,7 @@ class GmshTools():
                 p1 = subprocess.Popen(["which", "gmsh"], stdout=subprocess.PIPE)
                 if p1.wait() == 0:
                     output = p1.stdout.read()
-                    if sys.version_info.major >= 3:
-                        output = output.decode("utf-8")
+                    output = output.decode("utf-8")
                     gmsh_path = output.split("\n")[0]
                 elif p1.wait() == 1:
                     error_message = (
@@ -330,6 +328,13 @@ class GmshTools():
                     )
                     Console.PrintError(error_message)
                     raise GmshError(error_message)
+                self.gmsh_bin = gmsh_path
+            elif system() == "Darwin":
+                # https://forum.freecadweb.org/viewtopic.php?f=13&t=73041&p=642026#p642022
+                gmsh_path = "/Applications/Gmsh.app/Contents/MacOS/gmsh"
+                FreeCAD.ParamGet(
+                    "User parameter:BaseApp/Preferences/Mod/Fem/Gmsh"
+                ).SetString("gmshBinaryPath", gmsh_path)
                 self.gmsh_bin = gmsh_path
             else:
                 error_message = (
@@ -412,7 +417,7 @@ class GmshTools():
                 shell=False,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                universal_newlines=True
             )
         except Exception as e:
             Console.PrintMessage(str(e) + "\n")
@@ -733,6 +738,13 @@ class GmshTools():
         geo = open(self.temp_file_geo, "w")
         geo.write("// geo file for meshing with Gmsh meshing software created by FreeCAD\n")
         geo.write("\n")
+
+        cpu_count = os.cpu_count()
+        if cpu_count is not None and cpu_count > 1:
+            geo.write("// enable multi-core processing\n")
+            geo.write(f"General.NumThreads = {cpu_count};\n")
+            geo.write("\n")
+
         geo.write("// open brep geometry\n")
         # explicit use double quotes in geo file
         geo.write('Merge "{}";\n'.format(self.temp_file_geometry))
@@ -914,9 +926,7 @@ class GmshTools():
                 stderr=subprocess.PIPE
             )
             output, error = p.communicate()
-            if sys.version_info.major >= 3:
-                # output = output.decode("utf-8")
-                error = error.decode("utf-8")
+            error = error.decode("utf-8")
             # stdout is still cut at some point
             # but the warnings are in stderr and thus printed :-)
             # print(output)
@@ -1011,7 +1021,7 @@ for len in max_mesh_sizes:
 """
 TODO
 class GmshTools should be splittet in two classes
-one class should only collect the mesh parameter from mesh object and his childs
+one class should only collect the mesh parameter from mesh object and its childs
 a second class only uses the collected parameter,
 writes the input file runs gmsh reads back the unv and returns a FemMesh
 gmsh binary will be collected in the second class

@@ -25,37 +25,31 @@
 
 #ifndef _PreComp_
 # include <QListIterator>
-# include <QTimer>
 # include <QListWidgetItem>
+# include <QTimer>
 #endif
 
-#include <Gui/Application.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/MainWindow.h>
-#include <Gui/Document.h>
-#include <Gui/Control.h>
-#include <Gui/ViewProviderOrigin.h>
 #include <App/Document.h>
 #include <App/Origin.h>
 #include <App/OriginFeature.h>
 #include <App/Part.h>
-#include <Base/Tools.h>
-#include <Base/Reader.h>
 #include <Base/Console.h>
-
+#include <Gui/Application.h>
+#include <Gui/BitmapFactory.h>
+#include <Gui/Control.h>
+#include <Gui/ViewProviderOrigin.h>
 #include <Mod/PartDesign/App/Body.h>
+#include <Mod/PartDesign/App/ShapeBinder.h>
+#include <Mod/PartDesign/App/DatumLine.h>
+#include <Mod/PartDesign/App/DatumPlane.h>
+#include <Mod/PartDesign/App/DatumPoint.h>
+#include <Mod/PartDesign/App/FeaturePrimitive.h>
 #include <Mod/Sketcher/App/SketchObject.h>
-
-#include "Utils.h"
 
 #include "ui_TaskFeaturePick.h"
 #include "TaskFeaturePick.h"
-#include <Mod/PartDesign/App/ShapeBinder.h>
-#include <Mod/PartDesign/App/DatumPoint.h>
-#include <Mod/PartDesign/App/DatumLine.h>
-#include <Mod/PartDesign/App/DatumPlane.h>
-#include <Mod/PartDesign/App/FeaturePrimitive.h>
-#include <Mod/Part/App/DatumFeature.h>
+#include "Utils.h"
+
 
 using namespace PartDesignGui;
 using namespace Attacher;
@@ -118,10 +112,9 @@ TaskFeaturePick::TaskFeaturePick(std::vector<App::DocumentObject*>& objects,
     for (; statusIt != status.end(); ++statusIt, ++objIt) {
         auto vp = Gui::Application::Instance->getViewProvider(*objIt);
         QListWidgetItem* item = new QListWidgetItem(
-                vp ? vp->getIcon() : QIcon(),
                 QStringLiteral("%1 (%2)")
-                    .arg(QString::fromUtf8((*objIt)->Label.getValue()))
-                    .arg(getFeatureStatusString(*statusIt)
+                    .arg(QString::fromUtf8((*objIt)->Label.getValue()),
+                         getFeatureStatusString(*statusIt)
                 )
         );
         if (*statusIt != validFeature)
@@ -450,7 +443,14 @@ App::DocumentObject* TaskFeaturePick::makeCopy(App::DocumentObject* obj, std::st
     return copy;
 }
 
-void TaskFeaturePick::onSelectionChanged(const Gui::SelectionChanges& /*msg*/)
+bool TaskFeaturePick::isSingleSelectionEnabled() const
+{
+    ParameterGrp::handle hGrp = App::GetApplication().GetUserParameter().GetGroup("BaseApp")->
+                                                      GetGroup("Preferences")->GetGroup("Selection");
+    return hGrp->GetBool("singleClickFeatureSelect", true);
+}
+
+void TaskFeaturePick::onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     if (doSelection)
         return;
@@ -462,6 +462,12 @@ void TaskFeaturePick::onSelectionChanged(const Gui::SelectionChanges& /*msg*/)
             QString t = item->data(Qt::UserRole).toString();
             if (t.compare(QString::fromUtf8(obj.FeatName))==0) {
                 item->setSelected(true);
+
+                if (msg.Type == Gui::SelectionChanges::AddSelection) {
+                    if (isSingleSelectionEnabled()) {
+                        QMetaObject::invokeMethod(qobject_cast<Gui::ControlSingleton*>(&Gui::Control()), "accept", Qt::QueuedConnection);
+                    }
+                }
             }
         }
     }
@@ -535,10 +541,10 @@ void TaskFeaturePick::showExternal(bool val)
 
 TaskDlgFeaturePick::TaskDlgFeaturePick( std::vector<App::DocumentObject*> &objects,
                                         const std::vector<TaskFeaturePick::featureStatus> &status,
-                                        boost::function<bool (std::vector<App::DocumentObject*>)> afunc,
-                                        boost::function<void (std::vector<App::DocumentObject*>)> wfunc,
+                                        std::function<bool (std::vector<App::DocumentObject*>)> afunc,
+                                        std::function<void (std::vector<App::DocumentObject*>)> wfunc,
                                         bool singleFeatureSelect,
-                                        boost::function<void (void)> abortfunc /* = NULL */ )
+                                        std::function<void (void)> abortfunc /* = NULL */ )
     : TaskDialog(), accepted(false)
 {
     pick  = new TaskFeaturePick(objects, status, singleFeatureSelect);

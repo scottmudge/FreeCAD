@@ -23,6 +23,7 @@
 #ifndef GUI_COMMAND_COMPLETER_H
 #define GUI_COMMAND_COMPLETER_H
 
+#include <FCGlobal.h>
 #include <QCompleter>
 
 class QLineEdit;
@@ -40,7 +41,7 @@ class GuiExport CommandCompleter : public QCompleter
 {
     Q_OBJECT
 public:
-    CommandCompleter(QLineEdit *edit, QObject *parent = nullptr);
+    explicit CommandCompleter(QLineEdit *edit, QObject *parent = nullptr);
 
 Q_SIGNALS:
     /// Triggered when a command is selected in the completer

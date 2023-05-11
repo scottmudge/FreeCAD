@@ -23,13 +23,11 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
-
 #include <App/Document.h>
-#include "ViewProviderBase.h"
-#include <Mod/PartDesign/App/FeatureBase.h>
 #include <Gui/Command.h>
+#include <Mod/PartDesign/App/FeatureBase.h>
+
+#include "ViewProviderBase.h"
 
 
 using namespace PartDesignGui;
@@ -46,7 +44,7 @@ ViewProviderBase::~ViewProviderBase()
 
 }
 
-bool ViewProviderBase::doubleClicked(void)
+bool ViewProviderBase::doubleClicked()
 {
     // If the Placement is mutable then open the transform panel.
     // If the Placement can't be modified then just do nothing on double-click.

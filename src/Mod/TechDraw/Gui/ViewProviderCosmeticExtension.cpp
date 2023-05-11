@@ -30,12 +30,8 @@
 # endif //_MSC_VER
 #endif
 
-#include <Base/Console.h>
-
-#include "ViewProviderCosmeticExtension.h"
 #include <Mod/TechDraw/App/CosmeticExtension.h>
-
-#include <Gui/BitmapFactory.h>
+#include "ViewProviderCosmeticExtension.h"
 
 using namespace TechDrawGui;
 
@@ -47,10 +43,6 @@ ViewProviderCosmeticExtension::ViewProviderCosmeticExtension()
     initExtensionType(ViewProviderCosmeticExtension::getExtensionClassTypeId());
 }
 
-void ViewProviderCosmeticExtension::extensionUpdateData(const App::Property* prop)
-{
-    Gui::ViewProviderExtension::extensionUpdateData(prop);
-}
 
 namespace Gui {
     EXTENSION_PROPERTY_SOURCE_TEMPLATE(TechDrawGui::ViewProviderCosmeticExtensionPython, TechDrawGui::ViewProviderCosmeticExtension)

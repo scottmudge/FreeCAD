@@ -20,18 +20,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <cfloat>
+# include <boost/algorithm/string/predicate.hpp>
 #endif
 
-#include <boost/algorithm/string/predicate.hpp>
-
-#include "PropertyModel.h"
 #include "PropertyItem.h"
+#include "PropertyModel.h"
 #include "PropertyView.h"
+
 
 using namespace Gui;
 using namespace Gui::PropertyEditor;
@@ -71,7 +69,7 @@ QVariant PropertyModel::data ( const QModelIndex & index, int role ) const
     if (!index.isValid())
         return QVariant();
 
-    PropertyItem *item = static_cast<PropertyItem*>(index.internalPointer());
+    auto item = static_cast<PropertyItem*>(index.internalPointer());
     return item->data(index.column(), role);
 }
 
@@ -82,7 +80,7 @@ bool PropertyModel::setData(const QModelIndex& index, const QVariant & value, in
 
     // we check whether the data has really changed, otherwise we ignore it
     if (role == Qt::EditRole) {
-        PropertyItem *item = static_cast<PropertyItem*>(index.internalPointer());
+        auto item = static_cast<PropertyItem*>(index.internalPointer());
         QVariant data = item->data(index.column(), role);
         if (data.type() == QVariant::Double && value.type() == QVariant::Double) {
             // since we store some properties as floats we get some round-off
@@ -109,7 +107,7 @@ bool PropertyModel::setData(const QModelIndex& index, const QVariant & value, in
 
 Qt::ItemFlags PropertyModel::flags(const QModelIndex &index) const
 {
-    PropertyItem *item = static_cast<PropertyItem*>(index.internalPointer());
+    auto item = static_cast<PropertyItem*>(index.internalPointer());
     return item->flags(index.column());
 }
 
@@ -134,7 +132,7 @@ QModelIndex PropertyModel::parent ( const QModelIndex & index ) const
     if (!index.isValid())
         return QModelIndex();
 
-    PropertyItem *childItem = static_cast<PropertyItem*>(index.internalPointer());
+    auto childItem = static_cast<PropertyItem*>(index.internalPointer());
     PropertyItem *parentItem = childItem->parent();
 
     if (parentItem == rootItem)
@@ -178,7 +176,7 @@ QStringList PropertyModel::propertyPathFromIndex(const QModelIndex& index) const
 {
     QStringList path;
     if (index.isValid()) {
-        PropertyItem* item = static_cast<PropertyItem*>(index.internalPointer());
+        auto item = static_cast<PropertyItem*>(index.internalPointer());
         while (item && item != this->rootItem) {
             path.push_front(item->propertyName());
             item = item->parent();
@@ -266,7 +264,7 @@ static PropertyItem *createPropertyItem(App::Property *prop)
 PropertyModel::GroupInfo &PropertyModel::getGroupInfo(App::Property *prop)
 {
     const char* group = prop->getGroup();
-    bool isEmpty = (group == 0 || group[0] == '\0');
+    bool isEmpty = (!group || group[0] == '\0');
     QString groupName = QString::fromUtf8(
             isEmpty ? QT_TRANSLATE_NOOP("App::Property", "Base") : group);
 
@@ -303,82 +301,100 @@ PropertyModel::GroupInfo &PropertyModel::getGroupInfo(App::Property *prop)
 
 void PropertyModel::buildUp(const PropertyModel::PropertyList& props)
 {
-    int revision = ++_revision;
+    ++_revision;
 
     // If props empty, then simply reset all property items, but keep the group
     // items.
     if (props.empty()) {
-        beginResetModel();
-        if (revision == _revision) {
-            for(auto &v : groupItems) {
-                auto &groupInfo = v.second;
-                groupInfo.groupItem->reset();
-                groupInfo.children.clear();
-            }
-            itemMap.clear();
-        }
-        endResetModel();
+        resetGroups();
         return;
     }
 
     // First step, init group info
-    for (auto &v : groupItems) {
-        auto &groupInfo = v.second;
-        groupInfo.children.clear();
-    }
+    initGroups();
 
     // Second step, either find existing items or create new items for the given
     // properties. There is no signaling of model change at this stage. The
     // change information is kept pending in GroupInfo::children
-    for (auto jt = props.begin(); jt != props.end(); ++jt) {
-        App::Property* prop = jt->second.front();
+    findOrCreateChildren(props);
+
+    // Third step, signal item insertion and movement.
+    insertOrMoveChildren();
+
+
+    // Final step, signal item removal. This is separated from the above because
+    // of the possibility of moving items between groups.
+    removeChildren();
+}
+
+void PropertyModel::resetGroups()
+{
+    beginResetModel();
+    for(auto &v : groupItems) {
+        auto &groupInfo = v.second;
+        groupInfo.groupItem->reset();
+        groupInfo.children.clear();
+    }
+    itemMap.clear();
+    endResetModel();
+}
+
+void PropertyModel::initGroups()
+{
+    for (auto &v : groupItems) {
+        auto &groupInfo = v.second;
+        groupInfo.children.clear();
+    }
+}
+
+void PropertyModel::findOrCreateChildren(const PropertyModel::PropertyList& props)
+{
+    for (const auto & jt : props) {
+        App::Property* prop = jt.second.front();
 
         PropertyItem *item = nullptr;
-        for (auto prop : jt->second) {
+        for (auto prop : jt.second) {
             auto it = itemMap.find(prop);
-            if (it == itemMap.end() || !it->second)
+            if (it == itemMap.end() || !it->second) {
                 continue;
+            }
             item = it->second;
             break;
         }
 
         if (!item) {
             item = createPropertyItem(prop);
-            if (!item)
+            if (!item) {
                 continue;
+            }
         }
 
         GroupInfo &groupInfo = getGroupInfo(prop);
         groupInfo.children.push_back(item);
 
-        const char *propName = jt->first.c_str();
-        std::string _name;
-        if (boost::ends_with(propName,"*")) {
-            item->setLinked(true);
-            _name = propName;
-            _name.resize(_name.size()-1);
-            propName = _name.c_str();
-        }
+        item->setLinked(boost::ends_with(jt.first,"*"));
+        setPropertyItemName(item, prop->getName(), groupInfo.groupItem->propertyName());
 
-        // propertyName() returns a name with inserted space. objectName() gives
-        // the original name.
-        //
-        // setPropertyItemName(item, propName, groupInfo.groupItem->propertyName());
-        setPropertyItemName(item, propName, groupInfo.groupItem->objectName());
-
-        if (jt->second != item->getPropertyData()) {
-            for (auto prop : item->getPropertyData())
+        if (jt.second != item->getPropertyData()) {
+            for (auto prop : item->getPropertyData()) {
                 itemMap.erase(prop);
-            for (auto prop : jt->second)
+            }
+            for (auto prop : jt.second) {
                 itemMap[prop] = item;
+            }
             // TODO: is it necessary to make sure the item has no pending commit?
-            item->setPropertyData(jt->second);
+            item->setPropertyData(jt.second);
         }
-        else
+        else {
             item->updateData();
+        }
     }
+}
 
-    // Third step, signal item insertion and movement.
+void PropertyModel::insertOrMoveChildren()
+{
+    int revision = _revision;
+
     for (auto &v : groupItems) {
         auto &groupInfo = v.second;
         int beginChange = -1;
@@ -457,26 +473,35 @@ void PropertyModel::buildUp(const PropertyModel::PropertyList& props)
         if (!flushInserts())
             return;
     }
+}
 
-    // Final step, signal item removal. This is separated from the above because
-    // of the possibility of moving items between groups.
+void PropertyModel::removeChildren()
+{
+    int revision = _revision;
+
     for (auto &v : groupItems) {
         auto &groupInfo = v.second;
-        int last = groupInfo.groupItem->childCount();
-        int first = static_cast<int>(groupInfo.children.size());
+        int first, last;
+        getRange(groupInfo, first, last);
         if (last > first) {
-            QModelIndex midx = this->index(groupInfo.groupItem->_row,0,QModelIndex());
-            beginRemoveRows(midx, first, last-1);
-            if (revision != _revision) {
-                endRemoveRows();
-                return;
+            QModelIndex midx = this->index(groupInfo.groupItem->_row, 0, QModelIndex());
+            // This can trigger a recursive call of PropertyView::onTimer()
+            beginRemoveRows(midx, first, last - 1);
+            if (revision == _revision) {
+                groupInfo.groupItem->removeChildren(first, last - 1);
             }
-            groupInfo.groupItem->removeChildren(first, last-1);
             endRemoveRows();
-        } else {
+        }
+        else {
             assert(last == first);
         }
     }
+}
+
+void PropertyModel::getRange(const PropertyModel::GroupInfo& groupInfo, int& first, int& last) const
+{
+    first = static_cast<int>(groupInfo.children.size());
+    last = groupInfo.groupItem->childCount();
 }
 
 void PropertyModel::updateProperty(const App::Property& prop, bool committing)
@@ -493,7 +518,7 @@ void PropertyModel::updateProperty(const App::Property& prop, bool committing)
     QModelIndex parent = this->index(item->parent()->row(), 0, QModelIndex());
     item->assignProperty(&prop);
     QModelIndex data = this->index(item->row(), column, parent);
-    dataChanged(data, data);
+    Q_EMIT dataChanged(data, data);
     updateChildren(item, column, data);
 }
 
@@ -554,16 +579,7 @@ void PropertyModel::updateChildren(PropertyItem* item, int column, const QModelI
     if (numChild > 0) {
         QModelIndex topLeft = this->index(0, column, parent);
         QModelIndex bottomRight = this->index(numChild, column, parent);
-        dataChanged(topLeft, bottomRight);
-#if 0 // It seems we don't have to inform grand children
-        for (int row=0; row<numChild; row++) {
-            PropertyItem* child = item->child(row);
-            QModelIndex data = this->index(row, column, parent);
-            if (data.isValid()) {
-                updateChildren(child, column, data);
-            }
-        }
-#endif
+        Q_EMIT dataChanged(topLeft, bottomRight);
     }
 }
 

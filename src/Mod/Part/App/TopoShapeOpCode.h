@@ -23,6 +23,8 @@
 #ifndef PART_TOPOSHAPE_OPCODE_H
 #define PART_TOPOSHAPE_OPCODE_H
 
+#include <Mod/Part/PartGlobal.h>
+
 /** Definition of commonly used TopoShape operaional code
  *
  * The operaional code (op code) is encoded into the mapped element name to

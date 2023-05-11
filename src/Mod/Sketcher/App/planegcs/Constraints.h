@@ -68,7 +68,10 @@ namespace GCS
         InternalAlignmentPoint2Hyperbola = 22,
         PointOnParabola = 23,
         EqualFocalDistance = 24,
-        EqualLineLength = 25
+        EqualLineLength = 25,
+        CenterOfGravity = 26,
+        WeightedLinearCombination = 27,
+        SlopeAtBSplineKnot = 28
     };
 
     enum InternalAlignmentType {
@@ -94,6 +97,13 @@ namespace GCS
 
     class Constraint
     {
+
+    public:
+        enum class Alignment  {
+            NoInternalAlignment,
+            InternalAlignment
+        };
+
     _PROTECTED_UNLESS_EXTRACT_MODE_:
         VEC_pD origpvec; // is used only as a reference for redirecting and reverting pvec
         VEC_pD pvec;
@@ -101,19 +111,24 @@ namespace GCS
         int tag;
         bool pvecChangedFlag;  //indicates that pvec has changed and saved pointers must be reconstructed (currently used only in AngleViaPoint)
         bool driving;
+        Alignment internalAlignment;
+
     public:
         Constraint();
         virtual ~Constraint(){}
 
         inline VEC_pD params() { return pvec; }
 
-        void redirectParams(MAP_pD_pD redirectionmap);
+        void redirectParams(const MAP_pD_pD & redirectionmap);
         void revertParams();
         void setTag(int tagId) { tag = tagId; }
         int getTag() { return tag; }
 
         void setDriving(bool isdriving) { driving = isdriving; }
         bool isDriving() const { return driving; }
+
+        void setInternalAlignment(Alignment isinternalalignment) { internalAlignment = isinternalalignment; }
+        Alignment isInternalAlignment() const { return internalAlignment; }
 
         virtual ConstraintType getTypeId();
         virtual void rescale(double coef=1.);
@@ -137,10 +152,84 @@ namespace GCS
         inline double* param2() { return pvec[1]; }
     public:
         ConstraintEqual(double *p1, double *p2, double p1p2ratio=1.0);
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
+    };
+
+    // Center of Gravity
+    class ConstraintCenterOfGravity : public Constraint
+    {
+        inline double* thecenter() { return pvec[0]; }
+        inline double* pointat(size_t i) { return pvec[1 + i]; }
+    public:
+        /// Constrains that the first parameter is center of gravity of rest
+        /// Let `pvec = [q, p_1, p_2,...]`, and
+        /// `givenweights = [f_1, f_2,...]`, then this constraint ensures
+        /// `q = sum(p_i*f_i)`.
+        ConstraintCenterOfGravity(const std::vector<double *>& givenpvec, const std::vector<double>& givenweights);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
+    private:
+        std::vector<double> weights;
+        double numpoints;
+    };
+
+    // Weighted Linear Combination
+    class ConstraintWeightedLinearCombination : public Constraint
+    {
+        inline double* thepoint() { return pvec[0]; }
+        inline double* poleat(size_t i) { return pvec[1 + i]; }
+        inline double* weightat(size_t i) { return pvec[1 + numpoles + i]; }
+    public:
+        /// Constrains that the first element in pvec is a linear combination
+        /// of the next numpoints elements in homogeneous coordinates with
+        /// weights given in the last numpoints elements.
+        /// Let `pvec = [q, p_1, p_2,... w_1, w_2,...]`, and
+        /// `givenfactors = [f_1, f_2,...]`, then this constraint ensures
+        /// `q*sum(w_i*f_i) = sum(p_i*w_i*f_i)`.
+        ///
+        /// This constraint is currently used to ensure that a B-spline knot
+        /// point remains at the position determined by it's poles.
+        /// In that case, `q` is the x (or y) coordinate of the knot, `p_i` are
+        /// the x (or y) coordinates of the poles, and `w_i` are their weights.
+        /// Finally, `f_i` are obtained using `BSpline::getLinCombFactor()`.
+        ConstraintWeightedLinearCombination(size_t givennumpoints, const std::vector<double *>& givenpvec, const std::vector<double>& givenfactors);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
+    private:
+        std::vector<double> factors;
+        size_t numpoles;
+    };
+
+    // Slope at knot
+    class ConstraintSlopeAtBSplineKnot : public Constraint
+    {
+    private:
+        inline double* polexat(size_t i) { return pvec[i]; }
+        inline double* poleyat(size_t i) { return pvec[numpoles + i]; }
+        inline double* weightat(size_t i) { return pvec[2*numpoles + i]; }
+        inline double* linep1x() { return pvec[3*numpoles + 0]; }
+        inline double* linep1y() { return pvec[3*numpoles + 1]; }
+        inline double* linep2x() { return pvec[3*numpoles + 2]; }
+        inline double* linep2y() { return pvec[3*numpoles + 3]; }
+    public:
+        // TODO: Should be able to make the geometries passed const
+        // Constrains the slope at a (C1 continuous) knot of the b-spline
+        ConstraintSlopeAtBSplineKnot(BSpline& b, Line& l, size_t knotindex);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
+    private:
+        std::vector<double> factors;
+        std::vector<double> slopefactors;
+        size_t numpoles;
     };
 
     // Difference
@@ -152,10 +241,10 @@ namespace GCS
         inline double* difference() { return pvec[2]; }
     public:
         ConstraintDifference(double *p1, double *p2, double *d);
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     // P2PDistance
@@ -172,11 +261,11 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintP2PDistance(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
-        virtual double maxStep(MAP_pD_D &dir, double lim=1.);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
+        double maxStep(MAP_pD_D &dir, double lim=1.) override;
     };
 
     // P2PAngle
@@ -194,11 +283,11 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintP2PAngle(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
-        virtual double maxStep(MAP_pD_D &dir, double lim=1.);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
+        double maxStep(MAP_pD_D &dir, double lim=1.) override;
     };
 
     // P2LDistance
@@ -217,11 +306,11 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintP2LDistance(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
-        virtual double maxStep(MAP_pD_D &dir, double lim=1.);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
+        double maxStep(MAP_pD_D &dir, double lim=1.) override;
         double abs(double darea);
     };
 
@@ -241,10 +330,10 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintPointOnLine(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     // PointOnPerpBisector
@@ -264,11 +353,11 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintPointOnPerpBisector(){};
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
 
-        virtual double error();
-        virtual double grad(double *);
+        double error() override;
+        double grad(double *) override;
     };
 
     // Parallel
@@ -288,10 +377,10 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintParallel(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     // Perpendicular
@@ -312,10 +401,10 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintPerpendicular(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     // L2LAngle
@@ -338,11 +427,11 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintL2LAngle(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
-        virtual double maxStep(MAP_pD_D &dir, double lim=1.);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
+        double maxStep(MAP_pD_D &dir, double lim=1.) override;
     };
 
     // MidpointOnLine
@@ -363,10 +452,10 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintMidpointOnLine(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     // TangentCircumf
@@ -387,10 +476,10 @@ namespace GCS
         inline ConstraintTangentCircumf(bool internal_){internal=internal_;}
         #endif
         inline bool getInternal() {return internal;};
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
     // PointOnEllipse
     class ConstraintPointOnEllipse : public Constraint
@@ -409,10 +498,10 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintPointOnEllipse(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     class ConstraintEllipseTangentLine : public Constraint
@@ -424,20 +513,20 @@ namespace GCS
         void errorgrad(double* err, double* grad, double *param); //error and gradient combined. Values are returned through pointers.
     public:
         ConstraintEllipseTangentLine(Line &l, Ellipse &e);
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     class ConstraintInternalAlignmentPoint2Ellipse : public Constraint
     {
     public:
         ConstraintInternalAlignmentPoint2Ellipse(Ellipse &e, Point &p1, InternalAlignmentType alignmentType);
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     private:
         void errorgrad(double* err, double* grad, double *param); //error and gradient combined. Values are returned through pointers.
         void ReconstructGeomPointers(); //writes pointers in pvec to the parameters of crv1, crv2 and poa
@@ -450,10 +539,10 @@ namespace GCS
     {
     public:
         ConstraintInternalAlignmentPoint2Hyperbola(Hyperbola &e, Point &p1, InternalAlignmentType alignmentType);
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     private:
         void errorgrad(double* err, double* grad, double *param); //error and gradient combined. Values are returned through pointers.
         void ReconstructGeomPointers(); //writes pointers in pvec to the parameters of crv1, crv2 and poa
@@ -471,10 +560,10 @@ namespace GCS
         void errorgrad(double* err, double* grad, double *param); //error and gradient combined. Values are returned through pointers.
     public:
         ConstraintEqualMajorAxesConic(MajorRadiusConic * a1, MajorRadiusConic * a2);
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     class ConstraintEqualFocalDistance : public Constraint
@@ -486,10 +575,10 @@ namespace GCS
         void errorgrad(double* err, double* grad, double *param); //error and gradient combined. Values are returned through pointers.
     public:
         ConstraintEqualFocalDistance(ArcOfParabola * a1, ArcOfParabola * a2);
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     class ConstraintCurveValue : public Constraint
@@ -510,12 +599,12 @@ namespace GCS
          * @param u : pointer to u parameter corresponding to the point
          */
         ConstraintCurveValue(Point &p, double* pcoord, Curve& crv, double* u);
-        ~ConstraintCurveValue();
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
-        virtual double maxStep(MAP_pD_D &dir, double lim=1.);
+        ~ConstraintCurveValue() override;
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
+        double maxStep(MAP_pD_D &dir, double lim=1.) override;
     };
 
     // PointOnHyperbola
@@ -535,10 +624,10 @@ namespace GCS
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintPointOnHyperbola(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     // PointOnParabola
@@ -552,14 +641,14 @@ namespace GCS
     public:
         ConstraintPointOnParabola(Point &p, Parabola &e);
         ConstraintPointOnParabola(Point &p, ArcOfParabola &a);
-	~ConstraintPointOnParabola();
+	~ConstraintPointOnParabola() override;
         #ifdef _GCS_EXTRACT_SOLVER_SUBSYSTEM_
         inline ConstraintPointOnParabola(){}
         #endif
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     class ConstraintAngleViaPoint : public Constraint
@@ -580,11 +669,11 @@ namespace GCS
         void ReconstructGeomPointers(); //writes pointers in pvec to the parameters of crv1, crv2 and poa
     public:
         ConstraintAngleViaPoint(Curve &acrv1, Curve &acrv2, Point p, double* angle);
-        ~ConstraintAngleViaPoint();
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ~ConstraintAngleViaPoint() override;
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     class ConstraintSnell : public Constraint //snell's law angles constrainer. Point needs to lie on all three curves to be constraied.
@@ -610,11 +699,11 @@ namespace GCS
     public:
         //n1dn2 = n1 divided by n2. from n1 to n2. flipn1 = true instructs to flip ray1's tangent
         ConstraintSnell(Curve &ray1, Curve &ray2, Curve &boundary, Point p, double* n1, double* n2, bool flipn1, bool flipn2);
-        ~ConstraintSnell();
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ~ConstraintSnell() override;
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
     class ConstraintEqualLineLength : public Constraint
@@ -626,10 +715,10 @@ namespace GCS
         void errorgrad(double* err, double* grad, double *param); //error and gradient combined. Values are returned through pointers.
     public:
         ConstraintEqualLineLength(Line &l1, Line &l2);
-        virtual ConstraintType getTypeId();
-        virtual void rescale(double coef=1.);
-        virtual double error();
-        virtual double grad(double *);
+        ConstraintType getTypeId() override;
+        void rescale(double coef=1.) override;
+        double error() override;
+        double grad(double *) override;
     };
 
 

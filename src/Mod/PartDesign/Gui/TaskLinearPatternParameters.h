@@ -20,16 +20,12 @@
  *                                                                            *
  ******************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskLinearPatternParameters_H
 #define GUI_TASKVIEW_TaskLinearPatternParameters_H
 
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-#include <Gui/TaskView/TaskDialog.h>
-
 #include "TaskTransformedParameters.h"
 #include "ViewProviderLinearPattern.h"
+
 
 class QTimer;
 class Ui_TaskLinearPatternParameters;
@@ -52,12 +48,12 @@ class TaskLinearPatternParameters : public TaskTransformedParameters
 
 public:
     /// Constructor for task with ViewProvider
-    TaskLinearPatternParameters(ViewProviderTransformed *TransformedView, QWidget *parent = 0);
+    explicit TaskLinearPatternParameters(ViewProviderTransformed *TransformedView, QWidget *parent = nullptr);
     /// Constructor for task with parent task (MultiTransform mode)
     TaskLinearPatternParameters(TaskMultiTransformParameters *parentTask, QLayout *layout);
-    virtual ~TaskLinearPatternParameters();
+    ~TaskLinearPatternParameters() override;
 
-    virtual void apply();
+    void apply() override;
 
 private Q_SLOTS:
     void onDirectionChanged(int num);
@@ -67,12 +63,12 @@ private Q_SLOTS:
     virtual void onUpdateView(bool);
 
 protected:
-    virtual void changeEvent(QEvent *e);
-    virtual void onSelectionChanged(const Gui::SelectionChanges& msg);
+    void changeEvent(QEvent *e) override;
+    void onSelectionChanged(const Gui::SelectionChanges& msg) override;
     void getDirection(App::DocumentObject*& obj, std::vector<std::string>& sub) const;
-    bool getReverse(void) const;
-    double getLength(void) const;
-    unsigned getOccurrences(void) const;
+    bool getReverse() const;
+    double getLength() const;
+    unsigned getOccurrences() const;
 
 private:
     void setupUI();
@@ -92,8 +88,8 @@ class TaskDlgLinearPatternParameters : public TaskDlgTransformedParameters
     Q_OBJECT
 
 public:
-    TaskDlgLinearPatternParameters(ViewProviderLinearPattern *LinearPatternView);
-    virtual ~TaskDlgLinearPatternParameters() {}
+    explicit TaskDlgLinearPatternParameters(ViewProviderLinearPattern *LinearPatternView);
+    ~TaskDlgLinearPatternParameters() override {}
 };
 
 } //namespace PartDesignGui

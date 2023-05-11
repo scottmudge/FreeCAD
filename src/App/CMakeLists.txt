@@ -12,6 +12,10 @@ IF(RESOURCEDIR)
     add_definitions(-DRESOURCEDIR="${RESOURCEDIR}")
 ENDIF(RESOURCEDIR)
 
+IF(LIBRARYDIR)
+    add_definitions(-DLIBRARYDIR="${LIBRARYDIR}")
+ENDIF(LIBRARYDIR)
+
 IF(DOCDIR)
     add_definitions(-DDOCDIR="${DOCDIR}")
 ENDIF(DOCDIR)
@@ -21,7 +25,7 @@ ENDIF(DOCDIR)
 
 # -----------------------------------------------------------------------------
 
-#write relevant cmake variables to a file for later access with python. Exported are all variables 
+#write relevant cmake variables to a file for later access with python. Exported are all variables
 #starting with BUILD. As the variable only exists if the user set it to ON a dict is useless, we
 #use a python list for export.
 set(_vars "const char CMakeVariables[] =\"cmake = [")
@@ -48,6 +52,7 @@ fc_copy_file_if_different(
 # -----------------------------------------------------------------------------
 
 include_directories(
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_BINARY_DIR}/src
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
@@ -62,25 +67,14 @@ set(FreeCADApp_LIBS
     ${Boost_LIBRARIES}
 )
 
-if (BUILD_QT5)
-    include_directories(
-        ${Qt5Core_INCLUDE_DIRS}
-        ${Qt5Xml_INCLUDE_DIRS}
-    )
-    list(APPEND FreeCADApp_LIBS
-         ${Qt5Core_LIBRARIES}
-         ${Qt5Xml_LIBRARIES}
-    )
-else()
-    include_directories(
-        ${QT_QTCORE_INCLUDE_DIR}
-        ${QT_QTXML_INCLUDE_DIR}
-    )
-    list(APPEND FreeCADApp_LIBS
-        ${QT_QTCORE_LIBRARY}
-        ${QT_QTXML_LIBRARY}
-    )
-endif()
+include_directories(
+    ${QtCore_INCLUDE_DIRS}
+    ${QtXml_INCLUDE_DIRS}
+)
+list(APPEND FreeCADApp_LIBS
+        ${QtCore_LIBRARIES}
+        ${QtXml_LIBRARIES}
+)
 
 generate_from_xml(StringIDPy)
 generate_from_xml(StringHasherPy)

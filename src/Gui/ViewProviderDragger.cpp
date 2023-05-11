@@ -20,54 +20,37 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <cfloat>
+# include <string>
 # include <QAction>
 # include <QMenu>
 # include <QPointer>
-# include <Inventor/actions/SoSearchAction.h>
 # include <Inventor/draggers/SoDragger.h>
-# include <Inventor/draggers/SoCenterballDragger.h>
-# include <Inventor/manips/SoCenterballManip.h>
-# include <Inventor/nodes/SoBaseColor.h>
-# include <Inventor/nodes/SoCamera.h>
-# include <Inventor/nodes/SoDrawStyle.h>
-# include <Inventor/nodes/SoMaterial.h>
-# include <Inventor/nodes/SoSeparator.h>
-# include <Inventor/nodes/SoSwitch.h>
-# include <Inventor/nodes/SoDirectionalLight.h>
 # include <Inventor/nodes/SoPickStyle.h>
-# include <Inventor/sensors/SoNodeSensor.h>
-# include <Inventor/SoPickedPoint.h>
-# include <Inventor/actions/SoRayPickAction.h>
+# include <Inventor/nodes/SoTransform.h>
 #endif
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-#include "ViewProviderDragger.h"
-#include "View3DInventorViewer.h"
+#include <App/ComplexGeoDataPy.h>
+#include <App/GeoFeature.h>
+#include <Base/Placement.h>
+#include <Base/Console.h>
+
 #include "Application.h"
+#include "BitmapFactory.h"
+#include "Control.h"
 #include "Document.h"
 #include "ViewProviderLink.h"
 #include "Window.h"
 
-#include <Base/Console.h>
-#include <Base/Placement.h>
-#include <App/PropertyGeo.h>
-#include <App/GeoFeature.h>
-#include <App/ComplexGeoDataPy.h>
-#include <Inventor/draggers/SoCenterballDragger.h>
-#include <Inventor/nodes/SoResetTransform.h>
-#if (COIN_MAJOR_VERSION > 2)
-#include <Inventor/nodes/SoDepthBuffer.h>
-#endif
 #include "SoFCUnifiedSelection.h"
 #include "SoFCCSysDragger.h"
-#include "Control.h"
+#include "SoFCUnifiedSelection.h"
 #include "TaskCSysDragger.h"
-#include <boost/math/special_functions/fpclassify.hpp>
+#include "View3DInventorViewer.h"
+#include "ViewProviderDragger.h"
+
 
 using namespace Gui;
 
@@ -100,7 +83,7 @@ void ViewProviderDragger::updateData(const App::Property* prop)
     ViewProviderDocumentObject::updateData(prop);
 }
 
-bool ViewProviderDragger::doubleClicked(void)
+bool ViewProviderDragger::doubleClicked()
 {
     Gui::Application::Instance->activeDocument()->setEdit(this, (int)ViewProvider::Default);
     return true;
@@ -117,6 +100,7 @@ void ViewProviderDragger::setupContextMenu(QMenu* menu, QObject* receiver, const
                 && !propPlacement->testStatus(App::Property::ReadOnly))
         {
             QAction* act = menu->addAction(QObject::tr("Transform"), receiver, member);
+            act->setIcon(BitmapFactory().pixmap("Std_TransformManip.svg"));
             act->setToolTip(QObject::tr("Transform at the origin of the placement"));
             act->setData(QVariant((int)ViewProvider::Transform));
             act = menu->addAction(QObject::tr("Transform at"), receiver, member);
@@ -128,7 +112,7 @@ void ViewProviderDragger::setupContextMenu(QMenu* menu, QObject* receiver, const
 }
 
 ViewProvider *ViewProviderDragger::startEditing(int mode) {
-    _linkDragger = 0;
+    _linkDragger = nullptr;
     auto ret = ViewProviderDocumentObject::startEditing(mode);
     if(!ret)
         return ret;
@@ -140,7 +124,7 @@ bool ViewProviderDragger::checkLink(int mode) {
     // usually by doubleClicked(). If so, we route the request back. There shall
     // be no risk of infinite recursion, as ViewProviderLink handles
     // ViewProvider::Transform request by itself.
-    ViewProviderDocumentObject *vpParent = 0;
+    ViewProviderDocumentObject *vpParent = nullptr;
     std::string subname;
     auto doc = Application::Instance->editDocument();
     if(!doc)
@@ -270,7 +254,7 @@ bool ViewProviderDragger::setEdit(int ModNum)
     Base::Placement placement =
         geoFeature->Placement.getValue().toMatrix() * this->dragOffset;
     this->dragOffset.inverse();
-    SoTransform *tempTransform = new SoTransform();
+    auto tempTransform = new SoTransform();
     tempTransform->ref();
     updateTransform(placement, tempTransform);
 
@@ -325,9 +309,9 @@ void ViewProviderDragger::setEditViewer(Gui::View3DInventorViewer* viewer, int M
 
     if (csysDragger && viewer)
     {
-      SoPickStyle *rootPickStyle = new SoPickStyle();
+      auto rootPickStyle = new SoPickStyle();
       rootPickStyle->style = SoPickStyle::UNPICKABLE;
-      SoFCUnifiedSelection* selection = static_cast<SoFCUnifiedSelection*>(viewer->getSceneGraph());
+      auto selection = static_cast<SoFCUnifiedSelection*>(viewer->getSceneGraph());
       selection->insertChild(rootPickStyle, 0);
       selection->selectionRole.setValue(false);
       csysDragger->setUpAutoScale(viewer->getSoRenderManager()->getCamera());
@@ -346,8 +330,8 @@ void ViewProviderDragger::setEditViewer(Gui::View3DInventorViewer* viewer, int M
 
 void ViewProviderDragger::unsetEditViewer(Gui::View3DInventorViewer* viewer)
 {
-  SoFCUnifiedSelection* selection = static_cast<SoFCUnifiedSelection*>(viewer->getSceneGraph());
-  SoNode *child = selection->getChild(0);
+    auto selection = static_cast<SoFCUnifiedSelection*>(viewer->getSceneGraph());
+    SoNode *child = selection->getChild(0);
   if (child && child->isOfType(SoPickStyle::getClassTypeId())) {
     selection->removeChild(child);
     selection->selectionRole.setValue(true);
@@ -378,7 +362,7 @@ void ViewProviderDragger::onDragStart(SoDragger *)
 
 void ViewProviderDragger::onDragFinish(SoDragger *d)
 {
-    SoFCCSysDragger *dragger = static_cast<SoFCCSysDragger *>(d);
+    auto dragger = static_cast<SoFCCSysDragger *>(d);
     updatePlacementFromDragger(dragger);
 
     if (_TaskDragger)
@@ -404,7 +388,7 @@ void ViewProviderDragger::updatePlacementFromDragger(SoFCCSysDragger* draggerIn)
   App::DocumentObject *genericObject = this->getObject();
   if (!genericObject->isDerivedFrom(App::GeoFeature::getClassTypeId()))
     return;
-  App::GeoFeature *geoFeature = static_cast<App::GeoFeature *>(genericObject);
+  auto geoFeature = static_cast<App::GeoFeature *>(genericObject);
   Base::Placement originalPlacement = geoFeature->Placement.getValue();
   auto offset = this->dragOffset;
   offset.inverse();
@@ -415,13 +399,13 @@ void ViewProviderDragger::updatePlacementFromDragger(SoFCCSysDragger* draggerIn)
 
 void ViewProviderDragger::updateTransform(const Base::Placement& from, SoTransform* to)
 {
-  float q0 = (float)from.getRotation().getValue()[0];
-  float q1 = (float)from.getRotation().getValue()[1];
-  float q2 = (float)from.getRotation().getValue()[2];
-  float q3 = (float)from.getRotation().getValue()[3];
-  float px = (float)from.getPosition().x;
-  float py = (float)from.getPosition().y;
-  float pz = (float)from.getPosition().z;
+    auto q0 = (float)from.getRotation().getValue()[0];
+    auto q1 = (float)from.getRotation().getValue()[1];
+    auto q2 = (float)from.getRotation().getValue()[2];
+    auto q3 = (float)from.getRotation().getValue()[3];
+    auto px = (float)from.getPosition().x;
+    auto py = (float)from.getPosition().y;
+    auto pz = (float)from.getPosition().z;
   to->rotation.setValue(q0,q1,q2,q3);
   to->translation.setValue(px,py,pz);
   to->center.setValue(0.0f,0.0f,0.0f);

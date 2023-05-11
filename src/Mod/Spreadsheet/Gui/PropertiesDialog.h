@@ -37,8 +37,8 @@ class PropertiesDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit PropertiesDialog(Spreadsheet::Sheet *_sheet, const std::vector<App::Range> & _ranges, QWidget *parent = 0);
-    ~PropertiesDialog();
+    explicit PropertiesDialog(Spreadsheet::Sheet *_sheet, const std::vector<App::Range> & _ranges, QWidget *parent = nullptr);
+    ~PropertiesDialog() override;
     
     void apply();
     void selectAlias();

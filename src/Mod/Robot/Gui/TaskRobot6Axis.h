@@ -20,15 +20,11 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskRobot6Axis_H
 #define GUI_TASKVIEW_TaskRobot6Axis_H
 
 #include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-
 #include <Mod/Robot/App/RobotObject.h>
-#include <Mod/Robot/App/TrajectoryObject.h>
 
 
 class Ui_TaskRobot6Axis;
@@ -51,8 +47,8 @@ class TaskRobot6Axis : public Gui::TaskView::TaskBox
     Q_OBJECT
 
 public:
-    TaskRobot6Axis(Robot::RobotObject *pcRobotObject,QWidget *parent = 0);
-    ~TaskRobot6Axis();
+    explicit TaskRobot6Axis(Robot::RobotObject *pcRobotObject,QWidget *parent = nullptr);
+    ~TaskRobot6Axis() override;
 
     void setRobot(Robot::RobotObject *pcRobotObject);
 
@@ -64,7 +60,7 @@ private Q_SLOTS:
     void changeSliderA4(int value);
     void changeSliderA5(int value);
     void changeSliderA6(int value);
-    void createPlacementDlg(void);
+    void createPlacementDlg();
 
 protected:
     Robot::RobotObject *pcRobot;

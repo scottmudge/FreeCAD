@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -29,19 +28,14 @@
 # include <queue>
 #endif
 
+#include <boost/math/special_functions/fpclassify.hpp>
+
 #include "Degeneration.h"
-#include "Definitions.h"
-#include "Iterator.h"
-#include "Helpers.h"
-#include "MeshKernel.h"
-#include "Algorithm.h"
-#include "Info.h"
 #include "Grid.h"
+#include "Iterator.h"
 #include "TopoAlgorithm.h"
 #include "Triangulation.h"
 
-#include <boost/math/special_functions/fpclassify.hpp>
-#include <Base/Sequencer.h>
 
 using namespace MeshCore;
 
@@ -95,7 +89,7 @@ bool MeshFixInvalids::Fixup()
 
 namespace MeshCore {
 
-typedef MeshPointArray::_TConstIterator VertexIterator;
+using VertexIterator = MeshPointArray::_TConstIterator;
 /*
  * When building up a mesh then usually the class MeshBuilder is used. This
  * class uses internally a std::set<MeshPoint> which uses the '<' operator of
@@ -222,7 +216,7 @@ bool MeshFixDuplicatePoints::Fixup()
     // remove invalid indices
     _rclMesh.DeletePoints(pointIndices);
     _rclMesh.RebuildNeighbours();
-    
+
     return true;
 }
 
@@ -263,7 +257,7 @@ bool MeshFixNaNPoints::Fixup()
     // remove invalid indices
     _rclMesh.DeletePoints(aInds);
     _rclMesh.RebuildNeighbours();
-    
+
     return true;
 }
 
@@ -271,13 +265,13 @@ bool MeshFixNaNPoints::Fixup()
 
 namespace MeshCore {
 
-typedef MeshFacetArray::_TConstIterator FaceIterator;
+using FaceIterator = MeshFacetArray::_TConstIterator;
 /*
  * The facet with the lowset index is regarded as 'less'.
  */
 struct MeshFacet_Less
 {
-    bool operator()(const FaceIterator& x, 
+    bool operator()(const FaceIterator& x,
                     const FaceIterator& y) const
     {
         PointIndex tmp;
@@ -301,12 +295,18 @@ struct MeshFacet_Less
         if (y1 > y2)
         { tmp = y1; y1 = y2; y2 = tmp; }
 
-        if      (x0 < y0)  return true;
-        else if (x0 > y0)  return false;
-        else if (x1 < y1)  return true;
-        else if (x1 > y1)  return false;
-        else if (x2 < y2)  return true;
-        else               return false;
+        if (x0 < y0)
+            return true;
+        else if (x0 > y0)
+            return false;
+        else if (x1 < y1)
+            return true;
+        else if (x1 > y1)
+            return false;
+        else if (x2 < y2)
+            return true;
+        else
+            return false;
     }
 };
 
@@ -323,7 +323,7 @@ struct MeshFacet_EqualTo
     {
         for (int i=0; i<3; i++ ) {
             if (x->_aulPoints[0] == y->_aulPoints[i]) {
-                if (x->_aulPoints[1] == y->_aulPoints[(i+1)%3] && 
+                if (x->_aulPoints[1] == y->_aulPoints[(i+1)%3] &&
                     x->_aulPoints[2] == y->_aulPoints[(i+2)%3])
                     return true;
                 else if (x->_aulPoints[1] == y->_aulPoints[(i+2)%3] &&
@@ -459,7 +459,7 @@ unsigned long MeshEvalDegeneratedFacets::CountEdgeTooSmall (float fMinEdgeLength
     MeshFacetIterator  clFIter(_rclMesh);
     unsigned long k = 0;
 
-    while (clFIter.EndReached() == false) {
+    while (!clFIter.EndReached()) {
         for (int i = 0; i < 3; i++) {
             if (Base::Distance(clFIter->_aclPoints[i], clFIter->_aclPoints[(i+1)%3]) < fMinEdgeLength)
                 k++;
@@ -503,8 +503,8 @@ bool MeshFixDegeneratedFacets::Fixup()
 
 bool MeshRemoveNeedles::Fixup()
 {
-    typedef std::pair<unsigned long, int> FaceEdge; // (face, edge) pair
-    typedef std::pair<float, FaceEdge> FaceEdgePriority;
+    using FaceEdge = std::pair<unsigned long, int>; // (face, edge) pair
+    using FaceEdgePriority = std::pair<float, FaceEdge>;
 
     MeshTopoAlgorithm topAlg(_rclMesh);
     MeshRefPointToFacets vf_it(_rclMesh);
@@ -603,8 +603,8 @@ bool MeshRemoveNeedles::Fixup()
 
 bool MeshFixCaps::Fixup()
 {
-    typedef std::pair<unsigned long, int> FaceVertex; // (face, vertex) pair
-    typedef std::pair<float, FaceVertex> FaceVertexPriority;
+    using FaceVertex = std::pair<unsigned long, int>; // (face, vertex) pair
+    using FaceVertexPriority = std::pair<float, FaceVertex>;
 
     MeshTopoAlgorithm topAlg(_rclMesh);
     const MeshFacetArray &rclFAry = _rclMesh.GetFacets();
@@ -1065,7 +1065,9 @@ bool MeshEvalRangePoint::Evaluate()
     PointIndex ulCtPoints = _rclMesh.CountPoints();
 
     for (MeshFacetArray::_TConstIterator it = rFaces.begin(); it != rFaces.end(); ++it) {
-        if (std::find_if(it->_aulPoints, it->_aulPoints + 3, [ulCtPoints](PointIndex i) { return i >= ulCtPoints; }) < it->_aulPoints + 3)
+        if (std::find_if(it->_aulPoints, it->_aulPoints + 3, [ulCtPoints](PointIndex i) {
+            return i >= ulCtPoints;
+        }) < it->_aulPoints + 3)
             return false;
     }
 
@@ -1080,7 +1082,9 @@ std::vector<PointIndex> MeshEvalRangePoint::GetIndices() const
 
     PointIndex ind=0;
     for (MeshFacetArray::_TConstIterator it = rFaces.begin(); it != rFaces.end(); ++it, ind++) {
-        if (std::find_if(it->_aulPoints, it->_aulPoints + 3, [ulCtPoints](PointIndex i) { return i >= ulCtPoints; }) < it->_aulPoints + 3)
+        if (std::find_if(it->_aulPoints, it->_aulPoints + 3, [ulCtPoints](PointIndex i) {
+            return i >= ulCtPoints;
+        }) < it->_aulPoints + 3)
             aInds.push_back(ind);
     }
 
@@ -1099,12 +1103,8 @@ bool MeshFixRangePoint::Fixup()
         // 'DeleteFacets' will segfault. But setting all point indices to 0 works.
         std::vector<PointIndex> invalid = eval.GetIndices();
         if (!invalid.empty()) {
-            const MeshFacetArray& rFaces = _rclMesh.GetFacets();
             for (std::vector<PointIndex>::iterator it = invalid.begin(); it != invalid.end(); ++it) {
-                MeshFacet& face = const_cast<MeshFacet&>(rFaces[*it]);
-                face._aulPoints[0] = 0;
-                face._aulPoints[1] = 0;
-                face._aulPoints[2] = 0;
+                _rclMesh.SetFacetPoints(*it, 0, 0, 0);
             }
 
             _rclMesh.DeleteFacets(invalid);

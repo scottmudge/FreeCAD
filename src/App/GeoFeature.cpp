@@ -23,16 +23,16 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
+#include <App/GeoFeaturePy.h>
 
+#include <App/GeoFeaturePy.h>
+#include <App/Link.h>
 #include <Base/Console.h>
 #include "Document.h"
+#include "ComplexGeoData.h"
 #include "GeoFeature.h"
 #include "GeoFeatureGroupExtension.h"
 #include "MappedElement.h"
-#include <App/GeoFeaturePy.h>
-#include <App/Link.h>
 
 FC_LOG_LEVEL_INIT("GeoFeature",true,true);
 
@@ -46,16 +46,14 @@ PROPERTY_SOURCE(App::GeoFeature, App::DocumentObject)
 // Feature
 //===========================================================================
 
-GeoFeature::GeoFeature(void)
+GeoFeature::GeoFeature()
 {
     ADD_PROPERTY_TYPE(Placement,(Base::Placement()),nullptr,Prop_NoRecompute,nullptr);
     ADD_PROPERTY_TYPE(_ElementMapVersion,(""),"Base",
             (App::PropertyType)(Prop_Output|Prop_Hidden|Prop_Transient),"");
 }
 
-GeoFeature::~GeoFeature(void)
-{
-}
+GeoFeature::~GeoFeature() = default;
 
 void GeoFeature::transformPlacement(const Base::Placement &transform)
 {
@@ -79,7 +77,7 @@ const PropertyComplexGeoData* GeoFeature::getPropertyOfGeometry() const
     return nullptr;
 }
 
-PyObject* GeoFeature::getPyObject(void)
+PyObject* GeoFeature::getPyObject()
 {
     if (PythonObject.is(Py::_None())) {
         // ref counter is set to 1
@@ -95,7 +93,8 @@ GeoFeature::getElementName(const char *name, ElementNameType type) const
     (void)type;
 
     std::pair<std::string,std::string> ret;
-    if(!name) return ret;
+    if(!name)
+        return ret;
 
     auto prop = getPropertyOfGeometry();
     if(!prop) return std::make_pair("", name);
@@ -141,7 +140,7 @@ DocumentObject *GeoFeature::resolveElement(DocumentObject *obj, const char *subn
     elementName.first.clear();
     elementName.second.clear();
     if(!obj || !obj->getNameInDocument())
-        return 0;
+        return nullptr;
     if(!subname)
         subname = "";
     const char *element = Data::ComplexGeoData::findElementName(subname);
@@ -149,7 +148,7 @@ DocumentObject *GeoFeature::resolveElement(DocumentObject *obj, const char *subn
     // Exclude element in subname to prevent warning message of element not found
     auto sobj = obj->getSubObject(std::string(subname, element).c_str());
     if(!sobj)
-        return 0;
+        return nullptr;
     auto linked = sobj->getLinkedObject(true);
     auto geo = Base::freecad_dynamic_cast<GeoFeature>(linked);
     if(!geo && linked) {
@@ -160,7 +159,7 @@ DocumentObject *GeoFeature::resolveElement(DocumentObject *obj, const char *subn
     if(geoFeature) 
         *geoFeature = geo;
     if(filter && geo!=filter)
-        return 0;
+        return nullptr;
     if(!element || !element[0]) {
         if(append) 
             elementName.second = Data::ComplexGeoData::oldElementName(subname);
@@ -179,7 +178,7 @@ DocumentObject *GeoFeature::resolveElement(DocumentObject *obj, const char *subn
     else{
         const auto &names = geo->getElementName(element,type);
         std::string prefix(subname,element-subname);
-        if(names.first.size())
+        if(!names.first.empty())
             elementName.first = prefix + names.first;
         elementName.second = prefix + names.second;
     }

@@ -20,16 +20,13 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef MESH_HELPERS_H
 #define MESH_HELPERS_H
 
 #include "Elements.h"
 
-#include <Base/Vector3D.h>
 
 namespace MeshCore {
-
 
 /**
  * Helper class for points.
@@ -76,7 +73,7 @@ struct MeshExport MeshHelpBuilderEdge
   inline bool operator < (const MeshHelpBuilderEdge &rclObj) const;
 
   inline bool operator == (const MeshHelpBuilderEdge &rclObj) const;
-  
+
 
   inline bool operator != (const MeshHelpBuilderEdge &rclObj) const;
 
@@ -89,7 +86,7 @@ struct MeshExport MeshHelpBuilderEdge
  */
 struct MeshEdgeBuilder: public std::vector<MeshHelpBuilderEdge>
 {
-  typedef std::vector<MeshHelpBuilderEdge>::iterator  _TIterator;
+  using _TIterator = std::vector<MeshHelpBuilderEdge>::iterator;
   inline void Add (PointIndex ulInd1, PointIndex ulInd2, FacetIndex ulSide, FacetIndex ulFInd);
 };
 
@@ -130,12 +127,12 @@ inline void MeshHelpBuilderEdge::Set (PointIndex ulInd1, PointIndex ulInd2,
   if (ulInd1 < ulInd2)
   {
     _aulInd[0] = ulInd1;
-    _aulInd[1] = ulInd2; 
+    _aulInd[1] = ulInd2;
   }
   else
   {
     _aulInd[0] = ulInd2;
-    _aulInd[1] = ulInd1; 
+    _aulInd[1] = ulInd1;
   }
   _ulFIndex = (ulFInd << 2) | ulSide;
 }
@@ -169,4 +166,4 @@ inline void MeshEdgeBuilder::Add (PointIndex ulInd1, PointIndex ulInd2,
 
 } // namespace MeshCore
 
-#endif // MESH_HELPERS_H 
+#endif // MESH_HELPERS_H

@@ -29,18 +29,16 @@
 #endif
 
 #ifndef _PreComp_
-# include <float.h>
 # include <algorithm>
+# include <cfloat>
 # include <map>
-# include <Python.h>
+
+# include <QApplication>
+
 # include <Inventor/SoPickedPoint.h>
 # include <Inventor/SoPrimitiveVertex.h>
-# include <Inventor/actions/SoCallbackAction.h>
 # include <Inventor/actions/SoGetBoundingBoxAction.h>
-# include <Inventor/actions/SoGetPrimitiveCountAction.h>
 # include <Inventor/actions/SoGLRenderAction.h>
-# include <Inventor/actions/SoPickAction.h>
-# include <Inventor/actions/SoWriteAction.h>
 # include <Inventor/bundles/SoMaterialBundle.h>
 # include <Inventor/bundles/SoTextureCoordinateBundle.h>
 # include <Inventor/elements/SoLazyElement.h>
@@ -49,15 +47,20 @@
 # include <Inventor/elements/SoGLCoordinateElement.h>
 # include <Inventor/elements/SoGLCacheContextElement.h>
 # include <Inventor/elements/SoGLVBOElement.h>
-# include <Inventor/elements/SoPointSizeElement.h>
-# include <Inventor/elements/SoLightModelElement.h>
+# include <Inventor/elements/SoCacheElement.h>
+# include <Inventor/elements/SoCullElement.h>
+# include <Inventor/elements/SoModelMatrixElement.h>
+# include <Inventor/elements/SoViewVolumeElement.h>
+# include <Inventor/elements/SoTextureEnabledElement.h>
+# include <Inventor/elements/SoShapeStyleElement.h>
 # include <Inventor/errors/SoDebugError.h>
-# include <Inventor/errors/SoReadError.h>
 # include <Inventor/details/SoFaceDetail.h>
-# include <Inventor/details/SoLineDetail.h>
 # include <Inventor/misc/SoState.h>
 # include <Inventor/misc/SoContextHandler.h>
-# include <Inventor/elements/SoTextureEnabledElement.h>
+# include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
+# include <Inventor/actions/SoRayPickAction.h>
+# include <Inventor/misc/SoGLDriverDatabase.h>
+
 # ifdef FC_OS_WIN32
 #  include <windows.h>
 #  include <GL/gl.h>
@@ -75,18 +78,11 @@
 # include <Inventor/C/glue/gl.h>
 #endif
 
-#include <Inventor/elements/SoLineWidthElement.h>
-#include <Inventor/elements/SoShapeStyleElement.h>
-#include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
-#include <Inventor/elements/SoCacheElement.h>
-#include <Inventor/actions/SoRayPickAction.h>
-#include <Inventor/elements/SoCullElement.h>
 #include <Inventor/caches/SoBoundingBoxCache.h>
-#include <Inventor/misc/SoGLDriverDatabase.h>
+#include <Inventor/elements/SoPolygonOffsetElement.h>
+#include <Inventor/elements/SoDrawStyleElement.h>
 
 #include <boost/algorithm/string/predicate.hpp>
-
-#include <QApplication>
 
 #include "SoBrepFaceSet.h"
 #include "PartParams.h"
@@ -95,6 +91,8 @@
 #include <Gui/SoFCSelectionAction.h>
 #include <Gui/SoFCInteractiveElement.h>
 #include <Gui/ViewParams.h>
+
+#include "SoBrepFaceSet.h"
 
 FC_LOG_LEVEL_INIT("SoBrepFaceSet",true,true);
 
@@ -660,9 +658,9 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
             if(isSelectAll(ctx)) {
                 if(ctx2 && !ctx2->isSelectAll()) {
                     ctx2->selectionColor = ctx->selectionColor;
-                    renderSelection(action,ctx2); 
+                    renderSelection(action,ctx2);
                 } else
-                    renderSelection(action,ctx); 
+                    renderSelection(action,ctx);
                 if(action->isRenderingDelayedPaths())
                     renderHighlight(action,ctx);
                 if(pushed)
@@ -670,7 +668,7 @@ void SoBrepFaceSet::glRender(SoGLRenderAction *action, bool inpath)
                 return;
             }
             if(inpath)
-                renderSelection(action,ctx,true,true); 
+                renderSelection(action,ctx,true,true);
         }
         if(ctx2) {
             if (!inpath)
@@ -1493,18 +1491,18 @@ void SoBrepFaceSet::generatePrimitivesRange(SoAction * action, int pstart, int f
     if (doTextures) {
         if (tb.isFunction() && !tb.needIndices()) {
             tbind = NONE;
-            tindices = NULL;
+            tindices = nullptr;
         }
         // FIXME: just call inherited::areTexCoordsIndexed() instead of
         // the if-check? 20020110 mortene.
         else if (SoTextureCoordinateBindingElement::get(state) ==
                  SoTextureCoordinateBindingElement::PER_VERTEX) {
             tbind = PER_VERTEX;
-            tindices = NULL;
+            tindices = nullptr;
         }
         else {
             tbind = PER_VERTEX_INDEXED;
-            if (tindices == NULL)
+            if (!tindices)
                 tindices = cindices;
             else
                 tindices += vstart;
@@ -1512,7 +1510,7 @@ void SoBrepFaceSet::generatePrimitivesRange(SoAction * action, int pstart, int f
     }
 
     if (nbind == PER_VERTEX_INDEXED) {
-        if(nindices == NULL)
+        if(!nindices)
             nindices = cindices;
         else
             nindices += vstart;
@@ -1526,7 +1524,7 @@ void SoBrepFaceSet::generatePrimitivesRange(SoAction * action, int pstart, int f
     }
             
     if (mbind == PER_VERTEX_INDEXED) {
-        if(mindices == NULL)
+        if(!mindices)
             mindices = cindices;
         else
             mindices += vstart;
@@ -1916,8 +1914,8 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
 
         auto vertexlist = static_cast<const SoGLCoordinateElement*>(coords);
 
-        const SbVec3f * coords3d = NULL;
-        SbVec3f * cur_coords3d = NULL;
+        const SbVec3f * coords3d = nullptr;
+        SbVec3f * cur_coords3d = nullptr;
         coords3d = vertexlist->getArrayPtr3();
         cur_coords3d = ( SbVec3f *)coords3d;
 
@@ -1951,10 +1949,10 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
 
         buf.tex.clear();
         buf.texstripe = 0;
-        const SoMultiTextureCoordinateElement * mtelem = NULL;
+        const SoMultiTextureCoordinateElement * mtelem = nullptr;
         if (texture) {
             int lastenabled = -1;
-            const SbBool * enabledunits = NULL;
+            const SbBool * enabledunits = nullptr;
             enabledunits = SoMultiTextureEnabledElement::getEnabledUnits(state, lastenabled);
             if (enabledunits)
                 mtelem = SoMultiTextureCoordinateElement::getInstance(state);
@@ -2086,11 +2084,11 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
             if (normals) {
                 if (nbind == PER_VERTEX || nbind == PER_FACE) {
                     currnormal = normals++;
-                    mynormal1=(SbVec3f *)currnormal;
+                    mynormal1 = const_cast<SbVec3f *>(currnormal);
                 }
                 else if (nbind == PER_VERTEX_INDEXED || nbind == PER_FACE_INDEXED) {
                     currnormal = &normals[*normalindices++];
-                    mynormal1 =(SbVec3f *) currnormal;
+                    mynormal1 = const_cast<SbVec3f *>(currnormal);
                 }
             }
             if (mbind == PER_VERTEX) {
@@ -2107,11 +2105,11 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
             if (normals) {
                 if (nbind == PER_VERTEX) {
                     currnormal = normals++;
-                    mynormal2 = (SbVec3f *)currnormal;
+                    mynormal2 = const_cast<SbVec3f *>(currnormal);
                 }
                 else if (nbind == PER_VERTEX_INDEXED) {
                      currnormal = &normals[*normalindices++];
-                    mynormal2 = (SbVec3f *)currnormal;
+                    mynormal2 = const_cast<SbVec3f *>(currnormal);
                  }
              }
 
@@ -2128,11 +2126,11 @@ bool SoBrepFaceSet::VBO::render(SoGLRenderAction * action,
             if (normals) {
                 if (nbind == PER_VERTEX) {
                     currnormal = normals++;
-                    mynormal3 =(SbVec3f *)currnormal;
+                    mynormal3 =const_cast<SbVec3f *>(currnormal);
                 }
                 else if (nbind == PER_VERTEX_INDEXED) {
                     currnormal = &normals[*normalindices++];
-                    mynormal3 = (SbVec3f *)currnormal;
+                    mynormal3 = const_cast<SbVec3f *>(currnormal);
                 }
             }
             if (nbind == PER_VERTEX_INDEXED)
@@ -2330,14 +2328,14 @@ void SoBrepFaceSet::renderShape(SoGLRenderAction * action) {
 
     if (doTextures) {
         if (tb.isFunction() && !tb.needIndices()) {
-            tindices = NULL;
+            tindices = nullptr;
         }
         else if (SoTextureCoordinateBindingElement::get(state) ==
                  SoTextureCoordinateBindingElement::PER_VERTEX) {
-            tindices = NULL;
+            tindices = nullptr;
         }
         else {
-            if (tindices == NULL)
+            if (!tindices)
                 tindices = cindices;
         }
     }
@@ -2460,7 +2458,7 @@ void SoBrepFaceSet::renderFaces(const SoCoordinateElement *coords,
     partindices += start_partindex;
     texidx = matnr = start_partindex;
 
-    const SbVec3f * coords3d = NULL;
+    const SbVec3f * coords3d = nullptr;
     coords3d = vertexlist->getArrayPtr3();
 
     int mode = GL_POLYGON;

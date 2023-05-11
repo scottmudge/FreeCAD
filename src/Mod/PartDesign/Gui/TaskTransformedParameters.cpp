@@ -23,7 +23,6 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QMessageBox>
 # include <QListWidget>
 # include <QAction>
 # include <QCheckBox>
@@ -37,38 +36,40 @@
 # include <BRepAdaptor_Surface.hxx>
 #endif
 
-#include <boost_bind_bind.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
 #include <Base/Console.h>
+#include <Base/ExceptionSafeCall.h>
 #include <Base/Tools.h>
 #include <App/Application.h>
 #include <App/Document.h>
+#include <App/DocumentObject.h>
 #include <App/Origin.h>
-#include <App/OriginFeature.h>
 #include <App/MappedElement.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
 #include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
 #include <Gui/Selection.h>
 #include <Gui/Command.h>
 #include <Gui/ViewParams.h>
 #include <Gui/DlgPropertyLink.h>
 #include <Gui/Placement.h>
+#include <Gui/WaitCursor.h>
+#include <Gui/MetaTypes.h>
 
 #include <Mod/Part/Gui/PartParams.h>
 #include <Mod/Part/App/SubShapeBinder.h>
 #include <Mod/PartDesign/App/FeatureTransformed.h>
 #include <Mod/PartDesign/App/Body.h>
 #include <Mod/PartDesign/App/FeatureAddSub.h>
-
-#include "ReferenceSelection.h"
-#include "TaskMultiTransformParameters.h"
-#include "Utils.h"
+#include <Mod/PartDesign/App/FeatureTransformed.h>
 
 #include "TaskTransformedParameters.h"
+#include "TaskMultiTransformParameters.h"
+#include "ReferenceSelection.h"
+#include "Utils.h"
+
 
 namespace bp = boost::placeholders;
 
@@ -188,6 +189,9 @@ void TaskTransformedParameters::originalSelectionChanged()
 
 void TaskTransformedParameters::setupTransaction()
 {
+    if (!isEnabledTransaction())
+        return;
+
     auto obj = getObject();
     if (!obj)
         return;
@@ -204,6 +208,16 @@ void TaskTransformedParameters::setupTransaction()
 
     if(!transactionID)
         transactionID = tid;
+}
+
+void TaskTransformedParameters::setEnabledTransaction(bool on)
+{
+    enableTransaction = on;
+}
+
+bool TaskTransformedParameters::isEnabledTransaction() const
+{
+    return enableTransaction;
 }
 
 void TaskTransformedParameters::setupUI() {
@@ -258,7 +272,6 @@ void TaskTransformedParameters::setupUI() {
     checkBoxSubTransform->setToolTip(tr("Check this option to transform individual sub-features,\n"
                                         "or else, transform the entire history up till the selected base."));
     checkBoxSubTransform->setChecked(getObject()->SubTransform.getValue());
-    connect(checkBoxSubTransform, SIGNAL(toggled(bool)), this, SLOT(onChangedSubTransform(bool)));
 
     checkBoxParallel = new QCheckBox(this);
     checkBoxParallel->setText(tr("Operate in parallel"));
@@ -267,13 +280,11 @@ void TaskTransformedParameters::setupUI() {
                "parallel. Note that this may fail if the pattern shape contains\n"
                "overlap. Uncheck this option to perform operation in sequence."));
     checkBoxParallel->setChecked(getObject()->SubTransform.getValue());
-    connect(checkBoxParallel, SIGNAL(toggled(bool)), this, SLOT(onChangedParallelTransform(bool)));
 
     checkBoxNewSolid = new QCheckBox(this);
     checkBoxNewSolid->setText(tr("New shape"));
     checkBoxNewSolid->setToolTip(tr("Make a new shape using the resulting pattern shape"));
     checkBoxNewSolid->setChecked(getObject()->NewSolid.getValue());
-    connect(checkBoxNewSolid, SIGNAL(toggled(bool)), this, SLOT(onChangedNewSolid(bool)));
 
     auto layout = qobject_cast<QBoxLayout*>(proxy->layout());
     assert(layout);
@@ -369,8 +380,15 @@ void TaskTransformedParameters::setupUI() {
     }
 
     linkEditor->init(App::DocumentObjectT(&pcTransformed->OriginalSubs),false);
+}
 
-    QObject::connect(linkEditor, SIGNAL(linkChanged()), this, SLOT(originalSelectionChanged()));
+void TaskTransformedParameters::connectSignals()
+{
+    QMetaObject::connectSlotsByName(this);
+    Base::connect(checkBoxSubTransform, &QCheckBox::toggled, this, &TaskTransformedParameters::onChangedSubTransform);
+    Base::connect(checkBoxParallel, &QCheckBox::toggled, this, &TaskTransformedParameters::onChangedParallelTransform);
+    Base::connect(checkBoxNewSolid, &QCheckBox::toggled, this, &TaskTransformedParameters::onChangedNewSolid);
+    Base::connect(linkEditor, &DlgPropertyLink::linkChanged, this, &TaskTransformedParameters::originalSelectionChanged);
 }
 
 void TaskTransformedParameters::slotDiagnosis(QString msg)
@@ -448,7 +466,7 @@ void TaskTransformedParameters::fillAxisCombo(ComboLinks &combolinks,
     }
 
     //add "Select reference"
-    combolinks.addLink(0,std::string(),tr("Select reference..."));
+    combolinks.addLink(nullptr,std::string(),tr("Select reference..."));
 }
 
 void TaskTransformedParameters::fillPlanesCombo(ComboLinks &combolinks,
@@ -484,7 +502,7 @@ void TaskTransformedParameters::fillPlanesCombo(ComboLinks &combolinks,
     }
 
     //add "Select reference"
-    combolinks.addLink(0,std::string(),tr("Select reference..."));
+    combolinks.addLink(nullptr,std::string(),tr("Select reference..."));
 }
 
 void TaskTransformedParameters::recomputeFeature() {
@@ -527,6 +545,9 @@ PartDesign::Transformed *TaskTransformedParameters::getObject() const {
 
 App::DocumentObject *TaskTransformedParameters::getBaseObject() const {
     PartDesign::Feature* feature = getTopTransformedObject ();
+    if (!feature)
+        return nullptr;
+
     // NOTE: getBaseObject() throws if there is no base; shouldn't happen here.
     App::DocumentObject *base = feature->getBaseObject(true);
     if(!base) {
@@ -538,7 +559,8 @@ App::DocumentObject *TaskTransformedParameters::getBaseObject() const {
 }
 
 App::DocumentObject* TaskTransformedParameters::getSketchObject() const {
-    return getTopTransformedObject()->getSketchObject();
+    PartDesign::Transformed* feature = getTopTransformedObject();
+    return feature ? feature->getSketchObject() : nullptr;
 }
 
 void TaskTransformedParameters::exitSelectionMode()
@@ -554,19 +576,16 @@ void TaskTransformedParameters::exitSelectionMode()
 
 void TaskTransformedParameters::addReferenceSelectionGate(bool edge, bool face)
 {
-    ReferenceSelection::Config conf;
-    conf.edge = edge;
-    conf.plane = face;
-    conf.planar = true;
-    conf.whole = false;
-    conf.circle = false;
-    addReferenceSelectionGate(conf);
+    AllowSelectionFlags allow = AllowSelection::PLANAR;
+    allow.setFlag(AllowSelection::EDGE, edge);
+    allow.setFlag(AllowSelection::FACE, face);
+    addReferenceSelectionGate(allow);
 }
 
-void TaskTransformedParameters::addReferenceSelectionGate(const ReferenceSelection::Config &conf)
+void TaskTransformedParameters::addReferenceSelectionGate(AllowSelectionFlags allow)
 {
     std::unique_ptr<Gui::SelectionFilterGate> gateRefPtr(
-            new ReferenceSelection(getBaseObject(), conf));
+            new ReferenceSelection(getBaseObject(), allow));
     std::unique_ptr<Gui::SelectionFilterGate> gateDepPtr(new NoDependentsSelection(getTopTransformedObject()));
     Gui::Selection().addSelectionGate(new CombineSelectionFilterGates(gateRefPtr, gateDepPtr));
 }
@@ -681,7 +700,7 @@ void TaskDlgTransformedParameters::onToggledTaskParameters()
 
 
 ComboLinks::ComboLinks(QComboBox &combo)
-    : doc(0)
+    : doc(nullptr)
 {
     this->_combo = &combo;
     _combo->clear();
@@ -695,7 +714,7 @@ int ComboLinks::addLink(const App::PropertyLinkSub &lnk, QString itemText)
     this->linksInList.push_back(new App::PropertyLinkSub());
     App::PropertyLinkSub &newitem = *(linksInList[linksInList.size()-1]);
     newitem.Paste(lnk);
-    if (newitem.getValue() && this->doc == 0)
+    if (newitem.getValue() && !this->doc)
         this->doc = newitem.getValue()->getDocument();
     return linksInList.size()-1;
 }
@@ -708,7 +727,7 @@ int ComboLinks::addLink(App::DocumentObject *linkObj, std::string linkSubname, Q
     this->linksInList.push_back(new App::PropertyLinkSub());
     App::PropertyLinkSub &newitem = *(linksInList[linksInList.size()-1]);
     newitem.setValue(linkObj,std::vector<std::string>(1,linkSubname));
-    if (newitem.getValue() && this->doc == 0)
+    if (newitem.getValue() && !this->doc)
         this->doc = newitem.getValue()->getDocument();
     return linksInList.size()-1;
 }
@@ -724,7 +743,7 @@ void ComboLinks::clear()
 
 App::PropertyLinkSub &ComboLinks::getLink(int index) const
 {
-    if (index < 0 || index > (int) linksInList.size()-1)
+    if (index < 0 || index > static_cast<int>(linksInList.size())-1)
         throw Base::IndexError("ComboLinks::getLink:Index out of range");
     if (linksInList[index]->getValue() && doc && !(doc->isIn(linksInList[index]->getValue())))
         throw Base::ValueError("Linked object is not in the document; it may have been deleted");

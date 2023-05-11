@@ -20,16 +20,21 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#include <Base/VectorPy.h>
-#include <Base/Handle.h>
-#include <Base/Builder3D.h>
 #include <Base/Converter.h>
 #include <Base/GeometryPyCXX.h>
 #include <Base/MatrixPy.h>
+#include <Base/Stream.h>
 #include <Base/Tools.h>
+#include <Base/VectorPy.h>
+
+#include <boost/algorithm/string.hpp>
+
+#include "Core/Degeneration.h"
+#include "Core/Segmentation.h"
+#include "Core/Smoothing.h"
+#include "Core/Triangulation.h"
 
 #include "Mesh.h"
 #include "MeshPy.h"
@@ -37,24 +42,13 @@
 #include "FacetPy.h"
 #include "MeshPy.cpp"
 #include "MeshProperties.h"
-#include "Core/Algorithm.h"
-#include "Core/Triangulation.h"
-#include "Core/Iterator.h"
-#include "Core/Degeneration.h"
-#include "Core/Elements.h"
-#include "Core/Grid.h"
-#include "Core/MeshKernel.h"
-#include "Core/Segmentation.h"
-#include "Core/Smoothing.h"
-#include "Core/Curvature.h"
 
-#include <boost/algorithm/string.hpp>
 
 using namespace Mesh;
 
 
 struct MeshPropertyLock {
-    MeshPropertyLock(PropertyMeshKernel* p) : prop(p)
+    explicit MeshPropertyLock(PropertyMeshKernel* p) : prop(p)
     { if (prop) prop->startEditing(); }
     ~MeshPropertyLock()
     { if (prop) prop->finishEditing(); }
@@ -64,28 +58,31 @@ private:
 
 int MeshPy::PyInit(PyObject* args, PyObject*)
 {
-    PyObject *pcObj=0;
-    if (!PyArg_ParseTuple(args, "|O", &pcObj))     // convert args: Python->C 
-        return -1;                             // NULL triggers exception
+    PyObject *pcObj=nullptr;
+    if (!PyArg_ParseTuple(args, "|O", &pcObj))
+        return -1;
 
     try {
-        this->parentProperty = 0;
+        this->parentProperty = nullptr;
         // if no mesh is given
-        if (!pcObj) return 0;
+        if (!pcObj)
+            return 0;
         if (PyObject_TypeCheck(pcObj, &(MeshPy::Type))) {
             getMeshObjectPtr()->operator = (*static_cast<MeshPy*>(pcObj)->getMeshObjectPtr());
         }
         else if (PyList_Check(pcObj)) {
             PyObject* ret = addFacets(args);
-            bool ok = (ret!=0);
+            bool ok = (ret != nullptr);
             Py_XDECREF(ret);
-            if (!ok) return -1;
+            if (!ok)
+                return -1;
         }
         else if (PyTuple_Check(pcObj)) {
             PyObject* ret = addFacets(args);
-            bool ok = (ret!=0);
+            bool ok = (ret != nullptr);
             Py_XDECREF(ret);
-            if (!ok) return -1;
+            if (!ok)
+                return -1;
         }
         else if (PyUnicode_Check(pcObj)) {
             getMeshObjectPtr()->load(PyUnicode_AsUTF8(pcObj));
@@ -97,11 +94,11 @@ int MeshPy::PyInit(PyObject* args, PyObject*)
         }
     }
     catch (const Base::Exception &e) {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,e.what());
+        e.setPyException();
         return -1;
     }
     catch (const std::exception &e) {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,e.what());
+        PyErr_SetString(Base::PyExc_FC_GeneralError,e.what());
         return -1;
     }
     catch (const Py::Exception&) {
@@ -112,27 +109,21 @@ int MeshPy::PyInit(PyObject* args, PyObject*)
 }
 
 // returns a string which represent the object e.g. when printed in python
-std::string MeshPy::representation(void) const
+std::string MeshPy::representation() const
 {
-    // Note: As the return type is 'const char*' we cannot create a temporary char array neither on the stack because the array would be freed
-    // when leaving the scope nor on the heap because we would have a memory leak.
-    // So we use a static array that is used by all instances of this class. This, however, is not a problem as long as we only
-    // use this method in _repr().
-    MeshPy::PointerType ptr = reinterpret_cast<MeshPy::PointerType>(_pcTwinPointer);
-
-    return  ptr->representation();
+    return getMeshObjectPtr()->representation();
 }
 
 PyObject *MeshPy::PyMake(struct _typeobject *, PyObject *, PyObject *)  // Python wrapper
 {
-    // create a new instance of MeshPy and the Twin object 
+    // create a new instance of MeshPy and the Twin object
     return new MeshPy(new MeshObject);
 }
 
 PyObject* MeshPy::copy(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     return new MeshPy(new MeshObject(*getMeshObjectPtr()));
 }
@@ -140,7 +131,7 @@ PyObject* MeshPy::copy(PyObject *args)
 PyObject*  MeshPy::read(PyObject *args, PyObject *kwds)
 {
     char* Name;
-    static char* keywords_path[] = {"Filename",NULL};
+    static char* keywords_path[] = {"Filename",nullptr};
     if (PyArg_ParseTupleAndKeywords(args, kwds, "et", keywords_path, "utf-8", &Name)) {
         getMeshObjectPtr()->load(Name);
         PyMem_Free(Name);
@@ -171,7 +162,7 @@ PyObject*  MeshPy::read(PyObject *args, PyObject *kwds)
 
     PyObject* input;
     char* Ext;
-    static char* keywords_stream[] = {"Stream","Format",NULL};
+    static char* keywords_stream[] = {"Stream","Format",nullptr};
     if (PyArg_ParseTupleAndKeywords(args, kwds, "Os",keywords_stream, &input, &Ext)) {
         std::string fmt(Ext);
         boost::to_upper(fmt);
@@ -181,7 +172,7 @@ PyObject*  MeshPy::read(PyObject *args, PyObject *kwds)
 
         // read mesh
         Base::PyStreambuf buf(input);
-        std::istream str(0);
+        std::istream str(nullptr);
         str.rdbuf(&buf);
         getMeshObjectPtr()->load(str, format);
 
@@ -189,15 +180,15 @@ PyObject*  MeshPy::read(PyObject *args, PyObject *kwds)
     }
 
     PyErr_SetString(PyExc_TypeError, "expect string or file object");
-    return NULL;
+    return nullptr;
 }
 
 PyObject*  MeshPy::write(PyObject *args, PyObject *kwds)
 {
     char* Name;
-    char* Ext=0;
-    char* ObjName=0;
-    PyObject* List=0;
+    char* Ext=nullptr;
+    char* ObjName=nullptr;
+    PyObject* List=nullptr;
 
     MeshCore::MeshIO::Format format = MeshCore::MeshIO::Undefined;
     std::map<std::string, MeshCore::MeshIO::Format> ext;
@@ -224,7 +215,7 @@ PyObject*  MeshPy::write(PyObject *args, PyObject *kwds)
     ext["ASY"  ] = MeshCore::MeshIO::ASY;
     ext["3MF"  ] = MeshCore::MeshIO::ThreeMF;
 
-    static char* keywords_path[] = {"Filename","Format","Name","Material",NULL};
+    static char* keywords_path[] = {"Filename","Format","Name","Material",nullptr};
     if (PyArg_ParseTupleAndKeywords(args, kwds, "et|ssO", keywords_path, "utf-8",
                                     &Name, &Ext, &ObjName, &List)) {
         if (Ext) {
@@ -255,7 +246,7 @@ PyObject*  MeshPy::write(PyObject *args, PyObject *kwds)
             getMeshObjectPtr()->save(Name, format, &mat, ObjName);
         }
         else {
-            getMeshObjectPtr()->save(Name, format, 0, ObjName);
+            getMeshObjectPtr()->save(Name, format, nullptr, ObjName);
         }
 
         PyMem_Free(Name);
@@ -264,7 +255,7 @@ PyObject*  MeshPy::write(PyObject *args, PyObject *kwds)
 
     PyErr_Clear();
 
-    static char* keywords_stream[] = {"Stream","Format","Name","Material",NULL};
+    static char* keywords_stream[] = {"Stream","Format","Name","Material",nullptr};
     PyObject* input;
     if (PyArg_ParseTupleAndKeywords(args, kwds, "Os|sO", keywords_stream,
                                     &input, &Ext, &ObjName, &List)) {
@@ -296,7 +287,7 @@ PyObject*  MeshPy::write(PyObject *args, PyObject *kwds)
 
         // write mesh
         Base::PyStreambuf buf(input);
-        std::ostream str(0);
+        std::ostream str(nullptr);
         str.rdbuf(&buf);
         getMeshObjectPtr()->save(str, format, mat.get(), ObjName);
 
@@ -304,41 +295,18 @@ PyObject*  MeshPy::write(PyObject *args, PyObject *kwds)
     }
 
     PyErr_SetString(PyExc_TypeError, "expect string or file object");
-    return NULL;
+    return nullptr;
 }
 
 PyObject*  MeshPy::writeInventor(PyObject *args)
 {
     float creaseangle=0.0f;
     if (!PyArg_ParseTuple(args, "|f",&creaseangle))
-        return NULL;
-
-    MeshObject* mesh = getMeshObjectPtr();
-    const MeshCore::MeshFacetArray& faces = mesh->getKernel().GetFacets();
-    std::vector<int> indices;
-    std::vector<Base::Vector3f> coords;
-    coords.reserve(mesh->countPoints());
-    for (MeshObject::const_point_iterator it = mesh->points_begin(); it != mesh->points_end(); ++it)
-        coords.emplace_back((float)it->x,(float)it->y,(float)it->z);
-    indices.reserve(4*faces.size());
-    for (MeshCore::MeshFacetArray::_TConstIterator it = faces.begin(); it != faces.end(); ++it) {
-        indices.push_back(it->_aulPoints[0]);
-        indices.push_back(it->_aulPoints[1]);
-        indices.push_back(it->_aulPoints[2]);
-        indices.push_back(-1);
-    }
+        return nullptr;
 
     std::stringstream result;
-    Base::InventorBuilder builder(result);
-    builder.beginSeparator();
-    builder.addShapeHints(creaseangle);
-    builder.beginPoints();
-    builder.addPoints(coords);
-    builder.endPoints();
-    builder.addIndexedFaceSet(indices);
-    builder.endSeparator();
-    builder.close();
-
+    MeshObject* mesh = getMeshObjectPtr();
+    mesh->writeInventor(result, creaseangle);
     return Py::new_reference_to(Py::String(result.str()));
 }
 
@@ -346,7 +314,7 @@ PyObject*  MeshPy::offset(PyObject *args)
 {
     float Float;
     if (!PyArg_ParseTuple(args, "f",&Float))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->offsetSpecial2(Float);
@@ -358,11 +326,11 @@ PyObject*  MeshPy::offset(PyObject *args)
 PyObject*  MeshPy::offsetSpecial(PyObject *args)
 {
     float Float,zmin,zmax;
-    if (!PyArg_ParseTuple(args, "fff",&Float,&zmin,&zmax))			 
-        return NULL;                         
+    if (!PyArg_ParseTuple(args, "fff",&Float,&zmin,&zmax))
+        return nullptr;
 
     PY_TRY {
-        getMeshObjectPtr()->offsetSpecial(Float,zmax,zmin);  
+        getMeshObjectPtr()->offsetSpecial(Float,zmax,zmin);
     } PY_CATCH;
 
     Py_Return;
@@ -374,11 +342,10 @@ PyObject*  MeshPy::crossSections(PyObject *args)
     PyObject *poly=Py_False;
     float min_eps = 1.0e-2f;
     if (!PyArg_ParseTuple(args, "O|fO!", &obj, &min_eps, &PyBool_Type, &poly))
-        return 0;
+        return nullptr;
 
     Py::Sequence list(obj);
-    union PyType_Object pyType = {&(Base::VectorPy::Type)};
-    Py::Type vType(pyType.o);
+    Py::Type vType(Base::getTypeAsObject(&Base::VectorPy::Type));
 
     std::vector<MeshObject::TPlane> csPlanes;
     for (Py::Sequence::iterator it = list.begin(); it != list.end(); ++it) {
@@ -411,7 +378,7 @@ PyObject*  MeshPy::crossSections(PyObject *args)
     }
 
     std::vector<MeshObject::TPolylines> sections;
-    getMeshObjectPtr()->crossSections(csPlanes, sections, min_eps, PyObject_IsTrue(poly) ? true : false);
+    getMeshObjectPtr()->crossSections(csPlanes, sections, min_eps, Base::asBoolean(poly));
 
     // convert to Python objects
     Py::List crossSections;
@@ -434,8 +401,8 @@ PyObject*  MeshPy::unite(PyObject *args)
 {
     MeshPy   *pcObject;
     PyObject *pcObj;
-    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))     // convert args: Python->C 
-        return NULL;                             // NULL triggers exception 
+    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))
+        return nullptr;
 
     pcObject = static_cast<MeshPy*>(pcObj);
 
@@ -451,8 +418,8 @@ PyObject*  MeshPy::intersect(PyObject *args)
 {
     MeshPy   *pcObject;
     PyObject *pcObj;
-    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))     // convert args: Python->C 
-        return NULL;                             // NULL triggers exception 
+    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))
+        return nullptr;
 
     pcObject = static_cast<MeshPy*>(pcObj);
 
@@ -468,8 +435,8 @@ PyObject*  MeshPy::difference(PyObject *args)
 {
     MeshPy   *pcObject;
     PyObject *pcObj;
-    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))     // convert args: Python->C 
-        return NULL;                             // NULL triggers exception 
+    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))
+        return nullptr;
 
     pcObject = static_cast<MeshPy*>(pcObj);
 
@@ -485,8 +452,8 @@ PyObject*  MeshPy::inner(PyObject *args)
 {
     MeshPy   *pcObject;
     PyObject *pcObj;
-    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))     // convert args: Python->C 
-        return NULL;                             // NULL triggers exception 
+    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))
+        return nullptr;
 
     pcObject = static_cast<MeshPy*>(pcObj);
 
@@ -502,8 +469,8 @@ PyObject*  MeshPy::outer(PyObject *args)
 {
     MeshPy   *pcObject;
     PyObject *pcObj;
-    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))     // convert args: Python->C 
-        return NULL;                             // NULL triggers exception 
+    if (!PyArg_ParseTuple(args, "O!", &(MeshPy::Type), &pcObj))
+        return nullptr;
 
     pcObject = static_cast<MeshPy*>(pcObj);
 
@@ -528,7 +495,7 @@ PyObject*  MeshPy::section(PyObject *args, PyObject *kwds)
 
     MeshPy* pcObject = static_cast<MeshPy*>(pcObj);
 
-    std::vector< std::vector<Base::Vector3f> > curves = getMeshObjectPtr()->section(*pcObject->getMeshObjectPtr(), PyObject_IsTrue(connectLines), fMinDist);
+    std::vector< std::vector<Base::Vector3f> > curves = getMeshObjectPtr()->section(*pcObject->getMeshObjectPtr(), Base::asBoolean(connectLines), fMinDist);
     Py::List outer;
     for (const auto& it : curves) {
         Py::List inner;
@@ -544,16 +511,16 @@ PyObject*  MeshPy::section(PyObject *args, PyObject *kwds)
 PyObject*  MeshPy::coarsen(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     PyErr_SetString(PyExc_NotImplementedError, "Not yet implemented");
-    return 0;
+    return nullptr;
 }
 
 PyObject*  MeshPy::translate(PyObject *args)
 {
     float x,y,z;
     if (!PyArg_ParseTuple(args, "fff",&x,&y,&z))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         Base::Matrix4D m;
@@ -568,7 +535,7 @@ PyObject*  MeshPy::rotate(PyObject *args)
 {
     double x,y,z;
     if (!PyArg_ParseTuple(args, "ddd",&x,&y,&z))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         Base::Matrix4D m;
@@ -585,7 +552,7 @@ PyObject*  MeshPy::transform(PyObject *args)
 {
     PyObject *mat;
     if (!PyArg_ParseTuple(args, "O!",&(Base::MatrixPy::Type), &mat))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->getKernel().Transform(static_cast<Base::MatrixPy*>(mat)->value());
@@ -597,7 +564,7 @@ PyObject*  MeshPy::transform(PyObject *args)
 PyObject*  MeshPy::transformToEigen(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     getMeshObjectPtr()->transformToEigenSystem();
     Py_Return;
 }
@@ -605,7 +572,7 @@ PyObject*  MeshPy::transformToEigen(PyObject *args)
 PyObject*  MeshPy::getEigenSystem(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     Base::Vector3d vec;
     Base::Matrix4D mat = getMeshObjectPtr()->getEigenSystem(vec);
     Py::Tuple t(2);
@@ -648,8 +615,8 @@ PyObject*  MeshPy::addFacet(PyObject *args)
         Py_Return;
     }
 
-    PyErr_SetString(Base::BaseExceptionFreeCADError, "set 9 floats or three vectors or a facet");
-    return 0;
+    PyErr_SetString(PyExc_TypeError, "set 9 floats or three vectors or a facet");
+    return nullptr;
 }
 
 PyObject*  MeshPy::addFacets(PyObject *args)
@@ -657,11 +624,8 @@ PyObject*  MeshPy::addFacets(PyObject *args)
     PyObject *list;
     if (PyArg_ParseTuple(args, "O!", &PyList_Type, &list)) {
         Py::List list_f(list);
-        union PyType_Object pyVType = {&(Base::VectorPy::Type)};
-        Py::Type vVType(pyVType.o);
-
-        union PyType_Object pyFType = {&(Mesh::FacetPy::Type)};
-        Py::Type vFType(pyFType.o);
+        Py::Type vVType(Base::getTypeAsObject(&Base::VectorPy::Type));
+        Py::Type vFType(Base::getTypeAsObject(&Mesh::FacetPy::Type));
 
         std::vector<MeshCore::MeshGeomFacet> facets;
         MeshCore::MeshGeomFacet facet;
@@ -695,8 +659,8 @@ PyObject*  MeshPy::addFacets(PyObject *args)
                         }
                     }
                     else {
-                        PyErr_SetString(Base::BaseExceptionFreeCADError, "expect a sequence of floats or Vector");
-                        return NULL;
+                        PyErr_SetString(PyExc_TypeError, "expect a sequence of floats or Vector");
+                        return nullptr;
                     }
 
                     facet.CalcNormal();
@@ -726,8 +690,7 @@ PyObject*  MeshPy::addFacets(PyObject *args)
         Py::Tuple tuple(list);
         Py::List list_v(tuple.getItem(0));
         std::vector<Base::Vector3f> vertices;
-        union PyType_Object pyVertType = {&(Base::VectorPy::Type)};
-        Py::Type vType(pyVertType.o);
+        Py::Type vType(Base::getTypeAsObject(&Base::VectorPy::Type));
         for (Py::List::iterator it = list_v.begin(); it != list_v.end(); ++it) {
             if ((*it).isType(vType)) {
                 Base::Vector3d v = static_cast<Base::VectorPy*>((*it).ptr())->value();
@@ -740,30 +703,30 @@ PyObject*  MeshPy::addFacets(PyObject *args)
         for (Py::List::iterator it = list_f.begin(); it != list_f.end(); ++it) {
             Py::Tuple f(*it);
             MeshCore::MeshFacet face;
-            face._aulPoints[0] = (long)Py::Long(f.getItem(0));
-            face._aulPoints[1] = (long)Py::Long(f.getItem(1));
-            face._aulPoints[2] = (long)Py::Long(f.getItem(2));
+            face._aulPoints[0] = static_cast<long>(Py::Long(f.getItem(0)));
+            face._aulPoints[1] = static_cast<long>(Py::Long(f.getItem(1)));
+            face._aulPoints[2] = static_cast<long>(Py::Long(f.getItem(2)));
             faces.push_back(face);
         }
 
-        getMeshObjectPtr()->addFacets(faces, vertices, PyObject_IsTrue(check) ? true : false);
+        getMeshObjectPtr()->addFacets(faces, vertices, Base::asBoolean(check));
 
         Py_Return;
     }
 
-    PyErr_SetString(Base::BaseExceptionFreeCADError, "either expect\n"
+    PyErr_SetString(PyExc_TypeError, "either expect\n"
         "-- [Vector] (3 of them define a facet)\n"
         "-- ([Vector],[(int,int,int)])");
-    return NULL;
+    return nullptr;
 }
 
 PyObject* MeshPy::removeFacets(PyObject *args)
 {
     PyObject* list;
     if (!PyArg_ParseTuple(args, "O", &list))
-        return 0;
+        return nullptr;
 
-    std::vector<unsigned long> indices;
+    std::vector<FacetIndex> indices;
     Py::Sequence ary(list);
     for (Py::Sequence::iterator it = ary.begin(); it != ary.end(); ++it) {
         Py::Long f(*it);
@@ -777,7 +740,7 @@ PyObject* MeshPy::removeFacets(PyObject *args)
 PyObject* MeshPy::getInternalFacets(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     const MeshCore::MeshKernel& kernel = getMeshObjectPtr()->getKernel();
     MeshCore::MeshEvalInternalFacets eval(kernel);
@@ -796,7 +759,7 @@ PyObject* MeshPy::getInternalFacets(PyObject *args)
 PyObject* MeshPy::rebuildNeighbourHood(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     MeshCore::MeshKernel& kernel = getMeshObjectPtr()->getKernel();
     kernel.RebuildNeighbours();
@@ -807,7 +770,7 @@ PyObject*  MeshPy::addMesh(PyObject *args)
 {
     PyObject* mesh;
     if (!PyArg_ParseTuple(args, "O!",&(MeshPy::Type), &mesh))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->addMesh(*static_cast<MeshPy*>(mesh)->getMeshObjectPtr());
@@ -821,7 +784,7 @@ PyObject*  MeshPy::setPoint(PyObject *args)
     unsigned long index;
     PyObject* pnt;
     if (!PyArg_ParseTuple(args, "kO!",&index, &(Base::VectorPy::Type), &pnt))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->setPoint(index, static_cast<Base::VectorPy*>(pnt)->value());
@@ -830,10 +793,38 @@ PyObject*  MeshPy::setPoint(PyObject *args)
     Py_Return;
 }
 
+PyObject* MeshPy::movePoint(PyObject *args)
+{
+    unsigned long index;
+    Base::Vector3d vec;
+
+    do {
+        double  x=0.0,y=0.0,z=0.0;
+        if (PyArg_ParseTuple(args, "kddd", &index,&x,&y,&z)) {
+            vec.Set(x,y,z);
+            break;
+        }
+
+        PyErr_Clear(); // set by PyArg_ParseTuple()
+        PyObject *object;
+        if (PyArg_ParseTuple(args,"kO!", &index, &(Base::VectorPy::Type), &object)) {
+            vec = *(static_cast<Base::VectorPy*>(object)->getVectorPtr());
+            break;
+        }
+
+        PyErr_SetString(PyExc_TypeError, "Tuple of three floats or Vector expected");
+        return nullptr;
+    }
+    while (false);
+
+    getMeshObjectPtr()->movePoint(index, vec);
+    Py_Return;
+}
+
 PyObject*  MeshPy::getPointNormals(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         std::vector<Base::Vector3d> normals = getMeshObjectPtr()->getPointNormals();
@@ -849,7 +840,7 @@ PyObject*  MeshPy::getPointNormals(PyObject *args)
 PyObject* MeshPy::countSegments(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     unsigned long count = getMeshObjectPtr()->countSegments();
     return Py_BuildValue("k",count);
@@ -859,18 +850,18 @@ PyObject* MeshPy::getSegment(PyObject *args)
 {
     unsigned long index;
     if (!PyArg_ParseTuple(args, "k", &index))
-        return 0;
+        return nullptr;
 
     unsigned long count = getMeshObjectPtr()->countSegments();
     if (index >= count) {
         PyErr_SetString(PyExc_IndexError, "index out of range");
-        return 0;
+        return nullptr;
     }
 
     Py::List ary;
     const std::vector<FacetIndex>& segm = getMeshObjectPtr()->getSegment(index).getIndices();
     for (std::vector<FacetIndex>::const_iterator it = segm.begin(); it != segm.end(); ++it) {
-        ary.append(Py::Long((int)*it));
+        ary.append(Py::Long(*it));
     }
 
     return Py::new_reference_to(ary);
@@ -1017,7 +1008,7 @@ PyObject* MeshPy::setSegmentName(PyObject *args)
 PyObject* MeshPy::getSeparateComponents(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     Py::List meshesList;
     std::vector<std::vector<FacetIndex> > segs;
@@ -1032,7 +1023,7 @@ PyObject* MeshPy::getSeparateComponents(PyObject *args)
 PyObject* MeshPy::getFacetSelection(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     Py::List ary;
     std::vector<FacetIndex> facets;
@@ -1047,7 +1038,7 @@ PyObject* MeshPy::getFacetSelection(PyObject *args)
 PyObject* MeshPy::getPointSelection(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     Py::List ary;
     std::vector<PointIndex> points;
@@ -1063,7 +1054,7 @@ PyObject* MeshPy::meshFromSegment(PyObject *args)
 {
     PyObject* list;
     if (!PyArg_ParseTuple(args, "O", &list))
-        return 0;
+        return nullptr;
 
     std::vector<FacetIndex> segment;
     Py::Sequence ary(list);
@@ -1080,7 +1071,7 @@ PyObject* MeshPy::meshFromSegment(PyObject *args)
 PyObject*  MeshPy::clear(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     getMeshObjectPtr()->clear();
     Py_Return;
 }
@@ -1088,23 +1079,23 @@ PyObject*  MeshPy::clear(PyObject *args)
 PyObject*  MeshPy::isSolid(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     bool ok = getMeshObjectPtr()->isSolid();
-    return Py_BuildValue("O", (ok ? Py_True : Py_False)); 
+    return Py_BuildValue("O", (ok ? Py_True : Py_False));
 }
 
 PyObject*  MeshPy::hasNonManifolds(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     bool ok = getMeshObjectPtr()->hasNonManifolds();
-    return Py_BuildValue("O", (ok ? Py_True : Py_False)); 
+    return Py_BuildValue("O", (ok ? Py_True : Py_False));
 }
 
 PyObject*  MeshPy::hasInvalidNeighbourhood(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     bool ok = getMeshObjectPtr()->hasInvalidNeighbourhood();
     return Py_BuildValue("O", (ok ? Py_True : Py_False));
 }
@@ -1112,7 +1103,7 @@ PyObject*  MeshPy::hasInvalidNeighbourhood(PyObject *args)
 PyObject*  MeshPy::hasPointsOutOfRange(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     bool ok = getMeshObjectPtr()->hasPointsOutOfRange();
     return Py_BuildValue("O", (ok ? Py_True : Py_False));
 }
@@ -1120,7 +1111,7 @@ PyObject*  MeshPy::hasPointsOutOfRange(PyObject *args)
 PyObject*  MeshPy::hasFacetsOutOfRange(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     bool ok = getMeshObjectPtr()->hasFacetsOutOfRange();
     return Py_BuildValue("O", (ok ? Py_True : Py_False));
 }
@@ -1128,7 +1119,7 @@ PyObject*  MeshPy::hasFacetsOutOfRange(PyObject *args)
 PyObject*  MeshPy::hasCorruptedFacets(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     bool ok = getMeshObjectPtr()->hasFacetsOutOfRange();
     return Py_BuildValue("O", (ok ? Py_True : Py_False));
 }
@@ -1136,7 +1127,7 @@ PyObject*  MeshPy::hasCorruptedFacets(PyObject *args)
 PyObject*  MeshPy::removeNonManifolds(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     getMeshObjectPtr()->removeNonManifolds();
     Py_Return;
 }
@@ -1144,7 +1135,7 @@ PyObject*  MeshPy::removeNonManifolds(PyObject *args)
 PyObject*  MeshPy::removeNonManifoldPoints(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     getMeshObjectPtr()->removeNonManifoldPoints();
     Py_Return;
 }
@@ -1152,30 +1143,30 @@ PyObject*  MeshPy::removeNonManifoldPoints(PyObject *args)
 PyObject*  MeshPy::hasSelfIntersections(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     bool ok = getMeshObjectPtr()->hasSelfIntersections();
-    return Py_BuildValue("O", (ok ? Py_True : Py_False)); 
+    return Py_BuildValue("O", (ok ? Py_True : Py_False));
 }
 
 PyObject*  MeshPy::getSelfIntersections(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     std::vector<std::pair<FacetIndex, FacetIndex> > selfIndices;
-    std::vector<std::pair<Base::Vector3f, Base::Vector3f> > selfPoints;
-    MeshCore::MeshEvalSelfIntersection eval(getMeshObjectPtr()->getKernel());
-    eval.GetIntersections(selfIndices);
-    eval.GetIntersections(selfIndices, selfPoints);
+    std::vector<Base::Line3d> selfLines;
+
+    selfIndices = getMeshObjectPtr()->getSelfIntersections();
+    selfLines = getMeshObjectPtr()->getSelfIntersections(selfIndices);
 
     Py::Tuple tuple(selfIndices.size());
-    if (selfIndices.size() == selfPoints.size()) {
+    if (selfIndices.size() == selfLines.size()) {
         for (std::size_t i=0; i<selfIndices.size(); i++) {
             Py::Tuple item(4);
             item.setItem(0, Py::Long(selfIndices[i].first));
             item.setItem(1, Py::Long(selfIndices[i].second));
-            item.setItem(2, Py::Vector(selfPoints[i].first));
-            item.setItem(3, Py::Vector(selfPoints[i].second));
+            item.setItem(2, Py::Vector(selfLines[i].p1));
+            item.setItem(3, Py::Vector(selfLines[i].p2));
             tuple.setItem(i, item);
         }
     }
@@ -1186,13 +1177,13 @@ PyObject*  MeshPy::getSelfIntersections(PyObject *args)
 PyObject*  MeshPy::fixSelfIntersections(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     try {
         getMeshObjectPtr()->removeSelfIntersections();
     }
     catch (const Base::Exception& e) {
-        PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());
-        return NULL;
+        e.setPyException();
+        return nullptr;
     }
     Py_Return;
 }
@@ -1200,13 +1191,13 @@ PyObject*  MeshPy::fixSelfIntersections(PyObject *args)
 PyObject*  MeshPy::removeFoldsOnSurface(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     try {
         getMeshObjectPtr()->removeFoldsOnSurface();
     }
     catch (const Base::Exception& e) {
-        PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());
-        return NULL;
+        e.setPyException();
+        return nullptr;
     }
     Py_Return;
 }
@@ -1214,21 +1205,21 @@ PyObject*  MeshPy::removeFoldsOnSurface(PyObject *args)
 PyObject*  MeshPy::hasInvalidPoints(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     bool ok = getMeshObjectPtr()->hasInvalidPoints();
-    return Py_BuildValue("O", (ok ? Py_True : Py_False)); 
+    return Py_BuildValue("O", (ok ? Py_True : Py_False));
 }
 
 PyObject*  MeshPy::removeInvalidPoints(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     try {
         getMeshObjectPtr()->removeInvalidPoints();
     }
     catch (const Base::Exception& e) {
-        PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());
-        return NULL;
+        e.setPyException();
+        return nullptr;
     }
     Py_Return;
 }
@@ -1248,10 +1239,10 @@ PyObject*  MeshPy::removePointsOnEdge(PyObject *args, PyObject *kwds)
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O!", keywords, &PyBool_Type, &fillBoundary))
         return nullptr;
     try {
-        getMeshObjectPtr()->removePointsOnEdge(PyObject_IsTrue(fillBoundary) ? true : false);
+        getMeshObjectPtr()->removePointsOnEdge(Base::asBoolean(fillBoundary));
     }
     catch (const Base::Exception& e) {
-        PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());
+        e.setPyException();
         return nullptr;
     }
     Py_Return;
@@ -1260,7 +1251,7 @@ PyObject*  MeshPy::removePointsOnEdge(PyObject *args, PyObject *kwds)
 PyObject*  MeshPy::flipNormals(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         MeshPropertyLock lock(this->parentProperty);
@@ -1273,23 +1264,23 @@ PyObject*  MeshPy::flipNormals(PyObject *args)
 PyObject*  MeshPy::hasNonUniformOrientedFacets(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     bool ok = getMeshObjectPtr()->countNonUniformOrientedFacets() > 0;
-    return Py_BuildValue("O", (ok ? Py_True : Py_False)); 
+    return Py_BuildValue("O", (ok ? Py_True : Py_False));
 }
 
 PyObject*  MeshPy::countNonUniformOrientedFacets(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     unsigned long count = getMeshObjectPtr()->countNonUniformOrientedFacets();
-    return Py_BuildValue("k", count); 
+    return Py_BuildValue("k", count);
 }
 
 PyObject*  MeshPy::getNonUniformOrientedFacets(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     const MeshCore::MeshKernel& kernel = getMeshObjectPtr()->getKernel();
     MeshCore::MeshEvalOrientation cMeshEval(kernel);
@@ -1305,7 +1296,7 @@ PyObject*  MeshPy::getNonUniformOrientedFacets(PyObject *args)
 PyObject*  MeshPy::harmonizeNormals(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         MeshPropertyLock lock(this->parentProperty);
@@ -1318,7 +1309,7 @@ PyObject*  MeshPy::harmonizeNormals(PyObject *args)
 PyObject*  MeshPy::countComponents(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     unsigned long count = getMeshObjectPtr()->countComponents();
     return Py_BuildValue("k",count);
@@ -1328,7 +1319,7 @@ PyObject*  MeshPy::removeComponents(PyObject *args)
 {
     unsigned long count;
     if (!PyArg_ParseTuple(args, "k", &count))
-        return NULL;                         
+        return nullptr;
 
     PY_TRY {
         if (count > 0) {
@@ -1345,7 +1336,7 @@ PyObject*  MeshPy::fillupHoles(PyObject *args)
     int level = 0;
     float max_area = 0.0f;
     if (!PyArg_ParseTuple(args, "k|if", &len,&level,&max_area))
-        return NULL;
+        return nullptr;
     try {
         std::unique_ptr<MeshCore::AbstractPolygonTriangulator> tria;
         if (max_area > 0.0f) {
@@ -1362,8 +1353,8 @@ PyObject*  MeshPy::fillupHoles(PyObject *args)
         getMeshObjectPtr()->fillupHoles(len, level, *tria);
     }
     catch (const Base::Exception& e) {
-        PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());
-        return NULL;
+        e.setPyException();
+        return nullptr;
     }
 
     Py_Return;
@@ -1372,7 +1363,7 @@ PyObject*  MeshPy::fillupHoles(PyObject *args)
 PyObject*  MeshPy::fixIndices(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->validateIndices();
@@ -1386,7 +1377,7 @@ PyObject*  MeshPy::fixCaps(PyObject *args)
     float fMaxAngle = Base::toRadians<float>(150.0f);
     float fSplitFactor = 0.25f;
     if (!PyArg_ParseTuple(args, "|ff", &fMaxAngle, &fSplitFactor))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->validateCaps(fMaxAngle, fSplitFactor);
@@ -1400,7 +1391,7 @@ PyObject*  MeshPy::fixDeformations(PyObject *args)
     float fMaxAngle;
     float fEpsilon = MeshCore::MeshDefinitions::_fMinPointDistanceP2;
     if (!PyArg_ParseTuple(args, "f|f", &fMaxAngle, &fEpsilon))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->validateDeformations(fMaxAngle, fEpsilon);
@@ -1413,7 +1404,7 @@ PyObject*  MeshPy::fixDegenerations(PyObject *args)
 {
     float fEpsilon = MeshCore::MeshDefinitions::_fMinPointDistanceP2;
     if (!PyArg_ParseTuple(args, "|f", &fEpsilon))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->validateDegenerations(fEpsilon);
@@ -1425,7 +1416,7 @@ PyObject*  MeshPy::fixDegenerations(PyObject *args)
 PyObject*  MeshPy::removeDuplicatedPoints(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->removeDuplicatedPoints();
@@ -1437,7 +1428,7 @@ PyObject*  MeshPy::removeDuplicatedPoints(PyObject *args)
 PyObject*  MeshPy::removeDuplicatedFacets(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->removeDuplicatedFacets();
@@ -1449,7 +1440,7 @@ PyObject*  MeshPy::removeDuplicatedFacets(PyObject *args)
 PyObject*  MeshPy::refine(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->refine();
@@ -1462,7 +1453,7 @@ PyObject* MeshPy::removeNeedles(PyObject *args)
 {
     float length;
     if (!PyArg_ParseTuple(args, "f", &length))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->removeNeedles(length);
@@ -1474,7 +1465,7 @@ PyObject* MeshPy::removeNeedles(PyObject *args)
 PyObject* MeshPy::removeFullBoundaryFacets(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->removeFullBoundaryFacets();
@@ -1486,7 +1477,7 @@ PyObject* MeshPy::removeFullBoundaryFacets(PyObject *args)
 PyObject* MeshPy::mergeFacets(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->mergeFacets();
@@ -1499,7 +1490,7 @@ PyObject*  MeshPy::optimizeTopology(PyObject *args)
 {
     float fMaxAngle=-1.0f;
     if (!PyArg_ParseTuple(args, "|f; specify the maximum allowed angle between the normals of two adjacent facets", &fMaxAngle))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         MeshPropertyLock lock(this->parentProperty);
@@ -1512,7 +1503,7 @@ PyObject*  MeshPy::optimizeTopology(PyObject *args)
 PyObject*  MeshPy::optimizeEdges(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         MeshPropertyLock lock(this->parentProperty);
@@ -1525,7 +1516,7 @@ PyObject*  MeshPy::optimizeEdges(PyObject *args)
 PyObject*  MeshPy::splitEdges(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         getMeshObjectPtr()->splitEdges();
@@ -1539,7 +1530,7 @@ PyObject*  MeshPy::splitEdge(PyObject *args)
     unsigned long facet, neighbour;
     PyObject* vertex;
     if (!PyArg_ParseTuple(args, "kkO!", &facet, &neighbour, &Base::VectorPy::Type, &vertex))
-        return NULL;
+        return nullptr;
 
     Base::VectorPy  *pcObject = static_cast<Base::VectorPy*>(vertex);
     Base::Vector3d* val = pcObject->getVectorPtr();
@@ -1549,20 +1540,20 @@ PyObject*  MeshPy::splitEdge(PyObject *args)
     PY_TRY {
         if (facet >= kernel.CountFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
         if (neighbour >= kernel.CountFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
 
         const MeshCore::MeshFacet& rclF = kernel.GetFacets()[facet];
         if (rclF._aulNeighbours[0] != neighbour && rclF._aulNeighbours[1] != neighbour &&
             rclF._aulNeighbours[2] != neighbour) {
             PyErr_SetString(PyExc_IndexError, "No adjacent facets");
-            return NULL;
+            return nullptr;
         }
-        
+
         getMeshObjectPtr()->splitEdge(facet, neighbour, v);
     } PY_CATCH;
 
@@ -1574,9 +1565,9 @@ PyObject*  MeshPy::splitFacet(PyObject *args)
     unsigned long facet;
     PyObject* vertex1;
     PyObject* vertex2;
-    if (!PyArg_ParseTuple(args, "kO!O!", &facet, &Base::VectorPy::Type, &vertex1, 
+    if (!PyArg_ParseTuple(args, "kO!O!", &facet, &Base::VectorPy::Type, &vertex1,
                                                  &Base::VectorPy::Type, &vertex2))
-        return NULL;
+        return nullptr;
 
     Base::VectorPy  *pcObject = static_cast<Base::VectorPy*>(vertex1);
     Base::Vector3d* val = pcObject->getVectorPtr();
@@ -1590,9 +1581,9 @@ PyObject*  MeshPy::splitFacet(PyObject *args)
     PY_TRY {
         if (facet >= kernel.CountFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
-        
+
         getMeshObjectPtr()->splitFacet(facet, v1, v2);
     } PY_CATCH;
 
@@ -1603,26 +1594,26 @@ PyObject*  MeshPy::swapEdge(PyObject *args)
 {
     unsigned long facet, neighbour;
     if (!PyArg_ParseTuple(args, "kk", &facet, &neighbour))
-        return NULL;
+        return nullptr;
 
     const MeshCore::MeshKernel& kernel = getMeshObjectPtr()->getKernel();
     PY_TRY {
         if (facet >= kernel.CountFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
         if (neighbour >= kernel.CountFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
-  
+
         const MeshCore::MeshFacet& rclF = kernel.GetFacets()[facet];
         if (rclF._aulNeighbours[0] != neighbour && rclF._aulNeighbours[1] != neighbour &&
             rclF._aulNeighbours[2] != neighbour) {
             PyErr_SetString(PyExc_IndexError, "No adjacent facets");
-            return NULL;
+            return nullptr;
         }
-        
+
         getMeshObjectPtr()->swapEdge(facet, neighbour);
     } PY_CATCH;
 
@@ -1633,26 +1624,26 @@ PyObject*  MeshPy::collapseEdge(PyObject *args)
 {
     unsigned long facet, neighbour;
     if (!PyArg_ParseTuple(args, "kk", &facet, &neighbour))
-        return NULL;
+        return nullptr;
 
     const MeshCore::MeshKernel& kernel = getMeshObjectPtr()->getKernel();
     PY_TRY {
         if (facet >= kernel.CountFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
         if (neighbour >= kernel.CountFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
-  
+
         const MeshCore::MeshFacet& rclF = kernel.GetFacets()[facet];
         if (rclF._aulNeighbours[0] != neighbour && rclF._aulNeighbours[1] != neighbour &&
             rclF._aulNeighbours[2] != neighbour) {
             PyErr_SetString(PyExc_IndexError, "No adjacent facets");
-            return NULL;
+            return nullptr;
         }
-        
+
         getMeshObjectPtr()->collapseEdge(facet, neighbour);
     } PY_CATCH;
 
@@ -1663,14 +1654,14 @@ PyObject*  MeshPy::collapseFacet(PyObject *args)
 {
     unsigned long facet;
     if (!PyArg_ParseTuple(args, "k", &facet))
-        return NULL;
+        return nullptr;
 
     PY_TRY {
         if (facet >= getMeshObjectPtr()->countFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
-  
+
         getMeshObjectPtr()->collapseFacet(facet);
     } PY_CATCH;
 
@@ -1682,7 +1673,7 @@ PyObject*  MeshPy::insertVertex(PyObject *args)
     unsigned long facet;
     PyObject* vertex;
     if (!PyArg_ParseTuple(args, "kO!", &facet, &Base::VectorPy::Type, &vertex))
-        return NULL;
+        return nullptr;
 
     Base::VectorPy  *pcObject = static_cast<Base::VectorPy*>(vertex);
     Base::Vector3d* val = pcObject->getVectorPtr();
@@ -1691,9 +1682,9 @@ PyObject*  MeshPy::insertVertex(PyObject *args)
     PY_TRY {
         if (facet >= getMeshObjectPtr()->countFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
-        
+
         getMeshObjectPtr()->insertVertex(facet, v);
     } PY_CATCH;
 
@@ -1705,7 +1696,7 @@ PyObject*  MeshPy::snapVertex(PyObject *args)
     unsigned long facet;
     PyObject* vertex;
     if (!PyArg_ParseTuple(args, "kO!", &facet, &Base::VectorPy::Type, &vertex))
-        return NULL;
+        return nullptr;
 
     Base::VectorPy  *pcObject = static_cast<Base::VectorPy*>(vertex);
     Base::Vector3d* val = pcObject->getVectorPtr();
@@ -1714,9 +1705,9 @@ PyObject*  MeshPy::snapVertex(PyObject *args)
     PY_TRY {
         if (facet >= getMeshObjectPtr()->countFacets()) {
             PyErr_SetString(PyExc_IndexError, "Facet index out of range");
-            return NULL;
+            return nullptr;
         }
-        
+
         getMeshObjectPtr()->snapVertex(facet, v);
     } PY_CATCH;
 
@@ -1726,15 +1717,15 @@ PyObject*  MeshPy::snapVertex(PyObject *args)
 PyObject*  MeshPy::printInfo(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     return Py_BuildValue("s", getMeshObjectPtr()->topologyInfo().c_str());
 }
 
 PyObject*  MeshPy::collapseFacets(PyObject *args)
 {
-    PyObject *pcObj=0;
-    if (!PyArg_ParseTuple(args, "O", &pcObj))     // convert args: Python->C 
-        return 0;                             // NULL triggers exception
+    PyObject *pcObj=nullptr;
+    if (!PyArg_ParseTuple(args, "O", &pcObj))
+        return nullptr;
 
     // if no mesh is given
     try {
@@ -1749,48 +1740,41 @@ PyObject*  MeshPy::collapseFacets(PyObject *args)
         getMeshObjectPtr()->collapseFacets(facets);
     }
     catch (const Py::Exception&) {
-        return 0;
+        return nullptr;
     }
 
     Py_Return;
 }
 
-PyObject*  MeshPy::foraminate(PyObject *args)
+PyObject* MeshPy::foraminate(PyObject *args)
 {
     PyObject* pnt_p;
     PyObject* dir_p;
-    if (!PyArg_ParseTuple(args, "OO", &pnt_p, &dir_p))
-        return NULL;
+    double maxAngle = MeshCore::Mathd::PI;
+    if (!PyArg_ParseTuple(args, "OO|d", &pnt_p, &dir_p, &maxAngle))
+        return nullptr;
 
     try {
-        Py::Tuple pnt_t(pnt_p);
-        Py::Tuple dir_t(dir_p);
-        Base::Vector3f pnt((float)Py::Float(pnt_t.getItem(0)),
-                           (float)Py::Float(pnt_t.getItem(1)),
-                           (float)Py::Float(pnt_t.getItem(2)));
-        Base::Vector3f dir((float)Py::Float(dir_t.getItem(0)),
-                           (float)Py::Float(dir_t.getItem(1)),
-                           (float)Py::Float(dir_t.getItem(2)));
+        Py::Vector pnt_t(pnt_p, false);
+        Py::Vector dir_t(dir_p, false);
 
-        Base::Vector3f res;
-        MeshCore::MeshFacetIterator f_it(getMeshObjectPtr()->getKernel());
-        int index = 0;
+        MeshObject::TRay ray = std::make_pair(pnt_t.toVector(),
+                                              dir_t.toVector());
+        auto output = getMeshObjectPtr()->foraminate(ray, maxAngle);
 
         Py::Dict dict;
-        for (f_it.Begin(); f_it.More(); f_it.Next(), index++) {
-            if (f_it->Foraminate(pnt, dir, res)) {
-                Py::Tuple tuple(3);
-                tuple.setItem(0, Py::Float(res.x));
-                tuple.setItem(1, Py::Float(res.y));
-                tuple.setItem(2, Py::Float(res.z));
-                dict.setItem(Py::Long(index), tuple);
-            }
+        for (const auto& it : output) {
+            Py::Tuple tuple(3);
+            tuple.setItem(0, Py::Float(it.second.x));
+            tuple.setItem(1, Py::Float(it.second.y));
+            tuple.setItem(2, Py::Float(it.second.z));
+            dict.setItem(Py::Long(it.first), tuple);
         }
 
         return Py::new_reference_to(dict);
     }
     catch (const Py::Exception&) {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -1799,7 +1783,7 @@ PyObject*  MeshPy::cut(PyObject *args)
     PyObject* poly;
     int mode;
     if (!PyArg_ParseTuple(args, "Oi", &poly, &mode))
-        return NULL;
+        return nullptr;
 
     Py::Sequence list(poly);
     std::vector<Base::Vector3f> polygon;
@@ -1833,7 +1817,7 @@ PyObject*  MeshPy::trim(PyObject *args)
     PyObject* poly;
     int mode;
     if (!PyArg_ParseTuple(args, "Oi", &poly, &mode))
-        return NULL;
+        return nullptr;
 
     Py::Sequence list(poly);
     std::vector<Base::Vector3f> polygon;
@@ -1878,16 +1862,18 @@ PyObject*  MeshPy::trimByPlane(PyObject *args)
     Py_Return;
 }
 
-PyObject*  MeshPy::smooth(PyObject *args, PyObject *kwds)
+PyObject* MeshPy::smooth(PyObject *args, PyObject *kwds)
 {
     char* method = "Laplace";
     int iter=1;
     double lambda = 0;
     double micro = 0;
-    static char* keywords_smooth[] = {"Method","Iteration","Lambda","Micro",NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sidd",keywords_smooth,
-                                     &method, &iter, &lambda, &micro))
-        return 0;
+    double maximum = 1000;
+    int weight = 1;
+    static char* keywords_smooth[] = {"Method", "Iteration", "Lambda", "Micro", "Maximum", "Weight", nullptr};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sidddi",keywords_smooth,
+                                     &method, &iter, &lambda, &micro, &maximum, &weight))
+        return nullptr;
 
     PY_TRY {
         MeshPropertyLock lock(this->parentProperty);
@@ -1908,6 +1894,12 @@ PyObject*  MeshPy::smooth(PyObject *args, PyObject *kwds)
         }
         else if (strcmp(method, "PlaneFit") == 0) {
             MeshCore::PlaneFitSmoothing smooth(kernel);
+            smooth.SetMaximum(maximum);
+            smooth.Smooth(iter);
+        }
+        else if (strcmp(method, "MedianFilter") == 0) {
+            MeshCore::MedianFilterSmoothing smooth(kernel);
+            smooth.SetWeight(weight);
             smooth.Smooth(iter);
         }
         else {
@@ -1947,62 +1939,30 @@ PyObject* MeshPy::nearestFacetOnRay(PyObject *args)
 {
     PyObject* pnt_p;
     PyObject* dir_p;
-    if (!PyArg_ParseTuple(args, "OO", &pnt_p, &dir_p))
-        return NULL;
+    double maxAngle = MeshCore::Mathd::PI;
+    if (!PyArg_ParseTuple(args, "OO|d", &pnt_p, &dir_p, &maxAngle))
+        return nullptr;
 
     try {
-        Py::Tuple pnt_t(pnt_p);
-        Py::Tuple dir_t(dir_p);
+        Py::Vector pnt_t(pnt_p, false);
+        Py::Vector dir_t(dir_p, false);
         Py::Dict dict;
-        Base::Vector3f pnt((float)Py::Float(pnt_t.getItem(0)),
-                           (float)Py::Float(pnt_t.getItem(1)),
-                           (float)Py::Float(pnt_t.getItem(2)));
-        Base::Vector3f dir((float)Py::Float(dir_t.getItem(0)),
-                           (float)Py::Float(dir_t.getItem(1)),
-                           (float)Py::Float(dir_t.getItem(2)));
 
-        FacetIndex index = 0;
-        Base::Vector3f res;
-        MeshCore::MeshAlgorithm alg(getMeshObjectPtr()->getKernel());
-
-#if 0 // for testing only
-        MeshCore::MeshFacetGrid grid(getMeshObjectPtr()->getKernel(),10);
-        // With grids we might search in the opposite direction, too
-        if (alg.NearestFacetOnRay(pnt,  dir, grid, res, index) ||
-            alg.NearestFacetOnRay(pnt, -dir, grid, res, index)) {
-#else
-        if (alg.NearestFacetOnRay(pnt, dir, res, index)) {
-#endif
+        MeshObject::TRay ray = std::make_pair(pnt_t.toVector(),
+                                              dir_t.toVector());
+        MeshObject::TFaceSection output;
+        if (getMeshObjectPtr()->nearestFacetOnRay(ray, maxAngle, output)) {
             Py::Tuple tuple(3);
-            tuple.setItem(0, Py::Float(res.x));
-            tuple.setItem(1, Py::Float(res.y));
-            tuple.setItem(2, Py::Float(res.z));
-            dict.setItem(Py::Long((int)index), tuple);
+            tuple.setItem(0, Py::Float(output.second.x));
+            tuple.setItem(1, Py::Float(output.second.y));
+            tuple.setItem(2, Py::Float(output.second.z));
+            dict.setItem(Py::Long(static_cast<int>(output.first)), tuple);
         }
-
-#if 0 // for testing only
-        char szBuf[200];
-        std::ofstream str("grid_test.iv");
-        Base::InventorBuilder builder(str);
-        MeshCore::MeshGridIterator g_it(grid);
-        for (g_it.Init(); g_it.More(); g_it.Next()) {
-            Base::BoundBox3f box = g_it.GetBoundBox();
-            unsigned long uX,uY,uZ;
-            g_it.GetGridPos(uX,uY,uZ);
-            builder.addBoundingBox(Base::Vector3f(box.MinX,box.MinY, box.MinZ),
-                                   Base::Vector3f(box.MaxX,box.MaxY, box.MaxZ));
-            sprintf(szBuf, "(%lu,%lu,%lu)", uX, uY, uZ);
-            builder.addText(box.CalcCenter(), szBuf);
-        }
-        builder.addSingleArrow(pnt-20.0f*dir, pnt+10.0f*dir);
-        builder.close();
-        str.close();
-#endif
 
         return Py::new_reference_to(dict);
     }
     catch (const Py::Exception&) {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -2011,7 +1971,7 @@ PyObject*  MeshPy::getPlanarSegments(PyObject *args)
     float dev;
     unsigned long minFacets=0;
     if (!PyArg_ParseTuple(args, "f|k",&dev,&minFacets))
-        return NULL;
+        return nullptr;
 
     Mesh::MeshObject* mesh = getMeshObjectPtr();
     std::vector<Mesh::Segment> segments = mesh->getSegmentsOfType
@@ -2022,7 +1982,7 @@ PyObject*  MeshPy::getPlanarSegments(PyObject *args)
         const std::vector<FacetIndex>& segm = it->getIndices();
         Py::List ary;
         for (std::vector<FacetIndex>::const_iterator jt = segm.begin(); jt != segm.end(); ++jt) {
-            ary.append(Py::Long((int)*jt));
+            ary.append(Py::Long(*jt));
         }
         s.append(ary);
     }
@@ -2036,7 +1996,7 @@ PyObject*  MeshPy::getSegmentsOfType(PyObject *args)
     float dev;
     unsigned long minFacets=0;
     if (!PyArg_ParseTuple(args, "sf|k",&type,&dev,&minFacets))
-        return NULL;
+        return nullptr;
 
     Mesh::MeshObject::GeometryType geoType;
     if (strcmp(type, "Plane") == 0) {
@@ -2074,7 +2034,7 @@ PyObject*  MeshPy::getSegmentsByCurvature(PyObject *args)
 {
     PyObject* l;
     if (!PyArg_ParseTuple(args, "O",&l))
-        return NULL;
+        return nullptr;
 
     const MeshCore::MeshKernel& kernel = getMeshObjectPtr()->getKernel();
     MeshCore::MeshSegmentAlgorithm finder(kernel);
@@ -2113,71 +2073,70 @@ PyObject*  MeshPy::getSegmentsByCurvature(PyObject *args)
 PyObject* MeshPy::getCurvaturePerVertex(PyObject* args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
 
     const MeshCore::MeshKernel& kernel = getMeshObjectPtr()->getKernel();
-    MeshCore::MeshSegmentAlgorithm finder(kernel);
     MeshCore::MeshCurvature meshCurv(kernel);
     meshCurv.ComputePerVertex();
 
     const std::vector<MeshCore::CurvatureInfo>& curv = meshCurv.GetCurvature();
+    Base::Placement plm = getMeshObjectPtr()->getPlacement();
+    plm.setPosition(Base::Vector3d());
+
     Py::List list;
     for (const auto& it : curv) {
+        Base::Vector3d maxCurve = Base::convertTo<Base::Vector3d>(it.cMaxCurvDir);
+        Base::Vector3d minCurve = Base::convertTo<Base::Vector3d>(it.cMinCurvDir);
+        plm.multVec(maxCurve, maxCurve);
+        plm.multVec(minCurve, minCurve);
+
         Py::Tuple tuple(4);
         tuple.setItem(0, Py::Float(it.fMaxCurvature));
         tuple.setItem(1, Py::Float(it.fMinCurvature));
-        Py::Tuple maxDir(3);
-        maxDir.setItem(0, Py::Float(it.cMaxCurvDir.x));
-        maxDir.setItem(1, Py::Float(it.cMaxCurvDir.y));
-        maxDir.setItem(2, Py::Float(it.cMaxCurvDir.z));
-        tuple.setItem(2, maxDir);
-        Py::Tuple minDir(3);
-        minDir.setItem(0, Py::Float(it.cMinCurvDir.x));
-        minDir.setItem(1, Py::Float(it.cMinCurvDir.y));
-        minDir.setItem(2, Py::Float(it.cMinCurvDir.z));
-        tuple.setItem(3, minDir);
+        tuple.setItem(2, Py::Vector(maxCurve));
+        tuple.setItem(3, Py::Vector(minCurve));
         list.append(tuple);
     }
 
     return Py::new_reference_to(list);
 }
 
-Py::Long MeshPy::getCountPoints(void) const
+Py::Long MeshPy::getCountPoints() const
 {
     return Py::Long((long)getMeshObjectPtr()->countPoints());
 }
 
-Py::Long MeshPy::getCountEdges(void) const
+Py::Long MeshPy::getCountEdges() const
 {
     return Py::Long((long)getMeshObjectPtr()->countEdges());
 }
 
-Py::Long MeshPy::getCountFacets(void) const
+Py::Long MeshPy::getCountFacets() const
 {
     return Py::Long((long)getMeshObjectPtr()->countFacets());
 }
 
-Py::Float MeshPy::getArea(void) const
+Py::Float MeshPy::getArea() const
 {
     return Py::Float(getMeshObjectPtr()->getSurface());
 }
 
-Py::Float MeshPy::getVolume(void) const
+Py::Float MeshPy::getVolume() const
 {
     return Py::Float(getMeshObjectPtr()->getVolume());
 }
 
 PyObject *MeshPy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int MeshPy::setCustomAttributes(const char* /*attr*/, PyObject* /*obj*/)
 {
-    return 0; 
+    return 0;
 }
 
-Py::List MeshPy::getPoints(void) const
+Py::List MeshPy::getPoints() const
 {
     Py::List PointList;
     unsigned int Index=0;
@@ -2188,7 +2147,7 @@ Py::List MeshPy::getPoints(void) const
     return PointList;
 }
 
-Py::List MeshPy::getFacets(void) const
+Py::List MeshPy::getFacets() const
 {
     Py::List FacetList;
     MeshObject* mesh = getMeshObjectPtr();
@@ -2198,11 +2157,11 @@ Py::List MeshPy::getFacets(void) const
     return FacetList;
 }
 
-Py::Tuple MeshPy::getTopology(void) const
+Py::Tuple MeshPy::getTopology() const
 {
     std::vector<Base::Vector3d> Points;
     std::vector<Data::ComplexGeoData::Facet> Facets;
-    getMeshObjectPtr()->getFaces(Points, Facets, 0.0f);
+    getMeshObjectPtr()->getFaces(Points, Facets, 0.0);
     Py::Tuple tuple(2);
     Py::List vertex;
     for (std::vector<Base::Vector3d>::const_iterator it = Points.begin();

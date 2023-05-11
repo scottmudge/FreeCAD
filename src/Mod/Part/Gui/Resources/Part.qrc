@@ -95,6 +95,7 @@
         <file>icons/Part_Feature.svg</file>
         <file>icons/Part_FeatureImport.svg</file>
         <file>icons/Part_Import.svg</file>
+        <file>icons/Part_SectionCut.svg</file>
         <file>icons/PartWorkbench.svg</file>
         <file>icons/preferences-part_design.svg</file>
         <file>icons/Part_Attachment_Detached.svg</file>
@@ -144,5 +145,7 @@
         <file>translations/Part_zh-TW.qm</file>
         <file>translations/Part_es-AR.qm</file>
         <file>translations/Part_bg.qm</file>
+        <file>translations/Part_ka.qm</file>
+        <file>translations/Part_sr-CS.qm</file>
     </qresource>
 </RCC>

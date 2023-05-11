@@ -70,6 +70,11 @@
        </item>
        <item>
         <property name="text">
+         <string>Normal sketch axis</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Select reference...</string>
         </property>
        </item>
@@ -80,7 +85,7 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayoutMode">
      <item>
-      <widget class="QLabel" name="label4">
+      <widget class="QLabel" name="labelInputMode">
        <property name="text">
         <string>Mode:</string>
        </property>
@@ -223,7 +228,7 @@
         <double>89.000000000000000</double>
        </property>
        <property name="singleStep" stdset="0">
-        <double>5.000000000000000</double>
+        <double>1.000000000000000</double>
        </property>
        <property name="value" stdset="0">
         <double>0.000000000000000</double>
@@ -250,7 +255,7 @@
         <string notr="true">mm</string>
        </property>
        <property name="singleStep" stdset="0">
-        <double>5.000000000000000</double>
+        <double>1.000000000000000</double>
        </property>
        <property name="value" stdset="0">
         <double>0.000000000000000</double>

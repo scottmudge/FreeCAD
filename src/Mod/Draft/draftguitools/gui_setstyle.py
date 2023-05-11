@@ -79,17 +79,17 @@ class Draft_SetStyle_TaskPanel:
         self.form.DrawStyle.setCurrentIndex(FreeCAD.ParamGet(self.p+"Mod/Draft").GetInt("DefaultDrawStyle",0))
         self.form.DisplayMode.setCurrentIndex(FreeCAD.ParamGet(self.p+"Mod/Draft").GetInt("DefaultDisplayMode",0))
         self.form.ShapeColor.setProperty("color",self.getPrefColor("View","DefaultShapeColor",4294967295))
-        self.form.Transparency.setValue(FreeCAD.ParamGet(self.p+"Mod/Draft").GetInt("DefaultTransparency",0))
+        self.form.Transparency.setValue(FreeCAD.ParamGet(self.p+"View").GetInt("DefaultShapeTransparency",0))
         self.form.TextFont.setCurrentFont(QtGui.QFont(FreeCAD.ParamGet(self.p+"Mod/Draft").GetString("textfont","Sans")))
         self.form.TextSize.setText(FreeCAD.Units.Quantity(FreeCAD.ParamGet(self.p+"Mod/Draft").GetFloat("textheight",10),FreeCAD.Units.Length).UserString)
         self.form.TextColor.setProperty("color",self.getPrefColor("Mod/Draft","DefaultTextColor",255))
         self.form.ArrowStyle.setCurrentIndex(FreeCAD.ParamGet(self.p+"Mod/Draft").GetInt("dimsymbol",0))
-        self.form.ArrowSize.setText(FreeCAD.Units.Quantity(FreeCAD.ParamGet(self.p+"/Mod/Draft").GetFloat("arrowsize",5),FreeCAD.Units.Length).UserString)
+        self.form.ArrowSize.setText(FreeCAD.Units.Quantity(FreeCAD.ParamGet(self.p+"Mod/Draft").GetFloat("arrowsize",5),FreeCAD.Units.Length).UserString)
         self.form.ShowUnit.setChecked(FreeCAD.ParamGet(self.p+"Mod/Draft").GetBool("showUnit",True))
         self.form.UnitOverride.setText(FreeCAD.ParamGet(self.p+"Mod/Draft").GetString("overrideUnit",""))
         self.form.saveButton.setIcon(QtGui.QIcon.fromTheme("gtk-save", QtGui.QIcon(":/icons/document-save.svg")))
         self.form.TextSpacing.setText(FreeCAD.Units.Quantity(FreeCAD.ParamGet(self.p+"Mod/Draft").GetFloat("dimspacing",1),FreeCAD.Units.Length).UserString)
-        self.form.LineSpacing.setValue(FreeCAD.ParamGet(self.p+"Mod/Draft").GetInt("LineSpacing",1))
+        self.form.LineSpacing.setValue(FreeCAD.ParamGet(self.p+"Mod/Draft").GetFloat("LineSpacing",1))
         self.form.saveButton.clicked.connect(self.onSaveStyle)
         self.form.applyButton.clicked.connect(self.onApplyStyle)
         self.form.dimButton.clicked.connect(self.onApplyDim)
@@ -123,7 +123,7 @@ class Draft_SetStyle_TaskPanel:
         return QtGui.QColor.fromRgbF(r,g,b)
 
     def getValues(self):
-        
+
         preset = {}
         preset["LineColor"] = self.form.LineColor.property("color").rgb()<<8
         preset["LineWidth"] = self.form.LineWidth.value()
@@ -143,7 +143,7 @@ class Draft_SetStyle_TaskPanel:
         return preset
 
     def setValues(self,preset):
-        
+
         from PySide import QtCore,QtGui
         self.form.LineColor.setProperty("color",self.getColor(preset.get("LineColor",255)))
         self.form.LineWidth.setValue(preset.get("LineWidth",1))
@@ -169,19 +169,21 @@ class Draft_SetStyle_TaskPanel:
 
         FreeCAD.ParamGet(self.p+"View").SetUnsigned("DefaultShapeLineColor",self.form.LineColor.property("color").rgb()<<8)
         FreeCAD.ParamGet(self.p+"View").SetInt("DefaultShapeLineWidth",self.form.LineWidth.value())
+        FreeCAD.ParamGet(self.p+"View").SetUnsigned("DefaultShapeVertexColor",self.form.LineColor.property("color").rgb()<<8)
+        FreeCAD.ParamGet(self.p+"View").SetInt("DefaultShapePointSize",self.form.LineWidth.value())
         FreeCAD.ParamGet(self.p+"Mod/Draft").SetInt("DefaultDrawStyle",self.form.DrawStyle.currentIndex())
         FreeCAD.ParamGet(self.p+"Mod/Draft").SetInt("DefaultDisplayMode",self.form.DisplayMode.currentIndex())
         FreeCAD.ParamGet(self.p+"View").SetUnsigned("DefaultShapeColor",self.form.ShapeColor.property("color").rgb()<<8)
-        FreeCAD.ParamGet(self.p+"Mod/Draft").SetInt("DefaultTransparency",self.form.Transparency.value())
+        FreeCAD.ParamGet(self.p+"View").SetInt("DefaultShapeTransparency",self.form.Transparency.value())
         FreeCAD.ParamGet(self.p+"Mod/Draft").SetString("textfont",self.form.TextFont.currentFont().family())
         FreeCAD.ParamGet(self.p+"Mod/Draft").SetFloat("textheight",FreeCAD.Units.Quantity(self.form.TextSize.text()).Value)
         FreeCAD.ParamGet(self.p+"Mod/Draft").SetUnsigned("DefaultTextColor",self.form.TextColor.property("color").rgb()<<8)
         FreeCAD.ParamGet(self.p+"Mod/Draft").SetInt("dimsymbol",self.form.ArrowStyle.currentIndex())
-        FreeCAD.ParamGet(self.p+"/Mod/Draft").SetFloat("arrowsize",FreeCAD.Units.Quantity(self.form.ArrowSize.text()).Value)
+        FreeCAD.ParamGet(self.p+"Mod/Draft").SetFloat("arrowsize",FreeCAD.Units.Quantity(self.form.ArrowSize.text()).Value)
         FreeCAD.ParamGet(self.p+"Mod/Draft").SetBool("showUnit",self.form.ShowUnit.isChecked())
         FreeCAD.ParamGet(self.p+"Mod/Draft").SetString("overrideUnit",self.form.UnitOverride.text())
         FreeCAD.ParamGet(self.p+"Mod/Draft").SetFloat("dimspacing",FreeCAD.Units.Quantity(self.form.TextSpacing.text()).Value)
-        FreeCAD.ParamGet(self.p+"Mod/Draft").SetInt("LineSpacing",self.form.LineSpacing.value())
+        FreeCAD.ParamGet(self.p+"Mod/Draft").SetFloat("LineSpacing",self.form.LineSpacing.value())
         if hasattr(FreeCADGui,"draftToolBar"):
             FreeCADGui.draftToolBar.setStyleButton()
         self.reject()
@@ -195,18 +197,17 @@ class Draft_SetStyle_TaskPanel:
                     vobj.LineColor = self.form.LineColor.property("color").getRgbF()
                 if "LineWidth" in vobj.PropertiesList:
                     vobj.LineWidth = self.form.LineWidth.value()
+                if "PointColor" in vobj.PropertiesList:
+                    vobj.PointColor = self.form.LineColor.property("color").getRgbF()
+                if "PointSize" in vobj.PropertiesList:
+                    vobj.PointSize = self.form.LineWidth.value()
                 if "DrawStyle" in vobj.PropertiesList:
                     vobj.DrawStyle = ["Solid","Dashed","Dotted","Dashdot"][self.form.DrawStyle.currentIndex()]
                 if "DisplayMode" in vobj.PropertiesList:
                     dmodes = ["Flat Lines","Wireframe","Shaded","Points"]
                     dm = dmodes[self.form.DisplayMode.currentIndex()]
-                    if hasattr(vobj,"Proxy") and hasattr(vobj.Proxy,"getDisplayModes"):
-                        dmodes = vobj.Proxy.getDisplayModes(vobj)
-                    if dm in dmodes:
-                        try:
-                            vobj.DisplayMode = dm
-                        except Exception:
-                            pass
+                    if dm in vobj.getEnumerationsOfProperty("DisplayMode"):
+                        vobj.DisplayMode = dm
                 if "ShapeColor" in vobj.PropertiesList:
                     vobj.ShapeColor = self.form.ShapeColor.property("color").getRgbF()
                 if "Transparency" in vobj.PropertiesList:
@@ -233,7 +234,7 @@ class Draft_SetStyle_TaskPanel:
                     vobj.LineSpacing = self.form.LineSpacing.value()
 
     def onApplyDim(self,index):
-        
+
         import Draft
         objs = FreeCAD.ActiveDocument.Objects
         dims = Draft.getObjectsOfType(objs,"LinearDimension")

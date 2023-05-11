@@ -23,7 +23,6 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <QString>
 # include <QApplication>
 # include <QBitmap>
 # include <QDir>
@@ -33,6 +32,7 @@
 # include <QImageReader>
 # include <QPainter>
 # include <QPalette>
+# include <QString>
 # include <QSvgRenderer>
 # include <QStyleOption>
 # include <sstream>
@@ -45,7 +45,7 @@
 #include <Inventor/fields/SoSFImage.h>
 
 #include <Base/Console.h>
-#include <App/Application.h>
+#include <Base/ConsoleObserver.h>
 #include "Tree.h"
 
 #include "BitmapFactory.h"
@@ -147,25 +147,25 @@ public:
 };
 }
 
-BitmapFactoryInst* BitmapFactoryInst::_pcSingleton = NULL;
+BitmapFactoryInst* BitmapFactoryInst::_pcSingleton = nullptr;
 
-BitmapFactoryInst& BitmapFactoryInst::instance(void)
+BitmapFactoryInst& BitmapFactoryInst::instance()
 {
-    if (_pcSingleton == NULL)
+    if (!_pcSingleton)
     {
         _pcSingleton = new BitmapFactoryInst;
         std::map<std::string,std::string>::const_iterator it;
         it = App::GetApplication().Config().find("ProgramIcons");
         if (it != App::GetApplication().Config().end()) {
-            QString home = QString::fromUtf8(App::GetApplication().getHomePath());
+            QString home = QString::fromUtf8(App::Application::getHomePath().c_str());
             QString path = QString::fromUtf8(it->second.c_str());
             if (QDir(path).isRelative()) {
                 path = QFileInfo(QDir(home), path).absoluteFilePath();
             }
             _pcSingleton->addPath(path);
         }
-        _pcSingleton->addPath(QStringLiteral("%1/icons").arg(QString::fromUtf8(App::GetApplication().getHomePath())));
-        _pcSingleton->addPath(QStringLiteral("%1/icons").arg(QString::fromUtf8(App::GetApplication().Config()["UserAppData"].c_str())));
+        _pcSingleton->addPath(QStringLiteral("%1/icons").arg(QString::fromUtf8(App::Application::getHomePath().c_str())));
+        _pcSingleton->addPath(QStringLiteral("%1/icons").arg(QString::fromUtf8(App::Application::getUserAppDataDir().c_str())));
         _pcSingleton->addPath(QStringLiteral(":/icons/"));
         _pcSingleton->addPath(QStringLiteral(":/Icons/"));
     }
@@ -173,11 +173,11 @@ BitmapFactoryInst& BitmapFactoryInst::instance(void)
     return *_pcSingleton;
 }
 
-void BitmapFactoryInst::destruct (void)
+void BitmapFactoryInst::destruct ()
 {
-    if (_pcSingleton != 0)
+    if (_pcSingleton)
     delete _pcSingleton;
-    _pcSingleton = 0;
+    _pcSingleton = nullptr;
 }
 
 BitmapFactoryInst::BitmapFactoryInst()
@@ -196,8 +196,8 @@ void BitmapFactoryInst::restoreCustomPaths()
     Base::Reference<ParameterGrp> group = App::GetApplication().GetParameterGroupByPath
         ("User parameter:BaseApp/Preferences/Bitmaps");
     std::vector<std::string> paths = group->GetASCIIs("CustomPath");
-    for (std::vector<std::string>::iterator it = paths.begin(); it != paths.end(); ++it) {
-        addPath(QString::fromUtf8(it->c_str()));
+    for (auto & path : paths) {
+        addPath(QString::fromUtf8(path.c_str()));
     }
 }
 
@@ -230,7 +230,7 @@ QStringList BitmapFactoryInst::findIconFiles() const
 
     QStringList paths = QDir::searchPaths(QStringLiteral("icons"));
     paths.removeDuplicates();
-    for (QStringList::ConstIterator pt = paths.begin(); pt != paths.end(); ++pt) {
+    for (QStringList::Iterator pt = paths.begin(); pt != paths.end(); ++pt) {
         QDir d(*pt);
         d.setNameFilters(filters);
         QFileInfoList fi = d.entryInfoList();
@@ -530,10 +530,12 @@ QPixmap BitmapFactoryInst::pixmapFromSvg(const QByteArray& originalContents, con
     image.fill(0x00000000);
 
     QPainter p(&image);
-    // tmp. disable the report window to suppress some bothering warnings
-    Base::Console().SetEnabledMsgType("ReportOutput", Base::ConsoleSingleton::MsgType_Wrn, false);
-    QSvgRenderer svg(contents);
-    Base::Console().SetEnabledMsgType("ReportOutput", Base::ConsoleSingleton::MsgType_Wrn, true);
+    QSvgRenderer svg;
+    {
+        // tmp. disable the report window to suppress some bothering warnings
+        const Base::ILoggerBlocker blocker("ReportOutput", Base::ConsoleSingleton::MsgType_Wrn);
+        svg.load(contents);
+    }
     svg.render(&p);
     p.end();
 
@@ -543,7 +545,7 @@ QPixmap BitmapFactoryInst::pixmapFromSvg(const QByteArray& originalContents, con
 QStringList BitmapFactoryInst::pixmapNames() const
 {
     QStringList names;
-    for (auto It = d->xpmCache.begin(); It != d->xpmCache.end(); ++It) {
+    for (auto It = d->xpmCache.cbegin(); It != d->xpmCache.cend(); ++It) {
         QString item = QString::fromUtf8(It->first.c_str());
         if (!names.contains(item))
             names << item;
@@ -657,12 +659,12 @@ QPixmap BitmapFactoryInst::merge(const QPixmap& p1, const QPixmap& p2, bool vert
     QBitmap mask2 = p2.mask();
     mask.fill( Qt::color0 );
 
-    QPainter* pt1 = new QPainter(&res);
+    auto* pt1 = new QPainter(&res);
     pt1->drawPixmap(0, 0, p1);
     pt1->drawPixmap(x, y, p2);
     delete pt1;
 
-    QPainter* pt2 = new QPainter(&mask);
+    auto* pt2 = new QPainter(&mask);
     pt2->drawPixmap(0, 0, mask1);
     pt2->drawPixmap(x, y, mask2);
     delete pt2;
@@ -746,7 +748,7 @@ void BitmapFactoryInst::convert(const QImage& p, SoSFImage& img) const
     }
 
     // allocate image data
-    img.setValue(size, numcomponents, NULL);
+    img.setValue(size, numcomponents, nullptr);
 
     unsigned char * bytes = img.startEditing(size, numcomponents);
 

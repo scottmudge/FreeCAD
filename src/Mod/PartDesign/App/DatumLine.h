@@ -26,6 +26,7 @@
 #define PARTDESIGN_DATUMLINE_H
 
 #include <Mod/Part/App/DatumFeature.h>
+#include <Mod/PartDesign/PartDesignGlobal.h>
 #include <App/PropertyUnits.h>
 
 namespace PartDesign
@@ -33,25 +34,25 @@ namespace PartDesign
 
 class PartDesignExport Line : public Part::Datum
 {
-    PROPERTY_HEADER(PartDesign::Line);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::Line);
 
 public:
 
     Line();
-    virtual ~Line();
+    ~Line() override;
 
     App::PropertyEnumeration ResizeMode;
     App::PropertyLength Length;
     App::PropertyLength MinimumLength;
-    virtual void onChanged(const App::Property *prop);
-    virtual void onDocumentRestored();
+    void onChanged(const App::Property *prop) override;
+    void onDocumentRestored() override;
 
-    const char* getViewProviderName(void) const {
+    const char* getViewProviderName() const override {
         return "PartDesignGui::ViewProviderDatumLine";
     }
 
-    virtual App::DocumentObject *getSubObject(const char *subname, 
-        PyObject **pyObj, Base::Matrix4D *pmat, bool transform, int depth) const;
+    App::DocumentObject *getSubObject(const char *subname, 
+        PyObject **pyObj, Base::Matrix4D *pmat, bool transform, int depth) const override;
 
     Base::Vector3d getDirection() const;
     

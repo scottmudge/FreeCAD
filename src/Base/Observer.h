@@ -25,15 +25,12 @@
 #ifndef BASE_OBSERVER_H
 #define BASE_OBSERVER_H
 
-// Std. configurations
-
-#include <assert.h>
-#include <set>
+#include <cassert>
 #include <cstring>
-#include <cstdio>
-#include <exception>
-#include "Exception.h"
+#include <set>
 #include "Console.h"
+#include "Exception.h"
+
 
 namespace Base
 {
@@ -57,13 +54,13 @@ public:
    * A constructor.
    * No special function so far.
    */
-  Observer(){}
+  Observer() = default;
 
   /**
    * A destructor.
    * No special function so far.
    */
-  virtual ~Observer(){}
+  virtual ~Observer() = default;
 
   /**
    * This method need to be reimplemented from the concrete Observer
@@ -88,7 +85,7 @@ public:
    * and returns the name of the observer. Needed to use the Get
    * Method of the Subject.
    */
-  virtual const char *Name(void){return 0L;}
+  virtual const char *Name(){return nullptr;}
 };
 
 /** Subject class
@@ -103,15 +100,15 @@ class Subject
 {
 public:
 
-  typedef  Observer<_MessageType> ObserverType;
-  typedef  _MessageType             MessageType;
-  typedef  Subject<_MessageType>  SubjectType;
+  using ObserverType = Observer<_MessageType>;
+  using MessageType  = _MessageType;
+  using SubjectType  = Subject<_MessageType>;
 
   /**
    * A constructor.
    * No special function so far.
    */
-  Subject(){}
+  Subject() = default;
 
   /**
    * A destructor.
@@ -202,7 +199,7 @@ public:
         return *Iter;
     }
 
-    return 0L;
+    return nullptr;
   }
 
   /** Clears the list of all registered observers.

@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -31,10 +30,8 @@
 #endif
 
 #include "Info.h"
-#include "Algorithm.h"
 #include "Iterator.h"
 
-#include <Base/Exception.h>
 
 using namespace MeshCore;
 
@@ -190,7 +187,7 @@ std::ostream& MeshInfo::InternalPointInfo (std::ostream& rclStream) const
                       << std::setw(8) << (*pPIter).x << ", "
                       << std::setw(8) << (*pPIter).y << ", "
                       << std::setw(8) << (*pPIter).z << ")";
-    if (pPIter->IsValid() == true)
+    if (pPIter->IsValid())
       rclStream << std::endl;
     else
       rclStream << " invalid" << std::endl;
@@ -220,7 +217,7 @@ std::ostream& MeshInfo::InternalFacetInfo (std::ostream& rclStream) const
                       << std::setw(4) << pFIter->_aulNeighbours[1] << ", "
                       << std::setw(4) << pFIter->_aulNeighbours[2] << ") ";
 
-    if (pFIter->IsValid() == true)
+    if (pFIter->IsValid())
       rclStream << std::endl;
     else
       rclStream << " invalid" << std::endl;
@@ -244,7 +241,7 @@ std::ostream& MeshInfo::TopologyInformation (std::ostream& rclStream) const
     unsigned long index = 0;
     const MeshFacetArray& rFAry = _rclMesh.GetFacets();
     for (MeshFacetArray::_TConstIterator it = rFAry.begin(); it != rFAry.end(); ++it, ++index) {
-        rclStream << "F " << std::setw(4) << index << ": P (" 
+        rclStream << "F " << std::setw(4) << index << ": P ("
                   << it->_aulPoints[0] << ", "
                   << it->_aulPoints[1] << ", "
                   << it->_aulPoints[2] << "), N ("
@@ -252,6 +249,6 @@ std::ostream& MeshInfo::TopologyInformation (std::ostream& rclStream) const
                   << it->_aulNeighbours[1] << ", "
                   << it->_aulNeighbours[2] << ")" << std::endl;
     }
-    
+
     return rclStream;
 }

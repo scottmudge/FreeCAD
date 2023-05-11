@@ -20,13 +20,14 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskSketcherGerneral_H
 #define GUI_TASKVIEW_TaskSketcherGerneral_H
 
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
 #include <boost_signals2.hpp>
+
+#include <Gui/Selection.h>
+#include <Gui/TaskView/TaskView.h>
+
 
 namespace App {
 class Property;
@@ -46,10 +47,10 @@ class SketcherGeneralWidget : public QWidget
     Q_OBJECT
 
 public:
-    SketcherGeneralWidget(QWidget *parent=0);
-    ~SketcherGeneralWidget();
+    explicit SketcherGeneralWidget(QWidget *parent=nullptr);
+    ~SketcherGeneralWidget() override;
     
-    bool eventFilter(QObject *object, QEvent *event);
+    bool eventFilter(QObject *object, QEvent *event) override;
 
     void saveSettings();
     void saveOrderingOrder();
@@ -60,6 +61,7 @@ public:
     void checkGridSnap(bool);
     void checkAutoconstraints(bool);
     void checkAvoidRedundant(bool);
+    void enableGridSettings(bool);
     void enableAvoidRedundant(bool);
 
 Q_SIGNALS:
@@ -74,7 +76,7 @@ protected Q_SLOTS:
     void onToggleGridAutoScale(bool);
 
 protected:
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
 
 private:
     std::unique_ptr<Ui_TaskSketcherGeneral> ui;
@@ -86,11 +88,11 @@ class TaskSketcherGeneral : public Gui::TaskView::TaskBox,
     Q_OBJECT
 
 public:
-    TaskSketcherGeneral(ViewProviderSketch *sketchView);
-    ~TaskSketcherGeneral();
+    explicit TaskSketcherGeneral(ViewProviderSketch *sketchView);
+    ~TaskSketcherGeneral() override;
     /// Observer message from the Selection
     void OnChange(Gui::SelectionSingleton::SubjectType &rCaller,
-                  Gui::SelectionSingleton::MessageType Reason);
+                  Gui::SelectionSingleton::MessageType Reason) override;
 
 public Q_SLOTS:
     void onToggleGridView(bool on);

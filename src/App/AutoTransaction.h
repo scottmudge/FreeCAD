@@ -23,6 +23,8 @@
 #ifndef APP_AUTOTRANSACTION_H
 #define APP_AUTOTRANSACTION_H
 
+#include <cstddef>
+
 namespace App {
 
 class Application;
@@ -31,7 +33,7 @@ class Application;
 class AppExport AutoTransaction {
 private:
     /// Private new operator to prevent heap allocation
-    void* operator new(size_t size);
+    void* operator new (std::size_t) = delete;
 
 public:
     /** Constructor
@@ -49,7 +51,7 @@ public:
      * current active transaction until it reaches zero. It does not have any
      * effect on aborting transaction, though.
      */
-    AutoTransaction(const char *name=0, bool tmpName=false, bool recordViewObject=false);
+    AutoTransaction(const char *name=nullptr, bool tmpName=false, bool recordViewObject=false);
 
     /** Destructor
      *
@@ -125,7 +127,7 @@ public:
 
 private:
     /// Private new operator to prevent heap allocation
-    void* operator new(size_t size);
+    void* operator new (std::size_t) = delete;
 
 private:
     bool active;

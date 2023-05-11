@@ -25,29 +25,25 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QMessageBox>
-# include <QAction>
 # include <QMenu>
+# include <QMessageBox>
 #endif
 
 #include "ViewProviderBoolean.h"
 #include "TaskBooleanParameters.h"
-#include "ViewProviderBody.h"
 #include <Mod/PartDesign/App/FeatureBoolean.h>
-#include <Mod/PartDesign/App/Body.h>
-#include <Mod/Sketcher/App/SketchObject.h>
+#include <Gui/Application.h>
 #include <Gui/Control.h>
 #include <Gui/Command.h>
-#include <Gui/SoFCUnifiedSelection.h>
-#include <Gui/Application.h>
 #include <Gui/Document.h>
+#include <Gui/SoFCUnifiedSelection.h>
 
 
 using namespace PartDesignGui;
 
 PROPERTY_SOURCE_WITH_EXTENSIONS(PartDesignGui::ViewProviderBoolean,PartDesignGui::ViewProvider)
 
-const char* PartDesignGui::ViewProviderBoolean::DisplayEnum[] = {"Result","Tools",NULL};
+const char* PartDesignGui::ViewProviderBoolean::DisplayEnum[] = {"Result","Tools",nullptr};
 
 
 ViewProviderBoolean::ViewProviderBoolean()
@@ -69,9 +65,7 @@ ViewProviderBoolean::~ViewProviderBoolean()
 
 void ViewProviderBoolean::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
 {
-    QAction* act;
-    act = menu->addAction(QObject::tr("Edit boolean"), receiver, member);
-    act->setData(QVariant((int)ViewProvider::Default));
+    addDefaultAction(menu, QObject::tr("Edit boolean"));
     PartDesignGui::ViewProvider::setupContextMenu(menu, receiver, member);
 }
 

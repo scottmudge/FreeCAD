@@ -24,28 +24,23 @@
 #define Spreadsheet_Spreadsheet_H
 
 #ifdef signals
-#undef signals
-#define signals signals
+# undef signals
+# define signals signals
 #endif
 
 #include <QVariant>
+#include <map>
 
 #include <App/DocumentObject.h>
-#include <App/DocumentObserver.h>
-#include <App/PropertyFile.h>
-#include <App/PropertyUnits.h>
-#include <App/PropertyLinks.h>
-#include <App/PropertyStandard.h>
 #include <App/DynamicProperty.h>
-#include <App/Material.h>
-#include <App/Range.h>
 #include <App/FeaturePython.h>
+#include <App/PropertyUnits.h>
+#include <App/Range.h>
 #include <Base/Unit.h>
-#include <map>
-#include "PropertySheet.h"
+
 #include "PropertyColumnWidths.h"
 #include "PropertyRowHeights.h"
-#include "Utils.h"
+#include "PropertySheet.h"
 
 
 namespace Spreadsheet
@@ -62,18 +57,18 @@ class SheetObserver;
  */
 class SpreadsheetExport PropertySpreadsheetQuantity : public App::PropertyQuantity
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
     PropertySpreadsheetQuantity(void){}
-    virtual ~PropertySpreadsheetQuantity(){}
+    ~PropertySpreadsheetQuantity() override{}
 
-    virtual Property *Copy(void) const;
-    virtual void Paste(const Property &from);
+    Property *Copy(void) const override;
+    void Paste(const Property &from) override;
 };
 
 class SpreadsheetExport Sheet : public App::DocumentObject
 {
-    PROPERTY_HEADER(Spreadsheet::Sheet);
+    PROPERTY_HEADER_WITH_OVERRIDE(Spreadsheet::Sheet);
 
 public:
     App::PropertyIntegerSet hiddenRows;
@@ -83,10 +78,10 @@ public:
 
     /// Constructor
     Sheet();
-    virtual ~Sheet();
+    ~Sheet() override;
 
     /// returns the type name of the ViewProvider
-    virtual const char* getViewProviderName(void) const {
+    const char* getViewProviderName(void) const override {
         return "SpreadsheetGui::ViewProviderSheet";
     }
 
@@ -183,21 +178,21 @@ public:
 
     bool hasCell(const std::vector<App::Range> &ranges) const;
 
-    PyObject *getPyObject();
+    PyObject *getPyObject() override;
 
     PropertySheet *getCells() { return &cells; }
 
-    App::Property *getPropertyByName(const char *name) const;
+    App::Property *getPropertyByName(const char *name) const override;
 
-    App::Property *getDynamicPropertyByName(const char* name) const;
+    App::Property *getDynamicPropertyByName(const char* name) const override;
 
-    virtual void getPropertyNamedList(std::vector<std::pair<const char*,App::Property*> > &List) const;
+    void getPropertyNamedList(std::vector<std::pair<const char*,App::Property*> > &List) const override;
 
-    virtual const char* getPropertyName(const App::Property* prop) const;
+    const char* getPropertyName(const App::Property* prop) const override;
 
-    virtual short mustExecute(void) const;
+    short mustExecute() const override;
 
-    App::DocumentObjectExecReturn *execute(void);
+    App::DocumentObjectExecReturn *execute(void) override;
 
     bool getCellAddress(const App::Property *prop, App::CellAddress &address);
 
@@ -233,7 +228,7 @@ public:
 
     void observeDocument(App::Document *document);
 
-    virtual void renameObjectIdentifiers(const std::map<App::ObjectIdentifier, App::ObjectIdentifier> & paths);
+    void renameObjectIdentifiers(const std::map<App::ObjectIdentifier, App::ObjectIdentifier> & paths) override;
 
     void setCopyOrCutRanges(const std::vector<App::Range> &ranges, bool copy=true);
     const std::vector<App::Range> &getCopyOrCutRange(bool copy=true) const;
@@ -241,13 +236,13 @@ public:
 
 protected:
 
-    virtual void onChanged(const App::Property *prop);
+    void onChanged(const App::Property *prop) override;
 
     void updateColumnsOrRows(bool horizontal, int section, int count) ;
 
     std::set<App::CellAddress> providesTo(App::CellAddress address) const;
 
-    void onDocumentRestored();
+    void onDocumentRestored() override;
 
     void recomputeCell(App::CellAddress p);
 
@@ -271,7 +266,7 @@ protected:
 
     void setPropertyVisibility(App::Property *prop, App::CellAddress);
 
-    virtual void onSettingDocument();
+    void onSettingDocument() override;
 
     void updateBindings();
 
@@ -296,7 +291,7 @@ protected:
     PropertyRowHeights rowHeights;
 
     /* Document observers to track changes to external properties */
-    typedef std::map<std::string, SheetObserver* > ObserverMap;
+    using ObserverMap = std::map<std::string, SheetObserver* >;
     ObserverMap observers;
 
     int currentRow = -1;
@@ -312,7 +307,7 @@ protected:
     friend class PropertySheet;
 };
 
-typedef App::FeaturePythonT<Sheet> SheetPython;
+using SheetPython = App::FeaturePythonT<Sheet>;
 
 } //namespace Spreadsheet
 

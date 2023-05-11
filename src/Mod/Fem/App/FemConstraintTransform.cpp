@@ -21,26 +21,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#include <BRepAdaptor_Curve.hxx>
-#include <BRepAdaptor_Surface.hxx>
-#include <Precision.hxx>
-#include <TopoDS.hxx>
-#include <gp_Lin.hxx>
-#include <gp_Pln.hxx>
-#include <gp_Pnt.hxx>
-#endif
-
 #include "FemConstraintTransform.h"
+
 
 using namespace Fem;
 
 PROPERTY_SOURCE(Fem::ConstraintTransform, Fem::Constraint)
 
-static const char* TransformTypes[] = {"Cylindrical","Rectangular", NULL};
+static const char* TransformTypes[] = {"Cylindrical","Rectangular", nullptr};
 
 ConstraintTransform::ConstraintTransform()
 {
@@ -50,8 +40,8 @@ ConstraintTransform::ConstraintTransform()
     ADD_PROPERTY_TYPE(TransformType,(1),"ConstraintTransform",(App::PropertyType)(App::Prop_None),
                       "Type of transform, rectangular or cylindrical");
     TransformType.setEnums(TransformTypes);
-    ADD_PROPERTY_TYPE(RefDispl,(0,0),"ConstraintTransform",(App::PropertyType)(App::Prop_None),"Elements where the constraint is applied");
-    ADD_PROPERTY_TYPE(NameDispl,(0),"ConstraintTransform",(App::PropertyType)(App::Prop_None),"Elements where the constraint is applied");
+    ADD_PROPERTY_TYPE(RefDispl,(nullptr,nullptr),"ConstraintTransform",(App::PropertyType)(App::Prop_None),"Elements where the constraint is applied");
+    ADD_PROPERTY_TYPE(NameDispl,(nullptr),"ConstraintTransform",(App::PropertyType)(App::Prop_None),"Elements where the constraint is applied");
     ADD_PROPERTY_TYPE(BasePoint,(Base::Vector3d(0,0,0)),"ConstraintTransform",App::PropertyType(App::Prop_ReadOnly|App::Prop_Output),
                       "Base point of cylindrical surface");
     ADD_PROPERTY_TYPE(Axis,(Base::Vector3d(0,1,0)),"ConstraintTransform",App::PropertyType(App::Prop_ReadOnly|App::Prop_Output),
@@ -64,12 +54,12 @@ ConstraintTransform::ConstraintTransform()
     Normals.setValues(std::vector<Base::Vector3d>());
 }
 
-App::DocumentObjectExecReturn *ConstraintTransform::execute(void)
+App::DocumentObjectExecReturn *ConstraintTransform::execute()
 {
     return Constraint::execute();
 }
 
-const char* ConstraintTransform::getViewProviderName(void) const
+const char* ConstraintTransform::getViewProviderName() const
 {
         return "FemGui::ViewProviderFemConstraintTransform";
 }

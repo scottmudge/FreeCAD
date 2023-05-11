@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2021 Chris Hennes <chennes@pioneerlibrarysystem.org>    *
+ *   Copyright (c) 2022 FreeCAD Project Association                        *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -23,25 +23,19 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <memory>
+#include <boost/core/ignore_unused.hpp>
+#include <memory>
+#include <sstream>
 #endif
 
 #include "Metadata.h"
 
-#include <xercesc/sax/HandlerBase.hpp>
-#include <xercesc/util/XMLString.hpp>
-#include <xercesc/util/PlatformUtils.hpp>
-#include <xercesc/util/PlatformUtils.hpp>
-#include <xercesc/dom/DOM.hpp>
-#include <xercesc/parsers/XercesDOMParser.hpp>
-#include <xercesc/dom/DOMImplementation.hpp>
-#include <xercesc/dom/DOMImplementationLS.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
+#include <xercesc/sax/HandlerBase.hpp>
 
-
-#include "Base/XMLTools.h"
-#include "App/Expression.h"
 #include "App/Application.h"
+#include "App/Expression.h"
+#include "Base/XMLTools.h"
 
 /*
 *** From GCC: ***
@@ -63,8 +57,37 @@ using namespace App;
 namespace fs = boost::filesystem;
 XERCES_CPP_NAMESPACE_USE
 
+namespace MetadataInternal
+{
+class XMLErrorHandler: public HandlerBase
+{
+    void warning(const SAXParseException &toCatch) override
+    {
+        // Don't deal with warnings at all
+        boost::ignore_unused(toCatch);
+    }
 
-Metadata::Metadata(const fs::path& metadataFile)
+    void error(const SAXParseException &toCatch) override
+    {
+        std::stringstream message;
+        message << "Error at file \"" << StrX(toCatch.getSystemId()) << "\", line "
+                << toCatch.getLineNumber() << ", column " << toCatch.getColumnNumber()
+                << "\n   Message: " << StrX(toCatch.getMessage()) << std::endl;
+        throw Base::XMLBaseException(message.str());
+    }
+
+    void fatalError(const SAXParseException &toCatch) override
+    {
+        std::stringstream message;
+        message << "Fatal error at file \"" << StrX(toCatch.getSystemId()) << "\", line "
+                << toCatch.getLineNumber() << ", column " << toCatch.getColumnNumber()
+                << "\n   Message: " << StrX(toCatch.getMessage()) << std::endl;
+        throw Base::XMLBaseException(message.str());
+    }
+};
+}// namespace MetadataInternal
+
+Metadata::Metadata(const fs::path &metadataFile)
 {
     // Any exception thrown by the XML code propagates out and prevents object creation
     XMLPlatformUtils::Initialize();
@@ -73,267 +96,295 @@ Metadata::Metadata(const fs::path& metadataFile)
     _parser->setValidationScheme(XercesDOMParser::Val_Never);
     _parser->setDoNamespaces(true);
 
-    auto errHandler = std::make_unique<HandlerBase>();
+    auto errHandler = std::make_unique<MetadataInternal::XMLErrorHandler>();
     _parser->setErrorHandler(errHandler.get());
 
+#if defined(FC_OS_WIN32)
+    _parser->parse(reinterpret_cast<const XMLCh *>(metadataFile.wstring().c_str()));
+#else
     _parser->parse(metadataFile.string().c_str());
+#endif
 
     auto doc = _parser->getDocument();
     _dom = doc->getDocumentElement();
 
     auto rootTagName = StrXUTF8(_dom->getTagName()).str;
-    if (rootTagName != "package")
-        throw Base::XMLBaseException("Malformed package.xml document: Root <package> group not found");
-
+    if (rootTagName != "package") {
+        throw Base::XMLBaseException(
+            "Malformed package.xml document: Root <package> group not found");
+    }
     auto formatVersion = XMLString::parseInt(_dom->getAttribute(XUTF8Str("format").unicodeForm()));
     switch (formatVersion) {
-    case 1:
-        parseVersion1(_dom);
-        break;
-    default:
-        throw Base::XMLBaseException("package.xml format version is not supported by this version of FreeCAD");
+        case 1: parseVersion1(_dom); break;
+        default:
+            throw Base::XMLBaseException(
+                "package.xml format version is not supported by this version of FreeCAD");
     }
 }
 
-Metadata::Metadata() : _dom(nullptr)
-{
-}
+Metadata::Metadata() : _dom(nullptr) {}
 
-Metadata::Metadata(const DOMNode* domNode, int format) : _dom(nullptr)
+Metadata::Metadata(const DOMNode *domNode, int format) : _dom(nullptr)
 {
-    auto element = dynamic_cast<const DOMElement*>(domNode);
+    auto element = dynamic_cast<const DOMElement *>(domNode);
     if (element) {
         switch (format) {
-        case 1:
-            parseVersion1(element);
-            break;
-        default:
-            throw Base::XMLBaseException("package.xml format version is not supported by this version of FreeCAD");
+            case 1: parseVersion1(element); break;
+            default:
+                throw Base::XMLBaseException(
+                    "package.xml format version is not supported by this version of FreeCAD");
         }
     }
 }
 
-Metadata::~Metadata()
-{
-}
+Metadata::~Metadata() = default;
 
-std::string Metadata::name() const
-{
-    return _name;
-}
+std::string Metadata::name() const { return _name; }
 
-Meta::Version Metadata::version() const
-{
-    return _version;
-}
+Meta::Version Metadata::version() const { return _version; }
 
-std::string Metadata::description() const
-{
-    return _description;
-}
+std::string App::Metadata::date() const { return _date; }
 
-std::vector<Meta::Contact> Metadata::maintainer() const
-{
-    return _maintainer;
-}
+std::string Metadata::description() const { return _description; }
 
-std::vector<Meta::License> Metadata::license() const
-{
-    return _license;
-}
+std::vector<Meta::Contact> Metadata::maintainer() const { return _maintainer; }
 
-std::vector<Meta::Url> Metadata::url() const
-{
-    return _url;
-}
+std::vector<Meta::License> Metadata::license() const { return _license; }
 
-std::vector<Meta::Contact> Metadata::author() const
-{
-    return _author;
-}
+std::vector<Meta::Url> Metadata::url() const { return _url; }
 
-std::vector<Meta::Dependency> Metadata::depend() const
-{
-    return _depend;
-}
+std::vector<Meta::Contact> Metadata::author() const { return _author; }
 
-std::vector<Meta::Dependency> Metadata::conflict() const
-{
-    return _conflict;
-}
+std::vector<Meta::Dependency> Metadata::depend() const { return _depend; }
 
-std::vector<Meta::Dependency> Metadata::replace() const
-{
-    return _replace;
-}
+std::vector<Meta::Dependency> Metadata::conflict() const { return _conflict; }
 
-std::vector<std::string> Metadata::tag() const
-{
-    return _tag;
-}
+std::vector<Meta::Dependency> Metadata::replace() const { return _replace; }
 
-fs::path Metadata::icon() const
-{
-    return _icon;
-}
+std::vector<std::string> Metadata::tag() const { return _tag; }
 
-std::string Metadata::classname() const
-{
-    return _classname;
-}
+fs::path Metadata::icon() const { return _icon; }
 
-std::vector<fs::path> Metadata::file() const
-{
-    return _file;
-}
+std::string Metadata::classname() const { return _classname; }
 
-Meta::Version App::Metadata::freecadmin() const
-{
-    return _freecadmin;
-}
+boost::filesystem::path Metadata::subdirectory() const { return _subdirectory; }
 
-Meta::Version App::Metadata::freecadmax() const
-{
-    return _freecadmax;
-}
+std::vector<fs::path> Metadata::file() const { return _file; }
 
-std::multimap<std::string, Metadata> Metadata::content() const
-{
-    return _content;
-}
+Meta::Version Metadata::freecadmin() const { return _freecadmin; }
 
-std::vector<Meta::GenericMetadata> Metadata::operator[](const std::string& tag) const
+Meta::Version Metadata::freecadmax() const { return _freecadmax; }
+
+Meta::Version Metadata::pythonmin() const { return _pythonmin; }
+
+std::multimap<std::string, Metadata> Metadata::content() const { return _content; }
+
+std::vector<Meta::GenericMetadata> Metadata::operator[](const std::string &tag) const
 {
     std::vector<Meta::GenericMetadata> returnValue;
     auto range = _genericMetadata.equal_range(tag);
-    for (auto item = range.first; item != range.second; ++item)
+    for (auto item = range.first; item != range.second; ++item) {
         returnValue.push_back(item->second);
+    }
     return returnValue;
 }
 
-XERCES_CPP_NAMESPACE::DOMElement* Metadata::dom() const
-{
-    return _dom;
-}
+XERCES_CPP_NAMESPACE::DOMElement *Metadata::dom() const { return _dom; }
 
-void Metadata::setName(const std::string& name)
+void Metadata::setName(const std::string &name)
 {
-    std::string invalidCharacters = "/\\?%*:|\"<>"; // Should cover all OSes
-    if (_name.find_first_of(invalidCharacters) != std::string::npos)
+    std::string invalidCharacters = "/\\?%*:|\"<>";// Should cover all OSes
+    if (_name.find_first_of(invalidCharacters) != std::string::npos) {
         throw Base::RuntimeError("Name cannot contain any of: " + invalidCharacters);
-
+    }
     _name = name;
 }
 
-void Metadata::setVersion(const Meta::Version& version)
-{
-    _version = version;
-}
+void Metadata::setVersion(const Meta::Version &version) { _version = version; }
 
-void Metadata::setDescription(const std::string& description)
-{
-    _description = description;
-}
+void App::Metadata::setDate(const std::string &date) { _date = date; }
 
-void Metadata::addMaintainer(const Meta::Contact& maintainer)
-{
-    _maintainer.push_back(maintainer);
-}
+void Metadata::setDescription(const std::string &description) { _description = description; }
 
-void Metadata::addLicense(const Meta::License& license)
-{
-    _license.push_back(license);
-}
+void Metadata::addMaintainer(const Meta::Contact &maintainer) { _maintainer.push_back(maintainer); }
 
-void Metadata::addUrl(const Meta::Url& url)
-{
-    _url.push_back(url);
-}
+void Metadata::addLicense(const Meta::License &license) { _license.push_back(license); }
 
-void Metadata::addAuthor(const Meta::Contact& author)
-{
-    _author.push_back(author);
-}
+void Metadata::addUrl(const Meta::Url &url) { _url.push_back(url); }
 
-void Metadata::addDepend(const Meta::Dependency& dep)
-{
-    _depend.push_back(dep);
-}
+void Metadata::addAuthor(const Meta::Contact &author) { _author.push_back(author); }
 
-void Metadata::addConflict(const Meta::Dependency& dep)
-{
-    _conflict.push_back(dep);
-}
+void Metadata::addDepend(const Meta::Dependency &dep) { _depend.push_back(dep); }
 
-void Metadata::addReplace(const Meta::Dependency& dep)
-{
-    _replace.push_back(dep);
-}
+void Metadata::addConflict(const Meta::Dependency &dep) { _conflict.push_back(dep); }
 
-void Metadata::addTag(const std::string& tag)
-{
-    _tag.push_back(tag);
-}
+void Metadata::addReplace(const Meta::Dependency &dep) { _replace.push_back(dep); }
 
-void Metadata::setIcon(const fs::path& path)
-{
-    _icon = path;
-}
+void Metadata::addTag(const std::string &tag) { _tag.push_back(tag); }
 
-void Metadata::setClassname(const std::string& name)
-{
-    _classname = name;
-}
+void Metadata::setIcon(const fs::path &path) { _icon = path; }
 
-void Metadata::addFile(const fs::path& path)
-{
-    _file.push_back(path);
-}
+void Metadata::setClassname(const std::string &name) { _classname = name; }
 
-void Metadata::addContentItem(const std::string& tag, const Metadata& item)
+void Metadata::setSubdirectory(const boost::filesystem::path &path) { _subdirectory = path; }
+
+void Metadata::addFile(const fs::path &path) { _file.push_back(path); }
+
+void Metadata::addContentItem(const std::string &tag, const Metadata &item)
 {
     _content.insert(std::make_pair(tag, item));
 }
 
-void App::Metadata::setFreeCADMin(const Meta::Version& version)
-{
-    _freecadmin = version;
-}
+void Metadata::setFreeCADMin(const Meta::Version &version) { _freecadmin = version; }
 
-void App::Metadata::setFreeCADMax(const Meta::Version& version)
-{
-    _freecadmax = version;
-}
+void Metadata::setPythonMin(const Meta::Version &version) { _pythonmin = version; }
 
-void App::Metadata::addGenericMetadata(const std::string& tag, const Meta::GenericMetadata& genericMetadata)
+void Metadata::setFreeCADMax(const Meta::Version &version) { _freecadmax = version; }
+
+void Metadata::addGenericMetadata(const std::string &tag,
+                                  const Meta::GenericMetadata &genericMetadata)
 {
     _genericMetadata.insert(std::make_pair(tag, genericMetadata));
 }
 
+void Metadata::removeContentItem(const std::string &tag, const std::string &itemName)
+{
+    auto tagRange = _content.equal_range(tag);
+    auto foundItem =
+        std::find_if(tagRange.first, tagRange.second, [&itemName](const auto &check) -> bool {
+            return itemName == check.second.name();
+        });
+    if (foundItem != tagRange.second) _content.erase(foundItem);
+}
 
-DOMElement* appendSimpleXMLNode(DOMElement* baseNode, const std::string& nodeName, const std::string& nodeContents)
+void Metadata::removeMaintainer(const Meta::Contact &maintainer)
+{
+    auto new_end = std::remove(_maintainer.begin(), _maintainer.end(), maintainer);
+    _maintainer.erase(new_end, _maintainer.end());
+}
+
+void Metadata::removeLicense(const Meta::License &license)
+{
+    auto new_end = std::remove(_license.begin(), _license.end(), license);
+    _license.erase(new_end, _license.end());
+}
+
+void Metadata::removeUrl(const Meta::Url &url)
+{
+    auto new_end = std::remove(_url.begin(), _url.end(), url);
+    _url.erase(new_end, _url.end());
+}
+
+void Metadata::removeAuthor(const Meta::Contact &author)
+{
+    auto new_end = std::remove(_author.begin(), _author.end(), author);
+    _author.erase(new_end, _author.end());
+}
+
+void Metadata::removeDepend(const Meta::Dependency &dep)
+{
+    bool found = false;
+    for (const auto &check : _depend) {
+        if (dep == check) found = true;
+    }
+    if (!found) throw Base::RuntimeError("No match found for dependency to remove");
+    auto new_end = std::remove(_depend.begin(), _depend.end(), dep);
+    _depend.erase(new_end, _depend.end());
+}
+
+void Metadata::removeConflict(const Meta::Dependency &dep)
+{
+    auto new_end = std::remove(_conflict.begin(), _conflict.end(), dep);
+    _conflict.erase(new_end, _conflict.end());
+}
+
+void Metadata::removeReplace(const Meta::Dependency &dep)
+{
+    auto new_end = std::remove(_replace.begin(), _replace.end(), dep);
+    _replace.erase(new_end, _replace.end());
+}
+
+void Metadata::removeTag(const std::string &tag)
+{
+    auto new_end = std::remove(_tag.begin(), _tag.end(), tag);
+    _tag.erase(new_end, _tag.end());
+}
+
+void Metadata::removeFile(const boost::filesystem::path &path)
+{
+    auto new_end = std::remove(_file.begin(), _file.end(), path);
+    _file.erase(new_end, _file.end());
+}
+
+
+void Metadata::clearContent() { _content.clear(); }
+
+void Metadata::clearMaintainer() { _maintainer.clear(); }
+
+void Metadata::clearLicense() { _license.clear(); }
+
+void Metadata::clearUrl() { _url.clear(); }
+
+void Metadata::clearAuthor() { _author.clear(); }
+
+void Metadata::clearDepend() { _depend.clear(); }
+
+void Metadata::clearConflict() { _conflict.clear(); }
+
+void Metadata::clearReplace() { _replace.clear(); }
+
+void Metadata::clearTag() { _tag.clear(); }
+
+void Metadata::clearFile() { _file.clear(); }
+
+
+DOMElement *appendSimpleXMLNode(DOMElement *baseNode, const std::string &nodeName,
+                                const std::string &nodeContents)
 {
     // For convenience (and brevity of final output) don't create nodes that don't have contents
-    if (nodeContents.empty())
+    if (nodeContents.empty()) {
         return nullptr;
-
+    }
     auto doc = baseNode->getOwnerDocument();
-    DOMElement* namedElement = doc->createElement(XUTF8Str(nodeName.c_str()).unicodeForm());
+    DOMElement *namedElement = doc->createElement(XUTF8Str(nodeName.c_str()).unicodeForm());
     baseNode->appendChild(namedElement);
-    DOMText* namedNode = doc->createTextNode(XUTF8Str(nodeContents.c_str()).unicodeForm());
+    DOMText *namedNode = doc->createTextNode(XUTF8Str(nodeContents.c_str()).unicodeForm());
     namedElement->appendChild(namedNode);
     return namedElement;
 }
 
-void addAttribute(DOMElement* node, const std::string& key, const std::string& value)
+void addAttribute(DOMElement *node, const std::string &key, const std::string &value)
 {
-    if (value.empty())
+    if (value.empty()) {
         return;
-
+    }
     node->setAttribute(XUTF8Str(key.c_str()).unicodeForm(), XUTF8Str(value.c_str()).unicodeForm());
 }
 
-void addDependencyNode(DOMElement* root, const std::string& name, const Meta::Dependency& depend)
+void addAttribute(DOMElement *node, const std::string &key, bool value)
+{
+    if (value)
+        node->setAttribute(XUTF8Str(key.c_str()).unicodeForm(), XUTF8Str("True").unicodeForm());
+    else
+        node->setAttribute(XUTF8Str(key.c_str()).unicodeForm(), XUTF8Str("False").unicodeForm());
+}
+
+void addAttribute(DOMElement *node, const std::string &key, Meta::DependencyType value)
+{
+    // Someday we should be able to change this to use reflection, but it's not yet
+    // available (using C++17)
+    std::string stringified("automatic");
+    switch (value) {
+        case Meta::DependencyType::automatic: stringified = "automatic"; break;
+        case Meta::DependencyType::internal: stringified = "internal"; break;
+        case Meta::DependencyType::addon: stringified = "addon"; break;
+        case Meta::DependencyType::python: stringified = "python"; break;
+    }
+    node->setAttribute(XUTF8Str(key.c_str()).unicodeForm(),
+                       XUTF8Str(stringified.c_str()).unicodeForm());
+}
+
+void addDependencyNode(DOMElement *root, const std::string &name, const Meta::Dependency &depend)
 {
     auto element = appendSimpleXMLNode(root, name, depend.package);
     if (element) {
@@ -343,21 +394,26 @@ void addDependencyNode(DOMElement* root, const std::string& name, const Meta::De
         addAttribute(element, "version_gte", depend.version_gte);
         addAttribute(element, "version_gt", depend.version_gt);
         addAttribute(element, "condition", depend.condition);
+        addAttribute(element, "optional", depend.optional);
+        addAttribute(element, "type", depend.dependencyType);
     }
 }
 
-void Metadata::write(const fs::path& file) const
+void Metadata::write(const fs::path &file) const
 {
-    DOMImplementation* impl = DOMImplementationRegistry::getDOMImplementation(XUTF8Str("Core LS").unicodeForm());
+    DOMImplementation *impl =
+        DOMImplementationRegistry::getDOMImplementation(XUTF8Str("Core LS").unicodeForm());
 
-    DOMDocument* doc = impl->createDocument(nullptr, XUTF8Str("package").unicodeForm(), nullptr);
-    DOMElement* root = doc->getDocumentElement();
+    DOMDocument *doc = impl->createDocument(nullptr, XUTF8Str("package").unicodeForm(), nullptr);
+    DOMElement *root = doc->getDocumentElement();
     root->setAttribute(XUTF8Str("format").unicodeForm(), XUTF8Str("1").unicodeForm());
+    root->setAttribute(XUTF8Str("xmlns").unicodeForm(),
+                       XUTF8Str("https://wiki.freecad.org/Package_Metadata").unicodeForm());
 
     appendToElement(root);
 
-    DOMLSSerializer* theSerializer = ((DOMImplementationLS*)impl)->createLSSerializer();
-    DOMConfiguration* config = theSerializer->getDomConfig();
+    DOMLSSerializer *theSerializer = ((DOMImplementationLS *)impl)->createLSSerializer();
+    DOMConfiguration *config = theSerializer->getDomConfig();
     if (config->canSetParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true))
         config->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, true);
 
@@ -369,8 +425,8 @@ void Metadata::write(const fs::path& file) const
         config->setParameter(XMLUni::fgDOMWRTDiscardDefaultContent, true);
 
     try {
-        XMLFormatTarget* myFormTarget = new LocalFileFormatTarget(file.string().c_str());
-        DOMLSOutput* theOutput = ((DOMImplementationLS*)impl)->createLSOutput();
+        XMLFormatTarget *myFormTarget = new LocalFileFormatTarget(file.string().c_str());
+        DOMLSOutput *theOutput = ((DOMImplementationLS *)impl)->createLSOutput();
 
         theOutput->setByteStream(myFormTarget);
         theSerializer->write(doc, theOutput);
@@ -379,14 +435,14 @@ void Metadata::write(const fs::path& file) const
         theSerializer->release();
         delete myFormTarget;
     }
-    catch (const XMLException& toCatch) {
-        char* message = XMLString::transcode(toCatch.getMessage());
+    catch (const XMLException &toCatch) {
+        char *message = XMLString::transcode(toCatch.getMessage());
         std::string what = message;
         XMLString::release(&message);
         throw Base::XMLBaseException(what);
     }
-    catch (const DOMException& toCatch) {
-        char* message = XMLString::transcode(toCatch.getMessage());
+    catch (const DOMException &toCatch) {
+        char *message = XMLString::transcode(toCatch.getMessage());
         std::string what = message;
         XMLString::release(&message);
         throw Base::XMLBaseException(what);
@@ -395,21 +451,22 @@ void Metadata::write(const fs::path& file) const
     doc->release();
 }
 
-bool Metadata::satisfies(const Meta::Dependency& dep)
+bool Metadata::satisfies(const Meta::Dependency &dep)
 {
-    if (dep.package != _name)
+    if (dep.package != _name) {
         return false;
-
+    }
     // The "condition" attribute allows an expression to enable or disable this dependency check: it must contain a valid
     // FreeCAD Expression. If it evaluates to false, this dependency is bypassed (e.g. this function returns false).
     if (!dep.condition.empty()) {
         auto injectedString = dep.condition;
         std::map<std::string, std::string> replacements;
-        std::map<std::string, std::string>& config = App::Application::Config();
+        std::map<std::string, std::string> &config = App::Application::Config();
         replacements.insert(std::make_pair("$BuildVersionMajor", config["BuildVersionMajor"]));
         replacements.insert(std::make_pair("$BuildVersionMinor", config["BuildVersionMinor"]));
+        replacements.insert(std::make_pair("$BuildVersionPoint", config["BuildVersionPoint"]));
         replacements.insert(std::make_pair("$BuildRevision", config["BuildRevision"]));
-        for (const auto& replacement : replacements) {
+        for (const auto &replacement : replacements) {
             auto pos = injectedString.find(replacement.first);
             while (pos != std::string::npos) {
                 injectedString.replace(pos, replacement.first.length(), replacement.second);
@@ -418,110 +475,140 @@ bool Metadata::satisfies(const Meta::Dependency& dep)
         }
         auto parsedExpression = App::Expression::parse(nullptr, dep.condition);
         auto result = parsedExpression->eval();
-        if (App::any_cast<bool> (result->getValueAsAny()) == false)
+        if (!App::any_cast<bool>(result->getValueAsAny())) {
             return false;
+        }
     }
 
-    if (!dep.version_eq.empty())
+    if (!dep.version_eq.empty()) {
         return _version == Meta::Version(dep.version_eq);
-
+    }
     // Any of the others might be specified in pairs, so only return the "false" case
 
-    if (!dep.version_lt.empty())
-        if (!(_version < Meta::Version(dep.version_lt)))
+    if (!dep.version_lt.empty()) {
+        if (!(_version < Meta::Version(dep.version_lt))) {
             return false;
-
-    if (!dep.version_lte.empty())
-        if (!(_version <= Meta::Version(dep.version_lt)))
+        }
+    }
+    if (!dep.version_lte.empty()) {
+        if (!(_version <= Meta::Version(dep.version_lt))) {
             return false;
-
-    if (!dep.version_gt.empty())
-        if (!(_version > Meta::Version(dep.version_lt)))
+        }
+    }
+    if (!dep.version_gt.empty()) {
+        if (!(_version > Meta::Version(dep.version_lt))) {
             return false;
-
-    if (!dep.version_gte.empty())
-        if (!(_version >= Meta::Version(dep.version_lt)))
+        }
+    }
+    if (!dep.version_gte.empty()) {
+        if (!(_version >= Meta::Version(dep.version_lt))) {
             return false;
-
+        }
+    }
     return true;
 }
 
-void Metadata::appendToElement(DOMElement* root) const
+bool Metadata::supportsCurrentFreeCAD() const
+{
+    static auto fcVersion = Meta::Version();
+    if (fcVersion == Meta::Version()) {
+        std::map<std::string, std::string> &config = App::Application::Config();
+        std::stringstream ss;
+        ss << config["BuildVersionMajor"]
+            << "." << config["BuildVersionMinor"]
+            << "." << config["BuildVersionPoint"]
+            << "." << (config["BuildRevision"].empty() ? "0" : config["BuildRevision"]);
+        fcVersion = Meta::Version(ss.str());
+    }
+
+    if (_freecadmin != Meta::Version() && _freecadmin > fcVersion) {
+        return false;
+    }
+    else if (_freecadmax != Meta::Version() && _freecadmax < fcVersion) {
+        return false;
+    }
+    return true;
+}
+
+void Metadata::appendToElement(DOMElement *root) const
 {
     appendSimpleXMLNode(root, "name", _name);
     appendSimpleXMLNode(root, "description", _description);
-    appendSimpleXMLNode(root, "version", _version.str());
+    if (_version != Meta::Version())
+        // Only append version if it's not 0.0.0
+        appendSimpleXMLNode(root, "version", _version.str());
 
-    for (const auto& maintainer : _maintainer) {
+    if (!_date.empty()) appendSimpleXMLNode(root, "date", _date);
+
+    for (const auto &maintainer : _maintainer) {
         auto element = appendSimpleXMLNode(root, "maintainer", maintainer.name);
-        if (element)
-            addAttribute(element, "email", maintainer.email);
+        if (element) addAttribute(element, "email", maintainer.email);
     }
 
-    for (const auto& license : _license) {
+    for (const auto &license : _license) {
         auto element = appendSimpleXMLNode(root, "license", license.name);
-        if (element)
-            addAttribute(element, "file", license.file.string());
+        if (element) addAttribute(element, "file", license.file.string());
     }
 
-    if (_freecadmin != Meta::Version())
-        appendSimpleXMLNode(root, "freecadmin", _freecadmin.str());
+    if (_freecadmin != Meta::Version()) appendSimpleXMLNode(root, "freecadmin", _freecadmin.str());
 
-    if (_freecadmax != Meta::Version())
-        appendSimpleXMLNode(root, "freecadmax", _freecadmin.str());
+    if (_freecadmax != Meta::Version()) appendSimpleXMLNode(root, "freecadmax", _freecadmax.str());
 
-    for (const auto& url : _url) {
+    if (_pythonmin != Meta::Version()) appendSimpleXMLNode(root, "pythonmin", _pythonmin.str());
+
+    for (const auto &url : _url) {
         auto element = appendSimpleXMLNode(root, "url", url.location);
         if (element) {
             std::string typeAsString("website");
             switch (url.type) {
-            case Meta::UrlType::website:       typeAsString = "website";       break;
-            case Meta::UrlType::repository:    typeAsString = "repository";    break;
-            case Meta::UrlType::bugtracker:    typeAsString = "bugtracker";    break;
-            case Meta::UrlType::readme:        typeAsString = "readme";        break;
-            case Meta::UrlType::documentation: typeAsString = "documentation"; break;
+                case Meta::UrlType::website: typeAsString = "website"; break;
+                case Meta::UrlType::repository: typeAsString = "repository"; break;
+                case Meta::UrlType::bugtracker: typeAsString = "bugtracker"; break;
+                case Meta::UrlType::readme: typeAsString = "readme"; break;
+                case Meta::UrlType::documentation: typeAsString = "documentation"; break;
+                case Meta::UrlType::discussion: typeAsString = "discussion"; break;
             }
             addAttribute(element, "type", typeAsString);
+            if (url.type == Meta::UrlType::repository) {
+                addAttribute(element, "branch", url.branch);
+            }
         }
     }
 
-    for (const auto& author : _author) {
+    for (const auto &author : _author) {
         auto element = appendSimpleXMLNode(root, "author", author.name);
-        if (element)
-            addAttribute(element, "email", author.email);
+        if (element) addAttribute(element, "email", author.email);
     }
 
-    for (const auto& depend : _depend)
-        addDependencyNode(root, "depend", depend);
+    for (const auto &depend : _depend) addDependencyNode(root, "depend", depend);
 
-    for (const auto& conflict : _conflict)
-        addDependencyNode(root, "conflict", conflict);
+    for (const auto &conflict : _conflict) addDependencyNode(root, "conflict", conflict);
 
-    for (const auto& replace : _replace)
-        addDependencyNode(root, "replace", replace);
+    for (const auto &replace : _replace) addDependencyNode(root, "replace", replace);
 
-    for (const auto& tag : _tag)
-        appendSimpleXMLNode(root, "tag", tag);
+    for (const auto &tag : _tag) appendSimpleXMLNode(root, "tag", tag);
 
     appendSimpleXMLNode(root, "icon", _icon.string());
 
     appendSimpleXMLNode(root, "classname", _classname);
 
-    for (const auto& file : _file)
-        appendSimpleXMLNode(root, "file", file.string());
+    appendSimpleXMLNode(root, "subdirectory", _subdirectory.string());
 
-    for (const auto& md : _genericMetadata) {
+    for (const auto &file : _file) appendSimpleXMLNode(root, "file", file.string());
+
+    for (const auto &md : _genericMetadata) {
         auto element = appendSimpleXMLNode(root, md.first, md.second.contents);
-        for (const auto& attr : md.second.attributes)
+        for (const auto &attr : md.second.attributes)
             addAttribute(element, attr.first, attr.second);
     }
 
     if (!_content.empty()) {
         auto doc = root->getOwnerDocument();
-        DOMElement* contentRootElement = doc->createElement(XUTF8Str("content").unicodeForm());
+        DOMElement *contentRootElement = doc->createElement(XUTF8Str("content").unicodeForm());
         root->appendChild(contentRootElement);
-        for (const auto& content : _content) {
-            DOMElement* contentElement = doc->createElement(XUTF8Str(content.first.c_str()).unicodeForm());
+        for (const auto &content : _content) {
+            DOMElement *contentElement =
+                doc->createElement(XUTF8Str(content.first.c_str()).unicodeForm());
             contentRootElement->appendChild(contentElement);
             content.second.appendToElement(contentElement);
         }
@@ -529,23 +616,23 @@ void Metadata::appendToElement(DOMElement* root) const
 }
 
 
-void Metadata::parseVersion1(const DOMNode* startNode)
+void Metadata::parseVersion1(const DOMNode *startNode)
 {
     auto children = startNode->getChildNodes();
 
     for (XMLSize_t i = 0; i < children->getLength(); ++i) {
         auto child = children->item(i);
-        auto element = dynamic_cast<const DOMElement*>(child);
-        if (!element)
-            continue;
+        auto element = dynamic_cast<const DOMElement *>(child);
+        if (!element) continue;
 
         auto tag = element->getNodeName();
         auto tagString = StrXUTF8(tag).str;
 
-        if (tagString == "name")
-            _name = StrXUTF8(element->getTextContent()).str;
+        if (tagString == "name") _name = StrXUTF8(element->getTextContent()).str;
         else if (tagString == "version")
             _version = Meta::Version(StrXUTF8(element->getTextContent()).str);
+        else if (tagString == "date")
+            _date = StrXUTF8(element->getTextContent()).str;
         else if (tagString == "description")
             _description = StrXUTF8(element->getTextContent()).str;
         else if (tagString == "maintainer")
@@ -556,6 +643,8 @@ void Metadata::parseVersion1(const DOMNode* startNode)
             _freecadmin = Meta::Version(StrXUTF8(element->getTextContent()).str);
         else if (tagString == "freecadmax")
             _freecadmax = Meta::Version(StrXUTF8(element->getTextContent()).str);
+        else if (tagString == "pythonmin")
+            _pythonmin = Meta::Version(StrXUTF8(element->getTextContent()).str);
         else if (tagString == "url")
             _url.emplace_back(element);
         else if (tagString == "author")
@@ -572,29 +661,30 @@ void Metadata::parseVersion1(const DOMNode* startNode)
             _file.emplace_back(StrXUTF8(element->getTextContent()).str);
         else if (tagString == "classname")
             _classname = StrXUTF8(element->getTextContent()).str;
+        else if (tagString == "subdirectory")
+            _subdirectory = StrXUTF8(element->getTextContent()).str;
         else if (tagString == "icon")
             _icon = fs::path(StrXUTF8(element->getTextContent()).str);
         else if (tagString == "content")
-            parseContentNodeVersion1(element); // Recursive call
+            parseContentNodeVersion1(element);// Recursive call
         else {
             // If none of this node's children have children of their own, it is a simple element and we
             // can handle it as a GenericMetadata object
             auto children = element->getChildNodes();
             bool hasGrandchildren = false;
             for (XMLSize_t i = 0; i < children->getLength() && !hasGrandchildren; ++i)
-                if (children->item(i)->getChildNodes()->getLength() > 0)
-                    hasGrandchildren = true;
+                if (children->item(i)->getChildNodes()->getLength() > 0) hasGrandchildren = true;
             if (!hasGrandchildren)
                 _genericMetadata.insert(std::make_pair(tagString, Meta::GenericMetadata(element)));
         }
     }
 }
 
-void Metadata::parseContentNodeVersion1(const DOMElement* contentNode)
+void Metadata::parseContentNodeVersion1(const DOMElement *contentNode)
 {
     auto children = contentNode->getChildNodes();
     for (XMLSize_t i = 0; i < children->getLength(); ++i) {
-        auto child = dynamic_cast<const DOMElement*>(children->item(i));
+        auto child = dynamic_cast<const DOMElement *>(children->item(i));
         if (child) {
             auto tag = StrXUTF8(child->getTagName()).str;
             _content.insert(std::make_pair(tag, Metadata(child, 1)));
@@ -602,48 +692,51 @@ void Metadata::parseContentNodeVersion1(const DOMElement* contentNode)
     }
 }
 
-Meta::Contact::Contact(const std::string& name, const std::string& email) :
-    name(name),
-    email(email)
+Meta::Contact::Contact(const std::string &name, const std::string &email) : name(name), email(email)
 {
     // This has to be provided manually since we have another constructor
 }
 
-Meta::Contact::Contact(const XERCES_CPP_NAMESPACE::DOMElement* e)
+Meta::Contact::Contact(const XERCES_CPP_NAMESPACE::DOMElement *e)
 {
     auto emailAttribute = e->getAttribute(XUTF8Str("email").unicodeForm());
     name = StrXUTF8(e->getTextContent()).str;
     email = StrXUTF8(emailAttribute).str;
 }
 
-Meta::License::License(const std::string& name, fs::path file) :
-    name(name),
-    file(file)
+bool App::Meta::Contact::operator==(const Contact &rhs) const
+{
+    return name == rhs.name && email == rhs.email;
+}
+
+Meta::License::License(const std::string &name, fs::path file) : name(name), file(file)
 {
     // This has to be provided manually since we have another constructor
 }
 
-Meta::License::License(const XERCES_CPP_NAMESPACE::DOMElement* e)
+Meta::License::License(const XERCES_CPP_NAMESPACE::DOMElement *e)
 {
     auto fileAttribute = e->getAttribute(XUTF8Str("file").unicodeForm());
-    if (XMLString::stringLen(fileAttribute) > 0) {
-        file = fs::path(StrXUTF8(fileAttribute).str);
-    }
+    if (XMLString::stringLen(fileAttribute) > 0) { file = fs::path(StrXUTF8(fileAttribute).str); }
     name = StrXUTF8(e->getTextContent()).str;
 }
 
-Meta::Url::Url(const std::string& location, UrlType type) :
-    location(location),
-    type(type)
+bool App::Meta::License::operator==(const License &rhs) const
+{
+    return name == rhs.name && file == rhs.file;
+}
+
+App::Meta::Url::Url() : location(""), type(App::Meta::UrlType::website) {}
+
+Meta::Url::Url(const std::string &location, UrlType type) : location(location), type(type)
 {
     // This has to be provided manually since we have another constructor
 }
 
-Meta::Url::Url(const XERCES_CPP_NAMESPACE::DOMElement* e)
+Meta::Url::Url(const XERCES_CPP_NAMESPACE::DOMElement *e)
 {
     auto typeAttribute = StrXUTF8(e->getAttribute(XUTF8Str("type").unicodeForm())).str;
-    if (typeAttribute.empty() || typeAttribute == "website")
-        type = UrlType::website;
+    if (typeAttribute.empty() || typeAttribute == "website") type = UrlType::website;
     else if (typeAttribute == "bugtracker")
         type = UrlType::bugtracker;
     else if (typeAttribute == "repository")
@@ -652,10 +745,34 @@ Meta::Url::Url(const XERCES_CPP_NAMESPACE::DOMElement* e)
         type = UrlType::readme;
     else if (typeAttribute == "documentation")
         type = UrlType::documentation;
+    else if (typeAttribute == "discussion")
+        type = UrlType::discussion;
+    else
+        type = UrlType::website;
+
+    if (type == UrlType::repository) {
+        branch = StrXUTF8(e->getAttribute(XUTF8Str("branch").unicodeForm())).str;
+    }
     location = StrXUTF8(e->getTextContent()).str;
 }
 
-Meta::Dependency::Dependency(const XERCES_CPP_NAMESPACE::DOMElement* e)
+bool App::Meta::Url::operator==(const Url &rhs) const
+{
+    if (type == UrlType::repository && branch != rhs.branch) {
+        return false;
+    }
+    return type == rhs.type && location == rhs.location;
+}
+
+App::Meta::Dependency::Dependency()
+    : optional(false), dependencyType(App::Meta::DependencyType::automatic)
+{}
+
+App::Meta::Dependency::Dependency(const std::string &pkg)
+    : package(pkg), optional(false), dependencyType(App::Meta::DependencyType::automatic)
+{}
+
+Meta::Dependency::Dependency(const XERCES_CPP_NAMESPACE::DOMElement *e)
 {
     version_lt = StrXUTF8(e->getAttribute(XUTF8Str("version_lt").unicodeForm())).str;
     version_lte = StrXUTF8(e->getAttribute(XUTF8Str("version_lte").unicodeForm())).str;
@@ -663,29 +780,44 @@ Meta::Dependency::Dependency(const XERCES_CPP_NAMESPACE::DOMElement* e)
     version_gte = StrXUTF8(e->getAttribute(XUTF8Str("version_gte").unicodeForm())).str;
     version_gt = StrXUTF8(e->getAttribute(XUTF8Str("version_gt").unicodeForm())).str;
     condition = StrXUTF8(e->getAttribute(XUTF8Str("condition").unicodeForm())).str;
+    std::string opt_string = StrXUTF8(e->getAttribute(XUTF8Str("optional").unicodeForm())).str;
+    if (opt_string == "true"
+        || opt_string == "True")// Support Python capitalization in this one case...
+        optional = true;
+    else
+        optional = false;
+    std::string type_string = StrXUTF8(e->getAttribute(XUTF8Str("type").unicodeForm())).str;
+    if (type_string == "automatic" || type_string == "")
+        dependencyType = Meta::DependencyType::automatic;
+    else if (type_string == "addon")
+        dependencyType = Meta::DependencyType::addon;
+    else if (type_string == "internal")
+        dependencyType = Meta::DependencyType::internal;
+    else if (type_string == "python")
+        dependencyType = Meta::DependencyType::python;
+    else {
+        auto message = std::string("Invalid dependency type \"") + type_string + "\"";
+        throw Base::XMLBaseException(message);
+    }
 
     package = StrXUTF8(e->getTextContent()).str;
 }
 
-Meta::Version::Version() :
-    major(0),
-    minor(0),
-    patch(0)
+bool App::Meta::Dependency::operator==(const Dependency &rhs) const
 {
+    return package == rhs.package && version_lt == rhs.version_lt && version_lte == rhs.version_lte
+        && version_eq == rhs.version_eq && version_gte == rhs.version_gte
+        && version_gt == rhs.version_gt && condition == rhs.condition && optional == rhs.optional
+        && dependencyType == rhs.dependencyType;
 }
 
-Meta::Version::Version(int major, int minor, int patch, const std::string& suffix) :
-    major(major),
-    minor(minor),
-    patch(patch),
-    suffix(suffix)
-{
+Meta::Version::Version() : major(0), minor(0), patch(0) {}
 
-}
+Meta::Version::Version(int major, int minor, int patch, const std::string &suffix)
+    : major(major), minor(minor), patch(patch), suffix(suffix)
+{}
 
-Meta::Version::Version(const std::string& versionString) :
-    minor(0),
-    patch(0)
+Meta::Version::Version(const std::string &versionString) : minor(0), patch(0)
 {
     std::istringstream stream(versionString);
     char separator;
@@ -699,52 +831,58 @@ Meta::Version::Version(const std::string& versionString) :
 
 std::string Meta::Version::str() const
 {
+    if (*this == Meta::Version()) {
+        return "";
+    }
     std::ostringstream stream;
     stream << major << "." << minor << "." << patch << suffix;
     return stream.str();
 }
 
-bool Meta::Version::operator<(const Version& rhs) const
+bool Meta::Version::operator<(const Version &rhs) const
 {
-    return std::tie(major, minor, patch, suffix) < std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
+    return std::tie(major, minor, patch, suffix)
+        < std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
 }
 
-bool Meta::Version::operator>(const Version& rhs) const
+bool Meta::Version::operator>(const Version &rhs) const
 {
-    return std::tie(major, minor, patch, suffix) > std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
+    return std::tie(major, minor, patch, suffix)
+        > std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
 }
 
-bool Meta::Version::operator<=(const Version& rhs) const
+bool Meta::Version::operator<=(const Version &rhs) const
 {
-    return std::tie(major, minor, patch, suffix) <= std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
+    return std::tie(major, minor, patch, suffix)
+        <= std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
 }
 
-bool Meta::Version::operator>=(const Version& rhs) const
+bool Meta::Version::operator>=(const Version &rhs) const
 {
-    return std::tie(major, minor, patch, suffix) >= std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
+    return std::tie(major, minor, patch, suffix)
+        >= std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
 }
 
-bool Meta::Version::operator==(const Version& rhs) const
+bool Meta::Version::operator==(const Version &rhs) const
 {
-    return std::tie(major, minor, patch, suffix) == std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
+    return std::tie(major, minor, patch, suffix)
+        == std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
 }
 
-bool Meta::Version::operator!=(const Version& rhs) const
+bool Meta::Version::operator!=(const Version &rhs) const
 {
-    return std::tie(major, minor, patch, suffix) != std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
+    return std::tie(major, minor, patch, suffix)
+        != std::tie(rhs.major, rhs.minor, rhs.patch, rhs.suffix);
 }
 
-Meta::GenericMetadata::GenericMetadata(const XERCES_CPP_NAMESPACE::DOMElement* e)
+Meta::GenericMetadata::GenericMetadata(const XERCES_CPP_NAMESPACE::DOMElement *e)
 {
     contents = StrXUTF8(e->getTextContent()).str;
     for (XMLSize_t i = 0; i < e->getAttributes()->getLength(); ++i) {
         auto a = e->getAttributes()->item(i);
-        attributes.insert(std::make_pair(StrXUTF8(a->getNodeName()).str,
-            StrXUTF8(a->getTextContent()).str));
+        attributes.insert(
+            std::make_pair(StrXUTF8(a->getNodeName()).str, StrXUTF8(a->getTextContent()).str));
     }
 }
 
-App::Meta::GenericMetadata::GenericMetadata(const std::string& contents) :
-    contents(contents)
-{
-}
+App::Meta::GenericMetadata::GenericMetadata(const std::string &contents) : contents(contents) {}

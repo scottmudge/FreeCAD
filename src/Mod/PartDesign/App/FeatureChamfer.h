@@ -24,12 +24,10 @@
 #ifndef PARTDESIGN_FEATURECHAMFER_H
 #define PARTDESIGN_FEATURECHAMFER_H
 
-#include "FeatureDressUp.h"
-
 #include <App/PropertyStandard.h>
 #include <App/PropertyUnits.h>
-#include <App/PropertyLinks.h>
 #include <Mod/Part/App/PropertyDressUp.h>
+#include "FeatureDressUp.h"
 
 namespace PartDesign
 {
@@ -46,21 +44,22 @@ public:
     App::PropertyQuantityConstraint Size2;
     App::PropertyAngle Angle;
     App::PropertyBool FlipDirection;
+    App::PropertyBool UseAllEdges;
 
     Part::PropertyChamferEdges ChamferInfo;
 
     /** @name methods override feature */
     //@{
     /// recalculate the feature
-    App::DocumentObjectExecReturn *execute(void) override;
+    App::DocumentObjectExecReturn *execute() override;
     short mustExecute() const override;
     /// returns the type name of the view provider
-    const char* getViewProviderName(void) const override {
+    const char* getViewProviderName() const override {
         return "PartDesignGui::ViewProviderChamfer";
     }
     //@}
 
-    virtual void onChanged(const App::Property* /*prop*/) override;
+    void onChanged(const App::Property* /*prop*/) override;
 
     void updateProperties();
 

@@ -30,26 +30,29 @@ namespace PartDesignGui {
 
 class PartDesignGuiExport ViewProviderLoft : public ViewProviderAddSub
 {
-    PROPERTY_HEADER(PartDesignGui::ViewProviderLoft);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderLoft);
 
 public:
+    enum Reference {
+        Profile,
+        Section,
+        Both
+    };
+
     /// constructor
     ViewProviderLoft();
     /// destructor
-    virtual ~ViewProviderLoft();
+    ~ViewProviderLoft() override;
 
     /// grouping handling 
-    std::vector<App::DocumentObject*> _claimChildren(void)const;
-    void setupContextMenu(QMenu*, QObject*, const char*);
+    std::vector<App::DocumentObject*> _claimChildren() const override;
+    void setupContextMenu(QMenu*, QObject*, const char*) override;
 
-    virtual bool onDelete(const std::vector<std::string> &);
-    void highlightReferences(const bool on, bool auxiliary);
-    
 protected:
-    virtual TaskDlgFeatureParameters* getEditDialog();
-    
+    TaskDlgFeatureParameters* getEditDialog() override;
+
 private:
-    std::vector<App::Color> originalLineColors;
+    std::map<long, std::vector<App::Color>> originalLineColors;
 };
 
 

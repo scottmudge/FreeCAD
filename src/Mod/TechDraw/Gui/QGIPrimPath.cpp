@@ -22,22 +22,21 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-#include <assert.h>
-#include <QGraphicsScene>
-#include <QGraphicsSceneHoverEvent>
-#include <QMouseEvent>
-#include <QPainter>
-#include <QPainterPathStroker>
-#include <QStyleOptionGraphicsItem>
+# include <cassert>
+
+# include <QGraphicsScene>
+# include <QGraphicsSceneHoverEvent>
+# include <QPainter>
+# include <QStyleOptionGraphicsItem>
 #endif
 
 #include <App/Application.h>
-#include <App/Material.h>
 #include <Base/Console.h>
 
-#include "PreferencesGui.h"
 #include "QGIPrimPath.h"
+#include "PreferencesGui.h"
 #include "QGIView.h"
+
 
 using namespace TechDrawGui;
 using namespace TechDraw;
@@ -53,7 +52,7 @@ QGIPrimPath::QGIPrimPath():
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemIsMovable, false);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, true);
-    setFlag(QGraphicsItem::ItemSendsGeometryChanges,true);
+    setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
     setAcceptHoverEvents(true);
 
     isHighlighted = false;
@@ -81,7 +80,7 @@ QGIPrimPath::QGIPrimPath():
 
 QVariant QGIPrimPath::itemChange(GraphicsItemChange change, const QVariant &value)
 {
-//    Base::Console().Message("QGIPP::itemChange(%d) - type: %d\n", change,type() - QGraphicsItem::UserType);
+//    Base::Console().Message("QGIPP::itemChange(%d) - type: %d\n", change, type() - QGraphicsItem::UserType);
     if (change == ItemSelectedHasChanged && scene()) {
         if(isSelected()) {
             setPrettySel();
@@ -94,7 +93,7 @@ QVariant QGIPrimPath::itemChange(GraphicsItemChange change, const QVariant &valu
 
 void QGIPrimPath::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
-//    Base::Console().Message("QGIPP::hoverEnter() - selected; %d\n",isSelected());
+//    Base::Console().Message("QGIPP::hoverEnter() - selected; %d\n", isSelected());
     if (!isSelected()) {
         setPrettyPre();
     }
@@ -103,11 +102,11 @@ void QGIPrimPath::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 
 void QGIPrimPath::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
-//    Base::Console().Message("QGIPP::hoverLeave() - selected; %d\n",isSelected());
+//    Base::Console().Message("QGIPP::hoverLeave() - selected; %d\n", isSelected());
     if(!isSelected()) {
         setPrettyNormal();
     }
-    
+
     QGraphicsPathItem::hoverLeaveEvent(event);
 }
 
@@ -157,13 +156,13 @@ QColor QGIPrimPath::getNormalColor()
     }
 
     QGraphicsItem* qparent = parentItem();
-    if (qparent == nullptr) {
+    if (!qparent) {
         parent = nullptr;
     } else {
         parent = dynamic_cast<QGIView *> (qparent);
     }
 
-    if (parent != nullptr) {
+    if (parent) {
         result = parent->getNormalColor();
     } else {
         result = PreferencesGui::normalQColor();
@@ -177,13 +176,13 @@ QColor QGIPrimPath::getPreColor()
     QColor result;
     QGIView *parent;
     QGraphicsItem* qparent = parentItem();
-    if (qparent == nullptr) {
+    if (!qparent) {
         parent = nullptr;
     } else {
         parent = dynamic_cast<QGIView *> (qparent);
     }
 
-    if (parent != nullptr) {
+    if (parent) {
         result = parent->getPreColor();
     } else {
         result = PreferencesGui::preselectQColor();
@@ -196,13 +195,13 @@ QColor QGIPrimPath::getSelectColor()
     QColor result;
     QGIView *parent;
     QGraphicsItem* qparent = parentItem();
-    if (qparent == nullptr) {
+    if (!qparent) {
         parent = nullptr;
     } else {
         parent = dynamic_cast<QGIView *> (qparent);
     }
 
-    if (parent != nullptr) {
+    if (parent) {
         result = parent->getSelectColor();
     } else {
         result = PreferencesGui::selectQColor();
@@ -226,7 +225,7 @@ void QGIPrimPath::setStyle(Qt::PenStyle s)
 void QGIPrimPath::setStyle(int s)
 {
 //    Base::Console().Message("QGIPP::setStyle(int: %d)\n", s);
-    m_styleCurrent = (Qt::PenStyle) s;
+    m_styleCurrent = static_cast<Qt::PenStyle>(s);
 }
 
 
@@ -260,16 +259,16 @@ Qt::PenCapStyle QGIPrimPath::prefCapStyle()
     newStyle = hGrp->GetInt("EdgeCapStyle", 32);    //0x00 FlatCap, 0x10 SquareCap, 0x20 RoundCap
     switch (newStyle) {
         case 0:
-            result = (Qt::PenCapStyle) 0x20;   //round;
+            result = static_cast<Qt::PenCapStyle>(0x20);   //round;
             break;
         case 1:
-            result = (Qt::PenCapStyle) 0x10;   //square;
+            result = static_cast<Qt::PenCapStyle>(0x10);   //square;
             break;
         case 2:
-            result = (Qt::PenCapStyle) 0x00;   //flat
+            result = static_cast<Qt::PenCapStyle>(0x00);   //flat
             break;
         default:
-            result = (Qt::PenCapStyle) 0x20;
+            result = static_cast<Qt::PenCapStyle>(0x20);
     }
     return result;
 }
@@ -279,9 +278,9 @@ void QGIPrimPath::mousePressEvent(QGraphicsSceneMouseEvent * event)
     //wf: this seems a bit of a hack. does it mess up selection of QGIPP??
     QGIView *parent;
     QGraphicsItem* qparent = parentItem();
-    if (qparent != nullptr) {
+    if (qparent) {
         parent = dynamic_cast<QGIView *> (qparent);
-        if (parent != nullptr) {
+        if (parent) {
 //            Base::Console().Message("QGIPP::mousePressEvent - passing event to QGIV parent\n");
             parent->mousePressEvent(event);
         } else {
@@ -315,7 +314,7 @@ void QGIPrimPath::resetFill() {
 
 //set PlainFill
 void QGIPrimPath::setFillColor(QColor c)
-{ 
+{
     m_colNormalFill = c;
     m_fillColorCurrent = m_colNormalFill;
 //    m_colDefFill = c;

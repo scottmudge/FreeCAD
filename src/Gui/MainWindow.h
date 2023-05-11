@@ -24,14 +24,11 @@
 #ifndef GUI_MAINWINDOW_H
 #define GUI_MAINWINDOW_H
 
-#include "Window.h"
-#include <Base/Console.h>
-#include <string>
-#include <vector>
-
 #include <QEvent>
 #include <QMainWindow>
 #include <QMdiArea>
+
+#include "Window.h"
 
 class QMimeData;
 class QUrl;
@@ -58,10 +55,10 @@ class GuiExport UrlHandler : public QObject
     Q_OBJECT
 
 public:
-    UrlHandler(QObject* parent = 0)
+    explicit UrlHandler(QObject* parent = nullptr)
         : QObject(parent){
     }
-    virtual ~UrlHandler() {
+    ~UrlHandler() override {
     }
     virtual void openUrl(App::Document*, const QUrl&) {
     }
@@ -89,13 +86,13 @@ public:
      * Constructs an empty main window. For default \a parent is 0, as there usually is
      * no toplevel window there.
      */
-    MainWindow(QWidget * parent = 0, Qt::WindowFlags f = Qt::Window);
+    explicit MainWindow(QWidget * parent = nullptr, Qt::WindowFlags f = Qt::Window);
     /** Destroys the object and frees any allocated resources. */
-    ~MainWindow();
+    ~MainWindow() override;
     /**
      * Filters events if this object has been installed as an event filter for the watched object.
      */
-    bool eventFilter(QObject* o, QEvent* e);
+    bool eventFilter(QObject* o, QEvent* e) override;
     /**
      * Adds an MDI window \a view to the main window's workspace and adds a new tab
      * to the tab bar.
@@ -137,7 +134,7 @@ public:
     /**
      * Returns true that the context menu contains the 'Customize...' menu item.
      */
-    QMenu * createPopupMenu();
+    QMenu * createPopupMenu() override;
 
     QString overrideIcons() const;
     void setOverrideIcons(const QString &);
@@ -150,9 +147,9 @@ public:
     /** Gets the one and only instance. */
     static MainWindow* getInstance();
     /** Starts the splasher at startup. */
-    void startSplasher(void);
+    void startSplasher();
     /** Stops the splasher after startup. */
-    void stopSplasher(void);
+    void stopSplasher();
     /* The image of the About dialog, it might be empty. */
     QPixmap aboutImage() const;
     /* The image of the splash screen of the application. */
@@ -168,6 +165,17 @@ public:
     void loadWindowSettings();
     /// Saves the main window settings.
     void saveWindowSettings(bool canDelay = false);
+    //@}
+
+    /** @name Menu
+     */
+    //@{
+    /// Set menu for dock windows.
+    void setDockWindowMenu(QMenu*);
+    /// Set menu for toolbars.
+    void setToolBarMenu(QMenu*);
+    /// Set menu for sub-windows
+    void setWindowsMenu(QMenu*);
     //@}
 
     /** @name MIME data handling
@@ -242,7 +250,7 @@ public Q_SLOTS:
     bool isClosingAll() const;
     /** Pop up a message box asking for saving document
      */
-    int confirmSave(const char *docName, QWidget *parent=0, bool addCheckBox=false);
+    int confirmSave(const char *docName, QWidget *parent=nullptr, bool addCheckBox=false);
     /**
      * Activates the next window in the child window chain.
      */
@@ -272,27 +280,35 @@ protected:
     /**
      * This method checks if the main window can be closed by checking all open documents and views.
      */
-    void closeEvent (QCloseEvent * e);
-    void showEvent  (QShowEvent  * e);
-    void hideEvent  (QHideEvent  * e);
-    void timerEvent (QTimerEvent *  ){ timeEvent();}
-    void customEvent(QEvent      * e);
-    bool event      (QEvent      * e);
+    void closeEvent (QCloseEvent * e) override;
+    void showEvent  (QShowEvent  * e) override;
+    void hideEvent  (QHideEvent  * e) override;
+    void timerEvent (QTimerEvent *  ) override {
+        Q_EMIT timeEvent();
+    }
+    void customEvent(QEvent      * e) override;
+    bool event      (QEvent      * e) override;
     /**
      * Try to interpret dropped elements.
      */
-    void dropEvent  (QDropEvent  * e);
+    void dropEvent  (QDropEvent  * e) override;
     /**
      * Checks if a mime source object can be interpreted.
      */
-    void dragEnterEvent(QDragEnterEvent * e);
+    void dragEnterEvent(QDragEnterEvent * e) override;
     /**
      * This method is called from the Qt framework automatically whenever a
      * QTranslator object has been installed. This allows to translate all
      * relevant user visible text.
      */
-    void changeEvent(QEvent *e);
-    void childEvent(QChildEvent *e);
+    void changeEvent(QEvent *e) override;
+    void childEvent(QChildEvent *e) override;
+
+private:
+    void setupDockWindows();
+    bool setupSelectionView();
+    bool setupReportView();
+    bool setupPythonConsole();
 
 private Q_SLOTS:
     /**
@@ -338,7 +354,7 @@ private Q_SLOTS:
 
 Q_SIGNALS:
     void timeEvent();
-    void windowStateChanged(MDIView*);
+    void windowStateChanged(Gui::MDIView*);
     void workbenchActivated(const QString&);
     void mainWindowClosed();
 
@@ -367,7 +383,7 @@ class StatusBarObserver: public WindowParameter, public Base::ILogger
 {
 public:
     StatusBarObserver();
-    virtual ~StatusBarObserver();
+    ~StatusBarObserver() override;
 
     /** Observes its parameter group. */
     void OnChange(Base::Subject<const char*> &rCaller, const char * sReason) override;
@@ -375,7 +391,7 @@ public:
     void SendLog(const std::string& msg, Base::LogStyle level) override;
 
     /// name of the observer
-    const char *Name(void) override {return "StatusBar";}
+    const char *Name() override {return "StatusBar";}
 
     friend class MainWindow;
 private:
@@ -393,7 +409,7 @@ public:
     static int EventType;
     enum Style {Restore, Clear};
 
-    ActionStyleEvent(Style type);
+    explicit ActionStyleEvent(Style type);
     Style getType() const;
 
 private:

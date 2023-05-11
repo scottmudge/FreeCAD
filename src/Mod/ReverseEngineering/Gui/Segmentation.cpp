@@ -20,37 +20,36 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
 # include <sstream>
+
 # include <BRep_Builder.hxx>
 # include <BRepBuilderAPI_MakePolygon.hxx>
-# include <GeomAPI_ProjectPointOnSurf.hxx>
 # include <Geom_Plane.hxx>
+# include <GeomAPI_ProjectPointOnSurf.hxx>
 # include <Standard_Failure.hxx>
 # include <TopoDS_Compound.hxx>
 # include <TopoDS_Wire.hxx>
 #endif
 
-#include "Segmentation.h"
-#include "ui_Segmentation.h"
-#include <Base/Console.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DocumentObjectGroup.h>
+#include <Base/Console.h>
 #include <Gui/WaitCursor.h>
-
 #include <Mod/Mesh/App/Core/Approximation.h>
 #include <Mod/Mesh/App/Core/Algorithm.h>
-#include <Mod/Mesh/App/Core/Segmentation.h>
 #include <Mod/Mesh/App/Core/Curvature.h>
+#include <Mod/Mesh/App/Core/Segmentation.h>
 #include <Mod/Mesh/App/Core/Smoothing.h>
-#include <Mod/Mesh/App/Mesh.h>
 #include <Mod/Mesh/App/MeshFeature.h>
-#include <Mod/Part/App/PartFeature.h>
 #include <Mod/Part/App/FaceMakerCheese.h>
+#include <Mod/Part/App/PartFeature.h>
+
+#include "Segmentation.h"
+#include "ui_Segmentation.h"
+
 
 using namespace ReverseEngineeringGui;
 
@@ -256,7 +255,7 @@ TaskSegmentation::TaskSegmentation(Mesh::Feature* mesh)
 {
     widget = new Segmentation(mesh);
     taskbox = new Gui::TaskView::TaskBox(
-        QPixmap(), widget->windowTitle(), false, 0);
+        QPixmap(), widget->windowTitle(), false, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

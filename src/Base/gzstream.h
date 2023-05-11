@@ -18,23 +18,20 @@
 // ============================================================================
 //
 // File          : gzstream.h
-// Revision      : Revision: 1.5 
+// Revision      : Revision: 1.5
 // Revision_date : Date: 2002/04/26 23:30:15 
 // Author(s)     : Deepak Bandyopadhyay, Lutz Kettner
-// 
-// Standard streambuf implementation following Nicolai Josuttis, "The 
+//
+// Standard streambuf implementation following Nicolai Josuttis, "The
 // Standard C++ Library".
 // ============================================================================
 
 #ifndef GZSTREAM_H
 #define GZSTREAM_H 1
 
-// standard C++ with new header file names and std:: namespace
-#include <iostream>
-#include <fstream>
-#include <istream>
-#include <ios>
+#include <sstream>
 #include <zlib.h>
+#include <FCGlobal.h>
 
 #ifdef _MSC_VER
 using std::ostream;
@@ -65,7 +62,7 @@ private:
 
     int flush_buffer();
 public:
-    gzstreambuf() : file(0), opened(0), mode(0) {
+    gzstreambuf() : file(nullptr), opened(0), mode(0) {
         setp( buffer, buffer + (bufferSize-1));
         setg( buffer + 4,     // beginning of putback area
               buffer + 4,     // read position
@@ -75,11 +72,11 @@ public:
     int is_open() { return opened; }
     gzstreambuf* open( const char* name, int open_mode, int comp);
     gzstreambuf* close();
-    ~gzstreambuf() { close(); }
+    ~gzstreambuf() override { close(); }
     
-    virtual int     overflow( int c = EOF);
-    virtual int     underflow();
-    virtual int     sync();
+    int     overflow( int c = EOF) override;
+    int     underflow() override;
+    int     sync() override;
 };
 
 class BaseExport gzstreambase : virtual public std::ios {
@@ -88,7 +85,7 @@ protected:
 public:
     gzstreambase() { init(&buf); }
     gzstreambase( const char* name, int open_mode, int comp);
-    ~gzstreambase();
+    ~gzstreambase() override;
     void open( const char* name, int open_mode, int comp);
     void close();
     gzstreambuf* rdbuf() { return &buf; }

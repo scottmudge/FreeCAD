@@ -33,12 +33,12 @@
 # include <Inventor/nodes/SoAnnotation.h>
 # include <Inventor/nodes/SoTransform.h>
 # include <Bnd_Box.hxx>
+# include <BRep_Tool.hxx>
 # include <BRepBndLib.hxx>
 # include <BRepMesh_IncrementalMesh.hxx>
-# include <BRep_Tool.hxx>
+# include <Standard_Version.hxx>
 # include <TopExp_Explorer.hxx>
 # include <TopoDS.hxx>
-# include <Standard_Version.hxx>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -57,6 +57,7 @@
 #include <Gui/SoFCUnifiedSelection.h>
 #include <Base/Console.h>
 
+#include "ViewProviderAddSub.h"
 
 using namespace PartDesignGui;
 

@@ -24,23 +24,25 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
-#include <QApplication>
-#include <QPainter>
-#include <QDesktopWidget>
-#include <QMenu>
-#include <QMouseEvent>
+#ifndef _PreComp_
+# include <QApplication>
+# include <QMenu>
+# include <QMouseEvent>
+# include <QPainter>
+#endif
+
+#include <App/Application.h>
+#include <App/DocumentObject.h>
+#include <App/ExpressionParser.h>
+#include <Base/Console.h>
+#include <Base/Tools.h>
 
 #include "DlgExpressionInput.h"
 #include "ui_DlgExpressionInput.h"
-#include "ExpressionCompleter.h"
-#include "Tools.h"
-#include "MainWindow.h"
+
 #include "ExprParams.h"
-#include <Base/Tools.h>
-#include <Base/Console.h>
-#include <App/Application.h>
-#include <App/ExpressionParser.h>
-#include <App/DocumentObject.h>
+#include "MainWindow.h"
+#include "Tools.h"
 
 FC_LOG_LEVEL_INIT("Gui", true, true)
 
@@ -52,13 +54,13 @@ DlgExpressionInput::DlgExpressionInput(const App::ObjectIdentifier & _path,
                                        const Base::Unit & _impliedUnit, QWidget *parent)
   : QDialog(parent)
   , ui(new Ui::DlgExpressionInput)
-  , expression(_expression ? _expression->copy() : 0)
+  , expression(_expression ? _expression->copy() : nullptr)
   , path(_path)
   , discarded(false)
   , impliedUnit(_impliedUnit)
   , exprFuncDisabler(false)
 {
-    assert(path.getDocumentObject() != 0);
+    assert(path.getDocumentObject());
 
     // Setup UI
     ui->setupUi(this);
@@ -148,6 +150,45 @@ DlgExpressionInput::~DlgExpressionInput()
     delete ui;
 }
 
+void NumberRange::setRange(double min, double max)
+{
+    minimum = min;
+    maximum = max;
+    defined = true;
+}
+
+void NumberRange::clearRange()
+{
+    defined = false;
+}
+
+void NumberRange::throwIfOutOfRange(const Base::Quantity& value) const
+{
+    if (!defined)
+        return;
+
+    if (value.getValue() < minimum || value.getValue() > maximum) {
+        Base::Quantity minVal(minimum, value.getUnit());
+        Base::Quantity maxVal(maximum, value.getUnit());
+        QString valStr = value.getUserString();
+        QString minStr = minVal.getUserString();
+        QString maxStr = maxVal.getUserString();
+        QString error = QStringLiteral("Value out of range (%1 out of [%2, %3])").arg(valStr, minStr, maxStr);
+
+        throw Base::ValueError(error.toStdString());
+    }
+}
+
+void DlgExpressionInput::setRange(double minimum, double maximum)
+{
+    numberRange.setRange(minimum, maximum);
+}
+
+void DlgExpressionInput::clearRange()
+{
+    numberRange.clearRange();
+}
+
 void DlgExpressionInput::resizeEvent(QResizeEvent *ev)
 {
     if (proxy)
@@ -173,17 +214,20 @@ void DlgExpressionInput::onTimer()
     try {
         const QString &text = ui->expression->toPlainText();
         if (text.trimmed().isEmpty()) {
+            ui->okBtn->setDisabled(true);
+            ui->discardBtn->setDefault(true);
             ui->msg->setPlainText(QString());
             ui->msg->setStyleSheet(textColorStyle);
             return;
         }
+        ui->okBtn->setDefault(true);
         std::shared_ptr<Expression> expr(
                 Expression::parse(path.getDocumentObject(), text.toUtf8().constData()));
 
         if (expr) {
             std::string error = path.getDocumentObject()->ExpressionEngine.validateExpression(path, expr);
 
-            if (error.size() > 0)
+            if (!error.empty())
                 throw Base::RuntimeError(error.c_str());
 
             std::unique_ptr<Expression> result(expr->eval());
@@ -193,7 +237,7 @@ void DlgExpressionInput::onTimer()
             ui->msg->setPlainText(QString());
             ui->msg->setStyleSheet(logColorStyle);
 
-            NumberExpression * n = Base::freecad_dynamic_cast<NumberExpression>(result.get());
+            auto * n = Base::freecad_dynamic_cast<NumberExpression>(result.get());
             if (n) {
                 Base::Quantity value = n->getQuantity();
                 QString msg = value.getUserString();
@@ -213,10 +257,12 @@ void DlgExpressionInput::onTimer()
                     ui->msg->setStyleSheet(warningColorStyle);
                 }
 
+                numberRange.throwIfOutOfRange(value);
+
                 ui->msg->setPlainText(msg);
             }
             else
-                ui->msg->setPlainText(Base::Tools::fromStdString(result->toString()));
+                ui->msg->setPlainText(QString::fromUtf8(result->toString().c_str()));
         }
     }
     catch (App::ExpressionFunctionDisabledException &) {
@@ -406,17 +452,6 @@ void DlgExpressionInput::showEvent(QShowEvent* ev)
 {
     QDialog::showEvent(ev);
     this->exprFuncDisabler.setActive(!ExprParams::getEvalFuncOnEdit());
-
-#if 0//defined(Q_OS_WIN)
-    // This way we can fetch click events outside modal dialogs
-    QWidget* widget = QApplication::activeModalWidget();
-    if (widget) {
-        QList<QWidget*> childs = widget->findChildren<QWidget*>();
-        if (childs.contains(this)) {
-            this->grabMouse();
-        }
-    }
-#endif
 }
 
 void DlgExpressionInput::evalFuncChecked(bool checked)
@@ -447,7 +482,7 @@ bool DlgExpressionInput::eventFilter(QObject *obj, QEvent *ev)
         // cursor is on this or an underlying widget or outside.
         if (!underMouse()) {
             // if the expression fields context-menu is open do not close the dialog
-            QMenu* menu = qobject_cast<QMenu*>(obj);
+            auto menu = qobject_cast<QMenu*>(obj);
             if (menu && menu->parentWidget() == ui->expression) {
                 return false;
             }

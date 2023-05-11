@@ -20,14 +20,10 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef FEMGUI_TaskAnalysisInfo_H
 #define FEMGUI_TaskAnalysisInfo_H
 
 #include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-
-#include <Mod/Fem/App/FemSetNodesObject.h>
 
 
 class Ui_TaskAnalysisInfo;
@@ -59,8 +55,8 @@ class TaskAnalysisInfo : public Gui::TaskView::TaskBox
     Q_OBJECT
 
 public:
-    TaskAnalysisInfo(Fem::FemAnalysis *pcObject,QWidget *parent = 0);
-    ~TaskAnalysisInfo();
+    explicit TaskAnalysisInfo(Fem::FemAnalysis *pcObject,QWidget *parent = nullptr);
+    ~TaskAnalysisInfo() override;
 
 private Q_SLOTS:
     void SwitchMethod(int Value);

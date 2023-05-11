@@ -20,19 +20,12 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskPadParameters_H
 #define GUI_TASKVIEW_TaskPadParameters_H
 
-#include <App/DocumentObserver.h>
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-#include <Gui/TaskView/TaskDialog.h>
-
-#include "TaskSketchBasedParameters.h"
+#include "TaskExtrudeParameters.h"
 #include "ViewProviderPad.h"
 
-class Ui_TaskPadParameters;
 
 namespace App {
 class Property;
@@ -45,78 +38,23 @@ class ViewProvider;
 namespace PartDesignGui {
 
 
-class TaskPadParameters : public TaskSketchBasedParameters
+class TaskPadParameters : public TaskExtrudeParameters
 {
     Q_OBJECT
 
 public:
-    TaskPadParameters(ViewProviderPad *PadView, QWidget *parent = 0, bool newObj=false);
-
     TaskPadParameters(ViewProviderPad *PadView, QWidget *parent, bool newObj,
-                      const std::string& pixmapname, const QString& parname);
+                      const std::string& pixmapname, const QString& parname,
+                      const char *historyPath);
 
-    ~TaskPadParameters();
+    ~TaskPadParameters() override;
 
-    virtual void saveHistory() override;
-    virtual void apply() override;
-
-    void fillDirectionCombo();
-    void addAxisToCombo(App::DocumentObject* linkObj, std::string linkSubname, QString itemText);
-
-private Q_SLOTS:
-    void onLengthChanged(double);
-    void onLength2Changed(double);
-    void onDirectionCBChanged(int);
-    void onAlongSketchNormalChanged(bool);
-    void onXDirectionEditChanged(double);
-    void onYDirectionEditChanged(double);
-    void onZDirectionEditChanged(double);
-    void onOffsetChanged(double);
-    void onMidplaneChanged(bool);
-    void onReversedChanged(bool);
-    void onUsePipeChanged(bool);
-    void onCheckFaceLimitsChanged(bool);
-    void onButtonFace(const bool pressed = true);
-    void onFaceName(const QString& text);
-    void onModeChanged(int);
-    void onAngleChanged(double);
-    void onAngle2Changed(double);
-    void onInnerAngleChanged(double);
-    void onInnerAngle2Changed(double);
-
-protected:
-    void changeEvent(QEvent *e) override;
-    bool eventFilter(QObject*, QEvent*) override;
-    void refresh() override;
-    void getReferenceAxis(App::DocumentObject*& obj, std::vector<std::string>& sub) const;
-    void onSelectionModeChanged(SelectionMode) override;
+    void apply() override;
 
 private:
-    double getLength(void) const;
-    double getLength2(void) const;
-    bool   getAlongSketchNormal(void) const;
-    bool   getCustom(void) const;
-    std::string getReferenceAxis(void) const;
-    double getXDirection(void) const;
-    double getYDirection(void) const;
-    double getZDirection(void) const;
-    double getOffset(void) const;
-    bool   getReversed(void) const;
-    bool   getMidplane(void) const;
-    int    getMode(void) const;
-    QString getFaceName(void) const;
-    void _onSelectionChanged(const Gui::SelectionChanges& msg) override;
-    void updateUI(int index);
-    void updateDirectionEdits(void);
-    void setupUI(bool newObj);
-
-private:
-    QWidget* proxy;
-    std::unique_ptr<Ui_TaskPadParameters> ui;
-    bool useElement;
-    bool selectionFace;
-    App::PropertyLinkSub* propReferenceAxis = nullptr;
-    std::vector<App::SubObjectT> axesInList;
+    void onModeChanged(int index) override;
+    void translateModeList(int index) override;
+    void translateFaceNamePlaceHolder() override;
 };
 
 /// simulation dialog for the TaskView
@@ -125,10 +63,9 @@ class TaskDlgPadParameters : public TaskDlgSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskDlgPadParameters(ViewProviderPad *PadView, bool newObj=false);
-    TaskDlgPadParameters(ViewProviderPad *PadView, bool newObj,
-                         const std::string& pixmapname, const QString& parname);
-    virtual bool accept();
+    explicit TaskDlgPadParameters(ViewProviderPad *PadView, bool newObj=false);
+
+    bool accept() override;
 
     ViewProviderPad* getPadView() const
     { return static_cast<ViewProviderPad*>(vp); }

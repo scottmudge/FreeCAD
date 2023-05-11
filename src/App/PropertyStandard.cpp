@@ -23,32 +23,27 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-# include <sstream>
-# include <boost/version.hpp>
-# include <boost/filesystem/path.hpp>
-#endif
+#include <cctype>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-#include <boost/math/special_functions/round.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/math/special_functions/round.hpp>
 
 #include <Base/Console.h>
 #include <Base/Exception.h>
+#include <Base/Interpreter.h>
 #include <Base/Reader.h>
 #include <Base/Writer.h>
-#include <Base/Stream.h>
 #include <Base/Quantity.h>
+#include <Base/Stream.h>
 #include <Base/Tools.h>
 
 #include "PropertyStandard.h"
-#include "PropertyLinks.h"
-#include "MaterialPy.h"
-#include "ObjectIdentifier.h"
 #include "Application.h"
 #include "Document.h"
 #include "DocumentObject.h"
 #include "DocumentParams.h"
+#include "MaterialPy.h"
+#include "ObjectIdentifier.h"
 
 using namespace App;
 using namespace Base;
@@ -74,10 +69,7 @@ PropertyInteger::PropertyInteger()
 }
 
 
-PropertyInteger::~PropertyInteger()
-{
-
-}
+PropertyInteger::~PropertyInteger() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -85,6 +77,8 @@ PropertyInteger::~PropertyInteger()
 
 bool PropertyInteger::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyInteger::getClassTypeId())
         && this->getValue() == static_cast<const PropertyInteger&>(other).getValue();
 }
@@ -176,15 +170,9 @@ TYPESYSTEM_SOURCE(App::PropertyPath , App::Property)
 //**************************************************************************
 // Construction/Destruction
 
-PropertyPath::PropertyPath()
-{
+PropertyPath::PropertyPath() = default;
 
-}
-
-PropertyPath::~PropertyPath()
-{
-
-}
+PropertyPath::~PropertyPath() = default;
 
 
 //**************************************************************************
@@ -285,6 +273,8 @@ unsigned int PropertyPath::getMemSize () const
 
 bool PropertyPath::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyPath::getClassTypeId())
         && this->getValue() == static_cast<const PropertyPath&>(other).getValue();
 }
@@ -310,10 +300,7 @@ PropertyEnumeration::PropertyEnumeration(const App::Enumeration &e)
     _enum = e;
 }
 
-PropertyEnumeration::~PropertyEnumeration()
-{
-
-}
+PropertyEnumeration::~PropertyEnumeration() = default;
 
 void PropertyEnumeration::setEnums(const char **plEnums)
 {
@@ -330,19 +317,7 @@ void PropertyEnumeration::setEnums(const char **plEnums)
 
 void PropertyEnumeration::setEnums(const std::vector<std::string> &Enums)
 {
-    // _enum.setEnums() will preserve old value possible, so no need to do it
-    // here
-#if 0
-    if (_enum.isValid()) {
-        const std::string &index = getValueAsString();
-        _enum.setEnums(Enums);
-        setValue(index.c_str());
-    } else {
-        _enum.setEnums(Enums);
-    }
-#else
     setEnumVector(Enums);
-#endif
 }
 
 void PropertyEnumeration::setValue(const char *value)
@@ -388,7 +363,7 @@ const char * PropertyEnumeration::getValueAsString() const
     return _enum.getCStr();
 }
 
-const Enumeration &PropertyEnumeration::getEnum() const
+const Enumeration & PropertyEnumeration::getEnum() const
 {
     return _enum;
 }
@@ -411,9 +386,9 @@ void PropertyEnumeration::setEnumVector(const std::vector<std::string> &values)
         hasSetValue();
 }
 
-const char ** PropertyEnumeration::getEnums() const
+bool PropertyEnumeration::hasEnums() const
 {
-    return _enum.getEnums();
+    return _enum.hasEnums();
 }
 
 bool PropertyEnumeration::isValid() const
@@ -471,7 +446,7 @@ void PropertyEnumeration::Restore(Base::XMLReader &reader)
 
     if (val < 0) {
         // If the enum is empty at this stage do not print a warning
-        if (_enum.getEnums())
+        if (_enum.hasEnums())
             Base::Console().Warning("Enumeration index %d is out of range, ignore it\n", val);
         val = getValue();
     }
@@ -483,13 +458,6 @@ void PropertyEnumeration::Restore(Base::XMLReader &reader)
 PyObject * PropertyEnumeration::getPyObject()
 {
     if (!_enum.isValid()) {
-        // There is legimate use case of having an empty PropertyEnumeration and
-        // set its enumeration items later. Returning error here cause hasattr()
-        // to return False even though the property exists.
-        //
-        // PyErr_SetString(PyExc_AssertionError, "The enum is empty");
-        // return nullptr;
-        //
         Py_Return;
     }
 
@@ -589,7 +557,8 @@ void PropertyEnumeration::setPathValue(const ObjectIdentifier &, const App::any 
         setValue(App::any_cast<const char*>(value));
     else {
         Base::PyGILStateLocker lock;
-        setPyObject(pyObjectFromAny(value).ptr());
+        Py::Object pyValue = pyObjectFromAny(value);
+        setPyObject(pyValue.ptr());
     }
 }
 
@@ -621,13 +590,13 @@ bool PropertyEnumeration::getPyPathValue(const ObjectIdentifier &path, Py::Objec
     if (p == ".Enum" || p == ".All") {
         Base::PyGILStateLocker lock;
         Py::Tuple res(_enum.maxValue()+1);
-        const char **enums = _enum.getEnums();
+        std::vector<std::string> enums = _enum.getEnumVector();
         PropertyString tmp;
-        for(int i=0;i<=_enum.maxValue();++i) {
+        for(int i=0;i< int(enums.size());++i) {
             tmp.setValue(enums[i]);
             res.setItem(i,Py::asObject(tmp.getPyObject()));
         }
-        if(p == ".Enum")
+        if (p == ".Enum")
             r = res;
         else {
             Py::Tuple tuple(2);
@@ -645,6 +614,8 @@ bool PropertyEnumeration::getPyPathValue(const ObjectIdentifier &path, Py::Objec
 
 bool PropertyEnumeration::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyEnumeration::getClassTypeId())
         && getEnum() == static_cast<const PropertyEnumeration&>(other).getEnum();
 }
@@ -675,6 +646,8 @@ PropertyIntegerConstraint::~PropertyIntegerConstraint()
 
 bool PropertyIntegerConstraint::isSame(const Property &_other) const
 {
+    if (&_other == this)
+        return true;
     if (!_other.isDerivedFrom(PropertyIntegerConstraint::getClassTypeId()))
         return false;
     const auto &other = static_cast<const PropertyIntegerConstraint&>(_other);
@@ -817,9 +790,7 @@ PropertyPercent::PropertyPercent()
     _ConstStruct = &percent;
 }
 
-PropertyPercent::~PropertyPercent()
-{
-}
+PropertyPercent::~PropertyPercent() = default;
 
 //**************************************************************************
 //**************************************************************************
@@ -832,15 +803,9 @@ TYPESYSTEM_SOURCE(App::PropertyIntegerList , App::PropertyLists)
 // Construction/Destruction
 
 
-PropertyIntegerList::PropertyIntegerList()
-{
+PropertyIntegerList::PropertyIntegerList() = default;
 
-}
-
-PropertyIntegerList::~PropertyIntegerList()
-{
-
-}
+PropertyIntegerList::~PropertyIntegerList() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -920,15 +885,9 @@ TYPESYSTEM_SOURCE(App::PropertyIntegerSet , App::Property)
 // Construction/Destruction
 
 
-PropertyIntegerSet::PropertyIntegerSet()
-{
+PropertyIntegerSet::PropertyIntegerSet() = default;
 
-}
-
-PropertyIntegerSet::~PropertyIntegerSet()
-{
-
-}
+PropertyIntegerSet::~PropertyIntegerSet() = default;
 
 
 //**************************************************************************
@@ -1049,6 +1008,8 @@ unsigned int PropertyIntegerSet::getMemSize () const
 
 bool PropertyIntegerSet::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyIntegerSet::getClassTypeId())
         && getValues() == static_cast<const PropertyIntegerSet&>(other).getValues();
 }
@@ -1069,10 +1030,7 @@ PropertyFloat::PropertyFloat()
     _dValue = 0.0;
 }
 
-PropertyFloat::~PropertyFloat()
-{
-
-}
+PropertyFloat::~PropertyFloat() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -1168,6 +1126,8 @@ App::any PropertyFloat::getPathValue(const ObjectIdentifier &path) const
 
 bool PropertyFloat::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyFloat::getClassTypeId())
         && getValue() == static_cast<const PropertyFloat&>(other).getValue();
 }
@@ -1324,6 +1284,8 @@ void PropertyFloatConstraint::setPyObject(PyObject *value)
 
 bool PropertyFloatConstraint::isSame(const Property &_other) const
 {
+    if (&_other == this)
+        return true;
     if (!_other.isDerivedFrom(PropertyFloatConstraint::getClassTypeId()))
         return false;
     auto &other = static_cast<const PropertyFloatConstraint&>(_other);
@@ -1354,10 +1316,7 @@ PropertyPrecision::PropertyPrecision()
     setConstraints(&PrecisionStandard);
 }
 
-PropertyPrecision::~PropertyPrecision()
-{
-
-}
+PropertyPrecision::~PropertyPrecision() = default;
 
 
 //**************************************************************************
@@ -1370,15 +1329,9 @@ TYPESYSTEM_SOURCE(App::PropertyFloatList , App::PropertyLists)
 // Construction/Destruction
 
 
-PropertyFloatList::PropertyFloatList()
-{
+PropertyFloatList::PropertyFloatList() = default;
 
-}
-
-PropertyFloatList::~PropertyFloatList()
-{
-
-}
+PropertyFloatList::~PropertyFloatList() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -1540,19 +1493,14 @@ void _PropertyFloatList::Paste(const Property &from)
 
 TYPESYSTEM_SOURCE(App::PropertyString , App::Property)
 
-PropertyString::PropertyString()
-{
+PropertyString::PropertyString() = default;
 
-}
-
-PropertyString::~PropertyString()
-{
-
-}
+PropertyString::~PropertyString() = default;
 
 void PropertyString::setValue(const char* newLabel)
 {
-    if(!newLabel) return;
+    if(!newLabel)
+        return;
 
     if(_cValue == newLabel)
         return;
@@ -1576,8 +1524,8 @@ void PropertyString::setValue(const char* newLabel)
             int len = 0;
             const char *a=newLabel, *b=obj->getNameInDocument();
             for (; *a && *b; ++a, ++b) {
-                int ac = *a;
-                int bc = *b;
+                unsigned char ac = static_cast<unsigned char>(*a);
+                unsigned char bc = static_cast<unsigned char>(*b);
                 if (ac == bc) {
                     if(ac == '_' || std::isalpha(ac))
                         continue;
@@ -1592,7 +1540,7 @@ void PropertyString::setValue(const char* newLabel)
                 }
             }
             if (!len && *b == 0) {
-                int ac = *a;
+                unsigned char ac = static_cast<unsigned char>(*a);
                 if (ac == 0 || (ac != '_' && !std::isalpha(ac)))
                     len = a - newLabel;
             }
@@ -1677,7 +1625,7 @@ void PropertyString::setValue(const char* newLabel)
             propChanges = PropertyLinkBase::updateLabelReferences(obj,newLabel);
         }
 
-        if(propChanges.size() && !GetApplication().getActiveTransaction()) {
+        if(!propChanges.empty() && !GetApplication().getActiveTransaction()) {
             commit = true;
             std::ostringstream str;
             str << "Change " << obj->getNameInDocument() << ".Label";
@@ -1822,6 +1770,8 @@ App::any PropertyString::getPathValue(const ObjectIdentifier &path) const
 
 bool PropertyString::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyString::getClassTypeId())
         && this->getValue() == static_cast<const PropertyString&>(other).getValue();
 }
@@ -1833,15 +1783,9 @@ bool PropertyString::isSame(const Property &other) const
 
 TYPESYSTEM_SOURCE(App::PropertyUUID , App::Property)
 
-PropertyUUID::PropertyUUID()
-{
+PropertyUUID::PropertyUUID() = default;
 
-}
-
-PropertyUUID::~PropertyUUID()
-{
-
-}
+PropertyUUID::~PropertyUUID() = default;
 
 void PropertyUUID::setValue(const Base::Uuid &id)
 {
@@ -1939,6 +1883,8 @@ unsigned int PropertyUUID::getMemSize () const
 
 bool PropertyUUID::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyUUID::getClassTypeId())
         && this->getValue() == static_cast<const PropertyUUID&>(other).getValue();
 }
@@ -1949,15 +1895,9 @@ bool PropertyUUID::isSame(const Property &other) const
 
 TYPESYSTEM_SOURCE(App::PropertyFont , App::PropertyString)
 
-PropertyFont::PropertyFont()
-{
+PropertyFont::PropertyFont() = default;
 
-}
-
-PropertyFont::~PropertyFont()
-{
-
-}
+PropertyFont::~PropertyFont() = default;
 
 //**************************************************************************
 // PropertyStringList
@@ -1965,15 +1905,9 @@ PropertyFont::~PropertyFont()
 
 TYPESYSTEM_SOURCE(App::PropertyStringList , App::PropertyLists)
 
-PropertyStringList::PropertyStringList()
-{
+PropertyStringList::PropertyStringList() = default;
 
-}
-
-PropertyStringList::~PropertyStringList()
-{
-
-}
+PropertyStringList::~PropertyStringList() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -2068,15 +2002,9 @@ void PropertyStringList::Paste(const Property &from)
 
 TYPESYSTEM_SOURCE(App::PropertyMap , App::Property)
 
-PropertyMap::PropertyMap()
-{
+PropertyMap::PropertyMap() = default;
 
-}
-
-PropertyMap::~PropertyMap()
-{
-
-}
+PropertyMap::~PropertyMap() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -2263,6 +2191,8 @@ void PropertyMap::Paste(const Property &from)
 
 bool PropertyMap::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyMap::getClassTypeId())
         && getValues() == static_cast<const PropertyMap &>(other).getValues();
 }
@@ -2283,10 +2213,7 @@ PropertyBool::PropertyBool()
     _lValue = false;
 }
 
-PropertyBool::~PropertyBool()
-{
-
-}
+PropertyBool::~PropertyBool() = default;
 
 //**************************************************************************
 // Setter/getter for the property
@@ -2310,10 +2237,9 @@ PyObject *PropertyBool::getPyObject()
 
 void PropertyBool::setPyObject(PyObject *value)
 {
-    if (PyBool_Check(value))
-        setValue(PyObject_IsTrue(value)!=0);
-    else if(PyLong_Check(value))
-        setValue(PyLong_AsLong(value)!=0);
+    if (PyBool_Check(value) || PyLong_Check(value)) {
+        setValue(Base::asBoolean(value));
+    }
     else {
         std::string error = std::string("type must be bool, not ");
         error += value->ob_type->tp_name;
@@ -2384,6 +2310,8 @@ App::any PropertyBool::getPathValue(const ObjectIdentifier &path) const
 
 bool PropertyBool::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyBool::getClassTypeId())
         && this->getValue() == static_cast<const PropertyBool&>(other).getValue();
 }
@@ -2399,15 +2327,9 @@ TYPESYSTEM_SOURCE(App::PropertyBoolList , App::PropertyLists)
 // Construction/Destruction
 
 
-PropertyBoolList::PropertyBoolList()
-{
+PropertyBoolList::PropertyBoolList() = default;
 
-}
-
-PropertyBoolList::~PropertyBoolList()
-{
-
-}
+PropertyBoolList::~PropertyBoolList() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -2441,7 +2363,7 @@ void PropertyBoolList::setPyObject(PyObject *value)
 
 bool PropertyBoolList::getPyValue(PyObject *item) const {
     if (PyBool_Check(item)) {
-        return (PyObject_IsTrue(item) ? true : false);
+        return Base::asBoolean(item);
     } else if (PyLong_Check(item)) {
         return (PyLong_AsLong(item) ? true : false);
     } else {
@@ -2497,15 +2419,9 @@ TYPESYSTEM_SOURCE(App::PropertyColor , App::Property)
 //**************************************************************************
 // Construction/Destruction
 
-PropertyColor::PropertyColor()
-{
+PropertyColor::PropertyColor() = default;
 
-}
-
-PropertyColor::~PropertyColor()
-{
-
-}
+PropertyColor::~PropertyColor() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -2639,6 +2555,8 @@ void PropertyColor::Paste(const Property &from)
 
 bool PropertyColor::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyColor::getClassTypeId())
         && this->getValue() == static_cast<const PropertyColor&>(other).getValue();
 }
@@ -2652,15 +2570,9 @@ TYPESYSTEM_SOURCE(App::PropertyColorList , App::PropertyLists)
 //**************************************************************************
 // Construction/Destruction
 
-PropertyColorList::PropertyColorList()
-{
+PropertyColorList::PropertyColorList() = default;
 
-}
-
-PropertyColorList::~PropertyColorList()
-{
-
-}
+PropertyColorList::~PropertyColorList() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -2759,13 +2671,9 @@ PropertyMaterial::PropertyMaterial()
 {
     if (DocumentParams::getEnableMaterialEdit())
         setStatus(MaterialEdit, true);
-
 }
 
-PropertyMaterial::~PropertyMaterial()
-{
-
-}
+PropertyMaterial::~PropertyMaterial() = default;
 
 void PropertyMaterial::setValue(const Material &mat)
 {
@@ -2888,6 +2796,8 @@ void PropertyMaterial::Paste(const Property &from)
 
 bool PropertyMaterial::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return other.isDerivedFrom(PropertyMaterial::getClassTypeId())
         && this->getValue() == static_cast<const PropertyMaterial&>(other).getValue();
 }
@@ -2902,15 +2812,9 @@ TYPESYSTEM_SOURCE(App::PropertyMaterialList, App::PropertyLists)
 //**************************************************************************
 // Construction/Destruction
 
-PropertyMaterialList::PropertyMaterialList()
-{
+PropertyMaterialList::PropertyMaterialList() = default;
 
-}
-
-PropertyMaterialList::~PropertyMaterialList()
-{
-
-}
+PropertyMaterialList::~PropertyMaterialList() = default;
 
 //**************************************************************************
 // Base class implementer
@@ -3029,7 +2933,7 @@ void PropertyMaterialList::Paste(const Property &from)
 
 TYPESYSTEM_SOURCE(App::PropertyPersistentObject , App::PropertyString)
 
-PyObject *PropertyPersistentObject::getPyObject(void){
+PyObject *PropertyPersistentObject::getPyObject(){
     if(_pObject)
         return _pObject->getPyObject();
     return inherited::getPyObject();
@@ -3055,7 +2959,7 @@ void PropertyPersistentObject::Restore(Base::XMLReader &reader){
     reader.readEndElement(ELEMENT_PERSISTENT_OBJ);
 }
 
-Property *PropertyPersistentObject::Copy(void) const{
+Property *PropertyPersistentObject::Copy() const{
     auto *p= new PropertyPersistentObject();
     p->_cValue = _cValue;
     p->_pObject = _pObject;
@@ -3072,8 +2976,10 @@ void PropertyPersistentObject::Paste(const Property &from){
     }
 }
 
-bool PropertyPersistentObject::isSame(const Property &) const
+bool PropertyPersistentObject::isSame(const Property &other) const
 {
+    if (&other == this)
+        return true;
     return false;
 }
 

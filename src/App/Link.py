@@ -285,7 +285,7 @@ def _define_link(class_name, props):
 {auto_comment()}
 namespace App {{
 PROPERTY_SOURCE_TEMPLATE(App::{class_name}Python, App::{class_name})
-template<> const char* App::{class_name}Python::getViewProviderName(void) const {{
+template<> const char* App::{class_name}Python::getViewProviderName() const {{
     return "Gui::ViewProvider{class_name}Python";
 }}
 template class AppExport FeaturePythonT<App::{class_name}>;

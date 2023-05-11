@@ -116,6 +116,11 @@ class Shape2DView(DraftObject):
                     "A list of exclusion points. Any edge touching any of those points will not be drawn.")
             obj.addProperty("App::PropertyVectorList", "ExclusionPoints",
                             "Draft", _tip)
+        if not "ExclusionNames" in pl:
+            _tip = QT_TRANSLATE_NOOP("App::Property",
+                    "A list of exclusion object names. Any object viewed that matches a name from the list will not be drawn.")
+            obj.addProperty("App::PropertyStringList", "ExclusionNames",
+                            "Draft", _tip)
         if not "OnlySolids" in pl:
             _tip = QT_TRANSLATE_NOOP("App::Property",
                     "If this is True, only solid geometry is handled. This overrides the base object's Only Solids property")
@@ -140,9 +145,9 @@ class Shape2DView(DraftObject):
     def getProjected(self,obj,shape,direction):
 
         "returns projected edges from a shape and a direction"
-        import Part, Drawing, DraftGeomUtils
+        import Part, TechDraw, DraftGeomUtils
         edges = []
-        _groups = Drawing.projectEx(shape, direction)
+        _groups = TechDraw.projectEx(shape, direction)
         for g in _groups[0:5]:
             if g:
                 edges.append(g)
@@ -183,10 +188,15 @@ class Shape2DView(DraftObject):
                     nedges.append(e)
         return nedges
 
+    def excludeNames(self,obj,objs):
+        if hasattr(obj,"ExclusionNames"):
+            objs = [o for o in objs if not(o.Name in obj.ExclusionNames)]
+            return objs
+
     def execute(self,obj):
-        if hasattr(obj,"AutoUpdate"):
-            if not obj.AutoUpdate:
-                return True
+
+        if not getattr(obj,"AutoUpdate", True):
+            return True
         import Part, DraftGeomUtils
         obj.positionBySupport()
         pl = obj.Placement
@@ -194,10 +204,10 @@ class Shape2DView(DraftObject):
             if utils.get_type(obj.Base) in ["BuildingPart","SectionPlane"]:
                 objs = []
                 if utils.get_type(obj.Base) == "SectionPlane":
-                    objs = obj.Base.Objects
+                    objs = self.excludeNames(obj,obj.Base.Objects)
                     cutplane = obj.Base.Shape
                 else:
-                    objs = obj.Base.Group
+                    objs = self.excludeNames(obj,obj.Base.Group)
                     cutplane = Part.makePlane(1000, 1000, App.Vector(-500, -500, 0))
                     m = 1
                     if obj.Base.ViewObject and hasattr(obj.Base.ViewObject,"CutMargin"):
@@ -210,12 +220,12 @@ class Shape2DView(DraftObject):
                         onlysolids = obj.Base.OnlySolids
                     if hasattr(obj,"OnlySolids"): # override base object
                         onlysolids = obj.OnlySolids
-                    import Arch, Part, Drawing
+                    import Arch
                     objs = groups.get_group_contents(objs, walls=True)
                     if getattr(obj,"VisibleOnly",True):
                         objs = gui_utils.remove_hidden(objs)
                     shapes = []
-                    if hasattr(obj,"FuseArch") and obj.FuseArch:
+                    if getattr(obj,"FuseArch", False):
                         shtypes = {}
                         for o in objs:
                             if utils.get_type(o) in ["Wall","Structure"]:
@@ -313,7 +323,7 @@ class Shape2DView(DraftObject):
 
             elif obj.Base.isDerivedFrom("App::DocumentObjectGroup"):
                 shapes = []
-                objs = groups.get_group_contents(obj.Base)
+                objs = self.excludeNames(obj,groups.get_group_contents(obj.Base))
                 for o in objs:
                     if hasattr(o,'Shape'):
                         if o.Shape:

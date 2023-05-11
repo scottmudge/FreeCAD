@@ -24,32 +24,22 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <sstream>
 # include <QAction>
-# include <QRegExp>
-# include <QTextStream>
 # include <QMessageBox>
-# include <Precision.hxx>
-# include <QKeyEvent>
 #endif
+
+#include <App/Application.h>
+#include <App/Document.h>
+#include <Base/Tools.h>
+#include <Gui/Application.h>
+#include <Gui/CommandT.h>
+#include <Gui/Document.h>
+#include <Gui/MetaTypes.h>
+#include <Gui/Selection.h>
+#include <Mod/PartDesign/App/FeatureLoft.h>
 
 #include "ui_TaskLoftParameters.h"
 #include "TaskLoftParameters.h"
-#include <App/Application.h>
-#include <App/Document.h>
-#include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Base/Console.h>
-#include <Base/Tools.h>
-#include <Gui/Selection.h>
-#include <Gui/CommandT.h>
-#include <Gui/MetaTypes.h>
-#include <Mod/PartDesign/App/FeatureLoft.h>
-#include <Mod/Sketcher/App/SketchObject.h>
-#include <Mod/PartDesign/App/Body.h>
 #include "TaskSketchBasedParameters.h"
 #include "ReferenceSelection.h"
 #include "Utils.h"
@@ -59,7 +49,7 @@ using namespace Gui;
 
 /* TRANSLATOR PartDesignGui::TaskLoftParameters */
 
-TaskLoftParameters::TaskLoftParameters(ViewProviderLoft *LoftView,bool /*newObj*/, QWidget *parent)
+TaskLoftParameters::TaskLoftParameters(ViewProviderLoft *LoftView, bool /*newObj*/, QWidget *parent)
     : TaskSketchBasedParameters(LoftView, parent, "PartDesign_AdditiveLoft", tr("Loft parameters"))
     , ui(new Ui_TaskLoftParameters)
 {
@@ -185,7 +175,6 @@ TaskDlgLoftParameters::TaskDlgLoftParameters(ViewProviderLoft *LoftView,bool new
 TaskDlgLoftParameters::~TaskDlgLoftParameters()
 {
 }
-
 
 bool TaskDlgLoftParameters::accept()
 {

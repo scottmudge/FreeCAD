@@ -20,12 +20,11 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_VIEWPROVIDERGROUPEXTENSION_H
 #define GUI_VIEWPROVIDERGROUPEXTENSION_H
 
-#include <App/Extension.h>
-#include "ViewProviderExtension.h"
+#include "ViewProviderExtensionPython.h"
+
 
 namespace Gui
 {
@@ -36,36 +35,35 @@ class GuiExport ViewProviderGroupExtension : public ViewProviderExtension
 
 public:
     /// Constructor
-    ViewProviderGroupExtension(void);
-    virtual ~ViewProviderGroupExtension();
+    ViewProviderGroupExtension();
+    ~ViewProviderGroupExtension() override;
 
-    virtual void extensionUpdateData(const App::Property*) override;
-    virtual void extensionClaimChildren(std::vector<App::DocumentObject*> &)const override;
-    virtual bool extensionCanDragObjects() const override;
-    virtual bool extensionCanDragObject(App::DocumentObject*) const override;
-    virtual void extensionDragObject(App::DocumentObject*) override;
-    virtual bool extensionCanDropObjects() const override;
-    virtual bool extensionCanDropObject(App::DocumentObject*) const override;
-    virtual void extensionDropObject(App::DocumentObject*) override;
+    void extensionUpdateData(const App::Property*) override;
+    void extensionClaimChildren(std::vector<App::DocumentObject*> &)const override;
+    bool extensionCanDragObjects() const override;
+    bool extensionCanDragObject(App::DocumentObject*) const override;
+    void extensionDragObject(App::DocumentObject*) override;
+    bool extensionCanDropObjects() const override;
+    bool extensionCanDropObject(App::DocumentObject*) const override;
+    void extensionDropObject(App::DocumentObject*) override;
+    bool extensionOnDelete(const std::vector<std::string> &) override;
 
-    virtual bool extensionOnDelete(const std::vector<std::string> &) override;
+    void extensionAttach(App::DocumentObject* pcObject) override;
 
-    virtual void extensionAttach(App::DocumentObject* pcObject) override;
+    void extensionFinishRestoring() override;
 
-    virtual void extensionFinishRestoring() override;
+    int extensionReorderObjects(const std::vector<App::DocumentObject*> &objs, App::DocumentObject* before) override;
+    int extensionCanReorderObject(App::DocumentObject* obj, App::DocumentObject* before) override;
 
-    virtual int extensionReorderObjects(const std::vector<App::DocumentObject*> &objs, App::DocumentObject* before) override;
-    virtual int extensionCanReorderObject(App::DocumentObject* obj, App::DocumentObject* before) override;
-
-    virtual bool extensionGetToolTip(const QByteArray &tag, QString &tooltip) const override;
-    virtual bool extensionIconMouseEvent(QMouseEvent *, const QByteArray &) override;
+    bool extensionGetToolTip(const QByteArray &tag, QString &tooltip) const override;
+    bool extensionIconMouseEvent(QMouseEvent *, const QByteArray &) override;
 
 protected:
     void buildExport() const;
     virtual bool shouldCheckExport(App::DocumentObject *) const;
 };
 
-typedef ViewProviderExtensionPythonT<Gui::ViewProviderGroupExtension> ViewProviderGroupExtensionPython;
+using ViewProviderGroupExtensionPython = ViewProviderExtensionPythonT<Gui::ViewProviderGroupExtension>;
 
 } //namespace Gui
 

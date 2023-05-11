@@ -20,16 +20,12 @@
  *                                                                            *
  ******************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskPolarPatternParameters_H
 #define GUI_TASKVIEW_TaskPolarPatternParameters_H
 
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-#include <Gui/TaskView/TaskDialog.h>
-
 #include "TaskTransformedParameters.h"
 #include "ViewProviderPolarPattern.h"
+
 
 class QTimer;
 class Ui_TaskPolarPatternParameters;
@@ -52,12 +48,12 @@ class TaskPolarPatternParameters : public TaskTransformedParameters
 
 public:
     /// Constructor for task with ViewProvider
-    TaskPolarPatternParameters(ViewProviderTransformed *TransformedView, QWidget *parent = 0);
+    explicit TaskPolarPatternParameters(ViewProviderTransformed *TransformedView, QWidget *parent = nullptr);
     /// Constructor for task with parent task (MultiTransform mode)
     TaskPolarPatternParameters(TaskMultiTransformParameters *parentTask, QLayout *layout);
-    virtual ~TaskPolarPatternParameters();
+    ~TaskPolarPatternParameters() override;
 
-    void apply();
+    void apply() override;
 
 private Q_SLOTS:
     void onAxisChanged(int num);
@@ -67,23 +63,22 @@ private Q_SLOTS:
     virtual void onUpdateView(bool);
 
 protected:
-    virtual void changeEvent(QEvent *e);
-    virtual void onSelectionChanged(const Gui::SelectionChanges& msg);
+    void changeEvent(QEvent *e) override;
+    void onSelectionChanged(const Gui::SelectionChanges& msg) override;
     void getAxis(App::DocumentObject*& obj, std::vector<std::string>& sub) const;
-    const std::string getStdAxis(void) const;
-    const std::string getAxis(void) const;
-    bool getReverse(void) const;
-    double getAngle(void) const;
-    unsigned getOccurrences(void) const;
+    const std::string getStdAxis() const;
+    const std::string getAxis() const;
+    bool getReverse() const;
+    double getAngle() const;
+    unsigned getOccurrences() const;
 
 private:
-    void connectSignals();
-    void setupUI();
-    void updateUI();
+    void connectSignals() override;
+    void setupUI() override;
+    void updateUI() override;
 
 private:
     std::unique_ptr<Ui_TaskPolarPatternParameters> ui;
-    QTimer* updateViewTimer;
 
     ComboLinks axesLinks;
 };
@@ -95,8 +90,8 @@ class TaskDlgPolarPatternParameters : public TaskDlgTransformedParameters
     Q_OBJECT
 
 public:
-    TaskDlgPolarPatternParameters(ViewProviderPolarPattern *PolarPatternView);
-    virtual ~TaskDlgPolarPatternParameters() {}
+    explicit TaskDlgPolarPatternParameters(ViewProviderPolarPattern *PolarPatternView);
+    ~TaskDlgPolarPatternParameters() override {}
 };
 
 } //namespace PartDesignGui

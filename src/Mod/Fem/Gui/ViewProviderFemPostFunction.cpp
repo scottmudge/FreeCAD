@@ -20,53 +20,46 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <cmath>
+
+# include <Inventor/actions/SoSearchAction.h>
+# include <Inventor/draggers/SoHandleBoxDragger.h>
+# include <Inventor/draggers/SoJackDragger.h>
+# include <Inventor/manips/SoCenterballManip.h>
+# include <Inventor/manips/SoHandleBoxManip.h>
+# include <Inventor/manips/SoJackManip.h>
+# include <Inventor/manips/SoTransformManip.h>
 # include <Inventor/nodes/SoCoordinate3.h>
-# include <Inventor/nodes/SoMaterial.h>
-# include <Inventor/nodes/SoSurroundScale.h>
 # include <Inventor/nodes/SoLineSet.h>
+# include <Inventor/nodes/SoMaterial.h>
 # include <Inventor/nodes/SoSeparator.h>
 # include <Inventor/nodes/SoTransform.h>
-# include <Inventor/nodes/SoMatrixTransform.h>
-# include <Inventor/nodes/SoSphere.h>
-# include <Inventor/manips/SoTransformManip.h>
-# include <Inventor/manips/SoCenterballManip.h>
-# include <Inventor/manips/SoTransformerManip.h>
-# include <Inventor/manips/SoTransformBoxManip.h>
-# include <Inventor/manips/SoHandleBoxManip.h>
-# include <Inventor/manips/SoTabBoxManip.h>
-# include <Inventor/actions/SoSearchAction.h>
-# include <Inventor/engines/SoDecomposeMatrix.h>
-# include <Inventor/draggers/SoCenterballDragger.h>
-# include <Inventor/draggers/SoTransformerDragger.h>
-# include <Inventor/draggers/SoTransformBoxDragger.h>
-# include <Inventor/draggers/SoHandleBoxDragger.h>
 
+# include <QApplication>
 # include <QMessageBox>
-
-# include <boost_bind_bind.hpp>
-
-# include <math.h>
+# include <QTextStream>
 #endif
 
-#include "ViewProviderFemPostFunction.h"
-#include "TaskPostBoxes.h"
-#include <Mod/Fem/App/FemPostFunction.h>
-#include <Base/Console.h>
-#include <Base/Interpreter.h>
+#include <App/Document.h>
+#include <Base/UnitsApi.h>
 #include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/SoNavigationDragger.h>
-#include <Gui/Macro.h>
-#include <Gui/TaskView/TaskDialog.h>
 #include <Gui/Control.h>
-#include <App/PropertyUnits.h>
+#include <Gui/Document.h>
+#include <Gui/MainWindow.h>
+#include <Gui/View3DInventor.h>
+#include <Gui/View3DInventorViewer.h>
+#include <Gui/TaskView/TaskDialog.h>
+
+#include "ViewProviderFemPostFunction.h"
+#include "FemSettings.h"
+#include "TaskPostBoxes.h"
 
 #include "ui_PlaneWidget.h"
 #include "ui_SphereWidget.h"
+
 
 using namespace FemGui;
 namespace bp = boost::placeholders;
@@ -80,7 +73,7 @@ void FunctionWidget::setViewProvider(ViewProviderFemPostFunction* view) {
 
 void FunctionWidget::onObjectsChanged(const App::DocumentObject& obj, const App::Property& p) {
 
-    if(&obj == m_object)
+    if (&obj == m_object)
         onChange(p);
 }
 
@@ -95,12 +88,12 @@ ViewProviderFemPostFunctionProvider::~ViewProviderFemPostFunctionProvider() {
 
 }
 
-std::vector< App::DocumentObject* > ViewProviderFemPostFunctionProvider::claimChildren(void) const {
+std::vector< App::DocumentObject* > ViewProviderFemPostFunctionProvider::claimChildren() const {
 
     return static_cast<Fem::FemPostFunctionProvider*>(getObject())->Functions.getValues();
 }
 
-std::vector< App::DocumentObject* > ViewProviderFemPostFunctionProvider::claimChildren3D(void) const {
+std::vector< App::DocumentObject* > ViewProviderFemPostFunctionProvider::claimChildren3D() const {
     return claimChildren();
 }
 
@@ -113,7 +106,7 @@ void ViewProviderFemPostFunctionProvider::onChanged(const App::Property* prop) {
 void ViewProviderFemPostFunctionProvider::updateData(const App::Property* prop) {
     Gui::ViewProviderDocumentObject::updateData(prop);
 
-    if(strcmp(prop->getName(), "Functions") == 0) {
+    if (strcmp(prop->getName(), "Functions") == 0) {
         updateSize();
     }
 }
@@ -121,9 +114,9 @@ void ViewProviderFemPostFunctionProvider::updateData(const App::Property* prop) 
 void ViewProviderFemPostFunctionProvider::updateSize() {
 
     std::vector< App::DocumentObject* > vec = claimChildren();
-    for(std::vector< App::DocumentObject* >::iterator it = vec.begin(); it != vec.end(); ++it) {
+    for (std::vector< App::DocumentObject* >::iterator it = vec.begin(); it != vec.end(); ++it) {
 
-        if(!(*it)->isDerivedFrom(Fem::FemPostFunction::getClassTypeId()))
+        if (!(*it)->isDerivedFrom(Fem::FemPostFunction::getClassTypeId()))
             continue;
 
         ViewProviderFemPostFunction* vp = static_cast<FemGui::ViewProviderFemPostFunction*>(Gui::Application::Instance->getViewProvider(*it));
@@ -133,7 +126,47 @@ void ViewProviderFemPostFunctionProvider::updateSize() {
     }
 }
 
+bool ViewProviderFemPostFunctionProvider::onDelete(const std::vector<std::string>&)
+{
+    // warn the user if the object has childs
 
+    auto objs = claimChildren();
+    if (!objs.empty())
+    {
+        // generate dialog
+        QString bodyMessage;
+        QTextStream bodyMessageStream(&bodyMessage);
+        bodyMessageStream << qApp->translate("Std_Delete",
+            "The functions list is not empty, therefore the\nfollowing referencing objects might be lost:");
+        bodyMessageStream << '\n';
+        for (auto ObjIterator : objs)
+            bodyMessageStream << '\n' << QString::fromUtf8(ObjIterator->Label.getValue());
+        bodyMessageStream << "\n\n" << QObject::tr("Are you sure you want to continue?");
+        // show and evaluate the dialog
+        int DialogResult = QMessageBox::warning(Gui::getMainWindow(),
+            qApp->translate("Std_Delete", "Object dependencies"), bodyMessage,
+            QMessageBox::Yes, QMessageBox::No);
+        if (DialogResult == QMessageBox::Yes)
+            return true;
+        else
+            return false;
+    }
+    else {
+        return true;
+    }
+}
+
+bool ViewProviderFemPostFunctionProvider::canDelete(App::DocumentObject* obj) const
+{
+    // deletions of objects from a FemFunction don't necessarily destroy anything
+    // thus we can pass this action
+    // we can warn the user if necessary in the object's ViewProvider in the onDelete() function
+    Q_UNUSED(obj)
+        return true;
+}
+
+
+// ***************************************************************************
 
 PROPERTY_SOURCE(FemGui::ViewProviderFemPostFunction, Gui::ViewProviderDocumentObject)
 
@@ -153,7 +186,7 @@ ViewProviderFemPostFunction::ViewProviderFemPostFunction()
 
     m_scale = new SoScale();
     m_scale->ref();
-    m_scale->scaleFactor = SbVec3f(1,1,1);
+    m_scale->scaleFactor = SbVec3f(1, 1, 1);
 }
 
 ViewProviderFemPostFunction::~ViewProviderFemPostFunction()
@@ -164,13 +197,13 @@ ViewProviderFemPostFunction::~ViewProviderFemPostFunction()
     //transform is unref'd when it is replaced by the dragger
 }
 
-void ViewProviderFemPostFunction::attach(App::DocumentObject *pcObj)
+void ViewProviderFemPostFunction::attach(App::DocumentObject* pcObj)
 {
     ViewProviderDocumentObject::attach(pcObj);
 
     // setup the graph for editing the function unit geometry
     SoMaterial* color = new SoMaterial();
-    color->diffuseColor.setValue(0,0,1);
+    color->diffuseColor.setValue(0, 0, 1);
     color->transparency.setValue(0.5);
 
     m_transform = new SoTransform;
@@ -196,7 +229,7 @@ void ViewProviderFemPostFunction::attach(App::DocumentObject *pcObj)
     sa.setSearchingAll(FALSE);
     sa.setNode(m_transform);
     sa.apply(pcEditNode);
-    SoPath * path = sa.getPath();
+    SoPath* path = sa.getPath();
     if (path) {
         m_manip->replaceNode(path);
 
@@ -211,54 +244,78 @@ void ViewProviderFemPostFunction::attach(App::DocumentObject *pcObj)
     pcEditNode->unref();
 }
 
-bool ViewProviderFemPostFunction::doubleClicked(void) {
+SbBox3f ViewProviderFemPostFunction::getBoundingsOfView() const
+{
+    SbBox3f box;
+    Gui::Document* doc = this->getDocument();
+    Gui::View3DInventor* view = qobject_cast<Gui::View3DInventor*>(doc->getViewOfViewProvider(this));
+    if (view) {
+        Gui::View3DInventorViewer* viewer = view->getViewer();
+        box = viewer->getBoundingBox();
+    }
+
+    return box;
+}
+
+bool ViewProviderFemPostFunction::findScaleFactor(double& scale) const
+{
+    SbBox3f bbox = getBoundingsOfView();
+    if (bbox.hasVolume()) {
+        float dx, dy, dz;
+        bbox.getSize(dx, dy, dz);
+        // we want the manipulator to have 20 % of the max size of the object
+        scale = 0.2 * std::max(std::max(dx, dy), dz);
+        return true;
+    }
+
+    return false;
+}
+
+bool ViewProviderFemPostFunction::doubleClicked() {
     Gui::Application::Instance->activeDocument()->setEdit(this, (int)ViewProvider::Default);
     return true;
 }
-
 
 SoTransformManip* ViewProviderFemPostFunction::setupManipulator() {
 
     return new SoCenterballManip;
 }
 
-
-std::vector<std::string> ViewProviderFemPostFunction::getDisplayModes(void) const
+std::vector<std::string> ViewProviderFemPostFunction::getDisplayModes() const
 {
     std::vector<std::string> StrList;
-    StrList.push_back("Default");
+    StrList.emplace_back("Default");
     return StrList;
 }
 
-void ViewProviderFemPostFunction::dragStartCallback(void *data, SoDragger *)
+void ViewProviderFemPostFunction::dragStartCallback(void* data, SoDragger*)
 {
     // This is called when a manipulator is about to manipulating
     Gui::Application::Instance->activeDocument()->openCommand(QT_TRANSLATE_NOOP("Command", "Edit Mirror"));
-    reinterpret_cast<ViewProviderFemPostFunction*>(data)->m_isDragging = true;
+    static_cast<ViewProviderFemPostFunction*>(data)->m_isDragging = true;
 
-    ViewProviderFemPostFunction* that = reinterpret_cast<ViewProviderFemPostFunction*>(data);
-    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Fem");
-    that->m_autoRecompute = hGrp->GetBool("PostAutoRecompute", false);
+    ViewProviderFemPostFunction* that = static_cast<ViewProviderFemPostFunction*>(data);
+    that->m_autoRecompute = FemSettings().getPostAutoRecompute();
 }
 
-void ViewProviderFemPostFunction::dragFinishCallback(void *data, SoDragger *)
+void ViewProviderFemPostFunction::dragFinishCallback(void* data, SoDragger*)
 {
     // This is called when a manipulator has done manipulating
     Gui::Application::Instance->activeDocument()->commitCommand();
 
-    ViewProviderFemPostFunction* that = reinterpret_cast<ViewProviderFemPostFunction*>(data);
-    if(that->m_autoRecompute)
+    ViewProviderFemPostFunction* that = static_cast<ViewProviderFemPostFunction*>(data);
+    if (that->m_autoRecompute)
         that->getObject()->getDocument()->recompute();
 
-    reinterpret_cast<ViewProviderFemPostFunction*>(data)->m_isDragging = false;
+    static_cast<ViewProviderFemPostFunction*>(data)->m_isDragging = false;
 }
 
-void ViewProviderFemPostFunction::dragMotionCallback(void *data, SoDragger *drag)
+void ViewProviderFemPostFunction::dragMotionCallback(void* data, SoDragger* drag)
 {
-    ViewProviderFemPostFunction* that = reinterpret_cast<ViewProviderFemPostFunction*>(data);
+    ViewProviderFemPostFunction* that = static_cast<ViewProviderFemPostFunction*>(data);
     that->draggerUpdate(drag);
 
-    if(that->m_autoRecompute)
+    if (that->m_autoRecompute)
         that->getObject()->getDocument()->recompute();
 }
 
@@ -266,12 +323,12 @@ void ViewProviderFemPostFunction::dragMotionCallback(void *data, SoDragger *drag
 bool ViewProviderFemPostFunction::setEdit(int ModNum) {
 
 
-     if (ModNum == ViewProvider::Default || ModNum == 1 ) {
+    if (ModNum == ViewProvider::Default || ModNum == 1) {
 
-        Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
-        TaskDlgPost *postDlg = qobject_cast<TaskDlgPost*>(dlg);
+        Gui::TaskView::TaskDialog* dlg = Gui::Control().activeDialog();
+        TaskDlgPost* postDlg = qobject_cast<TaskDlgPost*>(dlg);
         if (postDlg && postDlg->getView() != this)
-            postDlg = 0; // another pad left open its task panel
+            postDlg = nullptr; // another pad left open its task panel
         if (dlg && !postDlg && !dlg->tryClose())
             return false;
 
@@ -306,18 +363,23 @@ void ViewProviderFemPostFunction::onChanged(const App::Property* prop) {
 
     Gui::ViewProviderDocumentObject::onChanged(prop);
 
-    if(m_autoscale)
+    if (m_autoscale)
         m_scale->scaleFactor = SbVec3f(AutoScaleFactorX.getValue(), AutoScaleFactorY.getValue(), AutoScaleFactorZ.getValue());
 }
-
 
 
 // ***************************************************************************
 
 PROPERTY_SOURCE(FemGui::ViewProviderFemPostPlaneFunction, FemGui::ViewProviderFemPostFunction)
+//NOTE: The technical lower limit is at 1e-4 that the Coin3D manipulator can handle
+static const App::PropertyFloatConstraint::Constraints scaleConstraint = {1e-4, DBL_MAX, 1.0};
 
-ViewProviderFemPostPlaneFunction::ViewProviderFemPostPlaneFunction() {
+ViewProviderFemPostPlaneFunction::ViewProviderFemPostPlaneFunction()
+    : m_detectscale(false)
+{
 
+    ADD_PROPERTY_TYPE(Scale, (1000.0), "Manipulator", App::Prop_None, "Scaling factor for the manipulator");
+    Scale.setConstraints(&scaleConstraint);
     sPixmap = "fem-post-geo-plane";
 
     setAutoScale(true);
@@ -326,9 +388,9 @@ ViewProviderFemPostPlaneFunction::ViewProviderFemPostPlaneFunction() {
     SoCoordinate3* points = new SoCoordinate3();
     points->point.setNum(4);
     points->point.set1Value(0, -0.5, -0.5, 0);
-    points->point.set1Value(1, -0.5,  0.5, 0);
-    points->point.set1Value(2,  0.5,  0.5, 0);
-    points->point.set1Value(3,  0.5, -0.5, 0);
+    points->point.set1Value(1, -0.5, 0.5, 0);
+    points->point.set1Value(2, 0.5, 0.5, 0);
+    points->point.set1Value(3, 0.5, -0.5, 0);
     points->point.set1Value(4, -0.5, -0.5, 0);
     SoLineSet* line = new SoLineSet();
     getGeometryNode()->addChild(points);
@@ -342,42 +404,73 @@ ViewProviderFemPostPlaneFunction::~ViewProviderFemPostPlaneFunction() {
 void ViewProviderFemPostPlaneFunction::draggerUpdate(SoDragger* m) {
 
     Fem::FemPostPlaneFunction* func = static_cast<Fem::FemPostPlaneFunction*>(getObject());
-    SoCenterballDragger* dragger = static_cast<SoCenterballDragger*>(m);
+    SoJackDragger* dragger = static_cast<SoJackDragger*>(m);
 
     // the new axis of the plane
-    SbRotation rot, scaleDir;
-    const SbVec3f& center = dragger->center.getValue();
+    const SbVec3f& base = dragger->translation.getValue();
+    const SbVec3f& scale = dragger->scaleFactor.getValue();
 
-    SbVec3f norm(0,0,1);
-    dragger->rotation.getValue().multVec(norm,norm);
-    func->Origin.setValue(center[0], center[1], center[2]);
-    func->Normal.setValue(norm[0],norm[1],norm[2]);
+    SbVec3f norm(0., 1., 0.);
+    dragger->rotation.getValue().multVec(norm, norm);
+    func->Origin.setValue(base[0], base[1], base[2]);
+    func->Normal.setValue(norm[0], norm[1], norm[2]);
+    this->Scale.setValue(scale[0]);
+}
 
-    SbVec3f t = static_cast<SoCenterballManip*>(getManipulator())->translation.getValue();
-    SbVec3f rt, irt;
-    dragger->rotation.getValue().multVec(t,rt);
-    dragger->rotation.getValue().inverse().multVec(t,irt);
+void ViewProviderFemPostPlaneFunction::onChanged(const App::Property* prop)
+{
+    if (prop == &Scale) {
+        // When loading the Scale property from a project then keep that
+        if (Scale.getConstraints())
+            m_detectscale = true;
+        if (!isDragging()) {
+            // get current matrix
+            SbVec3f t, s;
+            SbRotation r, so;
+            SbMatrix matrix = getManipulator()->getDragger()->getMotionMatrix(); // clazy:exclude=rule-of-two-soft
+            matrix.getTransform(t, r, s, so);
+
+            float scale = static_cast<float>(Scale.getValue());
+            s.setValue(scale, scale, scale);
+
+            matrix.setTransform(t, r, s, so);
+            getManipulator()->setMatrix(matrix);
+        }
+    }
+    ViewProviderFemPostFunction::onChanged(prop);
 }
 
 void ViewProviderFemPostPlaneFunction::updateData(const App::Property* p) {
 
     Fem::FemPostPlaneFunction* func = static_cast<Fem::FemPostPlaneFunction*>(getObject());
 
-    if(!isDragging() && (p == &func->Origin || p == &func->Normal)) {
+    if (!isDragging() && (p == &func->Origin || p == &func->Normal)) {
+        if (!m_detectscale) {
+            double s;
+            if (findScaleFactor(s)) {
+                m_detectscale = true;
+                this->Scale.setValue(s);
+            }
+        }
 
         Base::Vector3d trans = func->Origin.getValue();
         Base::Vector3d norm = func->Normal.getValue();
 
-        norm = norm / norm.Length();
-        SbRotation rot(SbVec3f(0.,0.,1.), SbVec3f(norm.x, norm.y, norm.z));
+        norm.Normalize();
+        SbRotation rot(SbVec3f(0., 1., 0.), SbVec3f(norm.x, norm.y, norm.z));
+        float scale = static_cast<float>(Scale.getValue());
 
-        SbMatrix t, translate;
-        t.setRotate(rot);
-        translate.setTranslate(SbVec3f(trans.x, trans.y, trans.z));
-        t.multRight(translate);
-        getManipulator()->setMatrix(t);
+        SbMatrix mat;
+        mat.setTransform(SbVec3f(trans.x, trans.y, trans.z), rot, SbVec3f(scale, scale, scale));
+        getManipulator()->setMatrix(mat);
     }
     Gui::ViewProviderDocumentObject::updateData(p);
+}
+
+
+SoTransformManip* ViewProviderFemPostPlaneFunction::setupManipulator()
+{
+    return new SoJackManip;
 }
 
 
@@ -391,13 +484,28 @@ PlaneWidget::PlaneWidget() {
     ui = new Ui_PlaneWidget();
     ui->setupUi(this);
 
+    QSize size = ui->originX->sizeForText(QStringLiteral("000000000000"));
+    ui->originX->setMinimumWidth(size.width());
+    ui->originY->setMinimumWidth(size.width());
+    ui->originZ->setMinimumWidth(size.width());
+    ui->normalX->setMinimumWidth(size.width());
+    ui->originY->setMinimumWidth(size.width());
+    ui->originZ->setMinimumWidth(size.width());
+
+    int UserDecimals = Base::UnitsApi::getDecimals();
+    ui->originX->setDecimals(UserDecimals);
+    ui->originY->setDecimals(UserDecimals);
+    ui->originZ->setDecimals(UserDecimals);
+    ui->normalX->setDecimals(UserDecimals);
+    ui->normalY->setDecimals(UserDecimals);
+    ui->normalZ->setDecimals(UserDecimals);
+
     connect(ui->originX, SIGNAL(valueChanged(double)), this, SLOT(originChanged(double)));
     connect(ui->originY, SIGNAL(valueChanged(double)), this, SLOT(originChanged(double)));
     connect(ui->originZ, SIGNAL(valueChanged(double)), this, SLOT(originChanged(double)));
     connect(ui->normalX, SIGNAL(valueChanged(double)), this, SLOT(normalChanged(double)));
     connect(ui->normalY, SIGNAL(valueChanged(double)), this, SLOT(normalChanged(double)));
     connect(ui->normalZ, SIGNAL(valueChanged(double)), this, SLOT(normalChanged(double)));
-
 }
 
 PlaneWidget::~PlaneWidget() {
@@ -411,6 +519,13 @@ void PlaneWidget::applyPythonCode() {
 void PlaneWidget::setViewProvider(ViewProviderFemPostFunction* view) {
 
     FemGui::FunctionWidget::setViewProvider(view);
+    const Base::Unit unit = static_cast<Fem::FemPostPlaneFunction*>(getObject())->Origin.getUnit();
+    setBlockObjectUpdates(true);
+    ui->originX->setUnit(unit);
+    ui->originY->setUnit(unit);
+    ui->originZ->setUnit(unit);
+    setBlockObjectUpdates(false);
+    // The normal vector is unitless. It uses nevertheless Gui::PrefQuantitySpinBox to keep dialog uniform.
     onChange(static_cast<Fem::FemPostPlaneFunction*>(getObject())->Normal);
     onChange(static_cast<Fem::FemPostPlaneFunction*>(getObject())->Origin);
 }
@@ -418,13 +533,13 @@ void PlaneWidget::setViewProvider(ViewProviderFemPostFunction* view) {
 void PlaneWidget::onChange(const App::Property& p) {
 
     setBlockObjectUpdates(true);
-    if(strcmp(p.getName(), "Normal") == 0) {
+    if (strcmp(p.getName(), "Normal") == 0) {
         const Base::Vector3d& vec = static_cast<const App::PropertyVector*>(&p)->getValue();
         ui->normalX->setValue(vec.x);
         ui->normalY->setValue(vec.y);
         ui->normalZ->setValue(vec.z);
     }
-    else if(strcmp(p.getName(), "Origin") == 0) {
+    else if (strcmp(p.getName(), "Origin") == 0) {
         const Base::Vector3d& vec = static_cast<const App::PropertyVectorDistance*>(&p)->getValue();
         ui->originX->setValue(vec.x);
         ui->originY->setValue(vec.y);
@@ -435,20 +550,21 @@ void PlaneWidget::onChange(const App::Property& p) {
 
 void PlaneWidget::normalChanged(double) {
 
-     if(!blockObjectUpdates()) {
-        Base::Vector3d vec(ui->normalX->value(), ui->normalY->value(), ui->normalZ->value());
+    if (!blockObjectUpdates()) {
+        Base::Vector3d vec(ui->normalX->value().getValue(), ui->normalY->value().getValue(),
+            ui->normalZ->value().getValue());
         static_cast<Fem::FemPostPlaneFunction*>(getObject())->Normal.setValue(vec);
-     }
+    }
 }
 
 void PlaneWidget::originChanged(double) {
 
-    if(!blockObjectUpdates()) {
-        Base::Vector3d vec(ui->originX->value(), ui->originY->value(), ui->originZ->value());
+    if (!blockObjectUpdates()) {
+        Base::Vector3d vec(ui->originX->value().getValue(), ui->originY->value().getValue(),
+            ui->originZ->value().getValue());
         static_cast<Fem::FemPostPlaneFunction*>(getObject())->Origin.setValue(vec);
     }
 }
-
 
 
 // ***************************************************************************
@@ -463,21 +579,21 @@ ViewProviderFemPostSphereFunction::ViewProviderFemPostSphereFunction() {
 
     //setup the visualisation geometry
     SoCoordinate3* points = new SoCoordinate3();
-    points->point.setNum(2*84);
+    points->point.setNum(2 * 84);
     int idx = 0;
-    for(int i=0; i<4; i++) {
-        for(int j=0; j<21; j++) {
-            points->point.set1Value(idx, SbVec3f(std::sin(2*M_PI/20*j) * std::cos(M_PI/4*i),
-                                                 std::sin(2*M_PI/20*j) * std::sin(M_PI/4*i),
-                                                 std::cos(2*M_PI/20*j) ));
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 21; j++) {
+            points->point.set1Value(idx, SbVec3f(std::sin(2 * M_PI / 20 * j) * std::cos(M_PI / 4 * i),
+                std::sin(2 * M_PI / 20 * j) * std::sin(M_PI / 4 * i),
+                std::cos(2 * M_PI / 20 * j)));
             ++idx;
         }
     }
-    for(int i=0; i<4; i++) {
-        for(int j=0; j<21; j++) {
-            points->point.set1Value(idx, SbVec3f(std::sin(M_PI/4*i) * std::cos(2*M_PI/20*j),
-                                                 std::sin(M_PI/4*i) * std::sin(2*M_PI/20*j),
-                                                 std::cos(M_PI/4*i) ));
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 21; j++) {
+            points->point.set1Value(idx, SbVec3f(std::sin(M_PI / 4 * i) * std::cos(2 * M_PI / 20 * j),
+                std::sin(M_PI / 4 * i) * std::sin(2 * M_PI / 20 * j),
+                std::cos(M_PI / 4 * i)));
             ++idx;
         }
     }
@@ -508,7 +624,6 @@ SoTransformManip* ViewProviderFemPostSphereFunction::setupManipulator() {
     return manip;
 }
 
-
 void ViewProviderFemPostSphereFunction::draggerUpdate(SoDragger* m) {
 
     Fem::FemPostSphereFunction* func = static_cast<Fem::FemPostSphereFunction*>(getObject());
@@ -518,7 +633,7 @@ void ViewProviderFemPostSphereFunction::draggerUpdate(SoDragger* m) {
     SbRotation rot, scaleDir;
     const SbVec3f& center = dragger->translation.getValue();
 
-    SbVec3f norm(0,0,1);
+    SbVec3f norm(0, 0, 1);
     func->Center.setValue(center[0], center[1], center[2]);
     func->Radius.setValue(dragger->scaleFactor.getValue()[0]);
 }
@@ -527,7 +642,7 @@ void ViewProviderFemPostSphereFunction::updateData(const App::Property* p) {
 
     Fem::FemPostSphereFunction* func = static_cast<Fem::FemPostSphereFunction*>(getObject());
 
-    if(!isDragging() && (p == &func->Center || p == &func->Radius)) {
+    if (!isDragging() && (p == &func->Center || p == &func->Radius)) {
 
         Base::Vector3d trans = func->Center.getValue();
         double radius = func->Radius.getValue();
@@ -537,21 +652,29 @@ void ViewProviderFemPostSphereFunction::updateData(const App::Property* p) {
         translate.setTranslate(SbVec3f(trans.x, trans.y, trans.z));
         t.multRight(translate);
         getManipulator()->setMatrix(t);
-
     }
     Gui::ViewProviderDocumentObject::updateData(p);
 }
-
 
 FunctionWidget* ViewProviderFemPostSphereFunction::createControlWidget() {
     return new SphereWidget();
 }
 
-
 SphereWidget::SphereWidget() {
 
     ui = new Ui_SphereWidget();
     ui->setupUi(this);
+
+    QSize size = ui->centerX->sizeForText(QStringLiteral("000000000000"));
+    ui->centerX->setMinimumWidth(size.width());
+    ui->centerY->setMinimumWidth(size.width());
+    ui->centerZ->setMinimumWidth(size.width());
+    ui->radius->setMinimumWidth(size.width());
+
+    int UserDecimals = Base::UnitsApi::getDecimals();
+    ui->centerX->setDecimals(UserDecimals);
+    ui->centerY->setDecimals(UserDecimals);
+    ui->centerZ->setDecimals(UserDecimals);
 
     connect(ui->centerX, SIGNAL(valueChanged(double)), this, SLOT(centerChanged(double)));
     connect(ui->centerY, SIGNAL(valueChanged(double)), this, SLOT(centerChanged(double)));
@@ -570,6 +693,14 @@ void SphereWidget::applyPythonCode() {
 void SphereWidget::setViewProvider(ViewProviderFemPostFunction* view) {
 
     FemGui::FunctionWidget::setViewProvider(view);
+    setBlockObjectUpdates(true);
+    Base::Unit unit = static_cast<Fem::FemPostSphereFunction*>(getObject())->Center.getUnit();
+    ui->centerX->setUnit(unit);
+    ui->centerY->setUnit(unit);
+    ui->centerZ->setUnit(unit);
+    unit = static_cast<Fem::FemPostSphereFunction*>(getObject())->Radius.getUnit();
+    ui->radius->setUnit(unit);
+    setBlockObjectUpdates(false);
     onChange(static_cast<Fem::FemPostSphereFunction*>(getObject())->Center);
     onChange(static_cast<Fem::FemPostSphereFunction*>(getObject())->Radius);
 }
@@ -577,11 +708,11 @@ void SphereWidget::setViewProvider(ViewProviderFemPostFunction* view) {
 void SphereWidget::onChange(const App::Property& p) {
 
     setBlockObjectUpdates(true);
-    if(strcmp(p.getName(), "Radius") == 0) {
+    if (strcmp(p.getName(), "Radius") == 0) {
         double val = static_cast<const App::PropertyDistance*>(&p)->getValue();
         ui->radius->setValue(val);
     }
-    else if(strcmp(p.getName(), "Center") == 0) {
+    else if (strcmp(p.getName(), "Center") == 0) {
         const Base::Vector3d& vec = static_cast<const App::PropertyVectorDistance*>(&p)->getValue();
         ui->centerX->setValue(vec.x);
         ui->centerY->setValue(vec.y);
@@ -592,16 +723,17 @@ void SphereWidget::onChange(const App::Property& p) {
 
 void SphereWidget::centerChanged(double) {
 
-     if(!blockObjectUpdates()) {
-        Base::Vector3d vec(ui->centerX->value(), ui->centerY->value(), ui->centerZ->value());
+    if (!blockObjectUpdates()) {
+        Base::Vector3d vec(ui->centerX->value().getValue(), ui->centerY->value().getValue(),
+            ui->centerZ->value().getValue());
         static_cast<Fem::FemPostSphereFunction*>(getObject())->Center.setValue(vec);
-     }
+    }
 }
 
 void SphereWidget::radiusChanged(double) {
 
-    if(!blockObjectUpdates()) {
-        static_cast<Fem::FemPostSphereFunction*>(getObject())->Radius.setValue(ui->radius->value());
+    if (!blockObjectUpdates()) {
+        static_cast<Fem::FemPostSphereFunction*>(getObject())->Radius.setValue(ui->radius->value().getValue());
     }
 }
 

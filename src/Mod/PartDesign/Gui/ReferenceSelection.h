@@ -25,45 +25,37 @@
 #define GUI_ReferenceSelection_H
 
 #include <Gui/SelectionFilter.h>
+#include <Mod/PartDesign/Gui/EnumFlags.h>
 
 class QLabel;
 
+namespace App {
+class OriginGroupExtension;
+}
+namespace PartDesign {
+class Body;
+}
 namespace PartDesignGui {
 
 class ReferenceSelection : public Gui::SelectionFilterGate
 {
 public:
-    // TODO Replace this set of bools with bitwice enum (2015-09-04, Fat-Zer)
-    struct Config {
-        // If set to true, allow picking axis line or edges
-        bool edge = false;
-        // If set to true, allow picking axis plane or face
-        bool plane = true;
-        // If set to true, allow only linear edges and planar faces
-        bool planar = false;
-        // If set to true, allow picking datum points or vertex
-        bool point = false;
-        // If set to true, allow picking objects from another body in the same part
-        bool allowOtherBody = true;
-        // Allow whole object selection
-        bool whole = false;
-        // Allow picking circular edges (incl arcs)
-        bool circle = false;
-        // Allow wire selection
-        bool wire = false;
 
-        Config() {}
-    };
+    static AllowSelectionFlags defaultFlags() {
+        return AllowSelection::FACE
+             | AllowSelection::OTHERBODY;
+    }
 
 private:
     const App::DocumentObject* support;
-    Config _conf;
+    AllowSelectionFlags type;
 
 public:
-    ReferenceSelection(const App::DocumentObject* support_, const Config &conf = Config())
-        : Gui::SelectionFilterGate((Gui::SelectionFilter*)0)
+    ReferenceSelection(const App::DocumentObject* support_,
+                       AllowSelectionFlags type = defaultFlags())
+        : Gui::SelectionFilterGate(nullPointer())
         , support(support_)
-        , _conf(conf)
+        , type(type)
     {
     }
     /**
@@ -71,6 +63,18 @@ public:
       * Optionally restrict the selection to planar edges/faces
       */
     bool allow(App::Document* pDoc, App::DocumentObject* pObj, const char* sSubName);
+
+private:
+    PartDesign::Body* getBody() const;
+    App::OriginGroupExtension* getOriginGroupExtension(PartDesign::Body *body) const;
+    bool allowOrigin(PartDesign::Body *body, App::OriginGroupExtension* originGroup, App::DocumentObject* pObj) const;
+    bool allowDatum(PartDesign::Body *body, App::DocumentObject* pObj) const;
+    bool allowPartFeature(App::DocumentObject* pObj, const char* sSubName) const;
+    bool allowFeature(App::DocumentObject* pObj, const char* sSubName) const;
+    bool isEdge(App::DocumentObject* pObj, const char* sSubName) const;
+    bool isFace(App::DocumentObject* pObj, const char* sSubName) const;
+    bool isCircle(App::DocumentObject* pObj, const char* sSubName) const;
+    bool isWire(App::DocumentObject* pObj, const char* sSubName) const;
 };
 
 class NoDependentsSelection : public Gui::SelectionFilterGate
@@ -79,7 +83,7 @@ class NoDependentsSelection : public Gui::SelectionFilterGate
 
 public:
     NoDependentsSelection(const App::DocumentObject* support_)
-        : Gui::SelectionFilterGate((Gui::SelectionFilter*)0)
+        : Gui::SelectionFilterGate(nullPointer())
     {
         if(support_) {
             inList = support_->getInListEx(true);
@@ -99,7 +103,7 @@ class CombineSelectionFilterGates: public Gui::SelectionFilterGate
 
 public:
     CombineSelectionFilterGates(std::unique_ptr<Gui::SelectionFilterGate> &filter1_, std::unique_ptr<Gui::SelectionFilterGate> &filter2_)
-        : Gui::SelectionFilterGate((Gui::SelectionFilter*)0), filter1(std::move(filter1_)), filter2(std::move(filter2_))
+        : Gui::SelectionFilterGate(nullPointer()), filter1(std::move(filter1_)), filter2(std::move(filter2_))
     {
     }
     bool allow(App::Document* pDoc, App::DocumentObject* pObj, const char* sSubName) override;

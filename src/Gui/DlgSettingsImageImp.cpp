@@ -20,12 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
+#ifndef _PreComp_
+# include <QRegularExpression>
+# include <QRegularExpressionMatch>
+#endif
 
 #include "DlgSettingsImageImp.h"
 #include "ui_DlgSettingsImage.h"
-#include "SpinBox.h"
+
 
 using namespace Gui::Dialog;
 using namespace std;
@@ -162,9 +165,9 @@ bool DlgSettingsImageImp::addWatermark() const
 
 void DlgSettingsImageImp::onSelectedFilter(const QString& filter)
 {
-    bool ok = (filter.startsWith(QLatin1String("JPG")) ||
-               filter.startsWith(QLatin1String("JPEG")) ||
-               filter.startsWith(QLatin1String("PNG")));
+    bool ok = (filter.startsWith(QStringLiteral("JPG")) ||
+               filter.startsWith(QStringLiteral("JPEG")) ||
+               filter.startsWith(QStringLiteral("PNG")));
     ui->buttonGroupComment->setEnabled( ok );
 }
 
@@ -216,15 +219,22 @@ void DlgSettingsImageImp::on_standardSizeBox_activated(int index)
     else {
         // try to extract from the string
         QString text = ui->standardSizeBox->itemText(index);
-        QRegExp rx(QStringLiteral("\\b\\d{2,5}\\b"));
+        QRegularExpression rx(QStringLiteral("\\b\\d{2,5}\\b"));
         int pos = 0;
-        pos = rx.indexIn(text, pos);
-        QString w = text.mid(pos, rx.matchedLength());
-        ui->spinWidth->setValue(w.toInt());
-        pos += rx.matchedLength();
-        pos = rx.indexIn(text, pos);
-        QString h = text.mid(pos, rx.matchedLength());
-        ui->spinHeight->setValue(h.toInt());
+        auto match = rx.match(text, pos);
+        if (match.hasMatch()) {
+            pos = match.capturedStart();
+            QString width = text.mid(pos, match.capturedLength());
+            ui->spinWidth->setValue(width.toInt());
+            pos += match.capturedLength();
+        }
+
+        match = rx.match(text, pos);
+        if (match.hasMatch()) {
+            pos = match.capturedStart();
+            QString height = text.mid(pos, match.capturedLength());
+            ui->spinHeight->setValue(height.toInt());
+        }
     }
 }
 

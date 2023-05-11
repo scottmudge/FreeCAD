@@ -32,11 +32,14 @@
 # include <Inventor/nodes/SoDrawStyle.h>
 #endif
 
+#include <App/Application.h>
 #include "ViewProviderDatumPoint.h"
 #include <Mod/Part/Gui/SoBrepPointSet.h>
 #include <Mod/PartDesign/App/DatumPoint.h>
 #include <Gui/Inventor/MarkerBitmaps.h>
-#include <App/Application.h>
+#include <Mod/PartDesign/App/DatumPoint.h>
+
+#include "ViewProviderDatumPoint.h"
 
 using namespace PartDesignGui;
 

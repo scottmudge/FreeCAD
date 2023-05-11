@@ -29,20 +29,17 @@
 
 #include <memory>
 
-#include <App/PropertyStandard.h>
-#include <App/PropertyLinks.h>
-#include <App/GeoFeature.h>
 #include <App/DocumentObjectExtension.h>
-#include <Base/Vector3D.h>
-#include <Base/Placement.h>
+#include <App/ExtensionPython.h>
+#include <App/GeoFeature.h>
+#include <App/PropertyLinks.h>
+#include <App/PropertyStandard.h>
 #include <Base/Exception.h>
+#include <Base/Placement.h>
 
-#include "PartFeature.h"
 #include "Attacher.h"
+#include "PartFeature.h"
 
-#include <QString>
-
-#include <gp_Vec.hxx>
 
 namespace Part
 {
@@ -52,10 +49,10 @@ class PartExport AttachEngineException : public Base::Exception
 public:
    /// Construction
    AttachEngineException();
-   AttachEngineException(const char * sMessage);
-   AttachEngineException(const std::string& sMessage);
+   explicit AttachEngineException(const char * sMessage);
+   explicit AttachEngineException(const std::string& sMessage);
    /// Destruction
-   virtual ~AttachEngineException() throw() {}
+   ~AttachEngineException() throw() override {}
 };
 
 /**
@@ -65,10 +62,10 @@ public:
  */
 class PartExport AttachExtension : public App::DocumentObjectExtension
 {
-    EXTENSION_PROPERTY_HEADER(Part::AttachableObject);
+    EXTENSION_PROPERTY_HEADER_WITH_OVERRIDE(Part::AttachableObject);
 public:
     AttachExtension();
-    virtual ~AttachExtension();
+    ~AttachExtension() override;
 
     /**
      * @brief setAttacher sets the AttachEngine object. The class takes the
@@ -107,7 +104,7 @@ public:
       * mode. Can throw FreeCAD and OCC exceptions. Returns true if attached,
       * false if not, throws if attachment failed.
       */
-    virtual bool positionBySupport(void);
+    virtual bool positionBySupport();
 
     /** Return whether this attacher is active
      */
@@ -116,10 +113,10 @@ public:
     virtual bool isTouched_Mapping()
     {return true; /*support.isTouched isn't true when linked objects are changed... why?..*/}
 
-    virtual short int extensionMustExecute(void);
-    virtual App::DocumentObjectExecReturn *extensionExecute(void);
-    virtual PyObject* getExtensionPyObject(void);
-    virtual void onExtendedDocumentRestored();
+    short int extensionMustExecute() override;
+    App::DocumentObjectExecReturn *extensionExecute() override;
+    PyObject* getExtensionPyObject() override;
+    void onExtendedDocumentRestored() override;
 
     struct Properties {
         App::PropertyString       *attacherType = nullptr;
@@ -138,9 +135,9 @@ public:
     Properties getInitedProperties(bool base);
 
 protected:
-    virtual void extensionOnChanged(const App::Property* /*prop*/);
+    void extensionOnChanged(const App::Property* /*prop*/) override;
     virtual void extHandleChangedPropertyName(Base::XMLReader &reader, const char* TypeName, const char* PropName);
-    
+
     App::PropertyPlacement& getPlacement() const;
     void initBase(bool force);
 
@@ -159,7 +156,7 @@ private:
 };
 
 
-typedef App::ExtensionPythonT<AttachExtension> AttachExtensionPython;
+using AttachExtensionPython = App::ExtensionPythonT<AttachExtension>;
 
 } // namespace Part
 

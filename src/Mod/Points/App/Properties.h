@@ -20,44 +20,40 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef POINTS_POINTPROPERTIES_H
 #define POINTS_POINTPROPERTIES_H
 
 #include <vector>
 
-#include <Base/Vector3D.h>
+#include <App/PropertyStandard.h>
 #include <Base/Matrix.h>
 #include <Base/Reader.h>
 #include <Base/Writer.h>
 
-#include <App/PropertyStandard.h>
-#include <App/PropertyGeo.h>
-
 #include "Points.h"
+
 
 namespace Points
 {
-
 
 /** Greyvalue property.
  */
 class PointsExport PropertyGreyValue : public App::PropertyFloat
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 
 public:
-    PropertyGreyValue(void)
+    PropertyGreyValue()
     {
     }
-    virtual ~PropertyGreyValue()
+    ~PropertyGreyValue() override
     {
     }
 };
 
 class PointsExport PropertyGreyValueList: public App::_PropertyFloatList
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
     /** @name Modify */
     //@{
@@ -67,7 +63,8 @@ public:
 
 class PointsExport PropertyNormalList: public App::_PropertyVectorList
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
+
 public:
 
     /** @name Modify */
@@ -95,7 +92,7 @@ struct PointsExport CurvatureInfo
  */
 class PointsExport PropertyCurvatureList: public App::PropertyListsT<CurvatureInfo>
 {
-    typedef PropertyListsT<CurvatureInfo> inherited;
+    using inherited = PropertyListsT<CurvatureInfo>;
     TYPESYSTEM_HEADER_WITH_OVERRIDE();
 
 public:
@@ -109,18 +106,18 @@ public:
 
 public:
     PropertyCurvatureList();
-    ~PropertyCurvatureList();
+    ~PropertyCurvatureList() override;
 
     std::vector<float> getCurvature( int tMode) const;
 
-    virtual PyObject *getPyObject(void) override;
+    PyObject *getPyObject(void) override;
 
     /** @name Undo/Redo */
     //@{
     /// returns a new copy of the property (mainly for Undo/Redo and transactions)
-    virtual App::Property *Copy(void) const override;
+    App::Property *Copy(void) const override;
     /// paste the value from the property (mainly for Undo/Redo and transactions)
-    virtual void Paste(const App::Property &from) override;
+    void Paste(const App::Property &from) override;
     //@}
 
     /** @name Modify */
@@ -130,13 +127,13 @@ public:
     //@}
 
 protected:
-    virtual CurvatureInfo getPyValue(PyObject *) const override;
+    CurvatureInfo getPyValue(PyObject *) const override;
 
-    virtual void restoreXML(Base::XMLReader &) override;
-    virtual bool saveXML(Base::Writer &) const override;
-    virtual bool canSaveStream(Base::Writer &) const override { return true; }
-    virtual void restoreStream(Base::InputStream &s, unsigned count) override;
-    virtual void saveStream(Base::OutputStream &) const override;
+    void restoreXML(Base::XMLReader &) override;
+    bool saveXML(Base::Writer &) const override;
+    bool canSaveStream(Base::Writer &) const override { return true; }
+    void restoreStream(Base::InputStream &s, unsigned count) override;
+    void saveStream(Base::OutputStream &) const override;
 };
 
 } // namespace Points

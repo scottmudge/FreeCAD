@@ -20,27 +20,22 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QApplication>
-# include <QMenu>
-# include <QPixmap>
-# include <boost_bind_bind.hpp>
 # include <Inventor/nodes/SoMaterial.h>
+# include <QMenu>
 #endif
 
-#include <App/Part.h>
 #include <App/Document.h>
-
-#include "ActiveObjectList.h"
-#include "ActionFunction.h"
-#include "BitmapFactory.h"
-#include "Command.h"
+#include <App/DocumentObject.h>
+#include <App/Part.h>
 
 #include "ViewProviderPart.h"
+#include "ActionFunction.h"
 #include "Application.h"
+#include "BitmapFactory.h"
+#include "Command.h"
 #include "MDIView.h"
 #include "ViewParams.h"
 #include "TaskElementColors.h"
@@ -111,9 +106,9 @@ void ViewProviderPart::updateData(const App::Property *prop) {
 
 void ViewProviderPart::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
 {
-    Gui::ActionFunction* func = new Gui::ActionFunction(menu);
+    auto func = new Gui::ActionFunction(menu);
     QAction* act = menu->addAction(QObject::tr("Toggle active part"));
-    func->trigger(act, boost::bind(&ViewProviderPart::doubleClicked, this));
+    func->trigger(act, std::bind(&ViewProviderPart::doubleClicked, this));
 
     if(getColoredElementsProperty()) {
         act = menu->addAction(QObject::tr("Override colors..."), receiver, member);
@@ -123,7 +118,7 @@ void ViewProviderPart::setupContextMenu(QMenu* menu, QObject* receiver, const ch
     inherited::setupContextMenu(menu, receiver, member);
 }
 
-bool ViewProviderPart::doubleClicked(void)
+bool ViewProviderPart::doubleClicked()
 {
     //make the part the active one
 
@@ -136,7 +131,7 @@ bool ViewProviderPart::doubleClicked(void)
         return false;
 
     App::SubObjectT sel(getObject(), "");
-    auto sels = Selection().getSelectionT("*",0,true);
+    auto sels = Selection().getSelectionT("*",ResolveMode::NoResolve,true);
     if (sels.size() == 1 && sels[0].getSubObject() == getObject())
         sel = sels[0];
 

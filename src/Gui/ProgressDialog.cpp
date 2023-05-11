@@ -20,16 +20,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <QApplication>
+# include <QElapsedTimer>
 # include <QMessageBox>
 # include <QPushButton>
-# include <QElapsedTimer>
 # include <QThread>
 # include <QTime>
 #endif
+
 #include "ProgressDialog.h"
 #include "MainWindow.h"
 
@@ -50,7 +50,7 @@ struct SequencerDialogPrivate
 }
 
 
-SequencerDialog* SequencerDialog::_pclSingleton = 0;
+SequencerDialog* SequencerDialog::_pclSingleton = nullptr;
 
 SequencerDialog* SequencerDialog::instance()
 {
@@ -219,7 +219,7 @@ void SequencerDialog::showRemainingTime()
             QTime time( 0,0, 0);
             time = time.addSecs( rest/1000 );
             QString remain = Gui::ProgressDialog::tr("Remaining: %1").arg(time.toString());
-            QString status = QStringLiteral("%1\t[%2]").arg(txt).arg(remain);
+            QString status = QStringLiteral("%1\t[%2]").arg(txt, remain);
 
             if (thr != currentThread) {
                 QMetaObject::invokeMethod(d->dlg, "setLabelText",

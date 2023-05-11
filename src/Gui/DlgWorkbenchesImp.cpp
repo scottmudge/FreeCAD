@@ -23,8 +23,8 @@
 
 // Based on DlgToolbars.cpp
 
-
 #include "PreCompiled.h"
+
 #ifndef _PreComp_
 # include <QDebug>
 # include <QInputDialog>
@@ -34,12 +34,6 @@
 #include "DlgWorkbenchesImp.h"
 #include "ui_DlgWorkbenches.h"
 #include "Application.h"
-#include "BitmapFactory.h"
-#include "Command.h"
-#include "MainWindow.h"
-#include "Widgets.h"
-#include "Workbench.h"
-#include "WorkbenchManager.h"
 #include "QListWidgetCustom.h"
 
 FC_LOG_LEVEL_INIT("Gui", true, true);
@@ -118,7 +112,7 @@ void DlgWorkbenchesImp::add_workbench(QListWidgetCustom *lw, const QString& it)
 {
     QPixmap px = Application::Instance->workbenchIcon(it);
     QString mt = Application::Instance->workbenchMenuText(it);
-    QListWidgetItem *wi = (new QListWidgetItem(QIcon(px), mt));
+    auto wi = (new QListWidgetItem(QIcon(px), mt));
     wi->setData(Qt::UserRole, QVariant(it));
     lw->addItem(wi);
 }

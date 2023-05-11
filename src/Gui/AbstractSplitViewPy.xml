@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<GenerateModel xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="generateMetaModel_Module.xsd">
+  <PythonExport 
+    Father="MDIViewPy" 
+    Name="AbstractSplitViewPy" 
+    TwinPointer="AbstractSplitView" 
+    Twin="SplitView" 
+    Include="Gui/SplitView3DInventor.h" 
+    Namespace="Gui" 
+    FatherInclude="Gui/MDIViewPy.h" 
+    FatherNamespace="Gui">
+    <Documentation>
+      <Author Licence="LGPL" Name="Zheng Lei" EMail="realthunder.dev@gmail.com" />
+      <UserDocu>This is the AbstractSplitView class</UserDocu>
+    </Documentation>
+    <Methode Name="fitAll">
+      <Documentation>
+        <UserDocu>fitAll()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="viewBottom">
+      <Documentation>
+        <UserDocu>viewBottom()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="viewFront">
+      <Documentation>
+        <UserDocu>viewFront()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="viewLeft">
+      <Documentation>
+        <UserDocu>viewLeft()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="viewRight">
+      <Documentation>
+        <UserDocu>viewRight()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="viewRear">
+      <Documentation>
+        <UserDocu>viewRear()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="viewTop">
+      <Documentation>
+        <UserDocu>viewTop()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="viewIsometric">
+      <Documentation>
+        <UserDocu>viewIsometric()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="getViewer">
+      <Documentation>
+        <UserDocu>getViewer()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Sequence
+        sq_length="true"
+        sq_concat="false"
+        sq_repeat="false"
+        sq_item="true"
+        mp_subscript="false"
+        sq_ass_item="false"
+        mp_ass_subscript="false"
+        sq_contains="false"
+        sq_inplace_concat="false"
+        sq_inplace_repeat="false">
+    </Sequence>
+  </PythonExport>
+</GenerateModel>

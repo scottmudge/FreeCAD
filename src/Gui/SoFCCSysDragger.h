@@ -34,6 +34,7 @@
 #include <Inventor/sensors/SoFieldSensor.h>
 #include <Inventor/sensors/SoIdleSensor.h>
 
+
 class SoCamera;
 
 namespace Base
@@ -66,8 +67,8 @@ public:
     SoSFFloat autoScaleResult; //!< set from parent dragger.
 
 protected:
-    virtual ~TDragger() override;
-    virtual SbBool setUpConnections(SbBool onoff, SbBool doitalways = FALSE) override;
+    ~TDragger() override;
+    SbBool setUpConnections(SbBool onoff, SbBool doitalways = FALSE) override;
 
     static void startCB(void *, SoDragger * d);
     static void motionCB(void *, SoDragger * d);
@@ -86,7 +87,7 @@ private:
     void buildFirstInstance();
     SbVec3f roundTranslation(const SbVec3f &vecIn, float incrementIn);
     SoGroup* buildGeometry();
-    typedef SoDragger inherited;
+    using inherited = SoDragger;
 };
 
 /*! @brief Rotation Dragger.
@@ -111,8 +112,8 @@ public:
     SoSFColor color; //!< set from outside. non-active color.
 
 protected:
-    virtual ~RDragger() override;
-    virtual SbBool setUpConnections(SbBool onoff, SbBool doitalways = FALSE) override;
+    ~RDragger() override;
+    SbBool setUpConnections(SbBool onoff, SbBool doitalways = FALSE) override;
 
     static void startCB(void *, SoDragger * d);
     static void motionCB(void *, SoDragger * d);
@@ -132,7 +133,7 @@ private:
     void buildFirstInstance();
     int roundIncrement(const float &radiansIn);
     SoGroup* buildGeometry();
-    typedef SoDragger inherited;
+    using inherited = SoDragger;
 };
 
 /*! @brief Coordinate System Dragger
@@ -283,7 +284,7 @@ private:
 
     void updateAxisScale();
 
-    typedef SoDragger inherited;
+    using inherited = SoDragger;
 };
 
 }

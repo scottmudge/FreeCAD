@@ -20,23 +20,19 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
-
 #include "FemPostFunction.h"
-#include <Base/Console.h>
+
 
 using namespace Fem;
 using namespace App;
 
 PROPERTY_SOURCE(Fem::FemPostFunctionProvider, App::DocumentObject)
 
-FemPostFunctionProvider::FemPostFunctionProvider(void): DocumentObject() {
+FemPostFunctionProvider::FemPostFunctionProvider() : DocumentObject() {
 
-    ADD_PROPERTY(Functions, (0));
+    ADD_PROPERTY(Functions, (nullptr));
 }
 
 FemPostFunctionProvider::~FemPostFunctionProvider() {
@@ -58,18 +54,20 @@ FemPostFunction::~FemPostFunction()
 {
 }
 
-DocumentObjectExecReturn* FemPostFunction::execute(void) {
+DocumentObjectExecReturn* FemPostFunction::execute() {
 
     return DocumentObject::StdReturn;
 }
 
 
+// ***************************************************************************
+// plane function
 PROPERTY_SOURCE(Fem::FemPostPlaneFunction, Fem::FemPostFunction)
 
-FemPostPlaneFunction::FemPostPlaneFunction(void): FemPostFunction() {
+FemPostPlaneFunction::FemPostPlaneFunction() : FemPostFunction() {
 
-    ADD_PROPERTY(Origin,(Base::Vector3d(0.0,0.0,0.0)));
-    ADD_PROPERTY(Normal,(Base::Vector3d(0.0,0.0,1.0)));
+    ADD_PROPERTY(Origin, (Base::Vector3d(0.0, 0.0, 0.0)));
+    ADD_PROPERTY(Normal, (Base::Vector3d(0.0, 0.0, 1.0)));
 
     m_plane = vtkSmartPointer<vtkPlane>::New();
     m_implicit = m_plane;
@@ -84,11 +82,11 @@ FemPostPlaneFunction::~FemPostPlaneFunction() {
 
 void FemPostPlaneFunction::onChanged(const Property* prop) {
 
-    if(prop == &Origin) {
+    if (prop == &Origin) {
         const Base::Vector3d& vec = Origin.getValue();
         m_plane->SetOrigin(vec[0], vec[1], vec[2]);
     }
-    else if(prop == &Normal) {
+    else if (prop == &Normal) {
         const Base::Vector3d& vec = Normal.getValue();
         m_plane->SetNormal(vec[0], vec[1], vec[2]);
     }
@@ -96,15 +94,20 @@ void FemPostPlaneFunction::onChanged(const Property* prop) {
     Fem::FemPostFunction::onChanged(prop);
 }
 
+void FemPostPlaneFunction::onDocumentRestored() {
+    // This is to notify the view provider that the document has been fully restored
+    Normal.touch();
+}
 
 
-
+// ***************************************************************************
+// sphere function
 PROPERTY_SOURCE(Fem::FemPostSphereFunction, Fem::FemPostFunction)
 
-FemPostSphereFunction::FemPostSphereFunction(void): FemPostFunction() {
+FemPostSphereFunction::FemPostSphereFunction() : FemPostFunction() {
 
-    ADD_PROPERTY(Radius,(5));
-    ADD_PROPERTY(Center,(Base::Vector3d(1.0,0.0,0.0)));
+    ADD_PROPERTY(Radius, (5));
+    ADD_PROPERTY(Center, (Base::Vector3d(1.0, 0.0, 0.0)));
 
     m_sphere = vtkSmartPointer<vtkSphere>::New();
     m_implicit = m_sphere;
@@ -119,11 +122,11 @@ FemPostSphereFunction::~FemPostSphereFunction() {
 
 void FemPostSphereFunction::onChanged(const Property* prop) {
 
-    if(prop == &Center) {
+    if (prop == &Center) {
         const Base::Vector3d& vec = Center.getValue();
         m_sphere->SetCenter(vec[0], vec[1], vec[2]);
     }
-    else if(prop == &Radius) {
+    else if (prop == &Radius) {
         m_sphere->SetRadius(Radius.getValue());
     }
 

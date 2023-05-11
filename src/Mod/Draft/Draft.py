@@ -120,9 +120,11 @@ from draftutils.gui_utils import (dim_symbol,
                                   dim_dash,
                                   dimDash)
 
-from draftutils.groups import (get_group_names,
+from draftutils.groups import (is_group,
+                               get_group_names,
                                getGroupNames,
                                ungroup,
+                               get_windows,
                                get_group_contents,
                                getGroupContents,
                                get_movable_children,
@@ -347,6 +349,8 @@ from draftobjects.shapestring import (ShapeString,
                                       _ShapeString)
 from draftmake.make_shapestring import (make_shapestring,
                                         makeShapeString)
+if App.GuiUp:
+    from draftviewproviders.view_shapestring import ViewProviderShapeString
 
 # shape 2d view
 from draftobjects.shape2dview import (Shape2DView,

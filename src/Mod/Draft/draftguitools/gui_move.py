@@ -106,13 +106,19 @@ class Move(gui_base_original.Modifier):
         self.call = self.view.addEventCallback("SoEvent", self.action)
         _msg(translate("draft", "Pick start point"))
 
-    def finish(self, closed=False, cont=False):
-        """Finish the move operation."""
+    def finish(self, cont=False):
+        """Terminate the operation.
+
+        Parameters
+        ----------
+        cont: bool or None, optional
+            Restart (continue) the command if `True`, or if `None` and
+            `ui.continueMode` is `True`.
+        """
         for ghost in self.ghosts:
             ghost.finalize()
-        if cont and self.ui:
-            if self.ui.continueMode:
-                todo.ToDo.delayAfter(self.Activated, [])
+        if cont or (cont is None and self.ui and self.ui.continueMode):
+            todo.ToDo.delayAfter(self.Activated, [])
         super(Move, self).finish()
 
     def action(self, arg):
@@ -174,25 +180,30 @@ class Move(gui_base_original.Modifier):
             if gui_tool_utils.hasMod(arg, gui_tool_utils.MODALT):
                 self.extendedCopy = True
             else:
-                self.finish(cont=True)
+                self.finish(cont=None)
 
     def set_ghosts(self):
         """Set the ghost to display."""
+        for ghost in self.ghosts:
+            ghost.remove()
         if self.ui.isSubelementMode.isChecked():
-            return self.set_subelement_ghosts()
-        self.ghosts = [trackers.ghostTracker(self.selected_objects)]
+            self.ghosts = self.get_subelement_ghosts()
+        else:
+            self.ghosts = [trackers.ghostTracker(self.selected_objects)]
 
-    def set_subelement_ghosts(self):
-        """Set ghost for the subelements."""
+    def get_subelement_ghosts(self):
+        """Get ghost for the subelements (vertices, edges)."""
         import Part
 
+        ghosts = []
         for item in self.selected_objects:
             if not isinstance(item, tuple):
                 continue;
             subelement = item[0].getSubObject(item[1]);
             if (isinstance(subelement, Part.Vertex)
                     or isinstance(subelement, Part.Edge)):
-                self.ghosts.append(trackers.ghostTracker(subelement))
+                ghosts.append(trackers.ghostTracker(subelement))
+        return ghosts
 
     def move(self, is_copy=False):
         """Perform the move of the subelements or the entire object."""
@@ -203,6 +214,7 @@ class Move(gui_base_original.Modifier):
 
     def move_subelements(self, is_copy):
         """Move the subelements."""
+        Gui.addModule("Draft")
         try:
             if is_copy:
                 self.commit(translate("draft", "Copy element"),

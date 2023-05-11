@@ -20,18 +20,13 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #include "ViewProviderDocumentObject.h"
 
 #ifndef _PreComp_
-# include <cfloat>
-# include <QAction>
-# include <QMenu>
+# include <Inventor/SoPickedPoint.h>
+# include <Inventor/actions/SoRayPickAction.h>
 # include <Inventor/actions/SoSearchAction.h>
-# include <Inventor/draggers/SoDragger.h>
-# include <Inventor/draggers/SoCenterballDragger.h>
-# include <Inventor/manips/SoCenterballManip.h>
 # include <Inventor/nodes/SoBaseColor.h>
 # include <Inventor/nodes/SoCamera.h>
 # include <Inventor/nodes/SoDrawStyle.h>
@@ -40,48 +35,36 @@
 # include <Inventor/nodes/SoSeparator.h>
 # include <Inventor/nodes/SoSwitch.h>
 # include <Inventor/nodes/SoDirectionalLight.h>
-# include <Inventor/nodes/SoPickStyle.h>
 # include <Inventor/sensors/SoNodeSensor.h>
-# include <Inventor/SoPickedPoint.h>
-# include <Inventor/actions/SoRayPickAction.h>
 #endif
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
+#include <Inventor/nodes/SoResetTransform.h>
+
+#include <App/GeoFeature.h>
+#include <App/PropertyGeo.h>
+
 #include "ViewProviderGeometryObject.h"
-#include "View3DInventorViewer.h"
-#include "SoFCSelection.h"
-#include "SoFCBoundingBox.h"
 #include "Application.h"
 #include "Document.h"
-#include "Window.h"
 #include "ViewParams.h"
 
-#include <Base/Console.h>
-#include <Base/Placement.h>
-#include <App/PropertyGeo.h>
-#include <App/GeoFeature.h>
-#include <Inventor/draggers/SoCenterballDragger.h>
-#include <Inventor/nodes/SoResetTransform.h>
-#if (COIN_MAJOR_VERSION > 2)
-#include <Inventor/nodes/SoDepthBuffer.h>
-#endif
+#include "SoFCBoundingBox.h"
+#include "SoFCSelection.h"
 #include "SoFCUnifiedSelection.h"
-#include "SoFCCSysDragger.h"
-#include "Control.h"
-#include "TaskCSysDragger.h"
-#include <boost/math/special_functions/fpclassify.hpp>
+#include "View3DInventorViewer.h"
+
 
 using namespace Gui;
 
 PROPERTY_SOURCE(Gui::ViewProviderGeometryObject, Gui::ViewProviderDragger)
 
-const App::PropertyIntegerConstraint::Constraints intPercent = {0,100,1};
+const App::PropertyIntegerConstraint::Constraints intPercent = {0, 100, 5};
 
 ViewProviderGeometryObject::ViewProviderGeometryObject()
-    : pcBoundingBox(0)
-    , pcBoundSwitch(0)
-    , pcBoundColor(0)
-    , pcSwitchSensor(0)
+    : pcBoundingBox(nullptr)
+    , pcBoundSwitch(nullptr)
+    , pcBoundColor(nullptr)
+    , pcSwitchSensor(nullptr)
 {
     float r,g,b;
 
@@ -102,20 +85,22 @@ ViewProviderGeometryObject::ViewProviderGeometryObject()
         b = ((shcol >> 8) & 0xff) / 255.0;
     }
 
+    int initialTransparency = ViewParams::getDefaultShapeTransparency(); 
+
     static const char *dogroup = "Display Options";
     static const char *osgroup = "Object Style";
 
     ADD_PROPERTY_TYPE(ShapeColor, (r, g, b), osgroup, App::Prop_None, "Set shape color");
-    ADD_PROPERTY_TYPE(Transparency, (0), osgroup, App::Prop_None, "Set object transparency");
+    ADD_PROPERTY_TYPE(Transparency, (initialTransparency), osgroup, App::Prop_None, "Set object transparency");
     Transparency.setConstraints(&intPercent);
     App::Material mat(App::Material::DEFAULT);
     ADD_PROPERTY_TYPE(ShapeMaterial,(mat), osgroup, App::Prop_None, "Shape material");
     ADD_PROPERTY_TYPE(BoundingBox, (false), dogroup, App::Prop_None, "Display object bounding box");
 
     pcShapeMaterial = new SoMaterial;
+    pcShapeMaterial->diffuseColor.setValue(r, g, b);
+    pcShapeMaterial->transparency = float(initialTransparency);
     pcShapeMaterial->ref();
-    //ShapeMaterial.touch(); materials are rarely used, so better to initialize with default shape color
-    ShapeColor.touch();
 
     sPixmap = "Feature";
 }
@@ -140,23 +125,25 @@ void ViewProviderGeometryObject::onChanged(const App::Property* prop)
     // Both redundant properties are kept due to more convenience for the user. But we must keep the values
     // consistent of all these properties.
     if (prop == &ShapeColor) {
-        const App::Color& c = ShapeColor.getValue();
-        pcShapeMaterial->diffuseColor.setValue(c.r,c.g,c.b);
+        const App::Color &c = ShapeColor.getValue();
+        pcShapeMaterial->diffuseColor.setValue(c.r, c.g, c.b);
         if (c != ShapeMaterial.getValue().diffuseColor)
             ShapeMaterial.setDiffuseColor(c);
     }
     else if (prop == &Transparency) {
-        const App::Material& Mat = ShapeMaterial.getValue();
-        long value = (long)(100*Mat.transparency);
+        const App::Material &Mat = ShapeMaterial.getValue();
+        long value = (long)(100 * Mat.transparency);
         if (value != Transparency.getValue()) {
-            float trans = Transparency.getValue()/100.0f;
+            float trans = Transparency.getValue() / 100.0f;
             pcShapeMaterial->transparency = trans;
             ShapeMaterial.setTransparency(trans);
         }
     }
     else if (prop == &ShapeMaterial) {
-        const App::Material& Mat = ShapeMaterial.getValue();
-        long value = (long)(100*Mat.transparency);
+        if (getObject() && getObject()->testStatus(App::ObjectStatus::TouchOnColorChange))
+            getObject()->touch(true);
+        const App::Material &Mat = ShapeMaterial.getValue();
+        long value = (long)(100 * Mat.transparency);
         if (value != Transparency.getValue())
             Transparency.setValue(value);
         const App::Color& color = Mat.diffuseColor;
@@ -202,11 +189,11 @@ void ViewProviderGeometryObject::updateBoundingBox() {
 
 SoPickedPointList ViewProviderGeometryObject::getPickedPoints(const SbVec2s& pos, const View3DInventorViewer& viewer,bool pickAll) const
 {
-    SoSeparator* root = new SoSeparator;
+    auto root = new SoSeparator;
     root->ref();
     root->addChild(viewer.getHeadlight());
     root->addChild(viewer.getSoRenderManager()->getCamera());
-    root->addChild(const_cast<ViewProviderGeometryObject*>(this)->getRoot());
+    root->addChild(getRoot());
 
     SoRayPickAction rp(viewer.getSoRenderManager()->getViewportRegion());
     rp.setPickAll(pickAll);
@@ -221,11 +208,11 @@ SoPickedPointList ViewProviderGeometryObject::getPickedPoints(const SbVec2s& pos
 
 SoPickedPoint* ViewProviderGeometryObject::getPickedPoint(const SbVec2s& pos, const View3DInventorViewer& viewer) const
 {
-    SoSeparator* root = new SoSeparator;
+    auto root = new SoSeparator;
     root->ref();
     root->addChild(viewer.getHeadlight());
     root->addChild(viewer.getSoRenderManager()->getCamera());
-    root->addChild(const_cast<ViewProviderGeometryObject*>(this)->getRoot());
+    root->addChild(getRoot());
 
     SoRayPickAction rp(viewer.getSoRenderManager()->getViewportRegion());
     rp.setPoint(pos);
@@ -236,7 +223,7 @@ SoPickedPoint* ViewProviderGeometryObject::getPickedPoint(const SbVec2s& pos, co
     // returns a copy of the point
     SoPickedPoint* pick = rp.getPickedPoint();
     //return (pick ? pick->copy() : 0); // needs the same instance of CRT under MS Windows
-    return (pick ? new SoPickedPoint(*pick) : 0);
+    return (pick ? new SoPickedPoint(*pick) : nullptr);
 }
 
 unsigned long ViewProviderGeometryObject::getBoundColor() const
@@ -299,8 +286,8 @@ void ViewProviderGeometryObject::showBoundingBox(bool show)
 
         pcBoundSwitch = new SoSwitch();
         pcBoundSwitch->ref();
-        SoSeparator* pBoundingSep = new SoSeparator();
-        SoDrawStyle* lineStyle = new SoDrawStyle;
+        auto pBoundingSep = new SoSeparator();
+        auto lineStyle = new SoDrawStyle;
         lineStyle->lineWidth = 2.0f;
         pBoundingSep->addChild(lineStyle);
 
@@ -310,7 +297,7 @@ void ViewProviderGeometryObject::showBoundingBox(bool show)
         }
         pcBoundColor->rgb.setValue(r, g, b);
         pBoundingSep->addChild(pcBoundColor);
-        SoFont* font = new SoFont();
+        auto font = new SoFont();
         font->size.setValue(getBoundBoxFontSize());
         pBoundingSep->addChild(font);
 
@@ -340,4 +327,3 @@ void ViewProviderGeometryObject::showBoundingBox(bool show)
         pcBoundSwitch->whichChild = (show ? 0 : -1);
     }
 }
-

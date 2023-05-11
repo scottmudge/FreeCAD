@@ -20,19 +20,18 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #include "PropertyColumnWidths.h"
-
 // inclusion of the generated files (generated out of PropertyColumnWidthsPy.xml)
 #include "PropertyColumnWidthsPy.h"
 #include "PropertyColumnWidthsPy.cpp"
 
+
 using namespace Spreadsheet;
 
 // returns a string which represents the object e.g. when printed in python
-std::string PropertyColumnWidthsPy::representation(void) const
+std::string PropertyColumnWidthsPy::representation() const
 {
     return std::string("<PropertyColumnWidths object>");
 }
@@ -51,7 +50,7 @@ int PropertyColumnWidthsPy::PyInit(PyObject* /*args*/, PyObject* /*kwd*/)
 
 PyObject *PropertyColumnWidthsPy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int PropertyColumnWidthsPy::setCustomAttributes(const char* /*attr*/, PyObject* /*obj*/)

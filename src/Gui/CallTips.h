@@ -56,9 +56,9 @@ public:
     /// Construction
     CallTipsList(QPlainTextEdit* parent);
     /// Destruction
-    ~CallTipsList();
+    ~CallTipsList() override;
 
-    void keyboardSearch (const QString&);
+    void keyboardSearch (const QString&) override;
     void showTips(const QString&);
     void validateCursor();
 
@@ -69,9 +69,9 @@ public:
     static QIcon iconOfType(CallTip::Type type, bool isValid=true);
 
 protected:
-    bool eventFilter(QObject *, QEvent *);
-    void showEvent(QShowEvent*);
-    void hideEvent(QHideEvent*);
+    bool eventFilter(QObject *, QEvent *) override;
+    void showEvent(QShowEvent*) override;
+    void hideEvent(QHideEvent*) override;
 
 private Q_SLOTS:
     void callTipItemActivated(QListWidgetItem *item);

@@ -21,18 +21,16 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
-#include <algorithm>
+
 #include <iomanip>
 #include <sstream>
 
-#include <QGlobalStatic>
 #include <QMainWindow>
-#include <QWidget>
 #include <FCConfig.h>
-#include <Base/Console.h>
+#include "Application.h"
 #include "GuiApplicationNativeEventAware.h"
 #include "SpaceballEvent.h"
-#include "Application.h"
+
 
 #if defined(_USE_3DCONNEXION_SDK) || defined(SPNAV_FOUND)
 #if defined(Q_OS_LINUX)
@@ -85,26 +83,26 @@ bool Gui::GUIApplicationNativeEventAware::processSpaceballEvent(QObject *object,
     QApplication::notify(object, event);
     if (event->type() == Spaceball::MotionEvent::MotionEventType)
     {
-        Spaceball::MotionEvent *motionEvent = dynamic_cast<Spaceball::MotionEvent*>(event);
+        auto motionEvent = dynamic_cast<Spaceball::MotionEvent*>(event);
         if (!motionEvent)
             return true;
         if (!motionEvent->isHandled())
         {
             //make a new event and post to parent.
-            Spaceball::MotionEvent *newEvent = new Spaceball::MotionEvent(*motionEvent);
+            auto newEvent = new Spaceball::MotionEvent(*motionEvent);
             postEvent(object->parent(), newEvent);
         }
     }
 
     if (event->type() == Spaceball::ButtonEvent::ButtonEventType)
     {
-        Spaceball::ButtonEvent *buttonEvent = dynamic_cast<Spaceball::ButtonEvent*>(event);
+        auto buttonEvent = dynamic_cast<Spaceball::ButtonEvent*>(event);
         if (!buttonEvent)
             return true;
         if (!buttonEvent->isHandled())
         {
             //make a new event and post to parent.
-            Spaceball::ButtonEvent *newEvent = new Spaceball::ButtonEvent(*buttonEvent);
+            auto newEvent = new Spaceball::ButtonEvent(*buttonEvent);
             postEvent(object->parent(), newEvent);
         }
     }
@@ -119,7 +117,7 @@ void Gui::GUIApplicationNativeEventAware::postMotionEvent(std::vector<int> motio
     }
     importSettings(motionDataArray);
 
-	Spaceball::MotionEvent *motionEvent = new Spaceball::MotionEvent();
+    auto motionEvent = new Spaceball::MotionEvent();
     motionEvent->setTranslations(motionDataArray[0], motionDataArray[1], motionDataArray[2]);
     motionEvent->setRotations(motionDataArray[3], motionDataArray[4], motionDataArray[5]);
     this->postEvent(currentWidget, motionEvent);
@@ -132,7 +130,7 @@ void Gui::GUIApplicationNativeEventAware::postButtonEvent(int buttonNumber, int 
         return;
     }
 
-    Spaceball::ButtonEvent *buttonEvent = new Spaceball::ButtonEvent();
+    auto buttonEvent = new Spaceball::ButtonEvent();
     buttonEvent->setButtonNumber(buttonNumber);
     if (buttonPress)
     {
@@ -299,10 +297,10 @@ void Gui::GUIApplicationNativeEventAware::importSettings(std::vector<int>& motio
 
     for (i = 0; i < 6; ++i) {
         if (motionDataArray[i] != 0) {
-            if (enabled[i] == false)
+            if (!enabled[i])
                 motionDataArray[i] = 0;
             else {
-                if (reversed[i] == true)
+                if (reversed[i])
                     motionDataArray[i] = - motionDataArray[i];
                 motionDataArray[i] = (int)((float)(motionDataArray[i]) * sensitivity[i] * generalSensitivity);
             }

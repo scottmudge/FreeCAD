@@ -46,7 +46,7 @@ from FreeCAD import Vector
 from FreeCAD import Console as FCC
 
 if FreeCAD.GuiUp:
-    from DraftTools import translate
+    from draftutils.translate import translate
 else:
     def translate(context, txt):
         return txt
@@ -331,8 +331,6 @@ def parse(filename, doc):
             color = (float(c[1])/255,
                      float(c[2])/255,
                      float(c[3])/255)
-
-    del color
 
 
 def decodeName(name):

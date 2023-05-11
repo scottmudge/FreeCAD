@@ -24,7 +24,6 @@
 #ifndef PARTDESIGN_DressUp_H
 #define PARTDESIGN_DressUp_H
 
-#include <App/PropertyStandard.h>
 #include "FeatureAddSub.h"
 
 namespace PartDesign
@@ -32,7 +31,7 @@ namespace PartDesign
 
 class PartDesignExport DressUp : public PartDesign::FeatureAddSub
 {
-    PROPERTY_HEADER(PartDesign::DressUp);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::DressUp);
 
 public:
     DressUp();
@@ -46,9 +45,9 @@ public:
     App::PropertyBool SupportTransform;
     Part::PropertyPartShape   DressUpShape;
 
-    short mustExecute() const;
+    short mustExecute() const override;
     /// updates the Placement property from the Placement of the BaseFeature
-    void positionByBaseFeature(void);
+    void positionByBaseFeature();
     /**
      * Returns the BaseFeature property's object if it's set otherwise returns Base's
      * feature property object otherwise feature property's object (if any)
@@ -56,21 +55,22 @@ public:
      *               silently return a nullptr, otherwise throw Base::Exception.
      *               Default is false.
      */
-    virtual Part::Feature* getBaseObject(bool silent=false) const;
+    Part::Feature* getBaseObject(bool silent=false) const override;
     /// extracts all edges from the subshapes (including face edges) and furthermore adds
     /// all C0 continuous edges to the vector
     std::vector<TopoShape> getContinuousEdges(const TopoShape &shape);
 
     std::vector<TopoShape> getFaces(const TopoShape &shape);
 
-    virtual void getAddSubShape(std::vector<std::pair<Part::TopoShape, Type> > &shapes);
+    void getAddSubShape(std::vector<std::pair<Part::TopoShape, Type> > &shapes) override;
 
     static const std::string &addsubElementPrefix();
 
-    virtual void setPauseRecompute(bool) {}
+    void setPauseRecompute(bool) override {
+    }
 
 protected:
-    virtual void onChanged(const App::Property* prop);
+    void onChanged(const App::Property* prop) override;
 };
 
 } //namespace PartDesign

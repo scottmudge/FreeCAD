@@ -44,7 +44,7 @@ public:
     ImageBase(const ImageBase &rhs);
     ImageBase & operator=(const ImageBase &rhs);
 
-    bool hasValidData() const { return (_pPixelData != 0); }
+    bool hasValidData() const { return (_pPixelData != nullptr); }
     void* getPixelDataPtr() { return (void *)_pPixelData; }
     bool isOwner() const { return _owner; }
     unsigned long getWidth() const { return _width; }
@@ -54,7 +54,7 @@ public:
     unsigned short getNumSamples() const { return _numSamples; }
     unsigned short getNumBitsPerSample() const { return _numBitsPerSample; }
     unsigned short getNumBytesPerPixel() const { return _numBytesPerPixel; }
-    
+
     virtual void clear();
     virtual int createCopy(void* pSrcPixelData, unsigned long width, unsigned long height, int format, unsigned short numSigBitsPerSample);
     virtual int pointTo(void* pSrcPixelData, unsigned long width, unsigned long height, int format, unsigned short numSigBitsPerSample, bool takeOwnership);

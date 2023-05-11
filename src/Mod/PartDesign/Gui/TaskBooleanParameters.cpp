@@ -25,9 +25,9 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QMessageBox>
 # include <QAction>
 # include <QKeyEvent>
+# include <QMessageBox>
 #endif
 
 #include "ui_TaskBooleanParameters.h"
@@ -37,20 +37,20 @@
 #include <App/Application.h>
 #include <App/DocumentObserver.h>
 #include <App/Document.h>
+#include <App/DocumentObject.h>
 #include <Gui/Application.h>
-#include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Base/Console.h>
-#include <Gui/Selection.h>
 #include <Gui/Command.h>
 #include <Gui/MainWindow.h>
+#include <Gui/WaitCursor.h>
 #include <Mod/PartDesign/App/FeatureBoolean.h>
 #include <Mod/PartDesign/App/ShapeBinder.h>
 #include <Mod/PartDesign/App/Body.h>
-#include <Mod/Sketcher/App/SketchObject.h>
-#include <Mod/PartDesign/Gui/ReferenceSelection.h>
+#include <Mod/PartDesign/App/FeatureBoolean.h>
+
+#include "ui_TaskBooleanParameters.h"
+#include "TaskBooleanParameters.h"
+
 
 using namespace PartDesignGui;
 using namespace Gui;
@@ -220,7 +220,8 @@ void TaskBooleanParameters::preselect(QListWidgetItem *item) {
     subname += ".";
 
     Gui::Selection().setPreselect(parent->getDocument()->getName(),
-            parent->getNameInDocument(),subname.c_str(),0,0,0,2,true);
+            parent->getNameInDocument(),subname.c_str(),0,0,0,
+            Gui::SelectionChanges::MsgSource::TreeView,true);
 }
 
 void TaskBooleanParameters::onItemSelection() {
@@ -300,7 +301,7 @@ void TaskBooleanParameters::onButtonAdd()
 
     PartDesign::Boolean* pcBoolean = static_cast<PartDesign::Boolean*>(BooleanView->getObject());
     auto inset = pcBoolean->getInListEx(true);
-    auto sels = Gui::Selection().getCompleteSelection(0);
+    auto sels = Gui::Selection().getCompleteSelection(Gui::ResolveMode::NoResolve);
     if(sels.empty())
         return;
 

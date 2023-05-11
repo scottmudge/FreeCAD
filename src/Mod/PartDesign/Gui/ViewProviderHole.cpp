@@ -25,17 +25,17 @@
 
 #ifndef _PreComp_
 # include <QMenu>
-# include <QAction>
 # include <QMessageBox>
 #endif
 
-#include "ViewProviderHole.h"
-#include "TaskHoleParameters.h"
-#include <Mod/PartDesign/App/FeatureHole.h>
-#include <Mod/Sketcher/App/SketchObject.h>
+#include <Gui/Application.h>
 #include <Gui/Control.h>
 #include <Gui/Command.h>
-#include <Gui/Application.h>
+#include <Mod/PartDesign/App/FeatureHole.h>
+#include <Mod/Sketcher/App/SketchObject.h>
+
+#include "ViewProviderHole.h"
+#include "TaskHoleParameters.h"
 
 using namespace PartDesignGui;
 
@@ -50,7 +50,7 @@ ViewProviderHole::~ViewProviderHole()
 {
 }
 
-std::vector<App::DocumentObject*> ViewProviderHole::_claimChildren(void)const
+std::vector<App::DocumentObject*> ViewProviderHole::_claimChildren() const
 {
     std::vector<App::DocumentObject*> temp;
     auto profile = static_cast<PartDesign::Hole*>(getObject())->Profile.getValue();
@@ -61,10 +61,8 @@ std::vector<App::DocumentObject*> ViewProviderHole::_claimChildren(void)const
 
 void ViewProviderHole::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
 {
-    QAction* act;
-    act = menu->addAction(QObject::tr("Edit hole"), receiver, member);
-    act->setData(QVariant((int)ViewProvider::Default));
-    inherited::setupContextMenu(menu,receiver,member);
+    addDefaultAction(menu, QObject::tr("Edit hole"));
+    inherited::setupContextMenu(menu, receiver, member);
 }
 
 TaskDlgFeatureParameters* ViewProviderHole::getEditDialog() {
@@ -75,7 +73,7 @@ bool ViewProviderHole::onDelete(const std::vector<std::string> &s)
 {
     // get the Sketch
     PartDesign::Hole* pcHole = static_cast<PartDesign::Hole*>(getObject());
-    Sketcher::SketchObject *pcSketch = 0;
+    Sketcher::SketchObject *pcSketch = nullptr;
     if (pcHole->Profile.getValue())
         pcSketch = static_cast<Sketcher::SketchObject*>(pcHole->Profile.getValue());
 

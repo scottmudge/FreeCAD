@@ -20,19 +20,21 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef PART_PROPERTYTOPOSHAPE_H
 #define PART_PROPERTYTOPOSHAPE_H
 
-#include "TopoShape.h"
-#include <TopAbs_ShapeEnum.hxx>
-#include <App/DocumentObject.h>
-#include <App/PropertyGeo.h>
-#include <boost/signals2/connection.hpp>
 #include <map>
 #include <vector>
 
 class BRepBuilderAPI_MakeShape;
+#include <map>
+#include <vector>
+
+#include "TopoShape.h"
+#include <TopAbs_ShapeEnum.hxx>
+
+#include <App/PropertyGeo.h>
+#include <App/DocumentObject.h>
 
 namespace Part
 {
@@ -48,7 +50,7 @@ class PartExport PropertyPartShape : public App::PropertyComplexGeoData
 
 public:
     PropertyPartShape();
-    ~PropertyPartShape();
+    ~PropertyPartShape() override;
 
     /** @name Getter/setter */
     //@{
@@ -57,56 +59,65 @@ public:
     /// set the part shape
     void setValue(const TopoDS_Shape&, bool resetElementMap=true);
     /// get the part shape
-    const TopoDS_Shape& getValue(void) const;
+    const TopoDS_Shape& getValue() const;
     TopoShape getShape() const;
-    virtual const Data::ComplexGeoData* getComplexData() const override;
+    const Data::ComplexGeoData* getComplexData() const override;
     //@}
 
     /** @name Modification */
     //@{
+    /// Set the placement of the geometry
+    void setTransform(const Base::Matrix4D& rclTrf) override;
+    /// Get the placement of the geometry
+    Base::Matrix4D getTransform() const override;
     /// Transform the real shape data
-    virtual void transformGeometry(const Base::Matrix4D &rclMat) override;
+    void transformGeometry(const Base::Matrix4D &rclMat) override;
     //@}
 
     /** @name Getting basic geometric entities */
     //@{
     /** Returns the bounding box around the underlying mesh kernel */
-    virtual Base::BoundBox3d getBoundingBox() const override;
+    Base::BoundBox3d getBoundingBox() const override;
     //@}
 
     /** @name Python interface */
     //@{
-    virtual PyObject* getPyObject(void) override;
-    virtual void setPyObject(PyObject *value) override;
+    PyObject* getPyObject() override;
+    void setPyObject(PyObject *value) override;
     //@}
 
     /** @name Save/restore */
     //@{
-    virtual void Save (Base::Writer &writer) const override;
-    virtual void Restore(Base::XMLReader &reader) override;
+    void Save (Base::Writer &writer) const override;
+    void Restore(Base::XMLReader &reader) override;
 
-    virtual void beforeSave() const override;
+    void beforeSave() const override;
 
-    virtual void SaveDocFile (Base::Writer &writer) const override;
-    virtual void RestoreDocFile(Base::Reader &reader) override;
+    void SaveDocFile (Base::Writer &writer) const override;
+    void RestoreDocFile(Base::Reader &reader) override;
 
-    virtual App::Property *Copy(void) const override;
-    virtual void Paste(const App::Property &from) override;
-    virtual unsigned int getMemSize (void) const override;
+    App::Property *Copy(void) const override;
+    void Paste(const App::Property &from) override;
+    unsigned int getMemSize (void) const override;
     //@}
 
     /// Get valid paths for this property; used by auto completer
-    virtual void getPaths(std::vector<App::ObjectIdentifier> & paths) const override;
+    void getPaths(std::vector<App::ObjectIdentifier> & paths) const override;
 
-    virtual std::string getElementMapVersion(bool restored=false) const override;
+    std::string getElementMapVersion(bool restored=false) const override;
     void resetElementMapVersion() {_Ver.clear();}
 
-    virtual void afterRestore() override;
+    void afterRestore() override;
 
     friend class Feature;
 
 protected:
     void validateShape(App::DocumentObject *);
+
+private:
+    void saveToFile(Base::Writer &writer) const;
+    TopoDS_Shape loadFromFile(Base::Reader &reader);
+    TopoDS_Shape loadFromStream(Base::Reader &reader);
 
 private:
     TopoShape _Shape;
@@ -120,8 +131,8 @@ struct PartExport ShapeHistory {
     * @brief MapList: key is index of subshape (of type 'type') in source
     * shape. Value is list of indexes of subshapes in result shape.
     */
-    typedef std::map<int, std::vector<int> > MapList;
-    typedef std::vector<int> List;
+    using MapList = std::map<int, std::vector<int> >;
+    using List = std::vector<int>;
 
     TopAbs_ShapeEnum type;
     MapList shapeMap;
@@ -144,16 +155,16 @@ struct PartExport ShapeHistory {
 
 class PartExport PropertyShapeHistory : public App::PropertyLists
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 
 public:
     PropertyShapeHistory();
-    ~PropertyShapeHistory();
+    ~PropertyShapeHistory() override;
 
-    virtual void setSize(int newSize) {
+    void setSize(int newSize) override {
         _lValueList.resize(newSize);
     }
-    virtual int getSize(void) const {
+    int getSize() const override {
         return _lValueList.size();
     }
 
@@ -163,27 +174,27 @@ public:
 
     void setValues (const std::vector<ShapeHistory>& values);
 
-    const std::vector<ShapeHistory> &getValues(void) const {
+    const std::vector<ShapeHistory> &getValues() const {
         return _lValueList;
     }
 
-    virtual bool isSame(const App::Property &) const {return false;}
+    bool isSame(const App::Property &) const override {return false;}
 
-    virtual App::Property *copyBeforeChange() const {return nullptr;}
+    App::Property *copyBeforeChange() const override {return nullptr;}
 
-    virtual PyObject *getPyObject(void);
-    virtual void setPyObject(PyObject *);
+    PyObject *getPyObject() override;
+    void setPyObject(PyObject *) override;
 
-    virtual void Save (Base::Writer &writer) const;
-    virtual void Restore(Base::XMLReader &reader);
+    void Save (Base::Writer &writer) const override;
+    void Restore(Base::XMLReader &reader) override;
 
-    virtual void SaveDocFile (Base::Writer &writer) const;
-    virtual void RestoreDocFile(Base::Reader &reader);
+    void SaveDocFile (Base::Writer &writer) const override;
+    void RestoreDocFile(Base::Reader &reader) override;
 
-    virtual Property *Copy(void) const;
-    virtual void Paste(const Property &from);
+    Property *Copy() const override;
+    void Paste(const Property &from) override;
 
-    virtual unsigned int getMemSize (void) const {
+    unsigned int getMemSize () const override {
         return _lValueList.size() * sizeof(ShapeHistory);
     }
 
@@ -217,30 +228,30 @@ class PartExport PropertyFilletEdges : public App::PropertyListsT<FilletElement>
 {
     TYPESYSTEM_HEADER_WITH_OVERRIDE();
 
-    typedef PropertyListsT<FilletElement> inherited;
+    using inherited = PropertyListsT<FilletElement>;
 
 public:
     PropertyFilletEdges();
-    ~PropertyFilletEdges();
+    ~PropertyFilletEdges() override;
 
     /** Sets the property
      */
     void setValue(int id, double r1, double r2);
     using inherited::setValue;
 
-    virtual PyObject *getPyObject(void) override;
+    PyObject *getPyObject(void) override;
 
-    virtual Property *Copy(void) const override;
-    virtual void Paste(const Property &from) override;
+    Property *Copy(void) const override;
+    void Paste(const Property &from) override;
 
 protected:
-    virtual FilletElement getPyValue(PyObject *item) const override;
+    FilletElement getPyValue(PyObject *item) const override;
 
-    virtual void restoreXML(Base::XMLReader &) override;
-    virtual bool saveXML(Base::Writer &) const override;
-    virtual bool canSaveStream(Base::Writer &) const override { return true; }
-    virtual void restoreStream(Base::InputStream &s, unsigned count) override;
-    virtual void saveStream(Base::OutputStream &) const override;
+    void restoreXML(Base::XMLReader &) override;
+    bool saveXML(Base::Writer &) const override;
+    bool canSaveStream(Base::Writer &) const override { return true; }
+    void restoreStream(Base::InputStream &s, unsigned count) override;
+    void saveStream(Base::OutputStream &) const override;
 };
 
 class PartExport PropertyShapeCache: public App::Property {
@@ -248,21 +259,21 @@ class PartExport PropertyShapeCache: public App::Property {
     TYPESYSTEM_HEADER_WITH_OVERRIDE();
 
 public:
-    virtual App::Property *Copy(void) const override;
+    App::Property *Copy(void) const override;
 
-    virtual void Paste(const App::Property &) override;
+    void Paste(const App::Property &) override;
 
-    virtual PyObject *getPyObject() override;
+    PyObject *getPyObject() override;
 
-    virtual void setPyObject(PyObject *value) override;
+    void setPyObject(PyObject *value) override;
 
-    virtual void Save (Base::Writer &writer) const override;
+    void Save (Base::Writer &writer) const override;
 
-    virtual void Restore(Base::XMLReader &reader) override;
+    void Restore(Base::XMLReader &reader) override;
 
-    virtual bool isSame(const App::Property &) const override {return false;}
+    bool isSame(const App::Property &) const override {return false;}
 
-    virtual App::Property *copyBeforeChange() const override {return nullptr;}
+    App::Property *copyBeforeChange() const override {return nullptr;}
 
     static PropertyShapeCache *get(const App::DocumentObject *obj, bool create);
     static bool getShape(const App::DocumentObject *obj, TopoShape &shape, const char *subname=0);

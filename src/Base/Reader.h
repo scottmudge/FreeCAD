@@ -23,11 +23,11 @@
 #ifndef BASE_READER_H
 #define BASE_READER_H
 
-
-#include <string>
-#include <map>
 #include <bitset>
+#include <map>
 #include <memory>
+#include <sstream>
+#include <string>
 
 #include <xercesc/framework/XMLPScanToken.hpp>
 #include <xercesc/sax2/Attributes.hpp>
@@ -131,7 +131,7 @@ public:
     /// open the file and read the first element
     XMLReader(Base::Reader &reader, std::size_t bufsize=16*1024);
     XMLReader(const char *name, std::istream &, std::size_t bufsize=16*1024);
-    ~XMLReader();
+    ~XMLReader() override;
 
     /** @name boost iostream device interface */
     //@{
@@ -147,7 +147,7 @@ public:
     /** @name Parser handling */
     //@{
     /// get the local name of the current Element
-    const char* localName(void) const;
+    const char* localName() const;
     /// get the current element level
     int level() const;
     /** read until a start element is found (\<name\>) or start-end element (\<name/\>) (with special name if given)
@@ -171,7 +171,7 @@ public:
      * does. The reader internally keeps a stack of guards, so you can setup
      * additional guard when calling readElement() at deeper level.
      */
-    void readElement   (const char* ElementName=0, int *guard=0);
+    void readElement   (const char* ElementName=nullptr, int *guard=nullptr);
     /** read until an end element is found
      *
      * @param ElementName: optional end element name to look for. If given, then
@@ -179,7 +179,7 @@ public:
      *
      * @param guard: optional level guard. @sa readElement().
      */
-    void readEndElement(const char* ElementName=0, int *guard=0);
+    void readEndElement(const char* ElementName=nullptr, int *guard=nullptr);
     /** Read element character content and save to a file
      *
      *  @param filename: file name to save into
@@ -221,12 +221,12 @@ public:
     /// check if the read element has a special attribute
     bool hasAttribute(const char* AttrName) const;
     /// return the named attribute as an interer (does type checking)
-    long getAttributeAsInteger(const char* AttrName, const char *def=0) const;
-    unsigned long getAttributeAsUnsigned(const char* AttrName, const char *def=0) const;
+    long getAttributeAsInteger(const char* AttrName, const char *def=nullptr) const;
+    unsigned long getAttributeAsUnsigned(const char* AttrName, const char *def=nullptr) const;
     /// return the named attribute as a double floating point (does type checking)
-    double getAttributeAsFloat(const char* AttrName, const char *def=0) const;
+    double getAttributeAsFloat(const char* AttrName, const char *def=nullptr) const;
     /// return the named attribute as a double floating point (does type checking)
-    const char* getAttribute(const char* AttrName, const char *def=0) const;
+    const char* getAttribute(const char* AttrName, const char *def=nullptr) const;
     //@}
 
     /** @name additional file reading */
@@ -264,9 +264,9 @@ public:
     /// sets simultaneously the global and local PartialRestore bits
     void setPartialRestore(bool on);
 
-    void clearPartialRestoreDocumentObject(void);
-    void clearPartialRestoreProperty(void);
-    void clearPartialRestoreObject(void);
+    void clearPartialRestoreDocumentObject();
+    void clearPartialRestoreProperty();
+    void clearPartialRestoreObject();
 
     /// return the status bits
     bool testStatus(ReaderStatus pos) const;
@@ -285,28 +285,23 @@ protected:
     // -----------------------------------------------------------------------
     /** @name Content handler */
     //@{
-    virtual void startDocument();
-    virtual void endDocument();
-    virtual void startElement(const XMLCh* const uri, const XMLCh* const localname, const XMLCh* const qname, const XERCES_CPP_NAMESPACE_QUALIFIER Attributes& attrs);
-    virtual void endElement  (const XMLCh* const uri, const XMLCh *const localname, const XMLCh *const qname);
-#if (XERCES_VERSION_MAJOR == 2)
-    virtual void characters         (const XMLCh* const chars, const unsigned int length);
-    virtual void ignorableWhitespace(const XMLCh* const chars, const unsigned int length);
-#else
-    virtual void characters         (const XMLCh* const chars, const XMLSize_t length);
-    virtual void ignorableWhitespace(const XMLCh* const chars, const XMLSize_t length);
-#endif
+    void startDocument() override;
+    void endDocument() override;
+    void startElement(const XMLCh* const uri, const XMLCh* const localname, const XMLCh* const qname, const XERCES_CPP_NAMESPACE_QUALIFIER Attributes& attrs) override;
+    void endElement  (const XMLCh* const uri, const XMLCh *const localname, const XMLCh *const qname) override;
+    void characters         (const XMLCh* const chars, const XMLSize_t length) override;
+    void ignorableWhitespace(const XMLCh* const chars, const XMLSize_t length) override;
     //@}
 
     /** @name Lexical handler */
     //@{
-    virtual void startCDATA  ();
-    virtual void endCDATA    ();
+    void startCDATA  () override;
+    void endCDATA    () override;
     //@}
 
     /** @name Document handler */
     //@{
-    virtual void resetDocument();
+    void resetDocument() override;
     //@}
 
 
@@ -315,10 +310,10 @@ protected:
     // -----------------------------------------------------------------------
     /** @name Error handler */
     //@{
-    void warning(const XERCES_CPP_NAMESPACE_QUALIFIER SAXParseException& exc);
-    void error(const XERCES_CPP_NAMESPACE_QUALIFIER SAXParseException& exc);
-    void fatalError(const XERCES_CPP_NAMESPACE_QUALIFIER SAXParseException& exc);
-    void resetErrors();
+    void warning(const XERCES_CPP_NAMESPACE_QUALIFIER SAXParseException& exc) override;
+    void error(const XERCES_CPP_NAMESPACE_QUALIFIER SAXParseException& exc) override;
+    void fatalError(const XERCES_CPP_NAMESPACE_QUALIFIER SAXParseException& exc) override;
+    void resetErrors() override;
     //@}
 
     int Level;
@@ -327,7 +322,7 @@ protected:
     std::streamsize CharacterOffset;
 
     std::map<std::string,std::string> AttrMap;
-    typedef std::map<std::string,std::string> AttrMapType;
+    using AttrMapType = std::map<std::string,std::string>;
 
     enum {
         None = 0,
@@ -364,7 +359,7 @@ protected:
 class BaseExport Reader : public std::istream
 {
 public:
-    Reader(std::istream&, const std::string&, XMLReader *parent=0);
+    Reader(std::istream&, const std::string&, XMLReader *parent=nullptr);
 
     XMLReader *getParent() const;
     const std::string &getFileName() const;
@@ -374,7 +369,7 @@ public:
     friend class XMLReader;
 
 protected:
-    Reader(const std::string&, XMLReader *parent=0);
+    Reader(const std::string&, XMLReader *parent=nullptr);
 
     typedef XMLReader::FileEntry FileEntry;
     virtual void readFiles(XMLReader &) {};
@@ -387,10 +382,10 @@ private:
 class BaseExport ZipReader : public Base::Reader
 {
 public:
-    ZipReader(zipios::ZipInputStream &, const std::string&, XMLReader *parent=0);
+    ZipReader(zipios::ZipInputStream &, const std::string&, XMLReader *parent=nullptr);
 
 protected:
-    virtual void readFiles(XMLReader &reader);
+    void readFiles(XMLReader &reader) override;
 
     zipios::ZipInputStream &_stream;
 };
@@ -398,10 +393,10 @@ protected:
 class BaseExport FileReader : public Base::Reader
 {
 public:
-    FileReader(const Base::FileInfo &fi, const std::string &name = std::string(), XMLReader *parent=0);
+    FileReader(const Base::FileInfo &fi, const std::string &name = std::string(), XMLReader *parent=nullptr);
 
 protected:
-    virtual void readFiles(XMLReader &reader);
+    void readFiles(XMLReader &reader) override;
 
     std::string _dir;
     Base::ifstream _stream;

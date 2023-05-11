@@ -23,12 +23,10 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
-
 #include "ViewProviderMultiTransform.h"
 #include "TaskMultiTransformParameters.h"
 #include <Mod/PartDesign/App/FeatureMultiTransform.h>
+#include <App/Document.h>
 #include <Gui/Command.h>
 
 using namespace PartDesignGui;
@@ -39,13 +37,19 @@ TaskDlgFeatureParameters *ViewProviderMultiTransform::getEditDialog() {
     return new TaskDlgMultiTransformParameters (this);
 }
 
-std::vector<App::DocumentObject*> ViewProviderMultiTransform::_claimChildren(void) const
+std::vector<App::DocumentObject*> ViewProviderMultiTransform::_claimChildren() const
 {
     PartDesign::MultiTransform* pcMultiTransform = static_cast<PartDesign::MultiTransform*>(getObject());
-    if (pcMultiTransform == NULL)
+    if (!pcMultiTransform)
         return std::vector<App::DocumentObject*>(); // TODO: Show error?
 
     return pcMultiTransform->Transformations.getValues();
+}
+
+void ViewProviderMultiTransform::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
+{
+    this->addDefaultAction(menu, QObject::tr("Edit %1").arg(QString::fromStdString(featureName)));
+    inherited::setupContextMenu(menu, receiver, member); // clazy:exclude=skipped-base-method
 }
 
 bool ViewProviderMultiTransform::onDelete(const std::vector<std::string> &svec) {
@@ -56,7 +60,7 @@ bool ViewProviderMultiTransform::onDelete(const std::vector<std::string> &svec) 
     // if the multitransform object was deleted the transformed features must be deleted, too
     for (std::vector<App::DocumentObject*>::const_iterator it = transformFeatures.begin(); it != transformFeatures.end(); ++it)
     {
-        if ((*it) != NULL)
+        if (*it)
             Gui::Command::doCommand(
                 Gui::Command::Doc,"App.getDocument('%s').removeObject(\"%s\")", \
                     (*it)->getDocument()->getName(), (*it)->getNameInDocument());

@@ -20,115 +20,57 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <float.h>
+# include <algorithm>
+# include <cfloat>
 # ifdef FC_OS_WIN32
 #  include <windows.h>
 # endif
 # ifdef FC_OS_MACOSX
-# include <OpenGL/gl.h>
+#  include <OpenGL/gl.h>
 # else
-# include <GL/gl.h>
+#  include <GL/gl.h>
 # endif
-# include <Inventor/SbBox.h>
-# include <Inventor/actions/SoGetBoundingBoxAction.h>
-# include <Inventor/actions/SoGetMatrixAction.h>
-# include <Inventor/actions/SoHandleEventAction.h>
-# include <Inventor/actions/SoToVRML2Action.h>
-# include <Inventor/actions/SoWriteAction.h>
-# include <Inventor/elements/SoViewportRegionElement.h>
-# include <Inventor/manips/SoClipPlaneManip.h>
-# include <Inventor/nodes/SoBaseColor.h>
-# include <Inventor/nodes/SoCallback.h>
-# include <Inventor/nodes/SoCoordinate3.h>
-# include <Inventor/nodes/SoCube.h>
-# include <Inventor/nodes/SoDirectionalLight.h>
-# include <Inventor/nodes/SoEventCallback.h>
-# include <Inventor/nodes/SoFaceSet.h>
-# include <Inventor/nodes/SoImage.h>
-# include <Inventor/nodes/SoIndexedFaceSet.h>
-# include <Inventor/nodes/SoLightModel.h>
-# include <Inventor/nodes/SoLocateHighlight.h>
-# include <Inventor/nodes/SoMaterial.h>
-# include <Inventor/nodes/SoMaterialBinding.h>
 # include <Inventor/nodes/SoOrthographicCamera.h>
-# include <Inventor/nodes/SoPerspectiveCamera.h>
-# include <Inventor/nodes/SoRotationXYZ.h>
-# include <Inventor/nodes/SoSeparator.h>
-# include <Inventor/nodes/SoShapeHints.h>
-# include <Inventor/nodes/SoSwitch.h>
-# include <Inventor/nodes/SoTransform.h>
-# include <Inventor/nodes/SoTranslation.h>
-# include <Inventor/nodes/SoSelection.h>
-# include <Inventor/nodes/SoText2.h>
-# include <Inventor/actions/SoBoxHighlightRenderAction.h>
 # include <Inventor/events/SoEvent.h>
-# include <Inventor/events/SoKeyboardEvent.h>
 # include <Inventor/events/SoLocation2Event.h>
-# include <Inventor/events/SoMotion3Event.h>
 # include <Inventor/events/SoMouseButtonEvent.h>
-# include <Inventor/actions/SoRayPickAction.h>
-# include <Inventor/projectors/SbSphereSheetProjector.h>
-# include <Inventor/SoOffscreenRenderer.h>
-# include <Inventor/SoPickedPoint.h>
-# include <Inventor/VRMLnodes/SoVRMLGroup.h>
-# include <QEventLoop>
-# include <QKeyEvent>
-# include <QWheelEvent>
-# include <QMessageBox>
+# include <QApplication>
+# include <QDialogButtonBox>
 # include <QTimer>
-# include <QStatusBar>
-# include <QBitmap>
-# include <QMimeData>
 # include <QSpinBox>
 # include <QLineEdit>
 # include <QCheckBox>
 # include <QDesktopWidget>
 # include <QFontDialog>
 # include <QFontMetrics>
+# include <QGridLayout>
+# include <QCursor>
+# include <QIcon>
+# include <QImage>
+# include <QMenu>
+# include <QOpenGLTexture>
+# include <QAction>
+# include <QVBoxLayout>
 #endif
 
-#include <sstream>
-#include <Base/Console.h>
-#include <Base/Stream.h>
-#include <Base/FileInfo.h>
-#include <Base/Rotation.h>
-#include <Base/Sequencer.h>
-#include <Base/Tools.h>
+#include <QPainterPath>
+
+#include <App/Document.h>
 #include <Base/Tools.h>
 #include <Base/UnitsApi.h>
-#include <App/Document.h>
-
-#include "View3DInventorViewer.h"
-#include "View3DInventor.h"
-#include "Application.h"
-#include "MainWindow.h"
-#include "MDIView.h"
-#include "Command.h"
-#include "Document.h"
-#include "Action.h"
-#include "Widgets.h"
+#include <Eigen/Dense>
 
 #include "NaviCube.h"
 
-#include <QCursor>
-#include <QIcon>
-#include <QMenu>
-#include <QAction>
-#include <QImage>
-#include <QPainterPath>
-#include <QApplication>
-
-#include <QOpenGLTexture>
-
-//#include <OpenGL/glu.h>
-#include <Eigen/Dense>
-#include <vector>
-#include <map>
-#include <algorithm>
-#include <iostream>
+#include "Action.h"
+#include "Application.h"
+#include "Command.h"
+#include "MainWindow.h"
+#include "View3DInventorViewer.h"
+#include "View3DInventor.h"
+#include "Widgets.h"
 
 FC_LOG_LEVEL_INIT("Gui", true, true)
 
@@ -339,7 +281,7 @@ public:
 	vector<GLubyte> m_IndexArray;
 	vector<Vector2f> m_TextureCoordArray;
 	vector<Vector3f> m_VertexArray;
-	vector<Vector3f> m_VertexArray2;
+	map<int, vector<Vector3f>> m_VertexArrays2;
 	map<int,GLuint> m_Textures;
 	vector<Face> m_Faces;
 	vector<int> m_Buttons;
@@ -384,13 +326,13 @@ int NaviCubeShared::m_AutoHideTimeout;
 
 class NaviCubeImplementation : public ParameterGrp::ObserverType {
 public:
-	NaviCubeImplementation(Gui::View3DInventorViewer*);
-	virtual ~ NaviCubeImplementation();
+	explicit NaviCubeImplementation(Gui::View3DInventorViewer*);
+	~NaviCubeImplementation() override;
 	void drawNaviCube();
 	void drawNaviCube(bool picking);
 
 	/// Observer message from the ParameterGrp
-	virtual void OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::MessageType Reason);
+	void OnChange(ParameterGrp::SubjectType& rCaller, ParameterGrp::MessageType Reason) override;
 
 	bool processSoEvent(const SoEvent* ev);
 private:
@@ -404,7 +346,7 @@ private:
 
 	void setHilite(int);
 
-	SbRotation setView(float ,float) const;
+	SbRotation setView(float, float) const;
 	SbRotation rotateView(SbRotation, int axis, float rotAngle, SbVec3f customAxis = SbVec3f(0, 0, 0)) const;
 	void rotateView(const SbRotation&);
 	void handleMenu();
@@ -518,7 +460,7 @@ void NaviCubeShared::deinit(QOpenGLContext *ctx)
 	m_IndexArray.clear();
 	m_TextureCoordArray.clear();
 	m_VertexArray.clear();
-	m_VertexArray2.clear();
+	m_VertexArrays2.clear();
 	m_Textures.clear();
 	m_Faces.clear();
 	m_Buttons.clear();
@@ -530,6 +472,26 @@ void NaviCubeImplementation::OnChange(ParameterGrp::SubjectType &, ParameterGrp:
         timer.start(200);
 }
 
+auto convertWeights = [](int weight) -> QFont::Weight {
+    if (weight >= 87)
+        return QFont::Black;
+    if (weight >= 81)
+        return QFont::ExtraBold;
+    if (weight >= 75)
+        return QFont::Bold;
+    if (weight >= 63)
+        return QFont::DemiBold;
+    if (weight >= 57)
+        return QFont::Medium;
+    if (weight >= 50)
+        return QFont::Normal;
+    if (weight >= 25)
+        return QFont::Light;
+    if (weight >= 12)
+        return QFont::ExtraLight;
+    return QFont::Thin;
+};
+
 GLuint NaviCubeShared::createCubeFaceTex(float gap, const char* text, int shape) {
 	int texSize = m_CubeWidgetSize * m_OverSample;
 	float gapi = texSize * gap;
@@ -537,7 +499,7 @@ GLuint NaviCubeShared::createCubeFaceTex(float gap, const char* text, int shape)
 	image.fill(qRgba(255, 255, 255, 0));
 	QPainter paint;
 	paint.begin(&image);
-    paint.setRenderHints(QPainter::Antialiasing|QPainter::TextAntialiasing|QPainter::SmoothPixmapTransform);
+	paint.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
 
 	if (text) {
 		paint.setPen(Qt::white);
@@ -546,30 +508,47 @@ GLuint NaviCubeShared::createCubeFaceTex(float gap, const char* text, int shape)
 	}
 	else if (shape == SHAPE_SQUARE) {
 		QPainterPath pathSquare;
-		pathSquare.addRect(QRectF(gapi, gapi, (qreal)texSize - 2.0 * gapi, (qreal)texSize - 2.0 * gapi));
+		auto rectSquare = QRectF(gapi, gapi, (qreal)texSize - 2.0 * gapi, (qreal)texSize - 2.0 * gapi);
+		// Qt's coordinate system is x->left y->down, this must be taken into account on operations
+		pathSquare.moveTo(rectSquare.left()         , rectSquare.bottom() - gapi);
+		pathSquare.lineTo(rectSquare.left() + gapi  , rectSquare.bottom());
+		pathSquare.lineTo(rectSquare.right() - gapi , rectSquare.bottom());
+		pathSquare.lineTo(rectSquare.right()        , rectSquare.bottom() - gapi);
+		pathSquare.lineTo(rectSquare.right()        , rectSquare.top() + gapi);
+		pathSquare.lineTo(rectSquare.right() - gapi , rectSquare.top());
+		pathSquare.lineTo(rectSquare.left() + gapi  , rectSquare.top());
+		pathSquare.lineTo(rectSquare.left()         , rectSquare.top() + gapi);
+		pathSquare.closeSubpath();
 		paint.fillPath(pathSquare, Qt::white);
 	}
 	else if (shape == SHAPE_CORNER) {
 		QPainterPath pathCorner;
-        QRectF rectCorner = QRectF(3.5 * gapi, 3.5 * gapi, 1.5 * gapi, 1.5 * gapi);
-		// pathCorner.moveTo(rectCorner.left() + (rectCorner.width() / 2), rectCorner.top());
-		// pathCorner.lineTo(rectCorner.bottomLeft());
-		// pathCorner.lineTo(rectCorner.bottomRight());
-		// pathCorner.lineTo(rectCorner.left() + (rectCorner.width() / 2), rectCorner.top());
-		pathCorner.addRoundedRect(rectCorner, rectCorner.width()*0.5f, rectCorner.height()*0.5f);
+		// the hexagon edges are of length sqrt(2) * gapi
+		const auto hexWidth = 2 * sqrt(2) * gapi; // hexagon vertex to vertex distance
+		const auto hexHeight = sqrt(3) * sqrt(2) * gapi; // edge to edge distance
+		auto rectCorner = QRectF((texSize - hexWidth) / 2, (texSize - hexHeight) / 2, hexWidth, hexHeight);
+		// Qt's coordinate system is x->left y->down, this must be taken into account on operations
+		pathCorner.moveTo(rectCorner.left()                   , rectCorner.bottom() - hexHeight / 2); // left middle vertex
+		pathCorner.lineTo(rectCorner.left() + hexWidth * 0.25 , rectCorner.bottom()); // left lower
+		pathCorner.lineTo(rectCorner.left() + hexWidth * 0.75 , rectCorner.bottom()); // right lower
+		pathCorner.lineTo(rectCorner.right()                  , rectCorner.bottom() - hexHeight / 2); // right middle
+		pathCorner.lineTo(rectCorner.left() + hexWidth * 0.75 , rectCorner.top()); // right upper
+		pathCorner.lineTo(rectCorner.left() + hexWidth * 0.25 , rectCorner.top()); // left upper
+		pathCorner.closeSubpath();
 		paint.fillPath(pathCorner, Qt::white);
 	}
 	else if (shape == SHAPE_EDGE) {
 		QPainterPath pathEdge;
-		// sice the gap is 0.12, the rect must be geometriclly shifted up with a factor
-		pathEdge.addRect(QRectF(gapi, 3.46 * gapi, (qreal)texSize - 2.0 * gapi, sqrt(2) * gapi));
+		// since the gap is 0.12, the rect must be geometriclly shifted up with a factor
+		pathEdge.addRect(QRectF(2 * gapi, ((qreal)texSize - sqrt(2) * gapi) * 0.5, (qreal)texSize - 4.0 * gapi, sqrt(2) * gapi));
 		paint.fillPath(pathEdge, Qt::white);
 	}
 
 	paint.end();
-    QOpenGLTexture *texture = new QOpenGLTexture(image.mirrored());
+    auto texture = new QOpenGLTexture(image.mirrored());
     m_glTextures.emplace_back(texture);
-    texture->setMinificationFilter(QOpenGLTexture::Linear);
+	texture->generateMipMaps();
+	texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
     texture->setMagnificationFilter(QOpenGLTexture::Linear);
     return texture->textureId();
 }
@@ -606,7 +585,7 @@ GLuint NaviCubeShared::createButtonTex(int button, bool stroke) {
 	image.fill(qRgba(255, 255, 255, 0));
 	QPainter painter;
 	painter.begin(&image);
-    painter.setRenderHints(QPainter::Antialiasing|QPainter::TextAntialiasing|QPainter::SmoothPixmapTransform);
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
 
 	QTransform transform;
 	transform.translate(texSize / 2, texSize / 2);
@@ -675,20 +654,20 @@ GLuint NaviCubeShared::createButtonTex(int button, bool stroke) {
 	}
 	case TEX_ARROW_SOUTH: {
 		path.moveTo(0, 1);
-		path.lineTo(-as1,1 - as1);
-		path.lineTo(+as1,1 - as1);
+		path.lineTo(-as1, 1 - as1);
+		path.lineTo(+as1, 1 - as1);
 		break;
 	}
 	case TEX_ARROW_NORTH: {
 		path.moveTo(0, -1);
-		path.lineTo(+as1,-1 + as1);
-		path.lineTo(-as1,-1 + as1);
+		path.lineTo(+as1, -1 + as1);
+		path.lineTo(-as1, -1 + as1);
 		break;
 	}
 	case TEX_DOT_BACKSIDE: {
 		path.addRoundedRect(QRectF(0.99 - as1, -0.99, as1, as1), as1*0.5, as1*0.5);
 		break;
-	}					
+	}
 	}
 
 	painter.fillPath(path, Qt::white);
@@ -700,9 +679,10 @@ GLuint NaviCubeShared::createButtonTex(int button, bool stroke) {
 	painter.end();
 	//image.save(str(enum2str(button))+str(".png"));
 
-    QOpenGLTexture *texture = new QOpenGLTexture(image.mirrored());
+    auto texture = new QOpenGLTexture(image.mirrored());
     m_glTextures.emplace_back(texture);
-    texture->setMinificationFilter(QOpenGLTexture::Linear);
+	texture->generateMipMaps();
+	texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
     texture->setMagnificationFilter(QOpenGLTexture::Linear);
     return texture->textureId();
 }
@@ -713,67 +693,68 @@ GLuint NaviCubeShared::createMenuTex(bool forPicking) {
 	image.fill(qRgba(0, 0, 0, 0));
 	QPainter painter;
 	painter.begin(&image);
-    painter.setRenderHints(QPainter::Antialiasing|QPainter::TextAntialiasing|QPainter::SmoothPixmapTransform);
+	painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
 
 	QTransform transform;
 	transform.translate(texSize * 12 / 16, texSize * 13 / 16);
-	transform.scale(texSize/200.0,texSize/200.0); // 200 == size at which this was designed
+	transform.scale(texSize / 200.0, texSize / 200.0); // 200 == size at which this was designed
 	painter.setTransform(transform);
 
 	QPainterPath path;
 
 	if (forPicking) {
-		path.addRoundedRect(-25,-8,75,45,6,6);
+		path.addRoundedRect(-25, -8, 75, 45, 6, 6);
 		painter.fillPath(path, Qt::white);
 	}
 	else {
 		// top
-		path.moveTo(0,0);
-		path.lineTo(15,5);
-		path.lineTo(0,10);
-		path.lineTo(-15,5);
+		path.moveTo(0, 0);
+		path.lineTo(15, 5);
+		path.lineTo(0, 10);
+		path.lineTo(-15, 5);
 
-		painter.fillPath(path, QColor(240,240,240));
+		painter.fillPath(path, QColor(240, 240, 240));
 
 		// left
 		QPainterPath path2;
-		path2.lineTo(0,10);
-		path2.lineTo(-15,5);
-		path2.lineTo(-15,25);
-		path2.lineTo(0,30);
-		painter.fillPath(path2, QColor(190,190,190));
+		path2.lineTo(0, 10);
+		path2.lineTo(-15, 5);
+		path2.lineTo(-15, 25);
+		path2.lineTo(0, 30);
+		painter.fillPath(path2, QColor(190, 190, 190));
 
 		// right
 		QPainterPath path3;
-		path3.lineTo(0,10);
-		path3.lineTo(15,5);
-		path3.lineTo(15,25);
-		path3.lineTo(0,30);
-		painter.fillPath(path3, QColor(220,220,220));
+		path3.lineTo(0, 10);
+		path3.lineTo(15, 5);
+		path3.lineTo(15, 25);
+		path3.lineTo(0, 30);
+		painter.fillPath(path3, QColor(220, 220, 220));
 
 		// outline
 		QPainterPath path4;
-		path4.moveTo(0,0);
-		path4.lineTo(15,5);
-		path4.lineTo(15,25);
-		path4.lineTo(0,30);
-		path4.lineTo(-15,25);
-		path4.lineTo(-15,5);
-		path4.lineTo(0,0);
-		painter.strokePath(path4, QColor(128,128,128));
+		path4.moveTo(0, 0);
+		path4.lineTo(15, 5);
+		path4.lineTo(15, 25);
+		path4.lineTo(0, 30);
+		path4.lineTo(-15, 25);
+		path4.lineTo(-15, 5);
+		path4.lineTo(0, 0);
+		painter.strokePath(path4, QColor(128, 128, 128));
 
 		// menu triangle
 		QPainterPath path5;
-		path5.moveTo(20,10);
-		path5.lineTo(40,10);
-		path5.lineTo(30,20);
-		path5.lineTo(20,10);
-		painter.fillPath(path5, QColor(64,64,64));
-		}
+		path5.moveTo(20, 10);
+		path5.lineTo(40, 10);
+		path5.lineTo(30, 20);
+		path5.lineTo(20, 10);
+		painter.fillPath(path5, QColor(64, 64, 64));
+	}
 	painter.end();
-    QOpenGLTexture *texture = new QOpenGLTexture(image.mirrored());
+    auto texture = new QOpenGLTexture(image.mirrored());
     m_glTextures.emplace_back(texture);
-    texture->setMinificationFilter(QOpenGLTexture::Linear);
+	texture->generateMipMaps();
+	texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
     texture->setMagnificationFilter(QOpenGLTexture::Linear);
     return texture->textureId();
 }
@@ -788,20 +769,53 @@ void NaviCubeShared::addFace(float gap, const Vector3f& x, const Vector3f& z, in
 
 	int t = m_VertexArray.size();
 
-	m_VertexArray.push_back(z - x - y);
-	m_VertexArray2.push_back(z - x2 - y2);
-	m_TextureCoordArray.emplace_back(0, 0);
-	m_VertexArray.push_back(z + x - y);
-	m_VertexArray2.push_back(z + x2 - y2);
-	m_TextureCoordArray.emplace_back(1, 0);
-	m_VertexArray.push_back(z + x + y);
-	m_VertexArray2.push_back(z + x2 + y2);
-	m_TextureCoordArray.emplace_back(1, 1);
-	m_VertexArray.push_back(z - x + y);
-	m_VertexArray2.push_back(z - x2 + y2);
-	m_TextureCoordArray.emplace_back(0, 1);
+    m_VertexArray.emplace_back(z - x - y);
+    m_TextureCoordArray.emplace_back(0, 0);
+    m_VertexArray.emplace_back(z + x - y);
+    m_TextureCoordArray.emplace_back(1, 0);
+    m_VertexArray.emplace_back(z + x + y);
+    m_TextureCoordArray.emplace_back(1, 1);
+    m_VertexArray.emplace_back(z - x + y);
+    m_TextureCoordArray.emplace_back(0, 1);
 
-	// TEX_TOP, TEX_FRONT_FACE, TEX_TOP
+    if (pickTex == TEX_FRONT_FACE) {
+        auto x2 = x * (1 - gap * 2);
+        auto y2 = y * (1 - gap * 2);
+        auto x4 = x * (1 - gap * 4);
+        auto y4 = y * (1 - gap * 4);
+        m_VertexArrays2[pickId].reserve(8);
+        m_VertexArrays2[pickId].emplace_back(z - x2 - y4);
+        m_VertexArrays2[pickId].emplace_back(z - x4 - y2);
+        m_VertexArrays2[pickId].emplace_back(z + x4 - y2);
+        m_VertexArrays2[pickId].emplace_back(z + x2 - y4);
+
+        m_VertexArrays2[pickId].emplace_back(z + x2 + y4);
+        m_VertexArrays2[pickId].emplace_back(z + x4 + y2);
+        m_VertexArrays2[pickId].emplace_back(z - x4 + y2);
+        m_VertexArrays2[pickId].emplace_back(z - x2 + y4);
+    }
+    else if (pickTex == TEX_EDGE_FACE) {
+        auto x4 = x * (1 - gap * 4);
+        auto y_sqrt2 = y * sqrt(2) * gap;
+        m_VertexArrays2[pickId].reserve(4);
+        m_VertexArrays2[pickId].emplace_back(z - x4 - y_sqrt2);
+        m_VertexArrays2[pickId].emplace_back(z + x4 - y_sqrt2);
+        m_VertexArrays2[pickId].emplace_back(z + x4 + y_sqrt2);
+        m_VertexArrays2[pickId].emplace_back(z - x4 + y_sqrt2);
+    }
+    else if (pickTex == TEX_CORNER_FACE) {
+        auto x_sqrt2 = x * sqrt(2) * gap;
+        auto y_sqrt6 = y * sqrt(6) * gap;
+        m_VertexArrays2[pickId].reserve(6);
+        m_VertexArrays2[pickId].emplace_back(z - 2 * x_sqrt2);
+        m_VertexArrays2[pickId].emplace_back(z - x_sqrt2 - y_sqrt6);
+        m_VertexArrays2[pickId].emplace_back(z + x_sqrt2 - y_sqrt6);
+        m_VertexArrays2[pickId].emplace_back(z + 2 * x_sqrt2);
+        m_VertexArrays2[pickId].emplace_back(z + x_sqrt2 + y_sqrt6);
+        m_VertexArrays2[pickId].emplace_back(z - x_sqrt2 + y_sqrt6);
+    }
+
+    // TEX_TOP, TEX_FRONT_FACE, TEX_TOP
 	// TEX_TOP 			frontTex,
 	// TEX_FRONT_FACE	pickTex,
 	// TEX_TOP 			pickId
@@ -910,7 +924,7 @@ bool NaviCubeShared::initNaviCube() {
 	m_Textures[TEX_VIEW_MENU_ICON] = createMenuTex(false);
 	m_Textures[TEX_VIEW_MENU_FACE] = createMenuTex(true);
 
-			// front,back,pick,pickid
+	// front,back,pick,pickid
 	addFace(gap, x, z, TEX_TOP, TEX_FRONT_FACE, TEX_TOP, true);
 	x = r90x * x;
 	z = r90x * z;
@@ -940,7 +954,7 @@ bool NaviCubeShared::initNaviCube() {
 
 	z = r45z * r54x * z;
 	x = r45z * r54x * x;
-	z *= 1.46f; // corner face position
+	z *= sqrt(3) * (1 - 2 * gap); // corner face position along the cube diagonal
 
 	addFace(gap, x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_BOTTOM_RIGHT_REAR);
 	x = r90z * x;
@@ -973,7 +987,7 @@ bool NaviCubeShared::initNaviCube() {
 	// rotate 45 degrees up
 	z = r45x * z;
 	x = r45x * x;
-	z *= 1.25f; // edge face position
+	z *= sqrt(2) * (1 - gap);
 	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_FRONT_TOP);
 	x = r90x * x;
 	z = r90x * z;
@@ -1019,12 +1033,12 @@ bool NaviCubeShared::initNaviCube() {
 
     createAxisLabels();
 
-	m_PickingFramebuffer = new QtGLFramebufferObject(2*m_CubeWidgetSize,2* m_CubeWidgetSize, QtGLFramebufferObject::CombinedDepthStencil);
+	m_PickingFramebuffer = new QtGLFramebufferObject(2 * m_CubeWidgetSize, 2 * m_CubeWidgetSize, QtGLFramebufferObject::CombinedDepthStencil);
     return true;
 }
 
 void NaviCubeImplementation::drawNaviCube() {
-	glViewport(m_CubeWidgetPosX-m_CubeWidgetSize/2, m_CubeWidgetPosY-m_CubeWidgetSize/2, m_CubeWidgetSize, m_CubeWidgetSize);
+	glViewport(m_CubeWidgetPosX - m_CubeWidgetSize / 2, m_CubeWidgetPosY - m_CubeWidgetSize / 2, m_CubeWidgetSize, m_CubeWidgetSize);
 	drawNaviCube(false);
 }
 
@@ -1117,15 +1131,15 @@ bool NaviCubeShared::drawNaviCube(SoCamera *cam, bool pickMode, int hiliteId, bo
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
 
-	glAlphaFunc( GL_GREATER, 0.25);
-	glEnable( GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.25);
+	glEnable(GL_ALPHA_TEST);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
 	const float NEARVAL = 0.1f;
 	const float FARVAL = 10.0f;
-	const float dim = NEARVAL * float(tan(M_PI / 8.0))*1.2;
+	const float dim = NEARVAL * float(tan(M_PI / 8.0)) * 1.2;
 	glFrustum(-dim, dim, -dim, dim, NEARVAL, FARVAL);
 
 	SbMatrix mx;
@@ -1136,7 +1150,7 @@ bool NaviCubeShared::drawNaviCube(SoCamera *cam, bool pickMode, int hiliteId, bo
 
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
-	glLoadMatrixf((float*) mx);
+	glLoadMatrixf((float*)mx);
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
@@ -1178,14 +1192,14 @@ bool NaviCubeShared::drawNaviCube(SoCamera *cam, bool pickMode, int hiliteId, bo
 			glVertex3f(-1.1f, -1.1f, -1.1f);
 			glVertex3f(-1.1f, +0.5f, -1.1f);
 			glEnd();
-			glRasterPos3d( -a, a, -a);
+			glRasterPos3d(-a, a, -a);
 
 			glColor3f(0, 0, 1);
 			glBegin(GL_LINES);
 			glVertex3f(-1.1f, -1.1f, -1.1f);
 			glVertex3f(-1.1f, -1.1f, +0.5f);
 			glEnd();
-			glRasterPos3d( -a, -a, a);
+			glRasterPos3d(-a, -a, a);
 
 			glEnable(GL_TEXTURE_2D);
 
@@ -1310,27 +1324,19 @@ bool NaviCubeShared::drawNaviCube(SoCamera *cam, bool pickMode, int hiliteId, bo
             glColor4f(c.redF(), c.greenF(), c.blueF(), c.alphaF());
             glLineWidth(m_BorderWidth);
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            glBegin(GL_QUADS);
             for (int pass = 0; pass < 3 ; pass++) {
                 for (auto &f : m_Faces) {
-                    if (pass != f.m_RenderPass)
+                    if (pass != f.m_RenderPass || f.m_TextureId != f.m_PickTextureId)
                         continue;
-                    if (f.m_TextureId == f.m_PickTextureId) {
-                        if (f.m_PickTexId == TEX_FRONT_FACE) {
-                            int idx = f.m_FirstVertex;
-                            const Vector3f &mv1 = m_VertexArray2[m_IndexArray[idx]];
-                            const Vector3f &mv2 = m_VertexArray2[m_IndexArray[idx+1]];
-                            const Vector3f &mv3 = m_VertexArray2[m_IndexArray[idx+2]];
-                            const Vector3f &mv4 = m_VertexArray2[m_IndexArray[idx+3]];
-                            glVertex3f(mv1[0], mv1[1], mv1[2]);
-                            glVertex3f(mv2[0], mv2[1], mv2[2]);
-                            glVertex3f(mv3[0], mv3[1], mv3[2]);
-                            glVertex3f(mv4[0], mv4[1], mv4[2]);
+                    if (f.m_PickTexId == TEX_FRONT_FACE || f.m_PickTexId == TEX_EDGE_FACE || f.m_PickTexId == TEX_CORNER_FACE) {
+                        glBegin(GL_POLYGON);
+                        for (const Vector3f& v : m_VertexArrays2[f.m_PickId]) {
+                            glVertex3f(v[0], v[1], v[2]);
                         }
+                        glEnd();
                     }
                 }
             }
-            glEnd();
 			glEnable(GL_TEXTURE_2D);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
@@ -1426,11 +1432,11 @@ bool NaviCubeShared::drawNaviCube(SoCamera *cam, bool pickMode, int hiliteId, bo
 }
 
 int NaviCubeImplementation::pickFace(short x, short y) {
-	GLubyte pixels[4] = {0};
+	GLubyte pixels[4] = { 0 };
     if (auto fb = m_Shared->m_PickingFramebuffer) {
 		fb->bind();
 
-		glViewport(0, 0, 2*m_CubeWidgetSize,2* m_CubeWidgetSize);
+		glViewport(0, 0, 2 * m_CubeWidgetSize, 2 * m_CubeWidgetSize);
 		glLoadIdentity();
 
 		glClearColor(0, 0, 0, 1);
@@ -1440,7 +1446,7 @@ int NaviCubeImplementation::pickFace(short x, short y) {
 
 		glFinish();
 
-		glReadPixels(2*(x - (m_CubeWidgetPosX-m_CubeWidgetSize/2)), 2*(y - (m_CubeWidgetPosY-m_CubeWidgetSize/2)), 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &pixels);
+		glReadPixels(2 * (x - (m_CubeWidgetPosX - m_CubeWidgetSize / 2)), 2 * (y - (m_CubeWidgetPosY - m_CubeWidgetSize / 2)), 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &pixels);
 		fb->release();
 
 		//QImage image = m_PickingFramebuffer->toImage();
@@ -1477,15 +1483,15 @@ SbRotation NaviCubeImplementation::rotateView(SbRotation viewRot, int axis, floa
 
 	SbVec3f direction;
 	switch (axis) {
-	default :
+	default:
 		return viewRot;
-	case DIR_UP :
+	case DIR_UP:
 		direction = up;
 		break;
-	case DIR_OUT :
+	case DIR_OUT:
 		direction = out;
 		break;
-	case DIR_RIGHT :
+	case DIR_RIGHT:
 		direction = right;
 		break;
 	}
@@ -1537,9 +1543,10 @@ bool NaviCubeImplementation::mouseReleased(short x, short y) {
 		float tilt = 90 - Base::toDegrees(atan(sqrt(2.0)));
 		int pick = pickFace(x, y);
 
-		long step = Base::clamp(NaviCubeShared::m_StepByTurn, (long)4, (long)36);
+		long step = Base::clamp(NaviCubeShared::m_StepByTurn, 4L, 36L);
 		float rotStepAngle = 360.0f / step;
 		bool toNearest = NaviCubeShared::m_RotateToNearest;
+		bool applyRotation = true;
 
 		SbRotation viewRot = CurrentViewRot;
 
@@ -1848,34 +1855,36 @@ bool NaviCubeImplementation::mouseReleased(short x, short y) {
 					viewRot = rotateView(viewRot, 0, -120, SbVec3f(-1, -1, -1));
 			}
 			break;
-		case TEX_ARROW_LEFT :
-			viewRot = rotateView(viewRot, DIR_OUT,rotStepAngle);
+		case TEX_ARROW_LEFT:
+			viewRot = rotateView(viewRot, DIR_OUT, rotStepAngle);
 			break;
-		case TEX_ARROW_RIGHT :
-			viewRot = rotateView(viewRot, DIR_OUT,-rotStepAngle);
+		case TEX_ARROW_RIGHT:
+			viewRot = rotateView(viewRot, DIR_OUT, -rotStepAngle);
 			break;
-		case TEX_ARROW_WEST :
-			viewRot = rotateView(viewRot, DIR_UP,-rotStepAngle);
+		case TEX_ARROW_WEST:
+			viewRot = rotateView(viewRot, DIR_UP, -rotStepAngle);
 			break;
-		case TEX_ARROW_EAST :
-			viewRot = rotateView(viewRot, DIR_UP,rotStepAngle);
+		case TEX_ARROW_EAST:
+			viewRot = rotateView(viewRot, DIR_UP, rotStepAngle);
 			break;
-		case TEX_ARROW_NORTH :
-			viewRot = rotateView(viewRot, DIR_RIGHT,-rotStepAngle);
+		case TEX_ARROW_NORTH:
+			viewRot = rotateView(viewRot, DIR_RIGHT, -rotStepAngle);
 			break;
-		case TEX_ARROW_SOUTH :
-			viewRot = rotateView(viewRot, DIR_RIGHT,rotStepAngle);
+		case TEX_ARROW_SOUTH:
+			viewRot = rotateView(viewRot, DIR_RIGHT, rotStepAngle);
 			break;
 		case TEX_DOT_BACKSIDE:
-			viewRot = rotateView(viewRot, 0, 180);
+			viewRot = rotateView(viewRot, DIR_UP, 180);
 			break;
-		case TEX_VIEW_MENU_FACE :
+		case TEX_VIEW_MENU_FACE:
 			m_Hit = true;
 			m_Shared->handleMenu(m_View3DInventorViewer->parentWidget());
+			applyRotation = false;
 			break;
 		}
 
-		rotateView(viewRot);
+		if (applyRotation)
+			rotateView(viewRot);
 	}
 	return true;
 }
@@ -1892,10 +1901,9 @@ void NaviCubeImplementation::setHilite(int hilite) {
 bool NaviCubeImplementation::inDragZone(short x, short y) {
 	int dx = x - m_CubeWidgetPosX;
 	int dy = y - m_CubeWidgetPosY;
-	int limit = m_CubeWidgetSize/4;
-	return abs(dx)<limit && abs(dy)<limit;
+	int limit = m_CubeWidgetSize / 4;
+	return abs(dx) < limit && abs(dy) < limit;
 }
-
 
 bool NaviCubeImplementation::mouseMoved(short x, short y) {
     bool redraw = false;
@@ -1907,8 +1915,12 @@ bool NaviCubeImplementation::mouseMoved(short x, short y) {
 			m_Dragging = true;
 		if (m_Dragging) {
 			setHilite(0);
-			m_CubeWidgetPosX = x;
-			m_CubeWidgetPosY = y;
+			SbVec2s view = m_View3DInventorViewer->getSoRenderManager()->getSize();
+			int width = view[0];
+			int height = view[1];
+			int len = m_CubeWidgetSize / 2;
+			m_CubeWidgetPosX = std::min(std::max(static_cast<int>(x), len), width - len);
+			m_CubeWidgetPosY = std::min(std::max(static_cast<int>(y), len), height - len);
             redraw = true;
             res = true;
 		}
@@ -1934,18 +1946,18 @@ bool NaviCubeImplementation::mouseMoved(short x, short y) {
 }
 
 bool NaviCubeImplementation::processSoEvent(const SoEvent* ev) {
-    short x, y;
-    ev->getPosition().getValue(x, y);
-    // FIXME find out why do we need to hack the cursor position to get
-    // 2019-02-17
-    // The above comment is truncated; don't know what it's about
-    // The two hacked lines changing the cursor position are responsible for
-    // parts of the navigational cluster not being active.
-    // Commented them out and everything seems to be working
+	short x, y;
+	ev->getPosition().getValue(x, y);
+	// FIXME find out why do we need to hack the cursor position to get
+	// 2019-02-17
+	// The above comment is truncated; don't know what it's about
+	// The two hacked lines changing the cursor position are responsible for
+	// parts of the navigational cluster not being active.
+	// Commented them out and everything seems to be working
 //    y += 4;
 //    x -= 2;
 	if (ev->getTypeId().isDerivedFrom(SoMouseButtonEvent::getClassTypeId())) {
-		const SoMouseButtonEvent* mbev = static_cast<const SoMouseButtonEvent*>(ev);
+		const auto mbev = static_cast<const SoMouseButtonEvent*>(ev);
 		if (mbev->isButtonPressEvent(mbev, SoMouseButtonEvent::BUTTON1))
 			return mousePressed(x, y);
 		if (mbev->isButtonReleaseEvent(mbev, SoMouseButtonEvent::BUTTON1))
@@ -2398,7 +2410,7 @@ QFont NaviCubeShared::getLabelFont()
     sansFont.setItalic(m_hGrp->GetBool("FontItalic", false));
     int weight = m_hGrp->GetInt("FontWeight", 87);
     if (weight > 0)
-        sansFont.setWeight(weight);
+        sansFont.setWeight(convertWeights(weight));
     int stretch = m_hGrp->GetInt("FontStretch", 62);
     if (stretch > 0)
         sansFont.setStretch(stretch);

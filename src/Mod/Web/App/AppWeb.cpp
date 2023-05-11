@@ -20,11 +20,8 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <Python.h>
-# include <climits>
 # include <sstream>
 #endif
 
@@ -32,9 +29,8 @@
 #include <Base/Interpreter.h>
 #include <Base/PyObjectBase.h>
 
-#include <CXX/Extensions.hxx>
-#include <CXX/Objects.hxx>
 #include "Server.h"
+
 
 // See http://docs.python.org/2/library/socketserver.html
 /*
@@ -71,26 +67,26 @@ public:
         add_varargs_method("startServer",&Module::startServer,
             "startServer(address=127.0.0.1,port=0) -- Start a server."
         );
-        add_varargs_method("waitForConnection",&Module::waitForConnection,
+        add_varargs_method("waitForConnection", &Module::waitForConnection,
             "waitForConnection(address=127.0.0.1,port=0,timeout=0)\n"
             "Start a server, wait for connection and close server.\n"
             "Its use is disadvised in a the GUI version, since it will\n"
             "stop responding until the function returns."
         );
-        add_varargs_method("registerServerFirewall",&Module::registerServerFirewall,
+        add_varargs_method("registerServerFirewall", &Module::registerServerFirewall,
             "registerServerFirewall(callable(string)) -- Register a firewall."
         );
         initialize("This module is the Web module."); // register with Python
     }
 
-    virtual ~Module() {}
+    ~Module() override {}
 
 private:
     Py::Object startServer(const Py::Tuple& args)
     {
         const char* addr = "127.0.0.1";
         int port=0;
-        if (!PyArg_ParseTuple(args.ptr(), "|si",&addr,&port))
+        if (!PyArg_ParseTuple(args.ptr(), "|si", &addr, &port))
             throw Py::Exception();
         if (port > USHRT_MAX) {
             throw Py::OverflowError("port number is greater than maximum");
@@ -161,7 +157,7 @@ private:
 
         Py::Object pyobj(obj);
         if (pyobj.isNone())
-            Web::Firewall::setInstance(0);
+            Web::Firewall::setInstance(nullptr);
         else
             Web::Firewall::setInstance(new Web::FirewallPython(pyobj));
 
@@ -171,7 +167,7 @@ private:
 
 PyObject* initModule()
 {
-    return (new Module())->module().ptr();
+    return Base::Interpreter().addModule(new Module);
 }
 
 } // namespace Web

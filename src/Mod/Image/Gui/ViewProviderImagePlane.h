@@ -20,16 +20,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef IMAGE_ViewProviderImagePlane_H
 #define IMAGE_ViewProviderImagePlane_H
 
 #include <Gui/ViewProviderGeometryObject.h>
 #include <Mod/Image/ImageGlobal.h>
 
+
 class SoCoordinate3;
 class SoDrawStyle;
-class SoTexture2; 
+class SoTexture2;
 class QImage;
 
 namespace ImageGui
@@ -37,19 +37,19 @@ namespace ImageGui
 
 class ImageGuiExport ViewProviderImagePlane : public Gui::ViewProviderGeometryObject
 {
-    PROPERTY_HEADER(RobotGui::ViewProviderImagePlane);
+    PROPERTY_HEADER_WITH_OVERRIDE(RobotGui::ViewProviderImagePlane);
 
 public:
     /// constructor.
     ViewProviderImagePlane();
 
     /// destructor.
-    ~ViewProviderImagePlane();
+    ~ViewProviderImagePlane() override;
 
-    void attach(App::DocumentObject *pcObject);
-    void setDisplayMode(const char* ModeName);
-    std::vector<std::string> getDisplayModes() const;
-    void updateData(const App::Property*);
+    void attach(App::DocumentObject *pcObject) override;
+    void setDisplayMode(const char* ModeName) override;
+    std::vector<std::string> getDisplayModes() const override;
+    void updateData(const App::Property*) override;
 
 private:
     bool loadSvg(const char*, float x, float y, QImage& img);

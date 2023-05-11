@@ -101,12 +101,12 @@
 #include <boost_graph_adjacency_list.hpp>
 #include <boost/graph/connected_components.hpp>
 
-typedef Eigen::FullPivHouseholderQR<Eigen::MatrixXd>::IntDiagSizeVectorType MatrixIndexType;
+using MatrixIndexType = Eigen::FullPivHouseholderQR<Eigen::MatrixXd>::IntDiagSizeVectorType;
 
 #ifndef EIGEN_STOCK_FULLPIVLU_COMPUTE
 namespace Eigen {
 
-    typedef Matrix<double,-1,-1,0,-1,-1> MatrixdType;
+    using MatrixdType = Matrix<double,-1,-1,0,-1,-1>;
 
     template<>
     FullPivLU<MatrixdType>& FullPivLU<MatrixdType>::compute(const MatrixdType& matrix)
@@ -288,7 +288,7 @@ void SolverReportingManager::LogToConsole(const std::string& str)
     if(str.size() < Base::Console().BufferSize)
         Base::Console().Log(str.c_str());
     else
-        Base::Console().Log("SolverReportingManager - Too long string suppressed");
+        Base::Console().Log("SolverReportingManager - Overly long string suppressed");
 }
 
 void SolverReportingManager::LogToFile(const std::string& str)
@@ -357,7 +357,7 @@ void SolverReportingManager::LogGroupOfConstraints(const std::string & str, std:
 
     tempstream << str << ":" << '\n';
 
-    for(auto group : constraintgroups)  {
+    for(const auto& group : constraintgroups)  {
         tempstream << "[";
 
         for(auto c :group)
@@ -429,7 +429,7 @@ void SolverReportingManager::LogMatrix(const std::string str, MatrixIndexType ma
 #endif
 
 
-typedef boost::adjacency_list <boost::vecS, boost::vecS, boost::undirectedS> Graph;
+using Graph = boost::adjacency_list <boost::vecS, boost::vecS, boost::undirectedS>;
 
 ///////////////////////////////////////
 // Solver
@@ -648,11 +648,12 @@ void System::removeConstraint(Constraint *constr)
 
 // basic constraints
 
-int System::addConstraintEqual(double *param1, double *param2, int tagId, bool driving)
+int System::addConstraintEqual(double *param1, double *param2, int tagId, bool driving, Constraint::Alignment internalalignment)
 {
     Constraint *constr = new ConstraintEqual(param1, param2);
     constr->setTag(tagId);
     constr->setDriving(driving);
+    constr->setInternalAlignment(internalalignment);
     return addConstraint(constr);
 }
 
@@ -806,6 +807,14 @@ int System::addConstraintTangentCircumf(Point &p1, Point &p2, double *rad1, doub
                                         bool internal, int tagId, bool driving)
 {
     Constraint *constr = new ConstraintTangentCircumf(p1, p2, rad1, rad2, internal);
+    constr->setTag(tagId);
+    constr->setDriving(driving);
+    return addConstraint(constr);
+}
+
+int System::addConstraintTangentAtBSplineKnot(BSpline &b, Line &l, unsigned int knotindex, int tagId, bool driving)
+{
+    Constraint *constr = new ConstraintSlopeAtBSplineKnot(b, l, knotindex);
     constr->setTag(tagId);
     constr->setDriving(driving);
     return addConstraint(constr);
@@ -1125,6 +1134,7 @@ int System::addConstraintInternalAlignmentPoint2Ellipse(Ellipse &e, Point &p1, I
     Constraint *constr = new ConstraintInternalAlignmentPoint2Ellipse(e, p1, alignmentType);
     constr->setTag(tagId);
     constr->setDriving(driving);
+    constr->setInternalAlignment(Constraint::Alignment::InternalAlignment);
     return addConstraint(constr);
 }
 
@@ -1133,6 +1143,7 @@ int System::addConstraintInternalAlignmentPoint2Hyperbola(Hyperbola &e, Point &p
     Constraint *constr = new ConstraintInternalAlignmentPoint2Hyperbola(e, p1, alignmentType);
     constr->setTag(tagId);
     constr->setDriving(driving);
+    constr->setInternalAlignment(Constraint::Alignment::InternalAlignment);
     return addConstraint(constr);
 }
 
@@ -1216,8 +1227,8 @@ int System::addConstraintInternalAlignmentEllipseMinorDiameter(Ellipse &e, Point
 
 int System::addConstraintInternalAlignmentEllipseFocus1(Ellipse &e, Point &p1, int tagId, bool driving)
 {
-    addConstraintEqual(e.focus1.x, p1.x, tagId, driving);
-    return addConstraintEqual(e.focus1.y, p1.y, tagId, driving);
+    addConstraintEqual(e.focus1.x, p1.x, tagId, driving, Constraint::Alignment::InternalAlignment);
+    return addConstraintEqual(e.focus1.y, p1.y, tagId, driving, Constraint::Alignment::InternalAlignment);
 }
 
 int System::addConstraintInternalAlignmentEllipseFocus2(Ellipse &e, Point &p1, int tagId, bool driving)
@@ -1313,21 +1324,92 @@ int System::addConstraintInternalAlignmentHyperbolaMinorDiameter(Hyperbola &e, P
 
 int System::addConstraintInternalAlignmentHyperbolaFocus(Hyperbola &e, Point &p1, int tagId, bool driving)
 {
-    addConstraintEqual(e.focus1.x, p1.x, tagId, driving);
-    return addConstraintEqual(e.focus1.y, p1.y, tagId, driving);
+    addConstraintEqual(e.focus1.x, p1.x, tagId, driving, Constraint::Alignment::InternalAlignment);
+    return addConstraintEqual(e.focus1.y, p1.y, tagId, driving, Constraint::Alignment::InternalAlignment);
 }
 
 int System::addConstraintInternalAlignmentParabolaFocus(Parabola &e, Point &p1, int tagId, bool driving)
 {
-    addConstraintEqual(e.focus1.x, p1.x, tagId, driving);
-    return addConstraintEqual(e.focus1.y, p1.y, tagId, driving);
+    addConstraintEqual(e.focus1.x, p1.x, tagId, driving, Constraint::Alignment::InternalAlignment);
+    return addConstraintEqual(e.focus1.y, p1.y, tagId, driving, Constraint::Alignment::InternalAlignment);
 }
 
-int System::addConstraintInternalAlignmentBSplineControlPoint(BSpline &b, Circle &c, int poleindex, int tagId, bool driving)
+int System::addConstraintInternalAlignmentBSplineControlPoint(BSpline &b, Circle &c, unsigned int poleindex, int tagId, bool driving)
 {
-    addConstraintEqual(b.poles[poleindex].x, c.center.x, tagId, driving);
-    addConstraintEqual(b.poles[poleindex].y, c.center.y, tagId, driving);
-    return addConstraintEqual(b.weights[poleindex], c.rad, tagId, driving);
+    addConstraintEqual(b.poles[poleindex].x, c.center.x, tagId, driving, Constraint::Alignment::InternalAlignment);
+    addConstraintEqual(b.poles[poleindex].y, c.center.y, tagId, driving, Constraint::Alignment::InternalAlignment);
+    return addConstraintEqual(b.weights[poleindex], c.rad, tagId, driving, Constraint::Alignment::InternalAlignment);
+}
+
+int System::addConstraintInternalAlignmentKnotPoint(BSpline &b, Point &p, unsigned int knotindex, int tagId, bool driving)
+{
+    if (b.periodic && knotindex == 0) {
+        // This is done here since knotpoints themselves aren't stored
+        addConstraintP2PCoincident(p, b.start, tagId, driving);
+        addConstraintP2PCoincident(p, b.end, tagId, driving);
+    }
+
+    size_t numpoles = b.degree - b.mult[knotindex] + 1;
+    if (numpoles == 0)
+        numpoles = 1;
+
+    // `startpole` is the first pole affecting the knot with `knotindex`
+    size_t startpole = 0;
+    std::vector<double *> pvec;
+    pvec.push_back(p.x);
+
+    std::vector<double> factors(numpoles, 1.0 / numpoles);
+
+    // Only poles with indices `[i, i+1,... i+b.degree]` affect the interval
+    // `flattenedknots[b.degree+i]` to `flattenedknots[b.degree+i+1]`.
+    // When a knot has higher multiplicity, it can be seen as spanning
+    // multiple of these intervals, and thus is only affected by an
+    // intersection of the poles that affect it.
+    // The `knotindex` gives us the intervals, so work backwards and find
+    // the affecting poles.
+    // Note that this works also for periodic B-splines, just that the poles wrap around if needed.
+    for (size_t j = 1; j <= knotindex; ++j)
+        startpole += b.mult[j];
+    // For the last knot, even the upper limit of the last interval range
+    // is included. So offset for that.
+    // For periodic B-splines the `flattenedknots` are defined differently,
+    // so this is not needed for them.
+    if (!b.periodic && startpole >= b.poles.size())
+        startpole = b.poles.size() - 1;
+
+    // Calculate the factors to be passed to weighted linear combination constraint.
+    // The if condition has a small performance benefit, but that is not why it is here.
+    // One case when numpoles <= 2 is for the last knot of a non-periodic B-spline.
+    // In this case, the interval `k` passed to `getLinCombFactor` is degenerate, and this is the cleanest way to handle it.
+    if (numpoles > 2)
+        for (size_t i = 0; i < numpoles; ++i)
+            factors[i] = b.getLinCombFactor(*(b.knots[knotindex]), startpole + b.degree, startpole + i);
+
+    // The mod operation is to adjust for periodic B-splines.
+    // This can be separated for performance reasons but it will be less readable.
+    for (size_t i = 0; i < numpoles; ++i)
+        pvec.push_back(b.poles[(startpole + i) % b.poles.size()].x);
+    for (size_t i = 0; i < numpoles; ++i)
+        pvec.push_back(b.weights[(startpole + i) % b.poles.size()]);
+
+    Constraint *constr = new ConstraintWeightedLinearCombination(numpoles, pvec, factors);
+    constr->setTag(tagId);
+    constr->setDriving(driving);
+    constr->setInternalAlignment(Constraint::Alignment::InternalAlignment);
+    addConstraint(constr);
+
+    pvec.clear();
+    pvec.push_back(p.y);
+    for (size_t i = 0; i < numpoles; ++i)
+        pvec.push_back(b.poles[(startpole + i) % b.poles.size()].y);
+    for (size_t i = 0; i < numpoles; ++i)
+        pvec.push_back(b.weights[(startpole + i) % b.poles.size()]);
+
+    constr = new ConstraintWeightedLinearCombination(numpoles, pvec, factors);
+    constr->setTag(tagId);
+    constr->setDriving(driving);
+    constr->setInternalAlignment(Constraint::Alignment::InternalAlignment);
+    return addConstraint(constr);
 }
 
 //calculates angle between two curves at point of their intersection p. If two
@@ -1429,7 +1511,7 @@ void System::initSolution(Algorithm alg)
             return;
     }
     std::vector<Constraint *> clistR;
-    if (redundant.size()) {
+    if (!redundant.empty()) {
         for (std::vector<Constraint *>::const_iterator constr=clist.begin(); constr != clist.end(); ++constr) {
             if (redundant.count(*constr) == 0)
                 clistR.push_back(*constr);
@@ -1521,11 +1603,11 @@ void System::initSolution(Algorithm alg)
                 clist1.push_back(*constr);
         }
 
-        subSystems.push_back(NULL);
-        subSystemsAux.push_back(NULL);
-        if (clist0.size() > 0)
+        subSystems.push_back(nullptr);
+        subSystemsAux.push_back(nullptr);
+        if (!clist0.empty())
             subSystems[cid] = new SubSystem(clist0, plists[cid], reductionmaps[cid]);
-        if (clist1.size() > 0)
+        if (!clist1.empty())
             subSystemsAux[cid] = new SubSystem(clist1, plists[cid], reductionmaps[cid]);
     }
 
@@ -3712,6 +3794,8 @@ int System::solve(SubSystem *subsysA, SubSystem *subsysB, bool /*isFine*/, bool 
             double alpha=1;
             alpha = std::min(alpha, subsysA->maxStep(plistAB,xdir));
 
+            // From the book "Numerical Optimization - Jorge Nocedal, Stephen J. Wright".
+            // See https://forum.freecadweb.org/viewtopic.php?f=10&t=35469.
             // Eq. 18.32
             // double mu = lambda.lpNorm<Eigen::Infinity>() + 0.01;
             // Eq. 18.33
@@ -4477,16 +4561,32 @@ void System::identifyConflictingRedundantConstraints(   Algorithm alg,
             break;
 
         int maxPopularity = 0;
-        Constraint *mostPopular = NULL;
+        Constraint *mostPopular = nullptr;
         for (std::map< Constraint *, SET_I >::const_iterator it=conflictingMap.begin();
                 it != conflictingMap.end(); ++it) {
-            if (static_cast<int>(it->second.size()) > maxPopularity ||
-                (static_cast<int>(it->second.size()) == maxPopularity && mostPopular &&
-                tagmultiplicity.at(it->first->getTag()) < tagmultiplicity.at(mostPopular->getTag())) ||
 
-                (static_cast<int>(it->second.size()) == maxPopularity && mostPopular &&
-                tagmultiplicity.at(it->first->getTag()) == tagmultiplicity.at(mostPopular->getTag()) &&
-                    it->first->getTag() > mostPopular->getTag())
+            bool isinternalalignment = ((it->first)->isInternalAlignment() == Constraint::Alignment::InternalAlignment);
+            int numberofsets =  static_cast<int>(it->second.size()); // number of sets in which the constraint appears
+
+
+            /* This is a heuristic algorithm to propose the user which constraints from a redundant/conflicting set should be removed. It is based on the following principles:
+             * 1. if it is internal alignment, we discard it from the contest, as it is inherent to the geometry and cannot be the conflicting/redundant to be removed, so it is not proposed.
+             * 2. if the current constraint is more popular than previous ones (appears in more sets), take it. This prioritises removal of constraints that cause several independent groups of constraints to be conflicting/redundant. It is based on the observation that the redundancy/conflict is caused by the lesser amount of constraints.
+             * 3. if there is already a constraint ranking in the contest, and the current one is as popular, prefer the constraint that removes a lesser amount of DoFs. This prioritises removal of sketcher constraints (not solver constraints) that generates a higher amount of solver constraints. It is based on
+             * the observation that constraints taking a higher amount of DoFs (such as symmetry) are preferred by the user, who may not see the redundancy of simpler
+             * ones.
+             * 4. if there is already a constraint ranking in the context, the current one is as popular, and they remove the same amount of DoFs, prefer removal of
+             * the latest introduced.
+             */
+
+            if ( !isinternalalignment && //  (1) internal alignment => Discard
+                 (   numberofsets > maxPopularity || // (2)
+                    (numberofsets == maxPopularity && mostPopular &&
+                    tagmultiplicity.at(it->first->getTag()) < tagmultiplicity.at(mostPopular->getTag())) || // (3)
+
+                    (numberofsets == maxPopularity && mostPopular &&
+                    tagmultiplicity.at(it->first->getTag()) == tagmultiplicity.at(mostPopular->getTag()) &&
+                        it->first->getTag() > mostPopular->getTag())) // (4)
 
             ) {
                 mostPopular = it->first;

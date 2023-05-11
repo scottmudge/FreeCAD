@@ -23,35 +23,34 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <cfloat>
-# include <boost_bind_bind.hpp>
 # include <gp_Lin.hxx>
 # include <gp_Pln.hxx>
 # include <BRep_Builder.hxx>
 # include <BRepBuilderAPI_MakeEdge.hxx>
 # include <BRepBuilderAPI_MakeFace.hxx>
-# include <BRepBuilderAPI_MakeWire.hxx>
-# include <BRep_Tool.hxx>
-# include <TopExp_Explorer.hxx>
-# include <TopoDS.hxx>
-# include <Precision.hxx>
 #endif
 
-#include <Base/Console.h>
-#include <Base/Tools.h>
+#include <unordered_map>
+#include <unordered_set>
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <App/Application.h>
 #include <App/Document.h>
-#include "ShapeBinder.h"
-#include <App/Document.h>
 #include <App/GroupExtension.h>
+#include <App/Link.h>
 #include <App/OriginFeature.h>
 #include "Feature.h"
 
+#include "ShapeBinder.h"
+
 FC_LOG_LEVEL_INIT("PartDesign",true,true)
+
+#ifndef M_PI
+# define M_PI       3.14159265358979323846
+#endif
 
 using namespace PartDesign;
 namespace bp = boost::placeholders;
-namespace bio = boost::iostreams;
 
 // ============================================================================
 
@@ -59,7 +58,7 @@ PROPERTY_SOURCE(PartDesign::ShapeBinder, Part::Feature)
 
 ShapeBinder::ShapeBinder()
 {
-    ADD_PROPERTY_TYPE(Support, (0,0), "",(App::PropertyType)(App::Prop_None),"Support of the geometry");
+    ADD_PROPERTY_TYPE(Support, (nullptr, nullptr), "", (App::PropertyType)(App::Prop_None), "Support of the geometry");
     Placement.setStatus(App::Property::Hidden, true);
     ADD_PROPERTY_TYPE(TraceSupport, (false), "", App::Prop_None, "Trace support shape");
 }
@@ -69,7 +68,12 @@ ShapeBinder::~ShapeBinder()
     this->connectDocumentChangedObject.disconnect();
 }
 
-short int ShapeBinder::mustExecute(void) const {
+void ShapeBinder::onChanged(const App::Property* prop)
+{
+    Feature::onChanged(prop);
+}
+
+short int ShapeBinder::mustExecute() const {
 
     if (Support.isTouched())
         return 1;
@@ -79,30 +83,49 @@ short int ShapeBinder::mustExecute(void) const {
     return Part::Feature::mustExecute();
 }
 
-App::DocumentObjectExecReturn* ShapeBinder::execute(void) {
+Part::TopoShape ShapeBinder::updatedShape() const
+{
+    Part::TopoShape shape;
+    App::GeoFeature* obj = nullptr;
+    std::vector<std::string> subs;
+
+    ShapeBinder::getFilteredReferences(&Support, obj, subs);
+
+    //if we have a link we rebuild the shape, but we change nothing if we are a simple copy
+    if (obj) {
+        shape = ShapeBinder::buildShapeFromReferences(obj, subs);
+        //now, shape is in object's CS, and includes local Placement of obj but nothing else.
+
+        if (TraceSupport.getValue()) {
+            //compute the transform, and apply it to the shape.
+            Base::Placement sourceCS = //full placement of container of obj
+                obj->globalPlacement() * obj->Placement.getValue().inverse();
+            Base::Placement targetCS = //full placement of container of this shapebinder
+                this->globalPlacement() * this->Placement.getValue().inverse();
+            Base::Placement transform = targetCS.inverse() * sourceCS;
+            shape.setPlacement(transform * shape.getPlacement());
+        }
+    }
+
+    return shape;
+}
+
+bool ShapeBinder::hasPlacementChanged() const
+{
+    Part::TopoShape shape(updatedShape());
+    Base::Placement placement(shape.getTransform());
+    return this->Placement.getValue() != placement;
+}
+
+App::DocumentObjectExecReturn* ShapeBinder::execute() {
 
     if (!this->isRestoring()) {
-        App::GeoFeature* obj = nullptr;
-        std::vector<std::string> subs;
-
-        ShapeBinder::getFilteredReferences(&Support, obj, subs);
-
-        //if we have a link we rebuild the shape, but we change nothing if we are a simple copy
-        if (obj) {
-            Part::TopoShape shape(ShapeBinder::buildShapeFromReferences(obj, subs));
-            //now, shape is in object's CS, and includes local Placement of obj but nothing else.
-
-            if (TraceSupport.getValue()) {
-                //compute the transform, and apply it to the shape.
-                Base::Placement sourceCS = //full placement of container of obj
-                        obj->globalPlacement() * obj->Placement.getValue().inverse();
-                Base::Placement targetCS = //full placement of container of this shapebinder
-                        this->globalPlacement() * this->Placement.getValue().inverse();
-                Base::Placement transform = targetCS.inverse() * sourceCS;
-                shape.setPlacement(transform * shape.getPlacement());
-            }
-
+        Part::TopoShape shape(updatedShape());
+        if (!shape.isNull()) {
             this->Placement.setValue(shape.getTransform());
+            this->Shape.setValue(shape);
+        }
+        else {
             this->Shape.setValue(shape);
         }
     }
@@ -110,7 +133,8 @@ App::DocumentObjectExecReturn* ShapeBinder::execute(void) {
     return Part::Feature::execute();
 }
 
-void ShapeBinder::getFilteredReferences(App::PropertyLinkSubList* prop, App::GeoFeature*& obj,
+void ShapeBinder::getFilteredReferences(const App::PropertyLinkSubList* prop,
+                                        App::GeoFeature*& obj,
                                         std::vector< std::string >& subobjects)
 {
     obj = nullptr;
@@ -180,7 +204,7 @@ Part::TopoShape ShapeBinder::buildShapeFromReferences(App::GeoFeature* obj, std:
             return part->Shape.getValue();
 
         std::vector<TopoDS_Shape> shapes;
-        for (std::string sub : subs) {
+        for (const std::string& sub : subs) {
             shapes.push_back(part->Shape.getShape().getSubShape(sub.c_str()));
         }
 
@@ -193,7 +217,7 @@ Part::TopoShape ShapeBinder::buildShapeFromReferences(App::GeoFeature* obj, std:
             BRep_Builder builder;
             TopoDS_Compound cmp;
             builder.MakeCompound(cmp);
-            for(const TopoDS_Shape& sh : shapes){
+            for (const TopoDS_Shape& sh : shapes) {
                 builder.Add(cmp, sh);
             }
             return cmp;
@@ -217,7 +241,7 @@ Part::TopoShape ShapeBinder::buildShapeFromReferences(App::GeoFeature* obj, std:
     return TopoDS_Shape();
 }
 
-void ShapeBinder::handleChangedPropertyType(Base::XMLReader &reader, const char *TypeName, App::Property *prop)
+void ShapeBinder::handleChangedPropertyType(Base::XMLReader& reader, const char* TypeName, App::Property* prop)
 {
     // The type of Support was App::PropertyLinkSubList in the past
     if (prop == &Support && strcmp(TypeName, "App::PropertyLinkSubList") == 0) {
@@ -255,7 +279,8 @@ void ShapeBinder::slotChangedObject(const App::DocumentObject& Obj, const App::P
     if (obj) {
         if (obj == &Obj) {
             // the directly referenced object has changed
-            enforceRecompute();
+            if (hasPlacementChanged())
+                enforceRecompute();
         }
         else if (Obj.hasExtension(App::GroupExtension::getExtensionClassTypeId())) {
             // check if the changed property belongs to a group-like object
@@ -268,7 +293,8 @@ void ShapeBinder::slotChangedObject(const App::DocumentObject& Obj, const App::P
 
             auto it = std::find(chain.begin(), chain.end(), &Obj);
             if (it != chain.end()) {
-                enforceRecompute();
+                if (hasPlacementChanged())
+                    enforceRecompute();
             }
         }
     }

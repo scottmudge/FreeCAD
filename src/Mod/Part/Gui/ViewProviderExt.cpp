@@ -20,81 +20,54 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <sstream>
 # include <Bnd_Box.hxx>
-# include <Poly_Polygon3D.hxx>
+# include <BRep_Tool.hxx>
 # include <BRepBndLib.hxx>
 # include <BRepBuilderAPI_Copy.hxx>
 # include <BRepBuilderAPI_MakeVertex.hxx>
 # include <BRepExtrema_DistShapeShape.hxx>
 # include <BRepMesh_IncrementalMesh.hxx>
-# include <BRep_Tool.hxx>
-# include <BRepTools.hxx>
-# include <BRepAdaptor_Curve.hxx>
-# include <BRepAdaptor_Surface.hxx>
-# include <GeomLib.hxx>
-# include <GeomAbs_CurveType.hxx>
-# include <GeomAbs_SurfaceType.hxx>
-# include <Geom_BezierCurve.hxx>
-# include <Geom_BSplineCurve.hxx>
-# include <Geom_BezierSurface.hxx>
-# include <Geom_BSplineSurface.hxx>
-# include <GeomAPI_ProjectPointOnSurf.hxx>
-# include <GeomLProp_SLProps.hxx>
 # include <gp_Trsf.hxx>
+# include <Precision.hxx>
 # include <Poly_Array1OfTriangle.hxx>
+# include <Poly_Polygon3D.hxx>
+# include <Poly_PolygonOnTriangulation.hxx>
 # include <Poly_Triangulation.hxx>
-# include <Poly_Connect.hxx>
 # include <Standard_Version.hxx>
+# include <TColgp_Array1OfDir.hxx>
 # include <TColgp_Array1OfPnt.hxx>
+# include <TColStd_Array1OfInteger.hxx>
+# include <TopExp.hxx>
+# include <TopExp_Explorer.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Edge.hxx>
-# include <TopoDS_Wire.hxx>
 # include <TopoDS_Face.hxx>
 # include <TopoDS_Shape.hxx>
 # include <TopoDS_Vertex.hxx>
-# include <TopoDS_Iterator.hxx>
-# include <TopExp_Explorer.hxx>
-# include <TopExp.hxx>
 # include <TopTools_IndexedMapOfShape.hxx>
-# include <Poly_PolygonOnTriangulation.hxx>
-# include <TColStd_Array1OfInteger.hxx>
-# include <TColgp_Array1OfDir.hxx>
-# include <TColgp_Array1OfPnt2d.hxx>
-# include <TopTools_ListOfShape.hxx>
-# include <TShort_Array1OfShortReal.hxx>
-# include <TShort_HArray1OfShortReal.hxx>
-# include <Precision.hxx>
-# include <Python.h>
+
+# include <QApplication>
+# include <QAction>
+# include <QMenu>
+# include <sstream>
+
 # include <Inventor/SoPickedPoint.h>
 # include <Inventor/details/SoFaceDetail.h>
 # include <Inventor/details/SoLineDetail.h>
 # include <Inventor/details/SoPointDetail.h>
 # include <Inventor/errors/SoDebugError.h>
-# include <Inventor/events/SoMouseButtonEvent.h>
-# include <Inventor/nodes/SoBaseColor.h>
 # include <Inventor/nodes/SoCoordinate3.h>
 # include <Inventor/nodes/SoDrawStyle.h>
-# include <Inventor/nodes/SoIndexedFaceSet.h>
-# include <Inventor/nodes/SoIndexedLineSet.h>
-# include <Inventor/nodes/SoLocateHighlight.h>
 # include <Inventor/nodes/SoMaterial.h>
 # include <Inventor/nodes/SoMaterialBinding.h>
 # include <Inventor/nodes/SoNormal.h>
 # include <Inventor/nodes/SoNormalBinding.h>
-# include <Inventor/nodes/SoPointSet.h>
 # include <Inventor/nodes/SoPolygonOffset.h>
+# include <Inventor/nodes/SoSeparator.h>
 # include <Inventor/nodes/SoShapeHints.h>
-# include <Inventor/nodes/SoSwitch.h>
-# include <Inventor/nodes/SoGroup.h>
-# include <Inventor/nodes/SoSphere.h>
-# include <Inventor/nodes/SoScale.h>
-# include <Inventor/nodes/SoLightModel.h>
-# include <QApplication>
 # include <QAction>
 # include <QMenu>
 #endif
@@ -103,42 +76,37 @@
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-#include <Base/Console.h>
-#include <Base/Parameter.h>
-#include <Base/Exception.h>
-#include <Base/TimeInfo.h>
-#include <Base/Tools.h>
-
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DocumentObserver.h>
 #include <App/MappedElement.h>
-
+#include <Base/Console.h>
+#include <Base/Parameter.h>
+#include <Base/TimeInfo.h>
+#include <Base/Tools.h>
 #include <Gui/Application.h>
-#include <Gui/Command.h>
 #include <Gui/Action.h>
-#include <Gui/SoFCUnifiedSelection.h>
-#include <Gui/SoFCSelectionAction.h>
 #include <Gui/Selection.h>
 #include <Gui/View3DInventorViewer.h>
 #include <Gui/Utilities.h>
-#include <Gui/Control.h>
 #include <Gui/ViewProviderLink.h>
 #include <Gui/TaskElementColors.h>
-#include <Gui/ViewParams.h>
 #include <Gui/Inventor/SoFCShapeInfo.h>
 #include <Gui/InventorBase.h>
-#include "PartParams.h"
+#include <Gui/BitmapFactory.h>
+#include <Gui/Control.h>
+#include <Gui/SoFCSelectionAction.h>
+#include <Gui/SoFCUnifiedSelection.h>
+#include <Gui/ViewParams.h>
+#include <Mod/Part/App/Tools.h>
+
 #include "ViewProviderExt.h"
-#include "SoBrepPointSet.h"
+#include "PartParams.h"
 #include "SoBrepEdgeSet.h"
 #include "SoBrepFaceSet.h"
+#include "SoBrepPointSet.h"
 #include "TaskFaceColors.h"
 
-#include <Mod/Part/App/PartFeature.h>
-#include <Mod/Part/App/PrimitiveFeature.h>
-#include <Mod/Part/App/Tools.h>
 
 #include "ViewProviderPartExtPy.h"
 
@@ -173,10 +141,10 @@ public:
 App::PropertyFloatConstraint::Constraints ViewProviderPartExt::sizeRange = {1.0,64.0,1.0};
 App::PropertyFloatConstraint::Constraints ViewProviderPartExt::tessRange = {0.01,100.0,0.01};
 App::PropertyQuantityConstraint::Constraints ViewProviderPartExt::angDeflectionRange = {1.0,180.0,0.05};
-const char* ViewProviderPartExt::LightingEnums[]= {"One side","Two side",NULL};
-const char* ViewProviderPartExt::DrawStyleEnums[]= {"Solid","Dashed","Dotted","Dashdot",NULL};
+const char* ViewProviderPartExt::LightingEnums[]= {"One side","Two side",nullptr};
+const char* ViewProviderPartExt::DrawStyleEnums[]= {"Solid","Dashed","Dotted","Dashdot",nullptr};
 
-ViewProviderPartExt::ViewProviderPartExt() 
+ViewProviderPartExt::ViewProviderPartExt()
 {
     static bool _inited;
     if (!_inited) {
@@ -222,8 +190,8 @@ ViewProviderPartExt::ViewProviderPartExt()
     vmat.specularColor.set(0.0f,0.0f,0.0f);
     vmat.emissiveColor.set(0.0f,0.0f,0.0f);
     vmat.shininess = 1.0f;
-    vmat.transparency = 0.0f;	
-	
+    vmat.transparency = 0.0f;
+
     ADD_PROPERTY_TYPE(LineMaterial,(lmat), osgroup, App::Prop_None, "Object line material.");
     ADD_PROPERTY_TYPE(PointMaterial,(vmat), osgroup, App::Prop_None, "Object point material.");
     ADD_PROPERTY_TYPE(LineColor, (lmat.diffuseColor), osgroup, App::Prop_None, "Set object line color.");
@@ -487,7 +455,7 @@ void ViewProviderPartExt::onChanged(const App::Property* prop)
             float trans = Transparency.getValue()/100.0f;
 
             App::PropertyContainer* parent = ShapeMaterial.getContainer();
-            ShapeMaterial.setContainer(0);
+            ShapeMaterial.setContainer(nullptr);
             ShapeMaterial.setTransparency(trans);
             ShapeMaterial.setContainer(parent);
 
@@ -637,16 +605,16 @@ void ViewProviderPartExt::setDisplayMode(const char* ModeName)
     ViewProviderGeometryObject::setDisplayMode( ModeName );
 }
 
-std::vector<std::string> ViewProviderPartExt::getDisplayModes(void) const
+std::vector<std::string> ViewProviderPartExt::getDisplayModes() const
 {
     // get the modes of the father
     std::vector<std::string> StrList = ViewProviderGeometryObject::getDisplayModes();
 
     // add your own modes
-    StrList.push_back("Flat Lines");
-    StrList.push_back("Shaded");
-    StrList.push_back("Wireframe");
-    StrList.push_back("Points");
+    StrList.emplace_back("Flat Lines");
+    StrList.emplace_back("Shaded");
+    StrList.emplace_back("Wireframe");
+    StrList.emplace_back("Points");
 
     return StrList;
 }
@@ -944,6 +912,9 @@ std::vector<Base::Vector3d> ViewProviderPartExt::getSelectionShape(const char* /
 
 void ViewProviderPartExt::setHighlightedFaces(const std::vector<App::Color>& colors)
 {
+    if (getObject() && getObject()->testStatus(App::ObjectStatus::TouchOnColorChange))
+        getObject()->touch(true);
+
     Gui::SoUpdateVBOAction action;
     action.apply(this->faceset);
 
@@ -1206,6 +1177,8 @@ void ViewProviderPartExt::unsetHighlightedFaces()
 
 void ViewProviderPartExt::setHighlightedEdges(const std::vector<App::Color>& colors)
 {
+    if (getObject() && getObject()->testStatus(App::ObjectStatus::TouchOnColorChange))
+        getObject()->touch(true);
     int size = static_cast<int>(colors.size());
     if (size > 1) {
         // Although indexed lineset is used the material binding must be PER_FACE!
@@ -1247,6 +1220,8 @@ void ViewProviderPartExt::unsetHighlightedEdges()
 
 void ViewProviderPartExt::setHighlightedPoints(const std::vector<App::Color>& colors)
 {
+    if (getObject() && getObject()->testStatus(App::ObjectStatus::TouchOnColorChange))
+        getObject()->touch(true);
     int size = static_cast<int>(colors.size());
     if (size > 1) {
         int numpoints = pcoords->point.getNum();
@@ -1447,7 +1422,7 @@ static App::Color getElementColor(App::Color color,
         //
         // However, if there are intermediate modeling steps, things get a bit
         // tricky. getElementHistory() returns intermediate element names in
-        // 'history', but the last entry of 'history' actually contains the real
+        // 'history', but the last entry of 'history' may actually contain the real
         // mapped element name of the 'current' modeling step. That's why we are
         // calling getElementHistory() for previous modeling step now, before
         // retrieving the element for the current step using getElementName(),
@@ -1458,8 +1433,10 @@ static App::Color getElementColor(App::Color color,
         std::swap(history, prevHistory);
         prevHistory.clear();
         tag = shape.getElementHistory(mapped,&original,&prevHistory);
-        Data::IndexedName element = shape.getIndexedName(history.empty()?mapped:history.back());
-        auto idx = Part::TopoShape::shapeTypeAndIndex(element);
+        Data::IndexedName indexedName = shape.getIndexedName(mapped);
+        if (!indexedName && !history.empty())
+           indexedName = shape.getIndexedName(history.back());
+        auto idx = Part::TopoShape::shapeTypeAndIndex(indexedName);
         if(idx.second>0 && idx.second<=(int)shape.countSubShapes(idx.first)) {
             if(idx.first==type) {
                 if(prop->getSize()==1) {
@@ -1731,13 +1708,13 @@ void ViewProviderPartExt::updateData(const App::Property* prop)
         // calculate the visual only if visible
         if (isUpdateForced() || Visibility.getValue())
             updateVisual();
-        else 
+        else
             VisualTouched = true;
 
         updateColors();
 
         if (!VisualTouched) {
-            if (this->faceset->partIndex.getNum() > 
+            if (this->faceset->partIndex.getNum() >
                 this->pcShapeMaterial->diffuseColor.getNum()) {
                 this->pcFaceBind->value = SoMaterialBinding::OVERALL;
             }
@@ -1748,8 +1725,9 @@ void ViewProviderPartExt::updateData(const App::Property* prop)
 
 void ViewProviderPartExt::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
 {
+    QIcon iconObject = Gui::BitmapFactory().pixmap("Part_ColorFace.svg");
     Gui::ViewProviderGeometryObject::setupContextMenu(menu, receiver, member);
-    QAction* act = menu->addAction(QObject::tr("Set colors..."), receiver, member);
+    QAction* act = menu->addAction(iconObject, QObject::tr("Set colors..."), receiver, member);
     act->setData(QVariant((int)ViewProvider::Color));
 }
 
@@ -1927,17 +1905,18 @@ void ViewProviderPartExt::updateVisual()
                 std::max(PartParams::getOverrideTessellation() ? PartParams::getMeshDeviation() : Deviation.getValue(),
                      PartParams::getMinimumDeviation()));
 
+        // Since OCCT 7.6 a value of equal 0 is not allowed any more, this can happen if a single vertex
+        // should be displayed.
+        if (deflection < gp::Resolution())
+            deflection = Precision::Confusion();
+
         // create or use the mesh on the data structure
-#if OCC_VERSION_HEX >= 0x060600
         Standard_Real AngDeflectionRads = std::max(Precision::Angular(),
             std::max((PartParams::getOverrideTessellation() ?
                         PartParams::getMeshAngularDeflection() : AngularDeflection.getValue()),
                       PartParams::getMinimumAngularDeflection()) / 180.0 * M_PI);
-        BRepMesh_IncrementalMesh(cShape,deflection,Standard_False,
-                AngDeflectionRads,Standard_True);
-#else
-        BRepMesh_IncrementalMesh(cShape,deflection);
-#endif
+
+        BRepMesh_IncrementalMesh(cShape,deflection,Standard_False, AngDeflectionRads,Standard_True);
 
         // count triangles and nodes in the mesh
         TopTools_IndexedMapOfShape faceMap;
@@ -1945,6 +1924,9 @@ void ViewProviderPartExt::updateVisual()
         for (int i=1; i <= faceMap.Extent(); i++) {
             TopoDS_Face face = TopoDS::Face(faceMap(i));
             Handle (Poly_Triangulation) mesh = BRep_Tool::Triangulation(face, aLoc);
+            if (mesh.IsNull()) {
+                mesh = Part::Tools::triangulationOfFace(face);
+            }
             // Note: we must also count empty faces
             if (!mesh.IsNull()) {
                 numTriangles += mesh->NbTriangles();
@@ -1988,7 +1970,7 @@ void ViewProviderPartExt::updateVisual()
                 if (BRep_Tool::IsClosed(aEdge, it->second))
                     seamEdges.push_back(i-1);
             } else {
-                Handle(Poly_Polygon3D) aPoly = BRep_Tool::Polygon3D(aEdge, aLoc);
+                Handle(Poly_Polygon3D) aPoly = Part::Tools::polygonOfEdge(aEdge, aLoc);
                 if (!aPoly.IsNull()) {
                     int nbNodesInEdge = aPoly->NbNodes();
                     numNodes += nbNodesInEdge;
@@ -2017,6 +1999,9 @@ void ViewProviderPartExt::updateVisual()
             const TopoDS_Face &actFace = TopoDS::Face(faceMap(i));
             // get the mesh of the shape
             Handle (Poly_Triangulation) mesh = BRep_Tool::Triangulation(actFace,aLoc);
+            if (mesh.IsNull()) {
+                mesh = Part::Tools::triangulationOfFace(actFace);
+            }
             if (mesh.IsNull()) {
                 parts[ii] = 0;
                 continue;
@@ -2129,12 +2114,12 @@ void ViewProviderPartExt::updateVisual()
                 edgeVector.push_back((int32_t)edgeIndex-1);
                 // already processed this index ?
                 if (edgeIdxSet.find(edgeIndex)!=edgeIdxSet.end()) {
-                    
+
                     // this holds the indices of the edge's triangulation to the current polygon
                     Handle(Poly_PolygonOnTriangulation) aPoly = BRep_Tool::PolygonOnTriangulation(curEdge, mesh, aLoc);
                     if (aPoly.IsNull())
                         continue; // polygon does not exist
-                    
+
                     // getting the indexes of the edge polygon
                     const TColStd_Array1OfInteger& indices = aPoly->Nodes();
                     for (Standard_Integer i=indices.Lower();i <= indices.Upper();i++) {
@@ -2163,7 +2148,7 @@ void ViewProviderPartExt::updateVisual()
             }
 
             edgeVector.push_back(-1);
-            
+
             // counting up the per Face offsets
             faceNodeOffset += nbNodesInFace;
             faceTriaOffset += nbTriInFace;
@@ -2178,7 +2163,7 @@ void ViewProviderPartExt::updateVisual()
 
             // handling of the free edge that are not associated to a face
             if (!faceEdges.count(aEdge)) {
-                Handle(Poly_Polygon3D) aPoly = BRep_Tool::Polygon3D(aEdge, aLoc);
+                Handle(Poly_Polygon3D) aPoly = Part::Tools::polygonOfEdge(aEdge, aLoc);
                 if (!aPoly.IsNull()) {
                     if (!aLoc.IsIdentity()) {
                         identity = false;
@@ -2217,10 +2202,10 @@ void ViewProviderPartExt::updateVisual()
             verts[i].setValue((float)(pnt.X()),(float)(pnt.Y()),(float)(pnt.Z()));
         }
 
-        // normalize all normals 
+        // normalize all normals
         for (int i = 0; i< numNorms ;i++)
             norms[i].normalize();
-        
+
         std::vector<int32_t> lineSetCoords;
         for (std::map<int, std::vector<int32_t> >::iterator it = lineSetMap.begin(); it != lineSetMap.end(); ++it) {
             lineSetCoords.insert(lineSetCoords.end(), it->second.begin(), it->second.end());
@@ -2249,8 +2234,9 @@ void ViewProviderPartExt::updateVisual()
     catch (Base::Exception &e) {
         FC_ERR("Failed to compute Inventor representation for the shape of " << pcObject->getFullName() << ": " << e.what());
     }
-    catch (Standard_Failure &e) {
-        FC_ERR("Failed to compute Inventor representation for the shape of " << pcObject->getFullName() << ": " << e.GetMessageString());
+    catch (const Standard_Failure& e) {
+        FC_ERR("Cannot compute Inventor representation for the shape of "
+               << pcObject->getFullName() << ": " << e.GetMessageString());
     }
     catch (...) {
         FC_ERR("Failed to compute Inventor representation for the shape of " << pcObject->getFullName());

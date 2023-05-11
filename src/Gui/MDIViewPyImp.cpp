@@ -35,7 +35,7 @@ using namespace Gui;
 // returns a string which represent the object e.g. when printed in python
 std::string MDIViewPy::representation(void) const
 {
-    return std::string("<MDIView>");
+    return getMDIViewPtr()->getTypeId().getName();
 }
 
 PyObject *MDIViewPy::getCustomAttributes(const char* attr) const
@@ -50,6 +50,11 @@ int MDIViewPy::setCustomAttributes(const char* /*attr*/, PyObject * /*obj*/)
 
 PyObject* MDIViewPy::message(PyObject *args)
 {
+    return sendMessage(args);
+}
+
+PyObject* MDIViewPy::sendMessage(PyObject *args)
+{
     const char **ppReturn = 0;
     char *psMsgStr;
     if (!PyArg_ParseTuple(args, "s;Message string needed (string)",&psMsgStr))
@@ -58,6 +63,79 @@ PyObject* MDIViewPy::message(PyObject *args)
     try {
         getMDIViewPtr()->onMsg(psMsgStr,ppReturn);
         Py_Return;
+    } PY_CATCH
+}
+
+PyObject *MDIViewPy::printView(PyObject *args)
+{
+    if (!PyArg_ParseTuple(args, ""))
+        return nullptr;
+
+    try {
+        getMDIViewPtr()->print();
+        Py_Return;
+    } PY_CATCH
+}
+
+PyObject *MDIViewPy::printPdf(PyObject *args)
+{
+    if (!PyArg_ParseTuple(args, ""))
+        return nullptr;
+
+    try {
+        getMDIViewPtr()->printPreview();
+        Py_Return;
+    } PY_CATCH
+}
+
+PyObject *MDIViewPy::printPreview(PyObject *args)
+{
+    if (!PyArg_ParseTuple(args, ""))
+        return nullptr;
+
+    try {
+        getMDIViewPtr()->printPreview();
+        Py_Return;
+    } PY_CATCH
+}
+
+PyObject *MDIViewPy::undoActions(PyObject *args)
+{
+    if (!PyArg_ParseTuple(args, ""))
+        return nullptr;
+
+    try {
+        Py::List list;
+        QStringList undo = getMDIViewPtr()->undoActions();
+        for (const auto& it : undo)
+            list.append(Py::String(it.toStdString()));
+        return Py::new_reference_to(list);
+    } PY_CATCH
+}
+
+PyObject *MDIViewPy::redoActions(PyObject *args)
+{
+    if (!PyArg_ParseTuple(args, ""))
+        return nullptr;
+
+    try {
+        Py::List list;
+        QStringList redo = getMDIViewPtr()->redoActions();
+        for (const auto& it : redo)
+            list.append(Py::String(it.toStdString()));
+        return Py::new_reference_to(list);
+    } PY_CATCH
+}
+
+PyObject *MDIViewPy::supportMessage(PyObject *args)
+{
+    char *psMsgStr;
+    if (!PyArg_ParseTuple(args, "s;Message string needed (string)",&psMsgStr))
+        return nullptr;
+
+    try {
+        return Py::new_reference_to(Py::Boolean(
+                    getMDIViewPtr()->onHasMsg(psMsgStr)));
     } PY_CATCH
 }
 
@@ -116,6 +194,19 @@ PyObject* MDIViewPy::getActiveObject(PyObject *args)
                 parent ? Py::asObject(parent->getPyObject()) : Py::Object(),
                 Py::String(subname.c_str())));
     } PY_CATCH
+}
+
+PyObject* MDIViewPy::close(PyObject *args)
+{
+    if (!PyArg_ParseTuple(args, ""))
+        return nullptr;
+
+    auto view = getMDIViewPtr();
+    if (view->parentWidget())
+        view->parentWidget()->deleteLater();
+    view->close();
+
+    Py_Return;
 }
 
 Py::Int MDIViewPy::getID() const

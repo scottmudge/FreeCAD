@@ -23,6 +23,8 @@
 #ifndef PART_PARAMS_H
 #define PART_PARAMS_H
 
+#include <Mod/Part/PartGlobal.h>
+
 /*[[[cog
 import PartGuiParams
 PartGuiParams.declare()

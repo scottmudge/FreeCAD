@@ -20,15 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef MESH_ITERATOR_H
 #define MESH_ITERATOR_H
 
-#include "MeshKernel.h"
-#include "Elements.h"
-#include <Base/Matrix.h>
-#include <Base/Vector3D.h>
 #include <climits>
+
+#include <Base/Matrix.h>
+
+#include "MeshKernel.h"
+
 
 namespace MeshCore {
 
@@ -51,7 +51,7 @@ public:
   /** @name Construction */
   //@{
   /// construction
-  inline MeshFacetIterator (const MeshKernel &rclM);
+  inline explicit MeshFacetIterator (const MeshKernel &rclM);
   /// construction
   inline MeshFacetIterator (const MeshKernel &rclM, FacetIndex ulPos);
   /// construction
@@ -175,17 +175,17 @@ class MeshExport MeshPointIterator
 public:
   /** @name Construction */
   //@{
-  inline MeshPointIterator (const MeshKernel &rclM);
+  inline explicit MeshPointIterator (const MeshKernel &rclM);
   inline MeshPointIterator (const MeshKernel &rclM, PointIndex ulPos);
   inline MeshPointIterator (const MeshPointIterator &rclI);
   //@}
- 
+
   /** @name Transformation */
   //@{
   /// Transforms the returned points with the current transformation
   inline void Transform( const Base::Matrix4D& rclTrf );
   //@}
- 
+
   /** @name Access methods */
   //@{
   /// Access to the element the iterator points to.
@@ -259,7 +259,7 @@ protected:
 protected:
   const MeshKernel& _rclMesh;
   const MeshPointArray& _rclPAry;
-  MeshPoint _clPoint;
+  mutable MeshPoint _clPoint;
   MeshPointArray::_TConstIterator _clIter;
   bool _bApply;
   Base::Matrix4D _clTrf;
@@ -271,7 +271,7 @@ protected:
 class MeshFastFacetIterator
 {
 public:
-  inline MeshFastFacetIterator (const MeshKernel &rclM);
+  inline explicit MeshFastFacetIterator (const MeshKernel &rclM);
   virtual ~MeshFastFacetIterator () {}
 
   void Init () { _clIter = _rclFAry.begin(); }
@@ -410,7 +410,7 @@ inline void MeshFacetIterator::GetNeighbours (MeshFacetIterator &rclN0, MeshFace
 }
 
 inline void MeshFacetIterator::SetToNeighbour (unsigned short usN)
-{ 
+{
   if (_clIter->_aulNeighbours[usN] != FACET_INDEX_MAX)
     _clIter = _rclFAry.begin() + _clIter->_aulNeighbours[usN];
   else
@@ -443,11 +443,12 @@ inline void MeshPointIterator::Transform( const Base::Matrix4D& rclTrf )
 }
 
 inline const MeshPoint& MeshPointIterator::Dereference () const
-{ // We change only the value of the point but not the actual iterator
-  const_cast<MeshPointIterator*>(this)->_clPoint = *_clIter;
+{
+  // We change only the value of the point but not the actual iterator
+  _clPoint = *_clIter;
   if ( _bApply )
-    const_cast<MeshPointIterator*>(this)->_clPoint = _clTrf * _clPoint;
-  return _clPoint; 
+    _clPoint = _clTrf * _clPoint;
+  return _clPoint;
 }
 
 inline bool MeshPointIterator::Set (PointIndex ulIndex)
@@ -476,4 +477,4 @@ inline MeshPointIterator& MeshPointIterator::operator = (const MeshPointIterator
 } // namespace MeshCore
 
 
-#endif // MESH_ITERATOR_H 
+#endif // MESH_ITERATOR_H

@@ -40,7 +40,6 @@
 #include "Application.h"
 #include "BitmapFactory.h"
 #include "Command.h"
-#include "Widgets.h"
 #include "Window.h"
 #include "PrefWidgets.h"
 #include "ShortcutManager.h"
@@ -51,7 +50,7 @@ FC_LOG_LEVEL_INIT("Gui", true, true)
 using namespace Gui::Dialog;
 
 namespace Gui { namespace Dialog {
-typedef std::vector< std::pair<QString, QString> > GroupMap;
+using GroupMap = std::vector< std::pair<QString, QString> >;
 
 struct GroupMap_find {
     const QString& item;
@@ -154,11 +153,14 @@ void DlgCustomKeyboardImp::populateCommandList(QTreeWidget *commandTreeWidget,
     if (auto item = commandTreeWidget->currentItem())
         current = item->data(1, Qt::UserRole).toByteArray();
 
-    if (separatorItem)
+    if (separatorItem) {
         commandTreeWidget->takeTopLevelItem(commandTreeWidget->indexOfTopLevelItem(separatorItem));
+    }
     commandTreeWidget->clear();
-    if (separatorItem)
+    if (separatorItem) {
         commandTreeWidget->addTopLevelItem(separatorItem);
+    }
+
     CommandManager & cCmdMgr = Application::Instance->commandManager();
     auto group = combo->itemData(combo->currentIndex(), Qt::UserRole).toByteArray();
     auto cmds = group == "All" ? cCmdMgr.getAllCommands()
@@ -211,11 +213,13 @@ DlgCustomKeyboardImp::initCommandList(QTreeWidget *commandTreeWidget,
         populateCommandList(commandTreeWidget, separatorItem, combo);
     });
 
-    QObject::connect(ShortcutManager::instance(), &ShortcutManager::shortcutChanged,
-                     timer, [timer]() { timer->start(100); });
+    QObject::connect(ShortcutManager::instance(), &ShortcutManager::shortcutChanged, timer, [timer]() {
+        timer->start(100);
+    });
 
-    QObject::connect(combo, QOverload<int>::of(&QComboBox::activated),
-                     timer, [timer]() { timer->start(100); });
+    QObject::connect(combo, QOverload<int>::of(&QComboBox::activated), timer, [timer]() {
+        timer->start(100);
+    });
 
     return Application::Instance->commandManager().signalChanged.connect([timer](){
         timer->start(100);
@@ -275,8 +279,8 @@ DlgCustomKeyboardImp::initCommandWidgets(QTreeWidget *commandTreeWidget,
                                          QTreeWidget *priorityList,
                                          QAbstractButton *buttonUp,
                                          QAbstractButton *buttonDown,
-                                         AccelLineEdit *editShortcut,
-                                         AccelLineEdit *currentShortcut)
+                                         Gui::AccelLineEdit *editShortcut,
+                                         Gui::AccelLineEdit *currentShortcut)
 {
     initCommandCompleter(editCommand, comboGroups, commandTreeWidget, separatorItem);
     auto conn = initCommandList(commandTreeWidget, separatorItem, comboGroups);
@@ -286,11 +290,18 @@ DlgCustomKeyboardImp::initCommandWidgets(QTreeWidget *commandTreeWidget,
 
         auto timer = new QTimer(priorityList);
         timer->setSingleShot(true);
-        if (currentShortcut)
-            QObject::connect(currentShortcut, &QLineEdit::textChanged, timer, [timer](){timer->start(200);});
-        QObject::connect(editShortcut, &QLineEdit::textChanged, timer, [timer](){timer->start(200);});
-        QObject::connect(ShortcutManager::instance(), &ShortcutManager::priorityChanged, timer, [timer](){timer->start(200);});
-        QObject::connect(timer, &QTimer::timeout, [=](){
+        if (currentShortcut) {
+            QObject::connect(currentShortcut, &QLineEdit::textChanged, timer, [timer]() {
+                timer->start(200);
+            });
+        }
+        QObject::connect(editShortcut, &QLineEdit::textChanged, timer, [timer]() {
+            timer->start(200);
+        });
+        QObject::connect(ShortcutManager::instance(), &ShortcutManager::priorityChanged, timer, [timer](){
+            timer->start(200);
+        });
+        QObject::connect(timer, &QTimer::timeout, [=]() {
             populatePriorityList(priorityList, editShortcut, currentShortcut);
         });
     }
@@ -299,8 +310,8 @@ DlgCustomKeyboardImp::initCommandWidgets(QTreeWidget *commandTreeWidget,
 }
 
 void DlgCustomKeyboardImp::populatePriorityList(QTreeWidget *priorityList,
-                                                AccelLineEdit *editor,
-                                                AccelLineEdit *curShortcut)
+                                                Gui::AccelLineEdit *editor,
+                                                Gui::AccelLineEdit *curShortcut)
 {
     QByteArray current;
     if (auto currentItem = priorityList->currentItem())
@@ -340,18 +351,18 @@ void DlgCustomKeyboardImp::populateCommandGroups(QComboBox *combo)
     std::map<std::string,Command*> sCommands = cCmdMgr.getCommands();
 
     GroupMap groupMap;
-    groupMap.push_back(std::make_pair(QStringLiteral("File"), QString()));
-    groupMap.push_back(std::make_pair(QStringLiteral("Edit"), QString()));
-    groupMap.push_back(std::make_pair(QStringLiteral("View"), QString()));
-    groupMap.push_back(std::make_pair(QStringLiteral("Standard-View"), QString()));
-    groupMap.push_back(std::make_pair(QStringLiteral("Tools"), QString()));
-    groupMap.push_back(std::make_pair(QStringLiteral("Window"), QString()));
-    groupMap.push_back(std::make_pair(QStringLiteral("Help"), QString()));
-    groupMap.push_back(std::make_pair(QStringLiteral("Macros"), qApp->translate("Gui::MacroCommand", "Macros")));
+    groupMap.emplace_back(QStringLiteral("File"), QString());
+    groupMap.emplace_back(QStringLiteral("Edit"), QString());
+    groupMap.emplace_back(QStringLiteral("View"), QString());
+    groupMap.emplace_back(QStringLiteral("Standard-View"), QString());
+    groupMap.emplace_back(QStringLiteral("Tools"), QString());
+    groupMap.emplace_back(QStringLiteral("Window"), QString());
+    groupMap.emplace_back(QStringLiteral("Help"), QString());
+    groupMap.emplace_back(QStringLiteral("Macros"), qApp->translate("Gui::MacroCommand", "Macros"));
 
-    for (std::map<std::string,Command*>::iterator it = sCommands.begin(); it != sCommands.end(); ++it) {
-        QString group = QString::fromUtf8(it->second->getGroupName());
-        QString text = it->second->translatedGroupName();
+    for (const auto & sCommand : sCommands) {
+        QString group = QString::fromUtf8(sCommand.second->getGroupName());
+        QString text = sCommand.second->translatedGroupName();
         GroupMap::iterator jt;
         jt = std::find_if(groupMap.begin(), groupMap.end(), GroupMap_find(group));
         if (jt != groupMap.end()) {
@@ -532,8 +543,10 @@ void DlgCustomKeyboardImp::changeEvent(QEvent *e)
         }
         ui->categoryBox->activated(ui->categoryBox->currentIndex());
     }
-    else if (e->type() == QEvent::StyleChange)
+    else if (e->type() == QEvent::StyleChange) {
         ui->categoryBox->activated(ui->categoryBox->currentIndex());
+    }
+
     QWidget::changeEvent(e);
 }
 

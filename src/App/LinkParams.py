@@ -24,7 +24,9 @@
 import sys
 from os import sys, path
 
-# import Tools/params_utils.py
+# Actual code generation is done in Tools/param_utils.py.
+
+# The following code is to import Tools/param_util.py without needing __init__.py
 sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'Tools'))
 import params_utils
 
@@ -40,7 +42,9 @@ Params = [
     ParamBool('CreateInPlace', True),
     ParamBool('CreateInContainer', bool, False),
     ParamString('ActiveContainerKey', ""),
-    ParamBool('CopyOnChangeApplyToAll', True),
+    ParamBool('CopyOnChangeApplyToAll', True, doc='''\
+Stores the last user choice of whether to apply CopyOnChange setup to all link
+that links to the same configurable object'''),
     ParamBool('ShowElement', True,
         title = 'Show array element in Link array',
         doc = 'Default value of the "ShowElement" property in an App::Link object,\n'

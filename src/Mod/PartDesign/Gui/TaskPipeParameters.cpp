@@ -24,15 +24,10 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <sstream>
 # include <QAction>
-# include <QRegExp>
-# include <QTextStream>
-# include <QMessageBox>
 # include <QGenericReturnArgument>
+# include <QMessageBox>
 # include <QMetaObject>
-# include <QKeyEvent>
-# include <Precision.hxx>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -40,31 +35,31 @@
 #include "ui_TaskPipeParameters.h"
 #include "ui_TaskPipeOrientation.h"
 #include "ui_TaskPipeScaling.h"
-#include <ui_DlgReference.h>
 #include "TaskPipeParameters.h"
-#include <Base/Tools.h>
 #include <App/Application.h>
-#include <App/Document.h>
+#include <App/DocumentObject.h>
 #include <App/Origin.h>
 #include <App/Part.h>
+#include <Base/Console.h>
+#include <Base/ExceptionSafeCall.h>
+#include <Base/Tools.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Gui/MetaTypes.h>
-#include <Base/Console.h>
-#include <Base/Tools.h>
-#include <Gui/Selection.h>
 #include <Gui/CommandT.h>
-#include <Gui/MainWindow.h>
-#include <Mod/PartDesign/App/FeaturePipe.h>
-#include <Mod/Sketcher/App/SketchObject.h>
+#include <Gui/MetaTypes.h>
+#include <Gui/Selection.h>
+#include <Gui/ViewProvider.h>
+#include <Gui/Widgets.h>
 #include <Mod/PartDesign/App/Body.h>
-#include "TaskSketchBasedParameters.h"
-#include "ReferenceSelection.h"
+#include <Mod/PartDesign/App/FeaturePipe.h>
+
+#include "ui_TaskPipeParameters.h"
+#include "ui_TaskPipeOrientation.h"
+#include "ui_TaskPipeScaling.h"
+
 #include "Utils.h"
-#include "TaskFeaturePick.h"
+
+Q_DECLARE_METATYPE(App::PropertyLinkSubList::SubSet)
 
 FC_LOG_LEVEL_INIT("PartDesign", true, true)
 
@@ -85,7 +80,6 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView, bool /*newObj
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
     ui->setupUi(proxy);
-    QMetaObject::connectSlotsByName(this);
 
     PartDesign::Pipe* pcPipe = static_cast<PartDesign::Pipe*>(PipeView->getObject());
 
@@ -96,29 +90,11 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView, bool /*newObj
         boxLayout->addWidget(spineWidget);
     }
 
-    connect(ui->comboBoxTransition, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(onTransitionChanged(int)));
 
     if (auto doc = pcPipe->MoveProfile.getDocumentation())
         ui->checkBoxMoveProfile->setToolTip(QString::fromUtf8(doc));
     if (auto doc = pcPipe->RotateProfile.getDocumentation())
         ui->checkBoxRotateProfile->setToolTip(QString::fromUtf8(doc));
-
-    auto onChange = [this]() {
-        if (!vp)
-            return;
-        try {
-            setupTransaction();
-            auto pcPipe = static_cast<PartDesign::Pipe*>(vp->getObject());
-            pcPipe->MoveProfile.setValue(ui->checkBoxMoveProfile->isChecked());
-            pcPipe->RotateProfile.setValue(ui->checkBoxRotateProfile->isChecked());
-            recomputeFeature();
-        } catch (Base::Exception &e) {
-            e.ReportException();
-        }
-    };
-    QObject::connect(ui->checkBoxMoveProfile, &QCheckBox::toggled, onChange);
-    QObject::connect(ui->checkBoxRotateProfile, &QCheckBox::toggled, onChange);
 
     this->initUI(proxy);
     this->groupLayout()->addWidget(proxy);
@@ -129,6 +105,12 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView, bool /*newObj
 
     if (!pcPipe->Spine.getValue())
         spineWidget->onButton(true);
+
+    Base::connect(ui->checkBoxMoveProfile, &QCheckBox::toggled, this, &TaskPipeParameters::onProfileOptionChanged);
+    Base::connect(ui->checkBoxRotateProfile, &QCheckBox::toggled, this, &TaskPipeParameters::onProfileOptionChanged);
+    Base::connect(ui->comboBoxTransition, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                  this, &TaskPipeParameters::onTransitionChanged);
+    QMetaObject::connectSlotsByName(this);
 }
 
 TaskPipeParameters::~TaskPipeParameters()
@@ -140,15 +122,28 @@ void TaskPipeParameters::updateUI()
 {
 }
 
+void TaskPipeParameters::onProfileOptionChanged()
+{
+    if (!vp)
+        return;
+    setupTransaction();
+    auto pcPipe = static_cast<PartDesign::Pipe*>(vp->getObject());
+    pcPipe->MoveProfile.setValue(ui->checkBoxMoveProfile->isChecked());
+    pcPipe->RotateProfile.setValue(ui->checkBoxRotateProfile->isChecked());
+    recomputeFeature();
+}
+
 void TaskPipeParameters::refresh()
 {
     if (!vp || !vp->getObject())
         return;
 
-    QSignalBlocker guard(ui->comboBoxTransition);
+    QSignalBlocker transition(ui->comboBoxTransition);
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
     ui->comboBoxTransition->setCurrentIndex(pipe->Transition.getValue());
+    QSignalBlocker moveProfile(ui->checkBoxMoveProfile);
     ui->checkBoxMoveProfile->setChecked(pipe->MoveProfile.getValue());
+    QSignalBlocker rotateProfile(ui->checkBoxRotateProfile);
     ui->checkBoxRotateProfile->setChecked(pipe->RotateProfile.getValue());
 
     spineWidget->refresh();
@@ -157,23 +152,15 @@ void TaskPipeParameters::refresh()
 void TaskPipeParameters::onTransitionChanged(int idx) {
     if (!vp)
         return;
-    try {
-        setupTransaction();
-        static_cast<PartDesign::Pipe*>(vp->getObject())->Transition.setValue(idx);
-        recomputeFeature();
-    } catch (Base::Exception &e) {
-        e.ReportException();
-    }
+    setupTransaction();
+    static_cast<PartDesign::Pipe*>(vp->getObject())->Transition.setValue(idx);
+    recomputeFeature();
 }
 
 void TaskPipeParameters::onTangentChanged(bool checked) {
-    try {
-        setupTransaction();
-        static_cast<PartDesign::Pipe*>(vp->getObject())->SpineTangent.setValue(checked);
-        recomputeFeature();
-    } catch (Base::Exception &e) {
-        e.ReportException();
-    }
+    setupTransaction();
+    static_cast<PartDesign::Pipe*>(vp->getObject())->SpineTangent.setValue(checked);
+    recomputeFeature();
 }
 
 //**************************************************************************
@@ -182,13 +169,12 @@ void TaskPipeParameters::onTangentChanged(bool checked) {
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool /*newObj*/, QWidget* parent)
-    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_AdditivePipe", tr("Section orientation")),
-    ui(new Ui_TaskPipeOrientation)
+    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_AdditivePipe", tr("Section orientation"))
+    , ui(new Ui_TaskPipeOrientation)
 {
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
     ui->setupUi(proxy);
-    QMetaObject::connectSlotsByName(this);
 
     QBoxLayout * boxLayout = qobject_cast<QBoxLayout*>(ui->auxiliary->layout());
     if (boxLayout) {
@@ -198,19 +184,6 @@ TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool /*newO
         boxLayout->addWidget(auxSpineWidget);
     }
 
-    connect(ui->comboBoxMode, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(onOrientationChanged(int)));
-    connect(ui->stackedWidget, SIGNAL(currentChanged(int)),
-            this, SLOT(updateUI(int)));
-    connect(ui->curvelinear, SIGNAL(toggled(bool)),
-            this, SLOT(onCurvelinearChanged(bool)));
-    connect(ui->doubleSpinBoxX, SIGNAL(valueChanged(double)),
-            this, SLOT(onBinormalChanged(double)));
-    connect(ui->doubleSpinBoxY, SIGNAL(valueChanged(double)),
-            this, SLOT(onBinormalChanged(double)));
-    connect(ui->doubleSpinBoxZ, SIGNAL(valueChanged(double)),
-            this, SLOT(onBinormalChanged(double)));
-
     this->groupLayout()->addWidget(proxy);
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
     // should be called after panel has become visible
@@ -218,6 +191,19 @@ TaskPipeOrientation::TaskPipeOrientation(ViewProviderPipe* PipeView, bool /*newO
         QGenericReturnArgument(), Q_ARG(int,pipe->Mode.getValue()));
 
     refresh();
+
+    QMetaObject::connectSlotsByName(this);
+    Base::connect(ui->comboBoxMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                  this, &TaskPipeOrientation::onOrientationChanged);
+    Base::connect(ui->stackedWidget, &QStackedWidget::currentChanged, this, &TaskPipeOrientation::updateUI);
+    Base::connect(ui->curvelinear, &QCheckBox::toggled, this, &TaskPipeOrientation::onCurvelinearChanged);
+    Base::connect(ui->doubleSpinBoxX, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+                  this, &TaskPipeOrientation::onBinormalChanged);
+    Base::connect(ui->doubleSpinBoxY, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+                  this, &TaskPipeOrientation::onBinormalChanged);
+    Base::connect(ui->doubleSpinBoxZ, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+                  this, &TaskPipeOrientation::onBinormalChanged);
+
 }
 
 TaskPipeOrientation::~TaskPipeOrientation()
@@ -256,31 +242,25 @@ void TaskPipeOrientation::onOrientationChanged(int idx) {
     if (!vp)
         return;
     ui->stackedWidget->setCurrentIndex(idx);
-    try {
-        setupTransaction();
-        auto pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
-        pipe->Mode.setValue(idx);
-        if (idx != 3 || pipe->AuxillerySpine.getValue())
-            recomputeFeature();
-    } catch (Base::Exception &e) {
-        e.ReportException();
+    setupTransaction();
+    auto pipe = static_cast<PartDesign::Pipe*>(vp->getObject());
+    pipe->Mode.setValue(idx);
+    if (idx != 3 || pipe->AuxillerySpine.getValue()) {
+        recomputeFeature();
     }
     if (idx == 3) {
         if (getSelectionMode() != SelectionMode::refAuxSpine)
             auxSpineWidget->onButton(true);
-    } else
+    } else {
         exitSelectionMode();
+    }
 }
 
 void TaskPipeOrientation::onCurvelinearChanged(bool checked)
 {
-    try {
-        setupTransaction();
-        static_cast<PartDesign::Pipe*>(vp->getObject())->AuxilleryCurvelinear.setValue(checked);
-        recomputeFeature();
-    } catch (Base::Exception &e) {
-        e.ReportException();
-    }
+    setupTransaction();
+    static_cast<PartDesign::Pipe*>(vp->getObject())->AuxilleryCurvelinear.setValue(checked);
+    recomputeFeature();
 }
 
 void TaskPipeOrientation::onBinormalChanged(double)
@@ -289,13 +269,9 @@ void TaskPipeOrientation::onBinormalChanged(double)
                        ui->doubleSpinBoxY->value(),
                        ui->doubleSpinBoxZ->value());
 
-    try {
-        setupTransaction();
-        static_cast<PartDesign::Pipe*>(vp->getObject())->Binormal.setValue(vec);
-        recomputeFeature();
-    } catch (Base::Exception &e) {
-        e.ReportException();
-    }
+    setupTransaction();
+    static_cast<PartDesign::Pipe*>(vp->getObject())->Binormal.setValue(vec);
+    recomputeFeature();
 }
 
 void TaskPipeOrientation::updateUI(int idx) {
@@ -313,18 +289,12 @@ void TaskPipeOrientation::updateUI(int idx) {
 // Task Scaling
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 TaskPipeScaling::TaskPipeScaling(ViewProviderPipe* PipeView, bool /*newObj*/, QWidget* parent)
-    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_AdditivePipe", tr("Section transformation")),
-    ui(new Ui_TaskPipeScaling)
+    : TaskSketchBasedParameters(PipeView, parent, "PartDesign_AdditivePipe", tr("Section transformation"))
+    , ui(new Ui_TaskPipeScaling)
 {
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
     ui->setupUi(proxy);
-    QMetaObject::connectSlotsByName(this);
-
-    connect(ui->comboBoxScaling, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(onScalingChanged(int)));
-    connect(ui->stackedWidget, SIGNAL(currentChanged(int)),
-            this, SLOT(updateUI(int)));
 
     PartDesign::Pipe* pipe = static_cast<PartDesign::Pipe*>(PipeView->getObject());
     sectionWidget = new LinkSubListWidget(this, tr("Sections"), tr("Add Section"), pipe->Sections);
@@ -338,6 +308,14 @@ TaskPipeScaling::TaskPipeScaling(ViewProviderPipe* PipeView, bool /*newObj*/, QW
         QGenericReturnArgument(), Q_ARG(int,pipe->Transformation.getValue()));
 
     refresh();
+
+    QMetaObject::connectSlotsByName(this);
+
+    // some buttons are handled in a buttongroup
+    Base::connect(ui->comboBoxScaling, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                  this, &TaskPipeScaling::onScalingChanged);
+    Base::connect(ui->stackedWidget, &QStackedWidget::currentChanged,
+                  this, &TaskPipeScaling::updateUI);
 }
 
 TaskPipeScaling::~TaskPipeScaling()
@@ -373,23 +351,20 @@ void TaskPipeScaling::onScalingChanged(int idx) {
         return;
     ui->stackedWidget->setCurrentIndex(idx);
     updateUI(idx);
-    try {
-        setupTransaction();
-        static_cast<PartDesign::Pipe*>(vp->getObject())->Transformation.setValue(idx);
-        recomputeFeature();
-    } catch (Base::Exception &e) {
-        e.ReportException();
-    }
+    setupTransaction();
+    static_cast<PartDesign::Pipe*>(vp->getObject())->Transformation.setValue(idx);
+    recomputeFeature();
     if (idx == 1) {
         sectionWidget->onButton(true);
-    } else
+    } else {
         exitSelectionMode();
+    }
 }
 
-void TaskPipeScaling::updateUI(int idx) {
-
+void TaskPipeScaling::updateUI(int idx)
+{
     //make sure we resize to the size of the current page
-    for(int i=0; i<ui->stackedWidget->count(); ++i)
+    for (int i=0; i<ui->stackedWidget->count(); ++i)
         ui->stackedWidget->widget(i)->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
 
     if (idx < ui->stackedWidget->count())
@@ -421,8 +396,10 @@ TaskDlgPipeParameters::TaskDlgPipeParameters(ViewProviderPipe *PipeView,bool new
     Content.push_back(orientation);
     Content.push_back(scaling);
 
-    if (PipeView->getObject()->isTouched() || PipeView->getObject()->mustExecute())
+    if (PipeView->getObject()->isTouched() || PipeView->getObject()->mustExecute()) {
+        parameter->setupTransaction();
         parameter->recomputeFeature();
+    }
 }
 
 TaskDlgPipeParameters::~TaskDlgPipeParameters()

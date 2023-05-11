@@ -20,26 +20,24 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <cmath>
 # include <iostream>
+# include <QtConcurrentMap>
+# include <boost/math/special_functions/fpclassify.hpp>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/math/special_functions/fpclassify.hpp>
-#include <QtConcurrentMap>
 
 #include <Base/Exception.h>
 #include <Base/Matrix.h>
-#include <Base/Persistence.h>
 #include <Base/Stream.h>
 #include <Base/Writer.h>
 
 #include "Points.h"
 #include "PointsAlgos.h"
-#include "PointsPy.h"
+
 
 #ifdef _MSC_VER
 # include <ppl.h>
@@ -57,7 +55,7 @@ PointKernel::PointKernel(const PointKernel& pts)
 
 }
 
-const std::vector<const char*>& PointKernel::getElementTypes(void) const
+const std::vector<const char*>& PointKernel::getElementTypes() const
 {
     static std::vector<const char*> temp;
     //temp.push_back("Segment");
@@ -80,7 +78,7 @@ Data::Segment* PointKernel::getSubElement(const char* /*Type*/, unsigned long /*
     //    return 0;
     //}
 
-    return 0;
+    return nullptr;
 }
 
 void PointKernel::transformGeometry(const Base::Matrix4D &rclMat)
@@ -100,7 +98,7 @@ void PointKernel::transformGeometry(const Base::Matrix4D &rclMat)
 #endif
 }
 
-Base::BoundBox3d PointKernel::getBoundBox(void)const
+Base::BoundBox3d PointKernel::getBoundBox()const
 {
     Base::BoundBox3d bnd;
 
@@ -132,16 +130,16 @@ void PointKernel::operator = (const PointKernel& Kernel)
     }
 }
 
-unsigned int PointKernel::getMemSize (void) const
+unsigned int PointKernel::getMemSize () const
 {
     return _Points.size() * sizeof(value_type);
 }
 
-PointKernel::size_type PointKernel::countValid(void) const
+PointKernel::size_type PointKernel::countValid() const
 {
     size_type num = 0;
     for (const_point_iterator it = begin(); it != end(); ++it) {
-        if (!(boost::math::isnan(it->x) || 
+        if (!(boost::math::isnan(it->x) ||
               boost::math::isnan(it->y) ||
               boost::math::isnan(it->z)))
             num++;
@@ -154,7 +152,7 @@ std::vector<PointKernel::value_type> PointKernel::getValidPoints() const
     std::vector<PointKernel::value_type> valid;
     valid.reserve(countValid());
     for (const_point_iterator it = begin(); it != end(); ++it) {
-        if (!(boost::math::isnan(it->x) || 
+        if (!(boost::math::isnan(it->x) ||
               boost::math::isnan(it->y) ||
               boost::math::isnan(it->z)))
             valid.emplace_back(
@@ -245,7 +243,7 @@ void PointKernel::save(const char* file) const
     save(out);
 }
 
-void PointKernel::load(const char* file) 
+void PointKernel::load(const char* file)
 {
     PointsAlgos::Load(*this,file);
 }
@@ -260,7 +258,7 @@ void PointKernel::save(std::ostream& out) const
 
 void PointKernel::getPoints(std::vector<Base::Vector3d> &Points,
                             std::vector<Base::Vector3d> &/*Normals*/,
-                            float /*Accuracy*/, uint16_t /*flags*/) const
+                            double /*Accuracy*/, uint16_t /*flags*/) const
 {
     unsigned long ctpoints = _Points.size();
     Points.reserve(ctpoints);
@@ -301,7 +299,7 @@ PointKernel::const_point_iterator::const_point_iterator
 //{
 //}
 
-PointKernel::const_point_iterator& 
+PointKernel::const_point_iterator&
 PointKernel::const_point_iterator::operator=(const PointKernel::const_point_iterator& pi)
 {
     this->_kernel  = pi._kernel;

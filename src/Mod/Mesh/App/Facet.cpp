@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <sstream>
@@ -29,9 +28,10 @@
 #include "Facet.h"
 #include "Mesh.h"
 
+
 using namespace Mesh;
 
-Facet::Facet(const MeshCore::MeshFacet& face, MeshObject* obj, MeshCore::FacetIndex index)
+Facet::Facet(const MeshCore::MeshFacet& face, const MeshObject* obj, MeshCore::FacetIndex index)
   : Index(index), Mesh(obj)
 {
     for (int i=0; i<3; i++) {

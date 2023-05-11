@@ -27,7 +27,7 @@ containers for Arch objects, and also define a terrain surface.
 import FreeCAD,Draft,ArchCommands,math,re,datetime,ArchIFC
 if FreeCAD.GuiUp:
     import FreeCADGui
-    from DraftTools import translate
+    from draftutils.translate import translate
     from PySide.QtCore import QT_TRANSLATE_NOOP
 else:
     # \cond
@@ -516,15 +516,15 @@ class _CommandSite:
         link = p.GetBool("FreeLinking",False)
         siteobj = []
         warning = False
-        for obj in sel :
+        for obj in sel:
             if (Draft.getType(obj) == "Building") or (hasattr(obj,"IfcType") and obj.IfcType == "Building"):
                 siteobj.append(obj)
-            else :
-                if link == True :
+            else:
+                if link:
                     siteobj.append(obj)
                 else:
                     warning = True
-        if warning :
+        if warning:
             message = translate( "Arch" ,  "Please either select only Building objects or nothing at all!\n\
 Site is not allowed to accept any other object besides Building.\n\
 Other objects will be removed from the selection.\n\
@@ -534,7 +534,7 @@ Note: You can change that in the preferences.")
             message = translate( "Arch" ,  "There is no valid object in the selection.\n\
 Site creation aborted.") + "\n"
             ArchCommands.printMessage( message )
-        else :
+        else:
             ss = "[ "
             for o in siteobj:
                 ss += "FreeCAD.ActiveDocument." + o.Name + ", "
@@ -749,11 +749,11 @@ class _Site(ArchIFC.IfcProduct):
             if f.normalAt(0,0).getAngle(FreeCAD.Vector(0,0,1)) < 1.5707:
                 fset.append(f)
         if fset:
-            import Drawing,Part
+            import TechDraw, Part
             pset = []
             for f in fset:
                 try:
-                    pf = Part.Face(Part.Wire(Drawing.project(f,FreeCAD.Vector(0,0,1))[0].Edges))
+                    pf = Part.Face(Part.Wire(TechDraw.project(f,FreeCAD.Vector(0,0,1))[0].Edges))
                 except Part.OCCError:
                     # error in computing the area. Better set it to zero than show a wrong value
                     if obj.ProjectedArea.Value != 0:

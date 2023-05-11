@@ -20,34 +20,29 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
-#   include <assert.h>
+# include <cassert>
 #endif
 
 #include <boost/regex.hpp>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-
 #include <Base/Exception.h>
+#include <App/ExpressionParser.h>
+#include <App/ObjectIdentifier.h>
+#include <Base/QuantityPy.h>
 #include <Base/Reader.h>
 #include <Base/Writer.h>
 #include <Base/Tools.h>
-#include <Base/QuantityPy.h>
-#include <App/ObjectIdentifier.h>
-#include <App/DocumentObject.h>
-#include <App/ExpressionParser.h>
 
 #include "PropertyConstraintList.h"
 #include "ConstraintPy.h"
+
 
 using namespace App;
 using namespace Base;
 using namespace std;
 using namespace Sketcher;
-
 
 //**************************************************************************
 // PropertyConstraintList
@@ -94,7 +89,7 @@ App::ObjectIdentifier PropertyConstraintList::makeSimplePath(const Constraint * 
 
 App::ObjectIdentifier PropertyConstraintList::makePath(int idx, const Constraint * c)
 {
-    return c->Name.size() == 0 ? makeArrayPath(idx) : makeSimplePath(c);
+    return c->Name.empty() ? makeArrayPath(idx) : makeSimplePath(c);
 }
 
 void PropertyConstraintList::setSize(int newSize)
@@ -108,7 +103,7 @@ void PropertyConstraintList::setSize(int newSize)
     }
 
     /* Signal removed elements */
-    if (removed.size() > 0)
+    if (!removed.empty())
         signalConstraintsRemoved(removed);
 
     /* Actually delete them */
@@ -119,7 +114,7 @@ void PropertyConstraintList::setSize(int newSize)
     _lValueList.resize(newSize);
 }
 
-int PropertyConstraintList::getSize(void) const
+int PropertyConstraintList::getSize() const
 {
     return static_cast<int>(_lValueList.size());
 }
@@ -135,7 +130,7 @@ void PropertyConstraintList::set1Value(const int idx, const Constraint* lValue)
             std::map<App::ObjectIdentifier, App::ObjectIdentifier> renamed;
 
             renamed[makePath(idx, _lValueList[idx])] = makePath(idx, lValue);
-            if (renamed.size() > 0)
+            if (!renamed.empty())
                 signalConstraintsRenamed(renamed);
         }
 
@@ -157,13 +152,13 @@ void PropertyConstraintList::setValue(const Constraint* lValue)
         int start = 0;
 
         /* Determine if it is a rename or not * */
-        if (_lValueList.size() > 0 && lValue->tag == _lValueList[0]->tag) {
+        if (!_lValueList.empty() && lValue->tag == _lValueList[0]->tag) {
             renamed[makePath(0, _lValueList[0])] = makePath(0, lValue);
             start = 1;
         }
 
         /* Signal rename changes */
-        if (renamed.size() > 0)
+        if (!renamed.empty())
             signalConstraintsRenamed(renamed);
 
         /* Collect info about removals */
@@ -173,7 +168,7 @@ void PropertyConstraintList::setValue(const Constraint* lValue)
         }
 
         /* Signal removes */
-        if (removed.size() > 0)
+        if (!removed.empty())
             signalConstraintsRemoved(removed);
 
         // Cleanup
@@ -237,11 +232,11 @@ void PropertyConstraintList::applyValues(std::vector<Constraint*>&& lValue)
     valueMap = std::move(newValueMap);
 
     /* Signal removes first, in case renamed values below have the same names as some of the removed ones. */
-    if (removed.size() > 0 && !restoreFromTransaction)
+    if (!removed.empty() && !restoreFromTransaction)
         signalConstraintsRemoved(removed);
 
     /* Signal renames */
-    if (renamed.size() > 0 && !restoreFromTransaction)
+    if (!renamed.empty() && !restoreFromTransaction)
         signalConstraintsRenamed(renamed);
 
     _lValueList = std::move(lValue);
@@ -251,7 +246,7 @@ void PropertyConstraintList::applyValues(std::vector<Constraint*>&& lValue)
         delete v;
 }
 
-PyObject *PropertyConstraintList::getPyObject(void)
+PyObject *PropertyConstraintList::getPyObject()
 {
     PyObject* list = PyList_New(getSize());
     for (int i = 0; i < getSize(); i++)
@@ -266,7 +261,7 @@ bool PropertyConstraintList::getPyPathValue(const App::ObjectIdentifier &path, P
         return false;
 
     const ObjectIdentifier::Component & c1 = components[0];
-    const Constraint *cstr = 0;
+    const Constraint *cstr = nullptr;
 
     if (c1.isArray())
         cstr = _lValueList[c1.getIndex(_lValueList.size())];
@@ -357,7 +352,7 @@ void PropertyConstraintList::Restore(Base::XMLReader &reader)
     setValues(std::move(values));
 }
 
-Property *PropertyConstraintList::Copy(void) const
+Property *PropertyConstraintList::Copy() const
 {
     PropertyConstraintList *p = new PropertyConstraintList();
     p->applyValidGeometryKeys(validGeometryKeys);
@@ -372,7 +367,7 @@ void PropertyConstraintList::Paste(const Property &from)
     setValues(FromList._lValueList);
 }
 
-unsigned int PropertyConstraintList::getMemSize(void) const
+unsigned int PropertyConstraintList::getMemSize() const
 {
     int size = sizeof(PropertyConstraintList);
     for (int i = 0; i < getSize(); i++)
@@ -416,10 +411,10 @@ bool PropertyConstraintList::checkGeometry(const std::vector<Part::Geometry *> &
 bool PropertyConstraintList::checkConstraintIndices(int geomax, int geomin)
 {
     int mininternalgeoid = std::numeric_limits<int>::max();
-    int maxinternalgeoid = Constraint::GeoUndef;
+    int maxinternalgeoid = GeoEnum::GeoUndef;
 
     auto cmin = [] (int previousmin, int cindex) {
-        if( cindex == Constraint::GeoUndef )
+        if( cindex == GeoEnum::GeoUndef )
             return previousmin;
 
         return ( cindex < previousmin )? cindex : previousmin;
@@ -489,7 +484,7 @@ string PropertyConstraintList::getConstraintName(int i)
 
 bool PropertyConstraintList::validConstraintName(const std::string & name)
 {
-    return name.size() > 0;
+    return !name.empty();
 }
 
 ObjectIdentifier PropertyConstraintList::createPath(int ConstrNbr) const
@@ -596,7 +591,7 @@ ObjectIdentifier PropertyConstraintList::canonicalPath(const ObjectIdentifier &p
 
     if (c1.isArray()) {
         size_t idx = c1.getIndex();
-        if (idx < _lValueList.size() && _lValueList[idx]->Name.size() > 0) {
+        if (idx < _lValueList.size() && !_lValueList[idx]->Name.empty()) {
             const std::string &name = _lValueList[idx]->Name;
             if (boost::regex_match(name.c_str(), cm, RegexIdentifier)) {
                 return ObjectIdentifier(*this) << ObjectIdentifier::SimpleComponent(name);

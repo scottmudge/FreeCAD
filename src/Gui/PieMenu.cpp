@@ -22,12 +22,14 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <QApplication>
 # include <QToolButton>
 # include <QMenu>
 # include <QToolTip>
 # include <QPainter>
 # include <QTimer>
 # include <QElapsedTimer>
+# include <QEventLoop>
 #endif
 
 #include <QGraphicsOpacityEffect>

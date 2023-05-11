@@ -20,21 +20,21 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <QApplication>
-# include <QDoubleSpinBox>
-# include <QRegExp>
-# include <QGridLayout>
 # include <QMessageBox>
 # include <QTimer>
 # include <memory>
 #endif
 
+#include <App/Application.h>
+#include <Base/Parameter.h>
+#include <Base/Tools.h>
+
 #include "DlgSettings3DViewImp.h"
-#include "ui_DlgSettings3DView.h"
+
 #include "Application.h"
 #include "Document.h"
 #include "MainWindow.h"
@@ -42,13 +42,11 @@
 #include "PrefWidgets.h"
 #include "View3DInventor.h"
 #include "View3DInventorViewer.h"
-#include "ui_MouseButtons.h"
-#include <App/Application.h>
-#include <Base/Console.h>
-#include <Base/Parameter.h>
-#include <Base/Tools.h>
 #include "ViewParams.h"
 #include "Renderer/Renderer.h"
+#include "ui_DlgSettings3DView.h"
+#include "ui_MouseButtons.h"
+
 
 using namespace Gui::Dialog;
 using namespace Gui;
@@ -89,6 +87,7 @@ void DlgSettings3DViewImp::saveSettings()
     ui->comboTransparentRender->onSave();
     ui->boxMarkerSize->onSave();
     ui->CheckBox_CornerCoordSystem->onSave();
+    ui->SpinBox_CornerCoordSystemSize->onSave();
     ui->CheckBox_ShowAxisCross->onSave();
     ui->CheckBox_WbByTab->onSave();
     ui->CheckBox_ShowFPS->onSave();
@@ -111,6 +110,7 @@ void DlgSettings3DViewImp::saveSettings()
 void DlgSettings3DViewImp::loadSettings()
 {
     ui->CheckBox_CornerCoordSystem->onRestore();
+    ui->SpinBox_CornerCoordSystemSize->onRestore();
     ui->CheckBox_ShowAxisCross->onRestore();
     ui->CheckBox_WbByTab->onRestore();
     ui->CheckBox_ShowFPS->onRestore();
@@ -169,11 +169,9 @@ void DlgSettings3DViewImp::changeEvent(QEvent *e)
 }
 
 namespace {
-bool applyCameraType(bool delayTrigger, ParameterGrp *hGrp)
-{
-    if (!delayTrigger)
-        return true;
 
+void applyCameraType(ParameterGrp *hGrp)
+{
     if (hGrp->GetBool("ApplyCameraTypeToAll", false)) {
         const char *cameraType = hGrp->GetBool("Perspective", false) ?
             "PerspectiveCamera" : "OrthographicCamera";
@@ -185,14 +183,10 @@ bool applyCameraType(bool delayTrigger, ParameterGrp *hGrp)
             });
         }
     }
-    return false;
 }
 
-bool applyAntiAlias(bool delayTrigger, ParameterGrp *)
+void applyAntiAlias(ParameterGrp *)
 {
-    if (!delayTrigger)
-        return true;
-
     auto activeView = Base::freecad_dynamic_cast<View3DInventor>(
             getMainWindow()->activeWindow());
     std::vector<View3DInventor*> views;
@@ -239,73 +233,19 @@ bool applyAntiAlias(bool delayTrigger, ParameterGrp *)
     auto it = viewMap.find(activeView);
     if (it != viewMap.end())
         getMainWindow()->setActiveWindow(it->second);
-    return false;
 }
 
-struct ParamKey {
-    ParameterGrp::handle hGrp;
-    const char *key;
-    mutable bool pending = false;
-
-    ParamKey(const char *key, const char *path = nullptr)
-        :hGrp(App::GetApplication().GetUserParameter().GetGroup(
-            path ? path : "BaseApp/Preferences/View"))
-        ,key(key)
-    {}
-
-    ParamKey(ParameterGrp *h, const char *key)
-        :hGrp(h), key(key)
-    {}
-
-    bool operator < (const ParamKey &other) const {
-        if (hGrp < other.hGrp)
-            return true;
-        if (hGrp > other.hGrp)
-            return false;
-        return strcmp(key, other.key) < 0;
-    }
-};
-
-struct ParamHandlers {
-    std::map<ParamKey, bool (*)(bool, ParameterGrp*)> handlers;
-    QTimer timer;
-
-    void attach() {
-        handlers[ParamKey("Orthographic")] = applyCameraType;
-        handlers[ParamKey("Perspective")] = applyCameraType;
-        handlers[ParamKey("ApplyCameraTypeToAll")] = applyCameraType;
-
-        handlers[ParamKey("AntiAliasing")] = applyAntiAlias;
-
-        App::GetApplication().GetUserParameter().signalParamChanged.connect(
-            [this](ParameterGrp *Param, ParameterGrp::ParamType, const char *Name, const char *) {
-                if (!Param || !Name)
-                    return;
-                auto it =  handlers.find(ParamKey(Param, Name));
-                if (it != handlers.end() && it->second(false, Param)) {
-                    it->first.pending = true;
-                    timer.start(100);
-                }
-            });
-        timer.setSingleShot(true);
-        QObject::connect(&timer, &QTimer::timeout, [this]() {
-            for (auto &v : handlers) {
-                if (v.first.pending) {
-                    v.first.pending = false;
-                    v.second(true, v.first.hGrp);
-                }
-            }
-        });
-    }
-};
-
-ParamHandlers _ParamHandlers;
 } // anonymous namespace
 
 
 void DlgSettings3DViewImp::attachObserver()
 {
-    _ParamHandlers.attach();
+    static ParamHandlers handlers;
+
+    auto hGrp = App::GetApplication().GetUserParameter().GetGroup("BaseApp/Preferences/View");
+    handlers.addDelayedHandler(hGrp, {"Orthographic","Perspective","ApplyCameraTypeToAll"}, applyCameraType);
+    handlers.addDelayedHandler(hGrp, "AntiAliasing", applyAntiAlias);
+
     ViewParams::init();
 }
 

@@ -23,39 +23,39 @@
 #ifndef SKETCHERGUI_SODATUMLABEL_H
 #define SKETCHERGUI_SODATUMLABEL_H
 
-#include <Inventor/fields/SoSubField.h>
-#include <Inventor/nodes/SoSubNode.h>
-#include <Inventor/nodes/SoShape.h>
+#include <Inventor/SbBox3f.h>
 #include <Inventor/fields/SoSFColor.h>
 #include <Inventor/fields/SoSFEnum.h>
 #include <Inventor/fields/SoSFFloat.h>
-#include <Inventor/fields/SoSFBool.h>
-#include <Inventor/fields/SoSFName.h>
-#include <Inventor/fields/SoMFString.h>
-#include <Inventor/fields/SoSFInt32.h>
-#include <Inventor/fields/SoSFVec3f.h>
-#include <Inventor/fields/SoMFVec3f.h>
-#include <Inventor/SbBox3f.h>
 #include <Inventor/fields/SoSFImage.h>
+#include <Inventor/fields/SoSFInt32.h>
+#include <Inventor/fields/SoSFName.h>
+#include <Inventor/fields/SoSFVec3f.h>
+#include <Inventor/fields/SoMFString.h>
+#include <Inventor/fields/SoMFVec3f.h>
+#include <Inventor/nodes/SoShape.h>
+
+#include <Mod/Sketcher/SketcherGlobal.h>
+
 
 namespace SketcherGui {
 
 class SketcherGuiExport SoDatumLabel : public SoShape {
-    typedef SoShape inherited;
+    using inherited = SoShape;
 
     SO_NODE_HEADER(SoDatumLabel);
 
 public:
-  enum Type
-  {
-  ANGLE,
-  DISTANCE,
-  DISTANCEX,
-  DISTANCEY,
-  RADIUS,
-  DIAMETER,
-  SYMMETRIC
-  };
+    enum Type
+    {
+        ANGLE,
+        DISTANCE,
+        DISTANCEX,
+        DISTANCEY,
+        RADIUS,
+        DIAMETER,
+        SYMMETRIC
+    };
 
     static void initClass();
     SoDatumLabel();
@@ -75,11 +75,18 @@ public:
     bool       useAntialiasing;
 
 protected:
-    virtual ~SoDatumLabel() {};
-    virtual void GLRender(SoGLRenderAction *action);
-    virtual void computeBBox(SoAction *, SbBox3f &box, SbVec3f &center);
-    virtual void generatePrimitives(SoAction * action);
-    virtual void notify(SoNotList * l);
+    ~SoDatumLabel() override {}
+    void GLRender(SoGLRenderAction *action) override;
+    void computeBBox(SoAction *, SbBox3f &box, SbVec3f &center) override;
+    void generatePrimitives(SoAction * action) override;
+    void notify(SoNotList * l) override;
+
+private:
+    float getScaleFactor(SoState*) const;
+    void generateDistancePrimitives(SoAction * action, const SbVec3f&, const SbVec3f&);
+    void generateDiameterPrimitives(SoAction * action, const SbVec3f&, const SbVec3f&);
+    void generateAnglePrimitives(SoAction * action, const SbVec3f&);
+    void generateSymmetricPrimitives(SoAction * action, const SbVec3f&, const SbVec3f&);
 
 private:
     void drawImage();

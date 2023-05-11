@@ -25,31 +25,23 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <cassert>
-# include <fcntl.h>
-# include <sys/types.h>
-# include <sys/stat.h>
 # ifdef FC_OS_WIN32
-# include <io.h>
 # include <xercesc/sax/SAXParseException.hpp>
 # endif
-# include <cstdio>
-# include <sstream>
 # include <list>
+# include <sstream>
+# include <string>
+# include <utility>
 #endif
 
-
-#include <fcntl.h>
 #ifdef FC_OS_LINUX
 # include <unistd.h>
 #endif
 
 #include "Parameter.h"
 #include "Exception.h"
-#include "Console.h"
 #include "PyObjectBase.h"
 #include "Interpreter.h"
-#include <CXX/Extensions.hxx>
 
 
 namespace Base {
@@ -65,14 +57,13 @@ public:
         : callable(callable), _target(target), inst(obj)
     {
     }
-
-    virtual ~ParameterGrpObserver()
+    ~ParameterGrpObserver() override
     {
         Base::PyGILStateLocker lock;
         inst = Py::None();
         callable = Py::None();
     }
-    virtual void OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::MessageType Reason)
+    void OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::MessageType Reason) override
     {
         Base::PyGILStateLocker lock;
         try {
@@ -105,7 +96,7 @@ private:
     Py::Object inst;
 };
 
-typedef std::list<ParameterGrpObserver*> ParameterGrpObserverList;
+using ParameterGrpObserverList = std::list<ParameterGrpObserver*>;
 
 class ParameterGrpPy : public Py::PythonExtension<ParameterGrpPy>
 {
@@ -113,11 +104,12 @@ public:
     static void init_type();    // announce properties and methods
 
     ParameterGrpPy(const Base::Reference<ParameterGrp> &rcParamGrp);
-    ~ParameterGrpPy();
+    ~ParameterGrpPy() override;
 
-    Py::Object repr();
+    Py::Object repr() override;
 
     Py::Object getGroup(const Py::Tuple&);
+    Py::Object getGroupName(const Py::Tuple&);
     Py::Object getGroups(const Py::Tuple&);
     Py::Object remGroup(const Py::Tuple&);
     Py::Object hasGroup(const Py::Tuple&);
@@ -183,6 +175,7 @@ void ParameterGrpPy::init_type()
     behaviors().readyType();
 
     add_varargs_method("GetGroup",&ParameterGrpPy::getGroup,"GetGroup(str)");
+    add_varargs_method("GetGroupName",&ParameterGrpPy::getGroupName,"GetGroupName()");
     add_varargs_method("GetGroups",&ParameterGrpPy::getGroups,"GetGroups()");
     add_varargs_method("RemGroup",&ParameterGrpPy::remGroup,"RemGroup(str)");
     add_varargs_method("HasGroup",&ParameterGrpPy::hasGroup,"HasGroup(str)");
@@ -202,7 +195,7 @@ void ParameterGrpPy::init_type()
         "The method expects the observer to have a callable attribute as shown below\n"
         "       slotParamChanged(param, tp, name, value)\n"
         "where 'param' is the parameter group causing the change, 'tp' is the type of\n"
-        "of the parameter, 'name' is the name of the parameter, and 'value' is the current\n"
+        "the parameter, 'name' is the name of the parameter, and 'value' is the current\n"
         "value.\n\n"
         "The possible value of type are, 'FCBool', 'FCInt', 'FCUint', 'FCFloat', 'FCText',\n"
         "and 'FCParamGroup'. The notification is triggered when value is changed, in which\n"
@@ -335,8 +328,8 @@ Py::Object ParameterGrpPy::getManager(const Py::Tuple& args)
         // increment the ref count
         return Py::asObject(pcParamGrp);
     }
-    else 
-        return Py::Object();
+
+    return Py::None();
 }
 
 Py::Object ParameterGrpPy::getParent(const Py::Tuple& args)
@@ -352,8 +345,18 @@ Py::Object ParameterGrpPy::getParent(const Py::Tuple& args)
         // increment the ref count
         return Py::asObject(pcParamGrp);
     }
-    else 
-        return Py::Object();
+
+    return Py::None();
+}
+
+Py::Object ParameterGrpPy::getGroupName(const Py::Tuple& args)
+{
+    if (!PyArg_ParseTuple(args.ptr(), ""))
+        throw Py::Exception();
+
+    // get the Handle of the wanted group
+    std::string name = _cParamGrp->GetGroupName();
+    return Py::String(name);
 }
 
 Py::Object ParameterGrpPy::getGroups(const Py::Tuple& args)
@@ -364,7 +367,7 @@ Py::Object ParameterGrpPy::getGroups(const Py::Tuple& args)
     // get the Handle of the wanted group
     std::vector<Base::Reference<ParameterGrp> > handle = _cParamGrp->GetGroups();
     Py::List list;
-    for (auto it : handle) {
+    for (const auto& it : handle) {
         list.append(Py::String(it->GetGroupName()));
     }
 
@@ -400,7 +403,7 @@ Py::Object ParameterGrpPy::getBools(const Py::Tuple& args)
 
     std::vector<std::pair<std::string,bool> > map = _cParamGrp->GetBoolMap(filter);
     Py::List list;
-    for (auto it : map) {
+    for (const auto& it : map) {
         list.append(Py::String(it.first));
     }
 
@@ -435,7 +438,7 @@ Py::Object ParameterGrpPy::getInts(const Py::Tuple& args)
 
     std::vector<std::pair<std::string,long> > map = _cParamGrp->GetIntMap(filter);
     Py::List list;
-    for (auto it : map) {
+    for (const auto& it : map) {
         list.append(Py::String(it.first));
     }
 
@@ -470,7 +473,7 @@ Py::Object ParameterGrpPy::getUnsigneds(const Py::Tuple& args)
 
     std::vector<std::pair<std::string,unsigned long> > map = _cParamGrp->GetUnsignedMap(filter);
     Py::List list;
-    for (auto it : map) {
+    for (const auto& it : map) {
         list.append(Py::String(it.first));
     }
 
@@ -506,7 +509,7 @@ Py::Object ParameterGrpPy::getFloats(const Py::Tuple& args)
 
     std::vector<std::pair<std::string,double> > map = _cParamGrp->GetFloatMap(filter);
     Py::List list;
-    for (auto it : map) {
+    for (const auto& it : map) {
         list.append(Py::String(it.first));
     }
 
@@ -542,7 +545,7 @@ Py::Object ParameterGrpPy::getStrings(const Py::Tuple& args)
 
     std::vector<std::pair<std::string,std::string> > map = _cParamGrp->GetASCIIMap(filter);
     Py::List list;
-    for (auto it : map) {
+    for (const auto& it : map) {
         list.append(Py::String(it.first));
     }
 

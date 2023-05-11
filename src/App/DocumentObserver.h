@@ -24,11 +24,13 @@
 #ifndef APP_DOCUMENTOBSERVER_H
 #define APP_DOCUMENTOBSERVER_H
 
-#include <QFlags>
+#include <Base/Bitmask.h>
 #include <Base/BaseClass.h>
 #include <boost_signals2.hpp>
-#include <set>
 #include <memory>
+#include <set>
+#include <FCGlobal.h>
+
 
 namespace App
 {
@@ -49,9 +51,9 @@ public:
     /*! Constructor */
     DocumentT();
     /*! Constructor */
-    DocumentT(Document*);
+    DocumentT(Document*); // explicit bombs
     /*! Constructor */
-    DocumentT(const std::string&);
+    explicit DocumentT(const std::string&);
     /*! Constructor */
     DocumentT(const DocumentT&);
     /*! Destructor */
@@ -99,13 +101,13 @@ public:
     /*! Constructor */
     DocumentObjectT(DocumentObjectT &&);
     /*! Constructor */
-    DocumentObjectT(const DocumentObject*, const char *propertyName="");
+    explicit DocumentObjectT(const DocumentObject*, const char *propertyName="");
     /*! Constructor */
     DocumentObjectT(const Document*, const std::string& objName);
     /*! Constructor */
     DocumentObjectT(const char *docName, const char *objName);
     /*! Constructor */
-    DocumentObjectT(const Property*);
+    explicit DocumentObjectT(const Property*);
     /*! Destructor */
     ~DocumentObjectT();
     /*! Assignment operator */
@@ -181,7 +183,7 @@ public:
     SubObjectT(const DocumentObject*, const char *subname);
 
     /*! Constructor */
-    SubObjectT(const DocumentObject*);
+    SubObjectT(const DocumentObject*);// explicit bombs
 
     /*! Constructor */
     SubObjectT(const char *docName, const char *objName, const char *subname);
@@ -273,7 +275,7 @@ public:
     std::string getSubObjectPython(bool force=true) const;
 
     /// Options used by normalize()
-    enum NormalizeOption {
+    enum class NormalizeOption {
         /// Do not include sub-element reference in the output path
         NoElement    = 0x01,
         /** Do not flatten the output path. If not specified, the output path
@@ -292,7 +294,7 @@ public:
         /** Convert integer index in the path to sub-object internal name */
         ConvertIndex = 0x08,
     };
-    Q_DECLARE_FLAGS(NormalizeOptions, NormalizeOption);
+    using NormalizeOptions = Base::Flags<NormalizeOption>;
 
     /** Normalize the subname path to use only the object internal name and old style element name
      * @return Return whether the subname has been changed
@@ -318,7 +320,7 @@ private:
 };
 
 /**
- * The PropertyLinkT class is a helper class to create Python statements for proprtey links.
+ * The PropertyLinkT class is a helper class to create Python statements for property links.
  */
 class AppExport PropertyLinkT
 {
@@ -327,13 +329,13 @@ public:
     PropertyLinkT();
 
     /*! Constructor */
-    PropertyLinkT(DocumentObject *obj);
+    explicit PropertyLinkT(DocumentObject *obj);
 
     /*! Constructor */
     PropertyLinkT(DocumentObject *obj, const std::vector<std::string>& subNames);
 
     /*! Constructor */
-    PropertyLinkT(const std::vector<DocumentObject*>& objs);
+    explicit PropertyLinkT(const std::vector<DocumentObject*>& objs);
 
     /*! Constructor */
     PropertyLinkT(const std::vector<DocumentObject*>& objs, const std::vector<std::string>& subNames);
@@ -351,7 +353,7 @@ private:
 class AppExport DocumentWeakPtrT
 {
 public:
-    DocumentWeakPtrT(App::Document*) noexcept;
+    explicit DocumentWeakPtrT(App::Document*) noexcept;
     ~DocumentWeakPtrT();
 
     /*!
@@ -365,10 +367,15 @@ public:
      */
     bool expired() const noexcept;
     /*!
+     * \brief operator *
+     * \return pointer to the document
+     */
+    App::Document* operator*() const noexcept;
+    /*!
      * \brief operator ->
      * \return pointer to the document
      */
-    App::Document* operator->() noexcept;
+    App::Document* operator->() const noexcept;
 
 private:
     // disable
@@ -385,7 +392,7 @@ private:
 class AppExport DocumentObjectWeakPtrT
 {
 public:
-    DocumentObjectWeakPtrT(App::DocumentObject*);
+    explicit DocumentObjectWeakPtrT(App::DocumentObject*);
     ~DocumentObjectWeakPtrT();
 
     /*!
@@ -404,10 +411,15 @@ public:
      */
     DocumentObjectWeakPtrT& operator= (App::DocumentObject* p);
     /*!
-     * \brief operator ->
-     * \return pointer to the document
+     * \brief operator *
+     * \return pointer to the document object
      */
-    App::DocumentObject* operator->() noexcept;
+    App::DocumentObject* operator*() const noexcept;
+    /*!
+     * \brief operator ->
+     * \return pointer to the document object
+     */
+    App::DocumentObject* operator->() const noexcept;
     /*!
      * \brief operator ==
      * \return true if both objects are equal, false otherwise
@@ -443,10 +455,9 @@ template <class T>
 class WeakPtrT
 {
 public:
-    WeakPtrT(T* t) : ptr(t) {
+    explicit WeakPtrT(T* t) : ptr(t) {
     }
-    ~WeakPtrT() {
-    }
+    ~WeakPtrT() = default;
 
     /*!
      * \brief reset
@@ -472,9 +483,16 @@ public:
     }
     /*!
      * \brief operator ->
-     * \return pointer to the document
+     * \return pointer to the document object
      */
-    T* operator->() {
+    T* operator*() const {
+        return ptr.get<T>();
+    }
+    /*!
+     * \brief operator ->
+     * \return pointer to the document object
+     */
+    T* operator->() const {
         return ptr.get<T>();
     }
     /*!
@@ -520,7 +538,7 @@ class AppExport DocumentObserver
 public:
     /// Constructor
     DocumentObserver();
-    DocumentObserver(Document*);
+    explicit DocumentObserver(Document*);
     virtual ~DocumentObserver();
 
     /** Attaches to another document, the old document
@@ -533,10 +551,12 @@ public:
     void detachDocument();
 
 private:
-    /** Checks if a new document was created */
+    /** Called when a new document was created */
     virtual void slotCreatedDocument(const App::Document& Doc);
-    /** Checks if the given document is about to be closed */
+    /** Called when a document is about to be closed */
     virtual void slotDeletedDocument(const App::Document& Doc);
+    /** Called when a document is activated */
+    virtual void slotActivateDocument(const App::Document& Doc);
     /** Checks if a new object was added. */
     virtual void slotCreatedObject(const App::DocumentObject& Obj);
     /** Checks if the given object is about to be removed. */
@@ -553,9 +573,10 @@ protected:
 
 private:
     App::Document* _document;
-    typedef boost::signals2::connection Connection;
+    using Connection = boost::signals2::connection;
     Connection connectApplicationCreatedDocument;
     Connection connectApplicationDeletedDocument;
+    Connection connectApplicationActivateDocument;
     Connection connectDocumentCreatedObject;
     Connection connectDocumentDeletedObject;
     Connection connectDocumentChangedObject;
@@ -573,11 +594,11 @@ class AppExport DocumentObjectObserver : public DocumentObserver
 {
 
 public:
-    typedef std::set<App::DocumentObject*>::const_iterator const_iterator;
+    using const_iterator = std::set<App::DocumentObject*>::const_iterator;
 
     /// Constructor
     DocumentObjectObserver();
-    virtual ~DocumentObjectObserver();
+    ~DocumentObjectObserver() override;
 
     const_iterator begin() const;
     const_iterator end() const;
@@ -586,15 +607,15 @@ public:
 
 private:
     /** Checks if a new document was created */
-    virtual void slotCreatedDocument(const App::Document& Doc);
+    void slotCreatedDocument(const App::Document& Doc) override;
     /** Checks if the given document is about to be closed */
-    virtual void slotDeletedDocument(const App::Document& Doc);
+    void slotDeletedDocument(const App::Document& Doc) override;
     /** Checks if a new object was added. */
-    virtual void slotCreatedObject(const App::DocumentObject& Obj);
+    void slotCreatedObject(const App::DocumentObject& Obj) override;
     /** Checks if the given object is about to be removed. */
-    virtual void slotDeletedObject(const App::DocumentObject& Obj);
+    void slotDeletedObject(const App::DocumentObject& Obj) override;
     /** The property of an observed object has changed */
-    virtual void slotChangedObject(const App::DocumentObject& Obj, const App::Property& Prop);
+    void slotChangedObject(const App::DocumentObject& Obj, const App::Property& Prop) override;
     /** This method gets called when all observed objects are deleted or the whole document is deleted.
       * This method can be re-implemented to perform an extra step like closing a dialog that observes
       * a document.
@@ -607,6 +628,6 @@ private:
 
 } //namespace App
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(App::SubObjectT::NormalizeOptions);
+ENABLE_BITMASK_OPERATORS(App::SubObjectT::NormalizeOption)
 
 #endif // APP_DOCUMENTOBSERVER_H

@@ -26,12 +26,13 @@
 #include <map>
 #include <App/Property.h>
 #include <CXX/Objects.hxx>
+#include <Mod/Spreadsheet/SpreadsheetGlobal.h>
 
 namespace Spreadsheet {
 
 class SpreadsheetExport PropertyRowHeights : public App::Property, std::map<int, int>
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
     PropertyRowHeights();
 
@@ -50,19 +51,22 @@ public:
         return *this;
     }
 
-    virtual bool isSame(const Property &other) const {
+    bool isSame(const Property &other) const override {
         return other.isDerivedFrom(getClassTypeId())
             && *this == static_cast<const PropertyRowHeights&>(other);
     }
-    virtual Property *copyBeforeChange() const {return Copy();}
 
-    virtual App::Property *Copy(void) const;
+    Property *copyBeforeChange() const override {
+        return Copy();
+    }
 
-    virtual void Paste(const App::Property &from);
+    App::Property *Copy() const override;
 
-    virtual void Save (Base::Writer & writer) const;
+    void Paste(const App::Property &from) override;
 
-    virtual void Restore(Base::XMLReader & reader);
+    void Save (Base::Writer & writer) const override;
+
+    void Restore(Base::XMLReader & reader) override;
 
     bool isDirty() const { return dirty.size() > 0; }
 
@@ -70,7 +74,7 @@ public:
 
     const std::set<int> & getDirty() const { return dirty; }
 
-    PyObject *getPyObject(void);
+    PyObject *getPyObject() override;
 
     static const int defaultHeight;
 

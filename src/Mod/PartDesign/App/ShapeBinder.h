@@ -24,13 +24,12 @@
 #ifndef PARTDESIGN_DATUMSHAPE_H
 #define PARTDESIGN_DATUMSHAPE_H
 
-#include <QString>
-#include <boost_signals2.hpp>
 #include <App/PropertyLinks.h>
 #include <App/DocumentObserver.h>
 #include <App/FeaturePython.h>
 #include <Mod/Part/App/DatumFeature.h>
 #include <Mod/Part/App/SubShapeBinder.h>
+#include <Mod/PartDesign/PartDesignGlobal.h>
 
 namespace PartDesign
 {
@@ -49,45 +48,48 @@ class PartDesignExport ShapeBinder : public Part::Feature
 
 public:
     ShapeBinder();
-    virtual ~ShapeBinder();
+    ~ShapeBinder() override;
 
     App::PropertyLinkSubListGlobal    Support;
     App::PropertyBool TraceSupport;
 
-    static void getFilteredReferences(App::PropertyLinkSubList* prop, App::GeoFeature*& object, std::vector< std::string >& subobjects);
+    static void getFilteredReferences(const App::PropertyLinkSubList* prop, App::GeoFeature*& object, std::vector< std::string >& subobjects);
     static Part::TopoShape buildShapeFromReferences(App::GeoFeature* obj, std::vector< std::string > subs);
 
-    const char* getViewProviderName(void) const override {
+    const char* getViewProviderName() const override {
         return "PartDesignGui::ViewProviderShapeBinder";
     }
 
 protected:
-    virtual void handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, App::Property * prop) override;
-    virtual short int mustExecute(void) const override;
-    virtual App::DocumentObjectExecReturn* execute(void) override;
+    Part::TopoShape updatedShape() const;
+    bool hasPlacementChanged() const;
+    void handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, App::Property * prop) override;
+    short int mustExecute() const override;
+    App::DocumentObjectExecReturn* execute() override;
+    void onChanged(const App::Property* prop) override;
 
 private:
     void slotChangedObject(const App::DocumentObject& Obj, const App::Property& Prop);
-    virtual void onSettingDocument() override;
+    void onSettingDocument() override;
 
-    typedef boost::signals2::connection Connection;
+    using Connection = boost::signals2::connection;
     Connection connectDocumentChangedObject;
 };
 
 class PartDesignExport SubShapeBinder : public Part::SubShapeBinder {
     PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::SubShapeBinder);
 public:
-    typedef Part::SubShapeBinder inherited;
+    using inherited = Part::SubShapeBinder;
 
     SubShapeBinder();
-    ~SubShapeBinder();
+    ~SubShapeBinder() override;
 
     const char* getViewProviderName(void) const override {
         return "PartDesignGui::ViewProviderSubShapeBinder";
     }
 };
 
-typedef App::FeaturePythonT<SubShapeBinder> SubShapeBinderPython;
+using SubShapeBinderPython = App::FeaturePythonT<SubShapeBinder>;
 
 } //namespace PartDesign
 

@@ -230,6 +230,16 @@ public:
 
     // Auto generated code (Tools/params_utils.py:122)
     //@{
+    /// Accessor for parameter DefaultShapeTransparency
+    static const long & getDefaultShapeTransparency();
+    static const long & defaultDefaultShapeTransparency();
+    static void removeDefaultShapeTransparency();
+    static void setDefaultShapeTransparency(const long &v);
+    static const char *docDefaultShapeTransparency();
+    //@}
+
+    // Auto generated code (Tools/params_utils.py:122)
+    //@{
     /// Accessor for parameter DefaultShapeLineWidth
     static const long & getDefaultShapeLineWidth();
     static const long & defaultDefaultShapeLineWidth();

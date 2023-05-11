@@ -24,6 +24,8 @@
 #define SKETCHER_VIEWPROVIDERSKETCHGEOMETRYEXTENSION_H
 
 #include <Mod/Part/App/Geometry.h>
+#include <Mod/Sketcher/SketcherGlobal.h>
+
 
 namespace SketcherGui {
 
@@ -33,11 +35,11 @@ class SketcherGuiExport ViewProviderSketchGeometryExtension : public Part::Geome
 public:
 
     ViewProviderSketchGeometryExtension();
-    virtual ~ViewProviderSketchGeometryExtension() override = default;
+    ~ViewProviderSketchGeometryExtension() override = default;
 
-    virtual std::unique_ptr<Part::GeometryExtension> copy(void) const override;
+    std::unique_ptr<Part::GeometryExtension> copy() const override;
 
-    virtual PyObject *getPyObject(void) override;
+    PyObject *getPyObject() override;
 
     // Data Members
 
@@ -51,7 +53,7 @@ public:
     virtual void setRepresentationFactor(double representationFactor) {RepresentationFactor = representationFactor;}
 
 protected:
-    virtual void copyAttributes(Part::GeometryExtension * cpy) const override;
+    void copyAttributes(Part::GeometryExtension * cpy) const override;
 
 private:
     ViewProviderSketchGeometryExtension(const ViewProviderSketchGeometryExtension&) = default;

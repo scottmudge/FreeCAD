@@ -25,9 +25,9 @@
 
 #include <QTimer>
 #include <QDialog>
-#include <Base/Unit.h>
-#include <App/ObjectIdentifier.h>
 #include <App/ExpressionParser.h>
+#include <App/ObjectIdentifier.h>
+#include <Base/Unit.h>
 #include <memory>
 
 namespace Ui {
@@ -49,6 +49,19 @@ namespace Gui {
 namespace Dialog {
 
 class ProxyWidget;
+
+class GuiExport NumberRange
+{
+public:
+    void setRange(double minimum, double maximum);
+    void clearRange();
+    void throwIfOutOfRange(const Base::Quantity&) const;
+
+private:
+    double minimum{};
+    double maximum{};
+    bool defined{false};
+};
 
 class GuiExport DlgExpressionInput : public QDialog
 {
@@ -88,16 +101,18 @@ class GuiExport DlgExpressionInput : public QDialog
     Q_PROPERTY(QColor errorBackgroundColor READ errorBackgroundColor WRITE setErrorBackgroundColor)
 
 public:
-    explicit DlgExpressionInput(const App::ObjectIdentifier & _path, std::shared_ptr<const App::Expression> _expression, const Base::Unit &_impliedUnit, QWidget *parent = 0);
-    ~DlgExpressionInput();
+    explicit DlgExpressionInput(const App::ObjectIdentifier & _path, std::shared_ptr<const App::Expression> _expression, const Base::Unit &_impliedUnit, QWidget *parent = nullptr);
+    ~DlgExpressionInput() override;
 
+    void setRange(double minimum, double maximum);
+    void clearRange();
     std::shared_ptr<App::Expression> getExpression() const { return expression; }
 
     bool discardedFormula() const { return discarded; }
 
     void setExpressionInputSize(int width, int height);
 
-    bool eventFilter(QObject *obj, QEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
     void setIgnoreOutputWindowColors(bool flag);
     void setTextColor(QColor color);
@@ -123,20 +138,19 @@ public Q_SLOTS:
     void show();
 
 protected:
-    void showEvent(QShowEvent*);
-    void hideEvent(QHideEvent*);
-    void closeEvent(QCloseEvent*);
-    void mouseReleaseEvent(QMouseEvent*);
-    void mousePressEvent(QMouseEvent*);
-    void mouseMoveEvent(QMouseEvent*);
-    void resizeEvent(QResizeEvent *);
+    void showEvent(QShowEvent*) override;
+    void hideEvent(QHideEvent*) override;
+    void closeEvent(QCloseEvent*) override;
+    void mouseReleaseEvent(QMouseEvent*) override;
+    void mousePressEvent(QMouseEvent*) override;
+    void mouseMoveEvent(QMouseEvent*) override;
+    void resizeEvent(QResizeEvent *) override;
+    void accept() override;
 
     void adjustPosition();
     void adjustExpressionSize();
-    void onClose();
     int hitTest(const QPoint &point);
-
-    void accept();
+    void onClose();
 
 private Q_SLOTS:
     void textChanged();
@@ -152,6 +166,7 @@ private:
     App::ObjectIdentifier path;
     bool discarded;
     const Base::Unit impliedUnit;
+    NumberRange numberRange;
 
     QColor borderColor;
     QColor backgroundColor;

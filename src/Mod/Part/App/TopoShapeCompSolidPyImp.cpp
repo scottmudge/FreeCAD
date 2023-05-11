@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -35,15 +34,14 @@
 #include "PartPyCXX.h"
 
 // inclusion of the generated files (generated out of TopoShapeCompSolidPy.xml)
-#include "TopoShapeSolidPy.h"
 #include "TopoShapeCompSolidPy.h"
 #include "TopoShapeCompSolidPy.cpp"
-#include "TopoShapeOpCode.h"
+#include "TopoShapeSolidPy.h"
 
 using namespace Part;
 
 // returns a string which represents the object e.g. when printed in python
-std::string TopoShapeCompSolidPy::representation(void) const
+std::string TopoShapeCompSolidPy::representation() const
 {
     std::stringstream str;
     str << "<CompSolid object at " << getTopoShapePtr() << ">";
@@ -98,14 +96,14 @@ int TopoShapeCompSolidPy::PyInit(PyObject* args, PyObject* /*kwd*/)
 PyObject*  TopoShapeCompSolidPy::add(PyObject *args)
 {
     PyObject *obj;
-    if (!PyArg_ParseTuple(args, "O", &obj))
-        return NULL;
+    if (!PyArg_ParseTuple(args, "O!", &(Part::TopoShapeSolidPy::Type), &obj))
+        return nullptr;
 
     BRep_Builder builder;
     TopoDS_Shape comp = getTopoShapePtr()->getShape();
     auto shapes = getPyShapes(obj);
     
-    PY_TRY {
+    try {
         for(auto &s : shapes) {
             if(!s.isNull())
                 builder.Add(comp,s.getShape());
@@ -128,7 +126,7 @@ PyObject*  TopoShapeCompSolidPy::add(PyObject *args)
 
 PyObject *TopoShapeCompSolidPy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int TopoShapeCompSolidPy::setCustomAttributes(const char* /*attr*/, PyObject* /*obj*/)

@@ -23,6 +23,8 @@
 #ifndef FC_SOFCDISPLAYMODEELEMENT_H
 #define FC_SOFCDISPLAYMODEELEMENT_H
 
+#include <Inventor/SbColor.h>
+#include <Inventor/SbString.h>
 #include <Inventor/elements/SoReplacedElement.h>
 
 class GuiExport SoFCDisplayModeElement: public SoReplacedElement {

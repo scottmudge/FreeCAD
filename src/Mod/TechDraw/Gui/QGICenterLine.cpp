@@ -22,20 +22,19 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-#include <QPainter>
-#include <QPainterPath>
-#include <QStyleOptionGraphicsItem>
+# include <cmath>
+
+# include <QPainter>
+# include <QPainterPath>
+# include <QStyleOptionGraphicsItem>
 #endif
 
-#include <cmath>
-
 #include <App/Application.h>
-#include <App/Material.h>
-#include <Base/Console.h>
 #include <Base/Parameter.h>
 
-#include "PreferencesGui.h"
 #include "QGICenterLine.h"
+#include "PreferencesGui.h"
+
 
 using namespace TechDrawGui;
 
@@ -65,10 +64,10 @@ void QGICenterLine::makeLine()
 }
 
 
-void QGICenterLine::setBounds(double x1,double y1,double x2,double y2)
+void QGICenterLine::setBounds(double x1, double y1, double x2, double y2)
 {
-    m_start = QPointF(x1,y1);
-    m_end = QPointF(x2,y2);
+    m_start = QPointF(x1, y1);
+    m_end = QPointF(x2, y2);
 }
 
 QColor QGICenterLine::getCenterColor()

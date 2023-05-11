@@ -26,7 +26,6 @@
 # include <Standard_Failure.hxx>
 #endif
 
-#include <Base/Exception.h>
 #include <App/FeaturePythonPyImp.h>
 #include "Body.h"
 #include "FeatureBase.h"
@@ -44,24 +43,24 @@ FeatureBase::FeatureBase()
 }
 
 Part::Feature* FeatureBase::getBaseObject(bool) const {
-    
+
     return nullptr;
 }
 
-short int FeatureBase::mustExecute(void) const {
-        
+short int FeatureBase::mustExecute() const {
+
     if(BaseFeature.isTouched())
         return 1;
-    
+
     return PartDesign::Feature::mustExecute();
 }
 
 
-App::DocumentObjectExecReturn* FeatureBase::execute(void) {
-       
+App::DocumentObjectExecReturn* FeatureBase::execute() {
+
     if(!BaseFeature.getValue())
         return new App::DocumentObjectExecReturn("BaseFeature link is not set");
-    
+
     if(!BaseFeature.getValue()->isDerivedFrom(Part::Feature::getClassTypeId()))
         return new App::DocumentObjectExecReturn("BaseFeature must be a Part::Feature");
     
@@ -72,15 +71,15 @@ App::DocumentObjectExecReturn* FeatureBase::execute(void) {
         return new App::DocumentObjectExecReturn("No solid found in BaseFeature");
     
     Shape.setValue(shape);
-    
+
     return StdReturn;
 }
 
 void FeatureBase::onChanged(const App::Property* prop) {
-    
+
     // the BaseFeature property should track the Body BaseFeature and vice-versa
     if (prop == &BaseFeature) {
-        
+
         auto body = getFeatureBody();
         if (body && BaseFeature.getValue() && body->BaseFeature.getValue() != BaseFeature.getValue()) {
             body->BaseFeature.setValue(BaseFeature.getValue());

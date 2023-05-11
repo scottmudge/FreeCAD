@@ -288,8 +288,8 @@ SoFCVertexArrayIndexer::close(SbFCVector<int> && parts)
 void
 SoFCVertexArrayIndexer::render(SoState * state,
                                const cc_glglue * glue,
-                               const SbBool renderasvbo,
-                               const uint32_t contextid,
+                               bool renderasvbo,
+                               uint32_t contextid,
                                const intptr_t * offsets,
                                const int32_t * counts,
                                int32_t drawcount)

@@ -23,32 +23,32 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <algorithm>
+# include <functional>
 #endif
 
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QtConcurrentMap>
-#include <boost_bind_bind.hpp>
 
-//#define OPTIMIZE_CURVATURE
-#ifdef OPTIMIZE_CURVATURE
-#include <Eigen/Eigenvalues>
-#else
-#include <Mod/Mesh/App/WildMagic4/Wm4Vector3.h>
-#include <Mod/Mesh/App/WildMagic4/Wm4MeshCurvature.h>
-#endif
-
-#include "Curvature.h"
-#include "Algorithm.h"
-#include "Approximation.h"
-#include "MeshKernel.h"
-#include "Iterator.h"
-#include "Tools.h"
 #include <Base/Sequencer.h>
 #include <Base/Tools.h>
 
+//#define OPTIMIZE_CURVATURE
+#ifdef OPTIMIZE_CURVATURE
+# include <Eigen/Eigenvalues>
+#else
+# include <Mod/Mesh/App/WildMagic4/Wm4MeshCurvature.h>
+#endif
+
+#include "Curvature.h"
+#include "Approximation.h"
+#include "Iterator.h"
+#include "MeshKernel.h"
+#include "Tools.h"
+
+
 using namespace MeshCore;
-namespace bp = boost::placeholders;
+namespace sp = std::placeholders;
 
 MeshCurvature::MeshCurvature(const MeshKernel& kernel)
   : myKernel(kernel), myMinPoints(20), myRadius(0.5f)
@@ -80,7 +80,7 @@ void MeshCurvature::ComputePerFace(bool parallel)
     }
     else {
         QFuture<CurvatureInfo> future = QtConcurrent::mapped
-            (mySegment, boost::bind(&FacetCurvature::Compute, &face, bp::_1));
+            (mySegment, std::bind(&FacetCurvature::Compute, &face, sp::_1));
         QFutureWatcher<CurvatureInfo> watcher;
         watcher.setFuture(future);
         watcher.waitForFinished();
@@ -343,8 +343,8 @@ namespace MeshCore {
 class FitPointCollector : public MeshCollector
 {
 public:
-    FitPointCollector(std::set<PointIndex>& ind) : indices(ind){}
-    virtual void Append(const MeshCore::MeshKernel& kernel, FacetIndex index)
+    explicit FitPointCollector(std::set<PointIndex>& ind) : indices(ind){}
+    void Append(const MeshCore::MeshKernel& kernel, FacetIndex index) override
     {
         PointIndex ulP1, ulP2, ulP3;
         kernel.GetFacetPoints(index, ulP1, ulP2, ulP3);

@@ -77,8 +77,7 @@ void ViewProviderExtrusion::setupContextMenu(QMenu* menu, QObject* receiver, con
 
 TaskDlgFeatureParameters *ViewProviderExtrusion::getEditDialog()
 {
-    return new TaskDlgPadParameters( this, false,
-            "PartDesign_Extrusion",  QObject::tr("Extrusion parameters"));
+    return new TaskDlgPadParameters(this, false);
 }
 
 std::vector<App::DocumentObject*>

@@ -27,10 +27,10 @@
 #endif
 
 #include <QString>
-#include "Exception.h"
-#include "UnitsApi.h"
+
 #include "UnitsSchemaMKS.h"
 #include <cmath>
+
 
 using namespace Base;
 
@@ -185,7 +185,6 @@ QString UnitsSchemaMKS::schemaTranslate(const Quantity &quant, double &factor, Q
         else {
             unitString = QStringLiteral("MN/m");
             factor = 1e6;
-            
         }
     }
     else if (unit == Unit::ThermalConductivity) {
@@ -383,6 +382,10 @@ QString UnitsSchemaMKS::schemaTranslate(const Quantity &quant, double &factor, Q
             unitString = QStringLiteral("H");
             factor = 1e6;
         }
+    }
+    else if (unit == Unit::VacuumPermittivity) {
+            unitString = QString::fromLatin1("F/m");
+            factor = 1e-9;
     }
     else if (unit == Unit::Work) {
         if (UnitValue < 1.602176634e-10) {

@@ -20,14 +20,14 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef _DrawUtil_h_
-#define _DrawUtil_h_
+#ifndef DrawUtil_h_
+#define DrawUtil_h_
 
 #include <string>
 
-#include <QString>
 #include <QByteArray>
 #include <QPointF>
+#include <QString>
 
 #include <gp_Ax2.hxx>
 #include <gp_Dir.hxx>
@@ -36,33 +36,46 @@
 #include <gp_Pnt2d.hxx>
 #include <gp_Vec.hxx>
 #include <TopoDS.hxx>
-#include <TopoDS_Vertex.hxx>
 #include <TopoDS_Edge.hxx>
-#include <TopoDS_Wire.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
+#include <TopoDS_Vertex.hxx>
+#include <TopoDS_Wire.hxx>
 
-#include <App/DocumentObject.h>
-#include <Base/Tools2D.h>
 #include <Base/Vector3D.h>
-#include <Base/Matrix.h>
-
 #include <Mod/Part/App/PartFeature.h>
-
-#include "LineGroup.h"
+#include <Mod/TechDraw/TechDrawGlobal.h>
 
 
 #ifndef M_2PI
-    #define M_2PI ((M_PI)*2.0)
+# define M_2PI ((M_PI) * 2.0)
 #endif
 
 #define VERTEXTOLERANCE (2.0 * Precision::Confusion())
+#define VECTORTOLERANCE (Precision::Confusion())
 
 #define SVG_NS_URI         "http://www.w3.org/2000/svg"
 #define FREECAD_SVG_NS_URI "http://www.freecadweb.org/wiki/index.php?title=Svg_Namespace"
 
+//some shapes are being passed in where edges that should be connected are in fact
+//separated by more than 2*Precision::Confusion (expected tolerance for 2 TopoDS_Vertex)
+//this value is used in EdgeWalker, DrawProjectSplit and DrawUtil and needs to be in sync in
+//all 3 files.
+#define EWTOLERANCE 0.0001//arbitrary number that seems to give good results for drawing
+
+//a multiplier for EWTOLERANCE used in fuzzy fuse and common operations.
+#define FUZZYADJUST 4.0
+
+
 namespace TechDraw
 {
+
+//used by sort_Edges
+struct EdgePoints {
+    gp_Pnt v1, v2;
+    std::list<TopoDS_Edge>::iterator it;
+    TopoDS_Edge edge;
+};
 
 /// Convenient utility functions for TechDraw Module
 class TechDrawExport DrawUtil {
@@ -76,6 +89,8 @@ class TechDrawExport DrawUtil {
         static double sensibleScale(double working_scale);
         static double angleWithX(TopoDS_Edge e, bool reverse);
         static double angleWithX(TopoDS_Edge e, TopoDS_Vertex v, double tolerance = VERTEXTOLERANCE);
+        static double incidenceAngleAtVertex(TopoDS_Edge e, TopoDS_Vertex v, double tolerance);
+
         static bool isFirstVert(TopoDS_Edge e, TopoDS_Vertex v, double tolerance = VERTEXTOLERANCE);
         static bool isLastVert(TopoDS_Edge e, TopoDS_Vertex v, double tolerance = VERTEXTOLERANCE);
         static bool fpCompare(const double& d1, const double& d2, double tolerance = FLT_EPSILON);
@@ -84,6 +99,7 @@ class TechDrawExport DrawUtil {
                                                                         double xRange,
                                                                         double yRange) ;
         static Base::Vector3d vertex2Vector(const TopoDS_Vertex& v);
+
         static std::string formatVector(const Base::Vector3d& v);
         static std::string formatVector(const gp_Dir& v);
         static std::string formatVector(const gp_Dir2d& v);
@@ -93,34 +109,67 @@ class TechDrawExport DrawUtil {
         static std::string formatVector(const QPointF& v);
 
         static bool vectorLess(const Base::Vector3d& v1, const Base::Vector3d& v2);
+        //!std::map require comparator to be a type not a function
+        struct vectorLessType {
+            bool operator()(const Base::Vector3d& a, const Base::Vector3d& b) const {
+                return DrawUtil::vectorLess(a, b);
+            }
+        };
+        static bool vertexEqual(TopoDS_Vertex& v1, TopoDS_Vertex& v2);
+        static bool vectorEqual(Base::Vector3d& v1, Base::Vector3d& v2);
+
+        static TopoDS_Shape vectorToCompound(std::vector<TopoDS_Edge> vecIn);
+        static TopoDS_Shape vectorToCompound(std::vector<TopoDS_Wire> vecIn);
+        static std::vector<TopoDS_Edge> shapeToVector(TopoDS_Shape shapeIn);
+
         static Base::Vector3d toR3(const gp_Ax2& fromSystem, const Base::Vector3d& fromPoint);
         static bool checkParallel(const Base::Vector3d v1, const Base::Vector3d v2, double tolerance = FLT_EPSILON);
         //! rotate vector by angle radians around axis through org
         static Base::Vector3d vecRotate(Base::Vector3d vec,
                                         double angle,
                                         Base::Vector3d axis,
-                                        Base::Vector3d org = Base::Vector3d(0.0,0.0,0.0));
+                                        Base::Vector3d org = Base::Vector3d(0.0, 0.0, 0.0));
+
         static Base::Vector3d closestBasis(Base::Vector3d v);
+        static gp_Vec closestBasis(gp_Vec inVec);
+        static Base::Vector3d closestBasis(Base::Vector3d vDir, gp_Ax2 coordSys);
+        static Base::Vector3d closestBasis(gp_Dir gDir, gp_Ax2 coordSys);
+
+        static double         getWidthInDirection(gp_Dir direction, TopoDS_Shape& shape);
+
         static double getDefaultLineWeight(std::string s);
-/*        static Base::Vector3d vector23(const Base::Vector3d& v2) { return Base::Vector3d(v2.x,v2.y,0.0); }*/
-/*        static Base::Vector3d vector32(const Base::Vector3d& v3) { return Base::Vector3d(v3.x,v3.y); }*/
         //! is pt between end1 and end2?
         static bool isBetween(const Base::Vector3d pt, const Base::Vector3d end1, const Base::Vector3d end2);
         //! find intersection in 2d for 2 lines in point+direction form
         static Base::Vector3d Intersect2d(Base::Vector3d p1, Base::Vector3d d1,
                                    Base::Vector3d p2, Base::Vector3d d2);
-        static Base::Vector3d gpPnt2V3(const gp_Pnt gp) { return Base::Vector3d(gp.X(),gp.Y(),gp.Z()); }
-        static gp_Pnt         V32gpPnt(const Base::Vector3d v)  { return gp_Pnt(v.x,v.y,v.z); }
+        static Base::Vector2d Intersect2d(Base::Vector2d p1, Base::Vector2d d1,
+                                   Base::Vector2d p2, Base::Vector2d d2);
+
+        static Base::Vector3d toVector3d(const gp_Pnt gp) { return Base::Vector3d(gp.X(), gp.Y(), gp.Z()); }
+        static Base::Vector3d toVector3d(const gp_Dir gp) { return Base::Vector3d(gp.X(), gp.Y(), gp.Z()); }
+        static Base::Vector3d toVector3d(const gp_Vec gp) { return Base::Vector3d(gp.X(), gp.Y(), gp.Z()); }
+        static Base::Vector3d toVector3d(const QPointF gp) { return Base::Vector3d(gp.x(), gp.y(), 0.0); }
+
+        static gp_Pnt         togp_Pnt(const Base::Vector3d v)  { return gp_Pnt(v.x, v.y, v.z); }
+        static gp_Dir         togp_Dir(const Base::Vector3d v)  { return gp_Dir(v.x, v.y, v.z); }
+        static gp_Vec         togp_Vec(const Base::Vector3d v)  { return gp_Vec(v.x, v.y, v.z); }
+        static QPointF        toQPointF(const Base::Vector3d v)  { return QPointF(v.x, v.y); }
+
         static std::string shapeToString(TopoDS_Shape s);
         static TopoDS_Shape shapeFromString(std::string s);
         static Base::Vector3d invertY(Base::Vector3d v);
         static QPointF invertY(QPointF p);
         static std::vector<std::string> split(std::string csvLine);
-        static std::vector<std::string> tokenize(std::string csvLine, std::string delimiter = ",$$$,");
+        static std::vector<std::string> tokenize(std::string csvLine, std::string delimiter = ", $$$, ");
         static App::Color pyTupleToColor(PyObject* pColor);
         static PyObject* colorToPyTuple(App::Color color);
         static bool isCrazy(TopoDS_Edge e);
         static Base::Vector3d getFaceCenter(TopoDS_Face f);
+        static bool circulation(Base::Vector3d A, Base::Vector3d B, Base::Vector3d C);
+        static int countSubShapes(TopoDS_Shape shape, TopAbs_ShapeEnum subShape);
+        static void encodeXmlSpecialChars(std::string& inoutText);
+        static std::list<TopoDS_Edge> sort_Edges(double tol3d, std::list<TopoDS_Edge>& edges);
 
         // Supplementary mathematical functions
         static int sgn(double x);

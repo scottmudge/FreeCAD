@@ -71,6 +71,7 @@ public:
     QuantitySpinBoxPrivate() :
       validInput(true),
       pendingEmit(false),
+      checkRangeInExpression(false),
       unitValue(0),
       maximum(DOUBLE_MAX),
       minimum(-DOUBLE_MAX),
@@ -292,6 +293,7 @@ end:
     QLocale locale;
     bool validInput;
     bool pendingEmit;
+    bool checkRangeInExpression;
     QString validStr;
     Base::Quantity quantity;
     Base::Quantity cached;
@@ -408,6 +410,13 @@ QString Gui::QuantitySpinBox::expressionText() const
         qDebug() << e.what();
     }
     return QString();
+}
+
+void QuantitySpinBox::evaluateExpression()
+{
+    if (isBound() && getExpression()) {
+        showValidExpression(Number::SetIfNumber);
+    }
 }
 
 void Gui::QuantitySpinBox::setNumberExpression(App::NumberExpression* expr)
@@ -541,10 +550,15 @@ void QuantitySpinBox::userInput(const QString & text)
     }
 }
 
-void QuantitySpinBox::openFormulaDialog()
+Dialog::DlgExpressionInput *QuantitySpinBox::openFormulaDialog()
 {
-    ExpressionSpinBox::openFormulaDialog();
+    auto box = ExpressionSpinBox::openFormulaDialog();
+    Q_D(const QuantitySpinBox);
+    if (d->checkRangeInExpression) {
+        box->setRange(d->minimum, d->maximum);
+    }
     Q_EMIT showFormulaDialog(true);
+    return box;
 }
 
 void QuantitySpinBox::finishFormulaDialog(Dialog::DlgExpressionInput *input)
@@ -676,6 +690,19 @@ void QuantitySpinBox::setRange(double minimum, double maximum)
     d->maximum = maximum;
 }
 
+void QuantitySpinBox::checkRangeInExpression(bool on)
+{
+    Q_D(QuantitySpinBox);
+    d->checkRangeInExpression = on;
+}
+
+bool QuantitySpinBox::isCheckedRangeInExpresion() const
+{
+    Q_D(const QuantitySpinBox);
+    return d->checkRangeInExpression;
+}
+
+
 int QuantitySpinBox::decimals() const
 {
     Q_D(const QuantitySpinBox);
@@ -769,6 +796,22 @@ void QuantitySpinBox::stepBy(int steps)
     updateFromCache(true);
     update();
     selectNumber();
+}
+
+QSize QuantitySpinBox::sizeForText(const QString& txt) const
+{
+    const QFontMetrics fm(fontMetrics());
+    int h = lineEdit()->sizeHint().height();
+    int w = QtTools::horizontalAdvance(fm, txt);
+
+    w += 2; // cursor blinking space
+    w += iconHeight;
+
+    QStyleOptionSpinBox opt;
+    initStyleOption(&opt);
+    QSize hint(w, h);
+    QSize size = style()->sizeFromContents(QStyle::CT_SpinBox, &opt, hint, this);
+    return size;
 }
 
 QSize QuantitySpinBox::sizeHint() const

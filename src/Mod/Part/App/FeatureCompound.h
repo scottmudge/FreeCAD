@@ -20,12 +20,12 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef PART_FEATURECOMPOUND_H
 #define PART_FEATURECOMPOUND_H
 
 #include <App/PropertyLinks.h>
 #include "PartFeature.h"
+
 
 namespace Part
 {
@@ -36,20 +36,20 @@ class Compound : public Part::Feature
 
 public:
     Compound();
-    virtual ~Compound();
+    ~Compound() override;
 
     App::PropertyLinkList Links;
 
     /** @name methods override feature */
     //@{
-    virtual short mustExecute() const override;
+    short mustExecute() const override;
     /// recalculate the feature
-    virtual App::DocumentObjectExecReturn *execute(void) override;
+    App::DocumentObjectExecReturn *execute() override;
     /// returns the type name of the view provider
-    virtual const char* getViewProviderName(void) const override {
+    const char* getViewProviderName() const override {
         return "PartGui::ViewProviderCompound";
     }
-    virtual App::PropertyLinkList *getShapeLinksProperty() override {return &Links;}
+    App::PropertyLinkList *getShapeLinksProperty() override {return &Links;}
     //@}
 };
 
@@ -58,7 +58,7 @@ class Compound2 : public Compound {
     PROPERTY_HEADER_WITH_OVERRIDE(Part::Compound2);
 public:
     Compound2();
-    virtual void onDocumentRestored() override;
+    void onDocumentRestored() override;
 };
 
 } //namespace Part

@@ -1,4 +1,5 @@
 /***************************************************************************
+ *   Copyright (c) 2011 Werner Mayer <wmayer[at]users.sourceforge.net>     *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -43,7 +44,7 @@
 #include "ViewProviderSketch.h"
 #include "ui_InsertDatum.h"
 #include "EditDatumDialog.h"
-#include "CommandConstraints.h"
+#include "Utils.h"
 
 
 using namespace SketcherGui;
@@ -77,7 +78,7 @@ void EditDatumDialog::exec(bool atCursor)
     if (Constr->isDimensional()) {
 
         if (sketch->hasConflicts()) {
-            QMessageBox::critical(qApp->activeWindow(), QObject::tr("Distance constraint"),
+            QMessageBox::critical(Gui::getMainWindow(), QObject::tr("Distance constraint"),
                                   QObject::tr("Not allowed to edit the datum because the sketch contains conflicting constraints"));
             return;
         }
@@ -85,12 +86,13 @@ void EditDatumDialog::exec(bool atCursor)
         Base::Quantity init_val;
 
         QDialog dlg(Gui::getMainWindow());
-        if (ui_ins_datum == nullptr) {
+        if (!ui_ins_datum) {
             ui_ins_datum.reset(new Ui_InsertDatum);
             ui_ins_datum->setupUi(&dlg);
         }
         double datum = Constr->getValue();
 
+        ui_ins_datum->labelEdit->setEntryName(QByteArray("DatumValue"));
         if (Constr->Type == Sketcher::Angle) {
             datum = Base::toDegrees<double>(datum);
             dlg.setWindowTitle(tr("Insert angle"));
@@ -212,7 +214,7 @@ void EditDatumDialog::accepted()
             tryAutoRecompute(sketch);
         }
         catch (const Base::Exception& e) {
-            QMessageBox::critical(qApp->activeWindow(), QObject::tr("Dimensional constraint"), QString::fromUtf8(e.what()));
+            QMessageBox::critical(Gui::getMainWindow(), QObject::tr("Dimensional constraint"), QString::fromUtf8(e.what()));
             Gui::Command::abortCommand();
 
             if(sketch->noRecomputes) // if setdatum failed, it is highly likely that solver information is invalid.
@@ -240,7 +242,7 @@ void EditDatumDialog::drivingToggled(bool state)
 
 void EditDatumDialog::datumChanged()
 {
-    if (ui_ins_datum->labelEdit->text() != ui_ins_datum->labelEdit->getHistory()[0]) {
+    if (ui_ins_datum->labelEdit->text() != qAsConst(ui_ins_datum->labelEdit)->getHistory()[0]) {
         ui_ins_datum->cbDriving->setChecked(false);
     }
 }

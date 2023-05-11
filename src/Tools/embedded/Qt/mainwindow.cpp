@@ -72,8 +72,8 @@ void MainWindow::loadFreeCAD()
         PyObject* dict = PyModule_GetDict(main);
         std::stringstream cmd;
         cmd << "import sys,os\n"
-            << "sys.path.append(\"" << (const char*)path.toLatin1() << "\")\n"
-            << "os.chdir(\"" << (const char*)path.toLatin1() << "\")\n"
+            << "sys.path.append(\"" << (const char*)path.toUtf8() << "\")\n"
+            << "os.chdir(\"" << (const char*)path.toUtf8() << "\")\n"
             << "import FreeCADGui\n"
             << "FreeCADGui.showMainWindow()\n";
 

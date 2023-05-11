@@ -25,10 +25,12 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <cassert>
+# include <iostream>
 #endif
 
 #include "Handle.h"
-#include "Exception.h"
+
 
 using namespace Base;
 

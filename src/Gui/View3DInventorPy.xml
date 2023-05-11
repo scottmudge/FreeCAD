@@ -282,6 +282,16 @@ Return the projected 3D point (in pixel coordinates).
         </UserDocu>
       </Documentation>
     </Methode>
+    <Methode Name="getPointOnFocalPlane">
+      <Documentation>
+        <UserDocu>
+getPointOnFocalPlane(pixel coords (as integer)) -> 3D vector
+
+Return the according 3D point on the focal plane to the given 2D point (in
+pixel coordinates).
+        </UserDocu>
+      </Documentation>
+    </Methode>
     <Methode Name="getPoint">
       <Documentation>
         <UserDocu>

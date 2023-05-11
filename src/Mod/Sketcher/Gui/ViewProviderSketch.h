@@ -24,20 +24,23 @@
 #ifndef SKETCHERGUI_VIEWPROVIDERSKETCH_H
 #define SKETCHERGUI_VIEWPROVIDERSKETCH_H
 
+#include <QCoreApplication>
+#include <boost_signals2.hpp>
+#include <Inventor/SbImage.h>
+#include <Inventor/SbColor.h>
+
+#include <App/Part.h>
+#include <App/DocumentObserver.h>
+#include <Base/Tools2D.h>
+#include <Base/Placement.h>
+#include <Gui/Document.h>
+#include <Gui/GLPainter.h>
+#include <Gui/Selection.h>
 #include <Mod/Part/Gui/ViewProvider2DObject.h>
 #include <Mod/Part/Gui/ViewProviderAttachExtension.h>
 #include <Mod/Part/App/BodyBase.h>
-#include <Inventor/SbImage.h>
-#include <Inventor/SbColor.h>
-#include <Base/Tools2D.h>
-#include <Base/Placement.h>
-#include <Gui/Selection.h>
-#include <Gui/GLPainter.h>
-#include <App/Part.h>
-#include <App/DocumentObserver.h>
-#include <boost_signals2.hpp>
-#include <QCoreApplication>
-#include <Gui/Document.h>
+#include <Mod/Sketcher/App/GeoList.h>
+
 #include "ShortcutListener.h"
 
 
@@ -132,12 +135,17 @@ public:
 
     /// draw the edit curve
     void drawEdit(const std::vector<Base::Vector2d> &EditCurve);
+    void drawEdit(const std::list<std::vector<Base::Vector2d>> &list);
 
     /// draw the edit markers
     void drawEditMarkers(const std::vector<Base::Vector2d> &EditMarkers, unsigned int augmentationlevel = 0);
 
+    void moveCursorToSketchPoint(Base::Vector2d point);
+
+    void preselectAtPoint(Base::Vector2d point);
+
     /// Is the view provider selectable
-    bool isSelectable(void) const override;
+    bool isSelectable() const override;
     /// Observer message from the Selection
     virtual void onSelectionChanged(const Gui::SelectionChanges& msg) override;
 
@@ -149,7 +157,7 @@ public:
     /// sets an DrawSketchHandler in control
     void activateHandler(DrawSketchHandler *newHandler);
     /// removes the active handler
-    void purgeHandler(void);
+    void purgeHandler();
     /// obtain the current active handler
     DrawSketchHandler *currentHandler() const;
     /// set the pick style of the sketch coordinate axes
@@ -177,7 +185,7 @@ public:
     /// is called by GuiCommands to set the drawing mode
     void setSketchMode(SketchMode mode);
     /// get the sketch mode
-    SketchMode getSketchMode(void) const {return _Mode;}
+    SketchMode getSketchMode() const {return _Mode;}
     //@}
 
     /** @name helper functions */
@@ -211,9 +219,9 @@ public:
                         const Gui::View3DInventorViewer *viewer);
 
     /// helper change the color of the sketch according to selection and solver status
-    void updateColor(void);
+    void updateColor();
     /// get the pointer to the sketch document object
-    Sketcher::SketchObject *getSketchObject(void) const;
+    Sketcher::SketchObject *getSketchObject() const;
 
     /** returns a const reference to the last solved sketch object. It guarantees that
      *  the solver object does not lose synchronisation with the SketchObject properties.
@@ -225,7 +233,7 @@ public:
      * -> inline int moveTemporaryPoint(int geoId, PointPos pos, Base::Vector3d toPoint, bool relative=false)
      * -> inline void updateSolverExtension(int geoId, std::unique_ptr<Part::GeometryExtension> && ext)
      */
-    const Sketcher::Sketch &getSolvedSketch(void) const;
+    const Sketcher::Sketch &getSolvedSketch() const;
 
     /// snap points x,y (mouse coordinates) onto grid if enabled
     void snapToGrid(double &x, double &y);
@@ -239,15 +247,15 @@ public:
                                           const SoNode *constraint);
 
     float getScaleFactor();
-    int getPreselectPoint(void) const;
-    int getPreselectCurve(void) const;
-    int getPreselectCross(void) const;
+    int getPreselectPoint() const;
+    int getPreselectCurve() const;
+    int getPreselectCross() const;
     //@}
 
     /** @name base class implementer */
     //@{
-    virtual void attach(App::DocumentObject *) override;
-    virtual void updateData(const App::Property *) override;
+    void attach(App::DocumentObject *) override;
+    void updateData(const App::Property *) override;
 
     virtual void setupContextMenu(QMenu *menu, QObject *receiver, const char *member) override;
     /// is called when the Provider is in edit and a deletion request occurs
@@ -257,7 +265,7 @@ public:
     /// If null is returned then no transaction will be opened.
     virtual const char* getTransactionText() const override { return nullptr; }
     /// is called by the tree if the user double clicks on the object
-    virtual bool doubleClicked(void) override;
+    virtual bool doubleClicked() override;
     /// is called when the Provider is in edit and the mouse is moved
     virtual bool mouseMove(const SbVec2s &pos, Gui::View3DInventorViewer *viewer) override;
     /// is called when the Provider is in edit and a key event ocours. Only ESC ends edit.
@@ -269,9 +277,9 @@ public:
     void deleteSelected();
 
     /// updates the visibility of the virtual space
-    void updateVirtualSpace(void);
+    void updateVirtualSpace();
     void setIsShownVirtualSpace(bool isshownvirtualspace);
-    bool getIsShownVirtualSpace(void) const;
+    bool getIsShownVirtualSpace() const;
 
     friend class DrawSketchHandler;
     friend struct ::EditData;
@@ -281,7 +289,7 @@ public:
     /// signals if the sketch has been set up
     boost::signals2::signal<void (const QString &state, const QString &msg, const QString &url, const QString &linkText)> signalSetUp;
         
-    virtual std::vector<App::DocumentObject*> claimChildren(void) const;
+    virtual std::vector<App::DocumentObject*> claimChildren() const;
     void selectElement(const char *element, bool preselect=false) const;
 
     virtual bool getElementPicked(const SoPickedPoint *pp, std::string &subname) const;
@@ -307,6 +315,8 @@ public:
 
     const App::SubObjectT &getEditingContext() const;
 
+    friend class ViewProviderSketchDrawSketchHandlerAttorney;
+
 protected:
     Base::Matrix4D getEditingPlacement() const;
 
@@ -316,21 +326,21 @@ protected:
     virtual void unsetEditViewer(Gui::View3DInventorViewer*) override;
     void deactivateHandler();
     /// update solver information based on last solving at SketchObject
-    void UpdateSolverInformation(void);
+    void UpdateSolverInformation();
     /// helper to detect whether the picked point lies on the sketch
     bool isPointOnSketch(const SoPickedPoint *pp) const;
     /// get called by the container whenever a property has been changed
     virtual void onChanged(const App::Property *prop) override;
 
     /// get called if a subelement is double clicked while editing
-    void editDoubleClicked(void);
+    void editDoubleClicked();
 
     /// set up the edition data structure EditData
-    void createEditInventorNodes(void);
+    void createEditInventorNodes();
     /// pointer to the edit data structure if the ViewProvider is in edit.
     EditData *edit;
     /// build up the visual of the constraints
-    void rebuildConstraintsVisual(void);
+    void rebuildConstraintsVisual();
 
     void slotUndoDocument(const Gui::Document&);
     void slotRedoDocument(const Gui::Document&);
@@ -422,10 +432,10 @@ protected:
                             //! Gets populated with bounding boxes (in icon
                             //! image coordinates) for the icon at left, then
                             //! labels for different constraints.
-                            std::vector<QRect> *boundingBoxes = NULL,
-                            //! If not NULL, gets set to the number of pixels
+                            std::vector<QRect> *boundingBoxes = nullptr,
+                            //! If not nullptr, gets set to the number of pixels
                             //! that the text extends below the icon base.
-                            int *vPad = NULL);
+                            int *vPad = nullptr);
 
     /// Copies a QImage constraint icon into a SoImage*
     /*! Used by drawTypicalConstraintIcon() and drawMergedConstraintIcons() */
@@ -438,16 +448,17 @@ protected:
     SbVec3s getDisplayedSize(const SoImage *) const;
     //@}
 
+    void setConstraintSelectability(bool enabled = true);
     void setPositionText(const Base::Vector2d &Pos, const SbString &txt);
     void setPositionText(const Base::Vector2d &Pos);
-    void resetPositionText(void);
+    void resetPositionText();
 
     // handle preselection and selection of points
     void setPreselectPoint(int PreselectPoint);
-    void resetPreselectPoint(void);
+    void resetPreselectPoint();
     void addSelectPoint(int SelectPoint);
     void removeSelectPoint(int SelectPoint);
-    void clearSelectPoints(void);
+    void clearSelectPoints();
 
     // modes while sketching
     SketchMode _Mode;
@@ -536,7 +547,7 @@ public:
     typedef PartGui::ViewProvider2DObject inherited;
 
     ViewProviderSketchExport();
-    virtual bool doubleClicked(void);
+    virtual bool doubleClicked();
     virtual void updateData(const App::Property *prop);
 };
 

@@ -20,32 +20,31 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <cfloat>
+
 # include <Standard_math.hxx>
-# include <Python.h>
+
+# include <Inventor/nodes/SoAnnotation.h>
 # include <Inventor/nodes/SoBaseColor.h>
 # include <Inventor/nodes/SoDepthBuffer.h>
 # include <Inventor/nodes/SoDrawStyle.h>
-# include <Inventor/nodes/SoMaterial.h>
 # include <Inventor/nodes/SoLineSet.h>
+# include <Inventor/nodes/SoMaterial.h>
 # include <Inventor/nodes/SoPickStyle.h>
 # include <Inventor/nodes/SoSeparator.h>
 # include <Inventor/nodes/SoVertexProperty.h>
-# include <Inventor/nodes/SoAnnotation.h>
 # include <Inventor/nodes/SoCamera.h>
 # include <Inventor/sensors/SoNodeSensor.h>
 # include <cfloat>
 #endif
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
+#include <App/Application.h>
 #include <Base/Console.h>
 #include <Base/Parameter.h>
 #include <Base/Reader.h>
-#include <Base/ViewProj.h>
-#include <App/Application.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/SoFCBoundingBox.h>
@@ -53,18 +52,16 @@
 #include <Gui/View3DInventorViewer.h>
 
 #include "ViewProvider2DObject.h"
-#include <Mod/Part/App/PartFeature.h>
 #include <Mod/Part/Gui/PartParams.h>
 
 
 using namespace PartGui;
 using namespace std;
 
-
 //**************************************************************************
 // Construction/Destruction
 
-const char* ViewProvider2DObjectGrid::GridStyleEnums[]= {"Dashed","Light",NULL};
+const char* ViewProvider2DObjectGrid::GridStyleEnums[]= {"Dashed","Light",nullptr};
 App::PropertyQuantityConstraint::Constraints ViewProvider2DObjectGrid::GridSizeRange = {0.001,DBL_MAX,1.0};
 
 PROPERTY_SOURCE(PartGui::ViewProvider2DObjectGrid, PartGui::ViewProvider2DObject)
@@ -105,7 +102,7 @@ ViewProvider2DObjectGrid::~ViewProvider2DObjectGrid()
 
 // **********************************************************************************
 
-SoSeparator* ViewProvider2DObjectGrid::createGrid(void)
+SoSeparator* ViewProvider2DObjectGrid::createGrid()
 {
     if (this->getEditingMode() == Transform
             || this->getEditingMode() == TransformAt)
@@ -209,7 +206,8 @@ SoSeparator* ViewProvider2DObjectGrid::createGrid(void)
     int lines = vlines + hlines;
 
     if (lines > maxNumberOfLines.getValue()) {
-        Base::Console().Warning("Grid Disabled: Requested number of lines %d is larger than the maximum configured of %d\n.", lines, maxNumberOfLines.getValue());
+        Base::Console().Warning("Grid Disabled: Requested number of lines %d is larger than the maximum configured of %d\n."
+                                "Either increase the 'GridSize' property to a more reasonable value (recommended) or increase the 'maxNumberOfLines' property.\n", lines, maxNumberOfLines.getValue());
         parent->addChild(vts);
         parent->addChild(grid);
         return GridRoot;
@@ -254,7 +252,8 @@ void ViewProvider2DObjectGrid::updateData(const App::Property* prop)
     if (prop->getTypeId() == Part::PropertyPartShape::getClassTypeId()) {
         if (GridAutoSize.getValue()) {
             Base::BoundBox3d bbox = static_cast<const Part::PropertyPartShape*>(prop)->getBoundingBox();
-            if (!bbox.IsValid()) return;
+            if (!bbox.IsValid())
+                return;
             Gui::coinRemoveAllChildren(GridRoot);
             Base::Placement place = static_cast<const Part::PropertyPartShape*>(prop)->getComplexData()->getPlacement();
             place.invert();
@@ -280,7 +279,7 @@ void ViewProvider2DObjectGrid::onChanged(const App::Property* prop)
     ViewProviderPart::onChanged(prop);
 
     if (prop == &ShowGrid || prop == &ShowOnlyInEditMode || prop == &Visibility) {
-        if (ShowGrid.getValue() && Visibility.getValue() && !(ShowOnlyInEditMode.getValue() && !this->isEditing()))
+        if (ShowGrid.getValue() && ((Visibility.getValue() && !ShowOnlyInEditMode.getValue()) || this->isEditing()))
             createGrid();
         else
             Gui::coinRemoveAllChildren(GridRoot);
@@ -451,16 +450,16 @@ ViewProvider2DObject::~ViewProvider2DObject()
 {
 }
 
-std::vector<std::string> ViewProvider2DObject::getDisplayModes(void) const
+std::vector<std::string> ViewProvider2DObject::getDisplayModes() const
 {
     // get the modes of the father
     std::vector<std::string> StrList = ViewProviderGeometryObject::getDisplayModes();
 
     // add your own modes
-    StrList.push_back("Flat Lines");
+    StrList.emplace_back("Flat Lines");
     //StrList.push_back("Shaded");
-    StrList.push_back("Wireframe");
-    StrList.push_back("Points");
+    StrList.emplace_back("Wireframe");
+    StrList.emplace_back("Points");
 
     return StrList;
 }

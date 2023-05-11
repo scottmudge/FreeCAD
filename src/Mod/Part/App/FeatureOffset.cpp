@@ -19,11 +19,13 @@
  *   Suite 330, Boston, MA  02111-1307, USA                                *
  *                                                                         *
  ***************************************************************************/
+
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <Precision.hxx>
 #endif
 
+#include <App/Link.h>
 
 #include <App/Document.h>
 #include "FeatureOffset.h"
@@ -31,14 +33,14 @@
 
 using namespace Part;
 
-const char* Part::Offset::ModeEnums[]= {"Skin","Pipe", "RectoVerso",NULL};
-const char* Part::Offset::JoinEnums[]= {"Arc","Tangent", "Intersection",NULL};
+const char* Part::Offset::ModeEnums[]= {"Skin","Pipe", "RectoVerso",nullptr};
+const char* Part::Offset::JoinEnums[]= {"Arc","Tangent", "Intersection",nullptr};
 
 PROPERTY_SOURCE(Part::Offset, Part::Feature)
 
 Offset::Offset()
 {
-    ADD_PROPERTY_TYPE(Source,(0),"Offset",App::Prop_None,"Source shape");
+    ADD_PROPERTY_TYPE(Source,(nullptr),"Offset",App::Prop_None,"Source shape");
     ADD_PROPERTY_TYPE(Value,(1.0),"Offset",App::Prop_None,"Offset value");
     ADD_PROPERTY_TYPE(Mode,(long(0)),"Offset",App::Prop_None,"Mode");
     Mode.setEnums(ModeEnums);
@@ -140,8 +142,13 @@ short Offset2D::mustExecute() const
 App::DocumentObjectExecReturn *Offset2D::execute(void)
 {
     App::DocumentObject* source = Source.getValue();
-    if (!source)
+    if (!source) {
+       return new App::DocumentObjectExecReturn("No source shape linked.");
+    }
+    const TopoShape shape = Part::Feature::getTopoShape(source);
+    if (shape.isNull()) {
         return new App::DocumentObjectExecReturn("No source shape linked.");
+    }
     double offset = Value.getValue();
     short mode = (short)Mode.getValue();
     auto join = static_cast<TopoShape::JoinType>(Join.getValue());
@@ -150,12 +157,8 @@ App::DocumentObjectExecReturn *Offset2D::execute(void)
     if (mode == 2)
         return new App::DocumentObjectExecReturn("Mode 'Recto-Verso' is not supported for 2D offset.");
 #ifdef FC_NO_ELEMENT_MAP
-    const TopoShape& shape = Feature::getShape(source);
     this->Shape.setValue(shape.makeOffset2D(offset, join, fill, mode == 0, inter));
 #else
-    auto shape = Feature::getTopoShape(source);
-    if(shape.isNull())
-        return new App::DocumentObjectExecReturn("Invalid source link");
     this->Shape.setValue(TopoShape(0,getDocument()->getStringHasher()).makEOffset2D(
                 shape,offset,join,fill,mode==0,inter));
 #endif

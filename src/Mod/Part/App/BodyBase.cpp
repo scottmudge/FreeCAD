@@ -20,30 +20,24 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-#ifndef _PreComp_
-#endif
 
-#include <Mod/Part/App/BodyBasePy.h>
-#include <App/Application.h>
 #include <App/Document.h>
-#include <Base/Placement.h>
 
 #include "BodyBase.h"
+#include "BodyBasePy.h"
 
 
 namespace Part {
-
 
 PROPERTY_SOURCE_WITH_EXTENSIONS(Part::BodyBase, Part::Feature)
 
 BodyBase::BodyBase()
 {
-    ADD_PROPERTY(Tip         , (0) );
+    ADD_PROPERTY(Tip         , (nullptr) );
     Tip.setScope(App::LinkScope::Child);
 
-    ADD_PROPERTY(BaseFeature , (0) );
+    ADD_PROPERTY(BaseFeature , (nullptr) );
 
     App::OriginGroupExtension::initExtension(this);
 }
@@ -51,7 +45,7 @@ BodyBase::BodyBase()
 BodyBase* BodyBase::findBodyOf(const App::DocumentObject* f)
 {
     if(!f || !f->getNameInDocument())
-        return 0;
+        return nullptr;
 
     auto prop = Base::freecad_dynamic_cast<App::PropertyLink>(f->getPropertyByName("_Body"));
     if(prop && prop->getValue() && prop->getValue()->isDerivedFrom(BodyBase::getClassTypeId()))
@@ -88,7 +82,7 @@ bool BodyBase::isAfter(const App::DocumentObject *feature, const App::DocumentOb
 }
 
 void BodyBase::onBeforeChange (const App::Property* prop) {
-    
+
     //Tip can't point outside the body, hence no base feature tip
     /*// If we are changing the base feature and tip point to it reset it
     if ( prop == &BaseFeature && BaseFeature.getValue() == Tip.getValue() && BaseFeature.getValue() ) {

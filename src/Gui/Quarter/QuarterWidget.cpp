@@ -52,56 +52,52 @@
 #pragma warning(disable : 4267)
 #endif
 
-#include <assert.h>
+#include <cassert>
 
-#include <Quarter/QuarterWidget.h>
-#include <Quarter/eventhandlers/EventFilter.h>
-#include <Quarter/eventhandlers/DragDropHandler.h>
-
-#include <QtCore/QEvent>
-#include <QtCore/QDebug>
-#include <QtCore/QFile>
-#include <QAction>
-#include <QApplication>
-#include <QPaintEvent>
-#include <QResizeEvent>
-
-#if defined(HAVE_QT5_OPENGL)
-#include <QOpenGLDebugMessage>
-#include <QOpenGLDebugLogger>
+#if HAVE_CONFIG_H
+# include <config.h>
+# ifdef  HAVE_GL_GL_H
+#  include <GL/gl.h>
+# endif
 #endif
 
+#include <QAction>
+#include <QApplication>
+#include <QDebug>
+#include <QEvent>
+#include <QFile>
+#include <QGuiApplication>
+#include <QMetaObject>
+#include <QOpenGLDebugLogger>
+#include <QOpenGLDebugMessage>
+#include <QPaintEvent>
+#include <QResizeEvent>
+#include <QWindow>
+
+#include <Inventor/C/basic.h>
 #if COIN_MAJOR_VERSION >= 4
 #include <Inventor/SbByteBuffer.h>
 #endif
 
-#include <Inventor/SbViewportRegion.h>
-#include <Inventor/system/gl.h>
-#include <Inventor/events/SoEvents.h>
-#include <Inventor/nodes/SoNode.h>
-#include <Inventor/nodes/SoCamera.h>
-#include <Inventor/nodes/SoSeparator.h>
-#include <Inventor/nodes/SoDirectionalLight.h>
-#include <Inventor/nodes/SoPerspectiveCamera.h>
 #include <Inventor/SbColor.h>
-#include <Inventor/sensors/SoSensorManager.h>
+#include <Inventor/SbViewportRegion.h>
 #include <Inventor/SoDB.h>
-
-#include <Inventor/SbBasic.h>
-#include <Inventor/SoRenderManager.h>
 #include <Inventor/SoEventManager.h>
+#include <Inventor/SoRenderManager.h>
+#include <Inventor/nodes/SoCamera.h>
+#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoNode.h>
+#include <Inventor/nodes/SoPerspectiveCamera.h>
+#include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/scxml/ScXML.h>
 #include <Inventor/scxml/SoScXMLStateMachine.h>
 
-#include <ctime>
-
+#include "QuarterWidget.h"
 #include "InteractionMode.h"
-#include "QuarterWidgetP.h"
 #include "QuarterP.h"
-
-#include <QWindow>
-#include <QGuiApplication>
-#include <QMetaObject>
+#include "QuarterWidgetP.h"
+#include "eventhandlers/EventFilter.h"
+#include "eventhandlers/DragDropHandler.h"
 
 
 using namespace SIM::Coin3D::Quarter;
@@ -147,12 +143,11 @@ using namespace SIM::Coin3D::Quarter;
 #endif
 
 //We need to avoid buffer swapping when initializing a QPainter on this widget
-#if defined(HAVE_QT5_OPENGL)
 class CustomGLWidget : public QOpenGLWidget {
 public:
     QSurfaceFormat myFormat;
 
-    CustomGLWidget(const QSurfaceFormat& format, QWidget* parent = 0, const QOpenGLWidget* shareWidget = 0, Qt::WindowFlags f = Qt::WindowFlags())
+    CustomGLWidget(const QSurfaceFormat& format, QWidget* parent = nullptr, const QOpenGLWidget* shareWidget = nullptr, Qt::WindowFlags f = Qt::WindowFlags())
      : QOpenGLWidget(parent, f), myFormat(format)
     {
         Q_UNUSED(shareWidget);
@@ -192,7 +187,7 @@ public:
     }
     // paintGL() is invoked when e.g. using the method grabFramebuffer of this class
     // \code
-    // from PySide2 import QtWidgets
+    // from PySide import QtWidgets
     // mw = Gui.getMainWindow()
     // mdi = mw.findChild(QtWidgets.QMdiArea)
     // gl = mdi.findChild(QtWidgets.QOpenGLWidget)
@@ -247,16 +242,6 @@ public:
         update(); // fixes flickering on some systems
     }
 };
-#else
-class CustomGLWidget : public QGLWidget {
-public:
-    CustomGLWidget(const QGLFormat& fo, QWidget* parent = 0, const QGLWidget* shareWidget = 0, Qt::WindowFlags f = 0)
-     : QGLWidget(fo, parent, shareWidget, f)
-    {
-         setAutoBufferSwap(false);
-    }
-};
-#endif
 
 /*! constructor */
 QuarterWidget::QuarterWidget(const QtGLFormat & format, QWidget * parent, const QtGLWidget * sharewidget, Qt::WindowFlags f)
@@ -308,7 +293,7 @@ QuarterWidget::constructor(const QtGLFormat & format, const QtGLWidget * sharewi
   PRIVATE(this)->eventfilter = new EventFilter(this);
   PRIVATE(this)->interactionmode = new InteractionMode(this);
 
-  PRIVATE(this)->currentStateMachine = NULL;
+  PRIVATE(this)->currentStateMachine = nullptr;
 
   PRIVATE(this)->headlight = new SoDirectionalLight;
   PRIVATE(this)->headlight->ref();
@@ -340,7 +325,6 @@ QuarterWidget::constructor(const QtGLFormat & format, const QtGLWidget * sharewi
 void
 QuarterWidget::replaceViewport()
 {
-#if defined(HAVE_QT5_OPENGL)
   CustomGLWidget* oldvp = static_cast<CustomGLWidget*>(viewport());
   CustomGLWidget* newvp = new CustomGLWidget(oldvp->myFormat, this);
   PRIVATE(this)->replaceGLWidget(newvp);
@@ -348,7 +332,6 @@ QuarterWidget::replaceViewport()
 
   setAutoFillBackground(false);
   viewport()->setAutoFillBackground(false);
-#endif
 }
 
 void
@@ -364,10 +347,10 @@ QuarterWidget::~QuarterWidget()
     delete PRIVATE(this)->currentStateMachine;
   }
   PRIVATE(this)->headlight->unref();
-  PRIVATE(this)->headlight = NULL;
-  this->setSceneGraph(NULL);
-  this->setSoRenderManager(NULL);
-  this->setSoEventManager(NULL);
+  PRIVATE(this)->headlight = nullptr;
+  this->setSceneGraph(nullptr);
+  this->setSoRenderManager(nullptr);
+  this->setSoEventManager(nullptr);
   delete PRIVATE(this)->eventfilter;
   delete PRIVATE(this);
 }
@@ -418,7 +401,7 @@ QuarterWidget::setHeadlightEnabled(bool onoff)
   Returns true if the headlight is on, false if it is off
 */
 bool
-QuarterWidget::headlightEnabled(void) const
+QuarterWidget::headlightEnabled() const
 {
   return PRIVATE(this)->headlight->on.getValue();
 }
@@ -427,7 +410,7 @@ QuarterWidget::headlightEnabled(void) const
   Returns the light used for the headlight.
 */
 SoDirectionalLight *
-QuarterWidget::getHeadlight(void) const
+QuarterWidget::getHeadlight() const
 {
   return PRIVATE(this)->headlight;
 }
@@ -452,7 +435,7 @@ QuarterWidget::setClearZBuffer(bool onoff)
   Returns true if the z buffer is cleared before rendering.
 */
 bool
-QuarterWidget::clearZBuffer(void) const
+QuarterWidget::clearZBuffer() const
 {
   return PRIVATE(this)->clearzbuffer;
 }
@@ -477,7 +460,7 @@ QuarterWidget::setClearWindow(bool onoff)
   Returns true if the rendering buffer is cleared before rendering.
 */
 bool
-QuarterWidget::clearWindow(void) const
+QuarterWidget::clearWindow() const
 {
   return PRIVATE(this)->clearwindow;
 }
@@ -503,7 +486,7 @@ QuarterWidget::setInteractionModeEnabled(bool onoff)
   Returns true if interaction mode is enabled, false otherwise.
  */
 bool
-QuarterWidget::interactionModeEnabled(void) const
+QuarterWidget::interactionModeEnabled() const
 {
   return PRIVATE(this)->interactionmode->enabled();
 }
@@ -527,7 +510,7 @@ QuarterWidget::setInteractionModeOn(bool onoff)
   Returns true if interaction mode is on.
  */
 bool
-QuarterWidget::interactionModeOn(void) const
+QuarterWidget::interactionModeOn() const
 {
   return PRIVATE(this)->interactionmode->on();
 }
@@ -536,7 +519,7 @@ QuarterWidget::interactionModeOn(void) const
   Returns the Coin cache context id for this widget.
 */
 uint32_t
-QuarterWidget::getCacheContextId(void) const
+QuarterWidget::getCacheContextId() const
 {
   return PRIVATE(this)->getCacheContextId();
 }
@@ -562,7 +545,7 @@ QuarterWidget::setTransparencyType(TransparencyType type)
   \retval The current \ref TransparencyType
 */
 QuarterWidget::TransparencyType
-QuarterWidget::transparencyType(void) const
+QuarterWidget::transparencyType() const
 {
   assert(PRIVATE(this)->sorendermanager);
   SoGLRenderAction * action = PRIVATE(this)->sorendermanager->getGLRenderAction();
@@ -590,7 +573,7 @@ QuarterWidget::setRenderMode(RenderMode mode)
   \retval The current \ref RenderMode
 */
 QuarterWidget::RenderMode
-QuarterWidget::renderMode(void) const
+QuarterWidget::renderMode() const
 {
   assert(PRIVATE(this)->sorendermanager);
   return static_cast<RenderMode>(PRIVATE(this)->sorendermanager->getRenderMode());
@@ -618,7 +601,7 @@ QuarterWidget::setStereoMode(StereoMode mode)
   \retval The current \ref StereoMode
 */
 QuarterWidget::StereoMode
-QuarterWidget::stereoMode(void) const
+QuarterWidget::stereoMode() const
 {
   assert(PRIVATE(this)->sorendermanager);
   return static_cast<StereoMode>(PRIVATE(this)->sorendermanager->getStereoMode());
@@ -636,7 +619,7 @@ the widget is located within, and updated whenever any change occurs, emitting a
  */
 
 qreal
-QuarterWidget::devicePixelRatio(void) const
+QuarterWidget::devicePixelRatio() const
 {
   return PRIVATE(this)->device_pixel_ratio;
 }
@@ -653,11 +636,11 @@ QuarterWidget::setSceneGraph(SoNode * node)
 
   if (PRIVATE(this)->scene) {
     PRIVATE(this)->scene->unref();
-    PRIVATE(this)->scene = NULL;
+    PRIVATE(this)->scene = nullptr;
   }
 
-  SoCamera * camera = NULL;
-  SoSeparator * superscene = NULL;
+  SoCamera * camera = nullptr;
+  SoSeparator * superscene = nullptr;
   bool viewall = false;
 
   if (node) {
@@ -692,7 +675,7 @@ QuarterWidget::setSceneGraph(SoNode * node)
   Returns pointer to root of scene graph
 */
 SoNode *
-QuarterWidget::getSceneGraph(void) const
+QuarterWidget::getSceneGraph() const
 {
   return PRIVATE(this)->scene;
 }
@@ -704,13 +687,13 @@ void
 QuarterWidget::setSoRenderManager(SoRenderManager * manager)
 {
   bool carrydata = false;
-  SoNode * scene = NULL;
-  SoCamera * camera = NULL;
+  SoNode * scene = nullptr;
+  SoCamera * camera = nullptr;
   SbViewportRegion vp;
-  if (PRIVATE(this)->sorendermanager && (manager != NULL)) {
+  if (PRIVATE(this)->sorendermanager && manager) {
     scene = PRIVATE(this)->sorendermanager->getSceneGraph();
     camera = PRIVATE(this)->sorendermanager->getCamera();
-    vp = PRIVATE(this)->sorendermanager->getViewportRegion();
+    vp = PRIVATE(this)->sorendermanager->getViewportRegion(); // clazy:exclude=rule-of-two-soft
     carrydata = true;
   }
 
@@ -737,7 +720,7 @@ QuarterWidget::setSoRenderManager(SoRenderManager * manager)
   Returns a pointer to the render manager.
 */
 SoRenderManager *
-QuarterWidget::getSoRenderManager(void) const
+QuarterWidget::getSoRenderManager() const
 {
   return PRIVATE(this)->sorendermanager;
 }
@@ -749,13 +732,13 @@ void
 QuarterWidget::setSoEventManager(SoEventManager * manager)
 {
   bool carrydata = false;
-  SoNode * scene = NULL;
-  SoCamera * camera = NULL;
+  SoNode * scene = nullptr;
+  SoCamera * camera = nullptr;
   SbViewportRegion vp;
-  if (PRIVATE(this)->soeventmanager && (manager != NULL)) {
+  if (PRIVATE(this)->soeventmanager && manager) {
     scene = PRIVATE(this)->soeventmanager->getSceneGraph();
     camera = PRIVATE(this)->soeventmanager->getCamera();
-    vp = PRIVATE(this)->soeventmanager->getViewportRegion();
+    vp = PRIVATE(this)->soeventmanager->getViewportRegion(); // clazy:exclude=rule-of-two-soft
     carrydata = true;
   }
 
@@ -782,7 +765,7 @@ QuarterWidget::setSoEventManager(SoEventManager * manager)
   Returns a pointer to the event manager
 */
 SoEventManager *
-QuarterWidget::getSoEventManager(void) const
+QuarterWidget::getSoEventManager() const
 {
   return PRIVATE(this)->soeventmanager;
 }
@@ -791,7 +774,7 @@ QuarterWidget::getSoEventManager(void) const
   Returns a pointer to the event filter
  */
 EventFilter *
-QuarterWidget::getEventFilter(void) const
+QuarterWidget::getEventFilter() const
 {
   return PRIVATE(this)->eventfilter;
 }
@@ -800,7 +783,7 @@ QuarterWidget::getEventFilter(void) const
   Reposition the current camera to display the entire scene
  */
 void
-QuarterWidget::viewAll(void)
+QuarterWidget::viewAll()
 {
   const SbName viewallevent("sim.coin3d.coin.navigation.ViewAll");
   for (int c = 0; c < PRIVATE(this)->soeventmanager->getNumSoScXMLStateMachines(); ++c) {
@@ -818,7 +801,7 @@ QuarterWidget::viewAll(void)
   Camera typically seeks towards what the mouse is pointing at.
 */
 void
-QuarterWidget::seek(void)
+QuarterWidget::seek()
 {
   const SbName seekevent("sim.coin3d.coin.navigation.Seek");
   for (int c = 0; c < PRIVATE(this)->soeventmanager->getNumSoScXMLStateMachines(); ++c) {
@@ -832,10 +815,10 @@ QuarterWidget::seek(void)
 }
 
 bool
-QuarterWidget::updateDevicePixelRatio(void) {
+QuarterWidget::updateDevicePixelRatio() {
     qreal dev_pix_ratio = 1.0;
     QWidget* winwidg = window();
-    QWindow* win = NULL;
+    QWindow* win = nullptr;
     if(winwidg) {
         win = winwidg->windowHandle();
     }
@@ -886,18 +869,12 @@ void QuarterWidget::paintEvent(QPaintEvent* event)
     }
 
     if(!initialized) {
-#if !defined(HAVE_QT5_OPENGL)
-        glEnable(GL_DEPTH_TEST);
-#endif
         this->getSoRenderManager()->reinitialize();
         initialized = true;
     }
 
     getSoRenderManager()->activate();
 
-#if !defined(HAVE_QT5_OPENGL)
-    glEnable(GL_DEPTH_TEST);
-#endif
     glMatrixMode(GL_PROJECTION);
 
     QtGLWidget* w = static_cast<QtGLWidget*>(this->viewport());
@@ -930,12 +907,8 @@ void QuarterWidget::paintEvent(QPaintEvent* event)
 
     assert(w->isValid() && "No valid GL context found!");
 
-#if defined(HAVE_QT5_OPENGL)
     // Causes an OpenGL error on resize
     //glDrawBuffer(w->format().swapBehavior() == QSurfaceFormat::DoubleBuffer ? GL_BACK : GL_FRONT);
-#else
-    glDrawBuffer(w->doubleBuffer() ? GL_BACK : GL_FRONT);
-#endif
 
     w->makeCurrent();
     this->actualRedraw();
@@ -947,13 +920,9 @@ void QuarterWidget::paintEvent(QPaintEvent* event)
     inherited::paintEvent(event);
     glPopAttrib();
 
-#if defined(HAVE_QT5_OPENGL)
     // Causes an OpenGL error on resize
     //if (w->format().swapBehavior() == QSurfaceFormat::DoubleBuffer)
     //    w->context()->swapBuffers(w->context()->surface());
-#else
-    if (w->doubleBuffer()) { w->swapBuffers(); }
-#endif
 
     PRIVATE(this)->autoredrawenabled = true;
 
@@ -964,31 +933,7 @@ void QuarterWidget::paintEvent(QPaintEvent* event)
 
 bool QuarterWidget::viewportEvent(QEvent* event)
 {
-    // Disable the old implementation of this method as it show
-    // problems with panning and rotations when a widget item is
-    // added to the scene.
-#if 0
-    if (event->type() == QEvent::Paint || event->type() == QEvent::Resize) {
-        return QGraphicsView::viewportEvent(event);
-    }
-    else if (event->type() == QEvent::MouseMove ||
-             event->type() == QEvent::Wheel ||
-             event->type() == QEvent::MouseButtonDblClick ||
-             event->type() == QEvent::MouseButtonRelease ||
-             event->type() == QEvent::MouseButtonPress) {
-        QMouseEvent* mouse = static_cast<QMouseEvent*>(event);
-        QGraphicsItem *item = itemAt(mouse->pos());
-        if (!item) {
-            return false;
-        }
 
-        return QGraphicsView::viewportEvent(event);
-      }
-
-     //if we return false the events get processed normally, this means they get passed to the quarter
-     //event filters for processing in the scene graph. If we return true event processing stops here.
-     return false;
-#else
     // If no item is selected still let the graphics scene handle it but
     // additionally handle it by this viewer. This is e.g. needed when
     // resizing a widget item because the cursor may already be outside
@@ -1026,7 +971,6 @@ bool QuarterWidget::viewportEvent(QEvent* event)
     }
 
     return QGraphicsView::viewportEvent(event);
-#endif
 }
 
 /*!
@@ -1068,7 +1012,7 @@ QuarterWidget::redraw(bool force)
   Overridden from QGLWidget to render the scenegraph
  */
 void
-QuarterWidget::actualRedraw(void)
+QuarterWidget::actualRedraw()
 {
   PRIVATE(this)->sorendermanager->render(PRIVATE(this)->clearwindow,
                                          PRIVATE(this)->clearzbuffer);
@@ -1120,7 +1064,7 @@ QuarterWidget::setBackgroundColor(const QColor & color)
   rendering the scene.
  */
 QColor
-QuarterWidget::backgroundColor(void) const
+QuarterWidget::backgroundColor() const
 {
   SbColor4f bg = PRIVATE(this)->sorendermanager->getBackgroundColor();
 
@@ -1134,7 +1078,7 @@ QuarterWidget::backgroundColor(void) const
   Returns the context menu used by the widget.
 */
 QMenu *
-QuarterWidget::getContextMenu(void) const
+QuarterWidget::getContextMenu() const
 {
   return PRIVATE(this)->contextMenu();
 }
@@ -1143,7 +1087,7 @@ QuarterWidget::getContextMenu(void) const
   \retval Is context menu enabled?
 */
 bool
-QuarterWidget::contextMenuEnabled(void) const
+QuarterWidget::contextMenuEnabled() const
 {
   return PRIVATE(this)->contextmenuenabled;
 }
@@ -1193,8 +1137,8 @@ void
 QuarterWidget::removeStateMachine(SoScXMLStateMachine * statemachine)
 {
   SoEventManager * em = this->getSoEventManager();
-  statemachine->setSceneGraphRoot(NULL);
-  statemachine->setActiveCamera(NULL);
+  statemachine->setSceneGraphRoot(nullptr);
+  statemachine->setActiveCamera(nullptr);
   em->removeSoScXMLStateMachine(statemachine);
 }
 
@@ -1202,7 +1146,7 @@ QuarterWidget::removeStateMachine(SoScXMLStateMachine * statemachine)
   See \ref QWidget::minimumSizeHint
  */
 QSize
-QuarterWidget::minimumSizeHint(void) const
+QuarterWidget::minimumSizeHint() const
 {
   return QSize(50, 50);
 }
@@ -1213,7 +1157,7 @@ QuarterWidget::minimumSizeHint(void) const
   QuarterWidget, add these actions to the menu.
  */
 QList<QAction *>
-QuarterWidget::transparencyTypeActions(void) const
+QuarterWidget::transparencyTypeActions() const
 {
   return PRIVATE(this)->transparencyTypeActions();
 }
@@ -1224,7 +1168,7 @@ QuarterWidget::transparencyTypeActions(void) const
   QuarterWidget, add these actions to the menu.
  */
 QList<QAction *>
-QuarterWidget::stereoModeActions(void) const
+QuarterWidget::stereoModeActions() const
 {
   return PRIVATE(this)->stereoModeActions();
 }
@@ -1235,7 +1179,7 @@ QuarterWidget::stereoModeActions(void) const
   QuarterWidget, add these actions to the menu.
  */
 QList<QAction *>
-QuarterWidget::renderModeActions(void) const
+QuarterWidget::renderModeActions() const
 {
   return PRIVATE(this)->renderModeActions();
 }
@@ -1257,7 +1201,7 @@ QuarterWidget::renderModeActions(void) const
   Removes any navigationModeFile set.
 */
 void
-QuarterWidget::resetNavigationModeFile(void) {
+QuarterWidget::resetNavigationModeFile() {
   this->setNavigationModeFile(QUrl());
 }
 
@@ -1273,19 +1217,13 @@ QuarterWidget::setNavigationModeFile(const QUrl & url)
 
   if (url.scheme()=="coin") {
     filename = url.path();
-    //FIXME: This conditional needs to be implemented when the
-    //CoinResources systems if working
-#if 0
-    //#if (COIN_MAJOR_VERSION==3) && (COIN_MINOR_VERSION==0)
-#endif
+
     //Workaround for differences between url scheme, and Coin internal
     //scheme in Coin 3.0.
     if (filename[0]=='/') {
       filename.remove(0,1);
     }
-#if 0
-    //#endif
-#endif
+
     filename = url.scheme()+':'+filename;
   }
   else if (url.scheme()=="file")
@@ -1294,7 +1232,7 @@ QuarterWidget::setNavigationModeFile(const QUrl & url)
     if (PRIVATE(this)->currentStateMachine) {
       this->removeStateMachine(PRIVATE(this)->currentStateMachine);
       delete PRIVATE(this)->currentStateMachine;
-      PRIVATE(this)->currentStateMachine = NULL;
+      PRIVATE(this)->currentStateMachine = nullptr;
       PRIVATE(this)->navigationModeFile = url;
     }
     return;
@@ -1305,7 +1243,7 @@ QuarterWidget::setNavigationModeFile(const QUrl & url)
   }
 
   QByteArray filenametmp = filename.toLocal8Bit();
-  ScXMLStateMachine * stateMachine = NULL;
+  ScXMLStateMachine * stateMachine = nullptr;
 
   if (filenametmp.startsWith("coin:")){
     stateMachine = ScXML::readFile(filenametmp.data());
@@ -1368,7 +1306,7 @@ QuarterWidget::setNavigationModeFile(const QUrl & url)
   \retval The current navigationModeFile
 */
 const QUrl &
-QuarterWidget::navigationModeFile(void) const
+QuarterWidget::navigationModeFile() const
 {
   return PRIVATE(this)->navigationModeFile;
 }

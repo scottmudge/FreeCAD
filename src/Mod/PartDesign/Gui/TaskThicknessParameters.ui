@@ -100,13 +100,6 @@ be removed using the Delete key.</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Join Type</string>
-       </property>
-      </widget>
-     </item>
      <item row="1" column="1">
       <widget class="QComboBox" name="modeComboBox">
        <item>
@@ -124,6 +117,13 @@ be removed using the Delete key.</string>
          <string>Recto Verso</string>
         </property>
        </item>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Join Type</string>
+       </property>
       </widget>
      </item>
      <item row="2" column="1">

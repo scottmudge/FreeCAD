@@ -27,7 +27,9 @@
 #ifndef _PreComp_
 # include <sstream>
 # include <QAction>
-# include <QRegExp>
+# include <QApplication>
+# include <QRegularExpression>
+# include <QRegularExpressionMatch>
 # include <QTextStream>
 # include <QListWidget>
 # include <QMessageBox>
@@ -42,13 +44,10 @@
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/Origin.h>
-#include <App/OriginFeature.h>
 #include <App/MappedElement.h>
 #include <Gui/Application.h>
+#include <Gui/CommandT.h>
 #include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
 #include <Gui/Selection.h>
 #include <Gui/Command.h>
 #include <Gui/MainWindow.h>
@@ -57,15 +56,14 @@
 
 #include <Mod/Part/App/DatumFeature.h>
 #include <Mod/Part/App/FeatureOffset.h>
+#include <Mod/PartDesign/App/Body.h>
 #include <Mod/PartDesign/App/FeatureSketchBased.h>
 #include <Mod/PartDesign/App/FeatureExtrusion.h>
 #include <Mod/Sketcher/App/SketchObject.h>
-#include <Mod/PartDesign/App/Body.h>
-
-#include "Utils.h"
-#include "ReferenceSelection.h"
 
 #include "TaskSketchBasedParameters.h"
+#include "ReferenceSelection.h"
+#include "Utils.h"
 
 using namespace PartDesignGui;
 using namespace Gui;
@@ -196,12 +194,12 @@ LinkSubWidget::LinkSubWidget(TaskSketchBasedParameters *parent,
     ,linkProp(&prop)
     ,singleElement(singleElement)
 {
-    selectionConf.edge = true;
-    selectionConf.plane = true;
-    selectionConf.planar = false;
-    selectionConf.whole = true;
-    selectionConf.wire = true;
-    selectionConf.point = true;
+    selectionConf.setFlag(AllowSelection::EDGE);
+    selectionConf.setFlag(AllowSelection::FACE);
+    selectionConf.setFlag(AllowSelection::PLANAR, false);
+    selectionConf.setFlag(AllowSelection::WHOLE);
+    selectionConf.setFlag(AllowSelection::WIRE);
+    selectionConf.setFlag(AllowSelection::POINT);
 
     if (_button && _listWidget) {
         button = _button;
@@ -291,7 +289,7 @@ void LinkSubWidget::onSelectionChanged(const Gui::SelectionChanges& msg)
     }
 }
 
-void LinkSubWidget::setSelectionConfig(const ReferenceSelection::Config &conf)
+void LinkSubWidget::setSelectionConfig(const AllowSelectionFlags &conf)
 {
     selectionConf = conf;
 }
@@ -325,7 +323,7 @@ void LinkSubWidget::onButton(bool checked)
 {
     if (checked) {
         if (parentTask->getSelectionMode() == TaskSketchBasedParameters::SelectionMode::none) {
-            auto sels = Gui::Selection().getSelectionT("*", 0);
+            auto sels = Gui::Selection().getSelectionT("*", Gui::ResolveMode::NoResolve);
             if (sels.size()) {
                 if (setLinks(sels)) {
                     button->setChecked(false);
@@ -501,12 +499,12 @@ LinkSubListWidget::LinkSubListWidget(TaskSketchBasedParameters *parent,
     ,selectionMode(TaskSketchBasedParameters::SelectionMode::refSection)
     ,linkProp(&prop)
 {
-    selectionConf.edge = true;
-    selectionConf.plane = true;
-    selectionConf.planar = false;
-    selectionConf.whole = true;
-    selectionConf.wire = true;
-    selectionConf.point = true;
+    selectionConf.setFlag(AllowSelection::EDGE);
+    selectionConf.setFlag(AllowSelection::FACE);
+    selectionConf.setFlag(AllowSelection::PLANAR, false);
+    selectionConf.setFlag(AllowSelection::WHOLE);
+    selectionConf.setFlag(AllowSelection::WIRE);
+    selectionConf.setFlag(AllowSelection::POINT);
 
     auto layout = new QVBoxLayout();
     setLayout(layout);
@@ -559,7 +557,7 @@ void LinkSubListWidget::onSelectionChanged(const Gui::SelectionChanges& msg)
     }
 }
 
-void LinkSubListWidget::setSelectionConfig(const ReferenceSelection::Config &conf)
+void LinkSubListWidget::setSelectionConfig(const AllowSelectionFlags &conf)
 {
     selectionConf = conf;
 }
@@ -741,7 +739,7 @@ void LinkSubListWidget::onItemMoved()
 void LinkSubListWidget::onButton(bool checked) {
     if (checked) {
         if (parentTask->getSelectionMode() == TaskSketchBasedParameters::SelectionMode::none) {
-            auto sels = Gui::Selection().getSelectionT("*", 0);
+            auto sels = Gui::Selection().getSelectionT("*", Gui::ResolveMode::NoResolve);
             if (sels.size()) {
                 if (addLinks(sels)) {
                     button->setChecked(false);
@@ -1052,7 +1050,7 @@ const QString TaskSketchBasedParameters::onSelectUpToFace(const Gui::SelectionCh
 
 void TaskSketchBasedParameters::onSelectReference(QWidget *blinkWidget,
                                                   SelectionMode mode,
-                                                  const ReferenceSelection::Config &conf)
+                                                  const AllowSelectionFlags &conf)
 {
     exitSelectionMode(false);
     if (!vp || mode == SelectionMode::none)
@@ -1144,7 +1142,7 @@ QVariant TaskSketchBasedParameters::setUpToFace(const QString& text)
 
     // Check whether this is the name of an App::Plane or Part::Datum feature
     App::DocumentObject* obj = vp->getObject()->getDocument()->getObject(parts[0].toUtf8());
-    if (obj == NULL)
+    if (!obj)
         return QVariant();
 
     if (obj->getTypeId().isDerivedFrom(App::Plane::getClassTypeId())) {
@@ -1162,15 +1160,16 @@ QVariant TaskSketchBasedParameters::setUpToFace(const QString& text)
         str << "^" << tr("Face") << "(\\d+)$";
 
         std::string upToFace;
-        QRegExp rx(name);
-        if (parts[1].indexOf(rx) > 0) {
-            int faceId = rx.cap(1).toInt();
+        QRegularExpression rx(name);
+        QRegularExpressionMatch match;
+        if (parts[1].indexOf(rx, 0, &match) < 0)
+            upToFace = parts[1].toUtf8().constData();
+        else {
+            int faceId = match.captured(1).toInt();
             std::stringstream ss;
             ss << "Face" << faceId;
             upToFace = ss.str();
         }
-        else
-            upToFace = parts[1].toUtf8().constData();
 
         PartDesign::ProfileBased* pcSketchBased = static_cast<PartDesign::ProfileBased*>(vp->getObject());
         pcSketchBased->UpToFace.setValue(obj, {upToFace});
@@ -1217,6 +1216,21 @@ QString TaskSketchBasedParameters::getFaceReference(const QString& obj, const QS
             .arg(QString::fromUtf8(doc->getName()), o, sub);
 }
 
+QString TaskSketchBasedParameters::make2DLabel(const App::DocumentObject* section,
+                                               const std::vector<std::string>& subValues)
+{
+    if (section->isDerivedFrom(Part::Part2DObject::getClassTypeId())) {
+        return QString::fromUtf8(section->Label.getValue());
+    }
+    else if (subValues.empty()) {
+        Base::Console().Error("No valid subelement linked in %s\n", section->Label.getValue());
+        return QString();
+    }
+    else {
+        return QString::fromStdString((std::string(section->getNameInDocument()) + ":" + subValues[0]));
+    }
+}
+
 TaskSketchBasedParameters::~TaskSketchBasedParameters()
 {
     _exitSelectionMode();
@@ -1247,11 +1261,19 @@ bool TaskDlgSketchBasedParameters::accept() {
 
     // Make sure the feature is what we are expecting
     // Should be fine but you never know...
-    if ( !feature->getTypeId().isDerivedFrom(PartDesign::ProfileBased::getClassTypeId()) ) {
+    if (!feature->getTypeId().isDerivedFrom(PartDesign::ProfileBased::getClassTypeId())) {
         throw Base::TypeError("Bad object processed in the sketch based dialog.");
     }
 
-    return TaskDlgFeatureParameters::accept();
+    // First verify that the feature can be built and then hide the profile as otherwise
+    // it will remain hidden if the feature's recompute fails
+    if (TaskDlgFeatureParameters::accept()) {
+        App::DocumentObject* sketch = static_cast<PartDesign::ProfileBased*>(feature)->Profile.getValue();
+        Gui::cmdAppObjectHide(sketch);
+        return true;
+    }
+
+    return false;
 }
 
 bool TaskDlgSketchBasedParameters::reject()

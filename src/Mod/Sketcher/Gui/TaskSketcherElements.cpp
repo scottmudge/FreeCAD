@@ -22,16 +22,13 @@
 
 
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
 # include <QContextMenuEvent>
 # include <QMenu>
-# include <QRegExp>
 # include <QShortcut>
 # include <QString>
 # include <QImage>
 # include <QPixmap>
-# include <boost_bind_bind.hpp>
 #endif
 
 #include "TaskSketcherElements.h"
@@ -77,8 +74,7 @@ public:
     QIcon Normal;
     QIcon Construction;
     QIcon External;
-    
-    QIcon getIcon(bool construction, bool external) const;
+    QIcon Internal;
 };
 
 // helper class to store additional information about the treeWidget entry.
@@ -94,11 +90,12 @@ public:
         , isEndPointSelected(false)
         , isMidPointSelected(false)
     {
-        StartingVertex = sketch->getVertexIndexGeoPos(elementnr,Sketcher::start),
-        MidVertex = sketch->getVertexIndexGeoPos(elementnr,Sketcher::mid),
-        EndVertex = sketch->getVertexIndexGeoPos(elementnr,Sketcher::end),
+        StartingVertex = sketch->getVertexIndexGeoPos(elementnr,Sketcher::PointPos::start),
+        MidVertex = sketch->getVertexIndexGeoPos(elementnr,Sketcher::PointPos::mid),
+        EndVertex = sketch->getVertexIndexGeoPos(elementnr,Sketcher::PointPos::end),
         GeometryType = geo->getTypeId();
         isConstruction = GeometryFacade::getConstruction(geo);
+        isInternalAligned = GeometryFacade::isInternalAligned(geo);
 
         static std::map<Base::Type,QString> typeMap;
         if(typeMap.empty()) {
@@ -114,13 +111,13 @@ public:
         }
         auto it = typeMap.find(GeometryType);
         if(it == typeMap.end())
-            setText(ColType, QObject::tr("Other") +
+            setText(ColumnIndex::ColType, QObject::tr("Other") +
                     QLatin1Char('-') + QString::fromUtf8(GeometryType.getName()));
         else
-            setText(ColType, it->second);
+            setText(ColumnIndex::ColType, it->second);
         if(ElementNbr>=0) {
             if(GeometryFacade::getConstruction(geo))
-                setText(ColFlags,QObject::tr("Construction"));
+                setText(ColumnIndex::ColFlags,QObject::tr("Construction"));
             isMissing = false;
             isExternal = false;
         }else{
@@ -136,9 +133,9 @@ public:
                     text += QLatin1Char('-');
                 text += QObject::tr("Frozen");
             }
-            setText(ColFlags,text);
+            setText(ColumnIndex::ColFlags,text);
 
-            setText(ColReference, QString::fromUtf8(sketch->getGeometryReference(ElementNbr).c_str()));
+            setText(ColumnIndex::ColReference, QString::fromUtf8(sketch->getGeometryReference(ElementNbr).c_str()));
         }
     }
 
@@ -257,17 +254,24 @@ public:
             if(it == iconMap.end()) {
                 if(!element && GeometryType != Part::GeomPoint::getClassTypeId())
                     icon = none;
-            } else
-                icon = it->second.getIcon(isConstruction, isExternal);
+            }
+            else if (isConstruction)
+                icon = it->second.Construction;
+            else if (isExternal)
+                icon = it->second.External;
+            else if (isInternalAligned)
+                icon = it->second.Internal;
+            else
+                icon = it->second.Normal;
         }
         setIcon(0,icon);
         setVisibility(filterIndex);
 
         Data::IndexedName name = sketch->shapeTypeFromGeoId(ElementNbr, (Sketcher::PointPos)(element));
         std::string tmp;
-        setText(ColName, QString::fromUtf8(name.toString(tmp)));
+        setText(ColumnIndex::ColName, QString::fromUtf8(name.toString(tmp)));
         std::string mapped = sketch->convertSubName(name,false);
-        setText(ColMapped, QString::fromUtf8(mapped.c_str()));
+        setText(ColumnIndex::ColMapped, QString::fromUtf8(mapped.c_str()));
     }
 
     int ElementNbr;
@@ -282,6 +286,7 @@ public:
     Base::Type GeometryType;
     bool isConstruction;
     bool isExternal;
+    bool isInternalAligned;
 };
 
 ElementView::ElementView(QWidget *parent)
@@ -412,11 +417,11 @@ TaskSketcherElements::TaskSketcherElements(ViewProviderSketch *sketchView)
     ui->elementsWidget->header()->setResizeMode(0, QHeaderView::ResizeToContents);
 #endif
     ui->elementsWidget->header()->setStretchLastSection(false);
-    ui->elementsWidget->headerItem()->setText(ColType, tr("Type"));
-    ui->elementsWidget->headerItem()->setText(ColName, tr("Name"));
-    ui->elementsWidget->headerItem()->setText(ColReference, tr("Reference"));
-    ui->elementsWidget->headerItem()->setText(ColFlags, tr("Flags"));
-    ui->elementsWidget->headerItem()->setText(ColMapped, tr("Mapped"));
+    ui->elementsWidget->headerItem()->setText(ColumnIndex::ColType, tr("Type"));
+    ui->elementsWidget->headerItem()->setText(ColumnIndex::ColName, tr("Name"));
+    ui->elementsWidget->headerItem()->setText(ColumnIndex::ColReference, tr("Reference"));
+    ui->elementsWidget->headerItem()->setText(ColumnIndex::ColFlags, tr("Flags"));
+    ui->elementsWidget->headerItem()->setText(ColumnIndex::ColMapped, tr("Mapped"));
 
     // connecting the needed signals
     QObject::connect(
@@ -500,13 +505,13 @@ void TaskSketcherElements::onSelectionChanged(const Gui::SelectionChanges& msg)
             ElementItem* ite = static_cast<ElementItem*>(it->second);
 
             switch(PosId) {
-            case Sketcher::start:
+            case Sketcher::PointPos::start:
                 ite->isStartingPointSelected=select;
                 break;
-            case Sketcher::end:
+            case Sketcher::PointPos::end:
                 ite->isEndPointSelected=select;
                 break;
-            case Sketcher::mid:
+            case Sketcher::PointPos::mid:
                 ite->isMidPointSelected=select;
                 break;
             default:
@@ -557,13 +562,13 @@ void TaskSketcherElements::on_elementsWidget_itemSelectionChanged(void)
     if(focusItemIndex>-1 && focusItemIndex<ui->elementsWidget->topLevelItemCount())
       itf=static_cast<ElementItem*>(ui->elementsWidget->topLevelItem(focusItemIndex));
     else
-      itf=NULL;
+      itf=nullptr;
 
     bool multipleselection=true; // ctrl type of selection in listWidget
     bool multipleconsecutiveselection=false; // shift type of selection in listWidget
 
     if (!inhibitSelectionUpdate) {
-        if(itf!=NULL) {
+        if(itf) {
             switch(element){
             case 0:
                 itf->isLineSelected=!itf->isLineSelected;
@@ -599,7 +604,7 @@ void TaskSketcherElements::on_elementsWidget_itemSelectionChanged(void)
     std::string doc_name = sketchView->getSketchObject()->getDocument()->getName();
     std::string obj_name = sketchView->getSketchObject()->getNameInDocument();
 
-    bool block = this->blockConnection(true); // avoid to be notified by itself
+    bool block = this->blockSelection(true); // avoid to be notified by itself
     Gui::Selection().clearSelection();
 
 
@@ -700,7 +705,7 @@ void TaskSketcherElements::on_elementsWidget_itemSelectionChanged(void)
         }
     }
 
-    this->blockConnection(block);
+    this->blockSelection(block);
     ui->elementsWidget->blockSignals(false);
 
     if (focusItemIndex>-1 && focusItemIndex<ui->elementsWidget->topLevelItemCount())
@@ -902,9 +907,8 @@ void TaskSketcherElements::updatePreselection()
 
 void TaskSketcherElements::clearWidget()
 {
-    ui->elementsWidget->blockSignals(true);
+    QSignalBlocker sigblk(ui->elementsWidget);
     ui->elementsWidget->clearSelection ();
-    ui->elementsWidget->blockSignals(false);
 
     // update widget
     int countItems = ui->elementsWidget->topLevelItemCount();
@@ -956,40 +960,40 @@ MultIcon & MultIcon::operator=(const char* name)
 {
     int hue, sat, val, alp;
     Normal = Gui::BitmapFactory().iconFromTheme(name);
-    QImage imgConstr(Normal.pixmap(Normal.availableSizes()[0]).toImage());
+    QImage imgConstr(Normal.pixmap(qAsConst(Normal).availableSizes()[0]).toImage());
     QImage imgExt(imgConstr);
+    QImage imgInt(imgConstr);
 
+    //Create construction/external/internal icons by changing colors.
     for(int ix=0 ; ix<imgConstr.width() ; ix++) {
         for(int iy=0 ; iy<imgConstr.height() ; iy++) {
-            QColor clr = QColor::fromRgba(imgConstr.pixel(ix,iy));
+            QColor clr(imgConstr.pixelColor(ix,iy));
             clr.getHsv(&hue, &sat, &val, &alp);
             if (alp > 127 && hue >= 0) {
-                if (sat > 127 && (hue > 330 || hue < 30)) {
+                if (sat > 127 && (hue > 330 || hue < 30)) { //change the color of red points.
                     clr.setHsv((hue + 240) % 360, sat, val, alp);
-                    imgConstr.setPixel(ix, iy, clr.rgba());
+                    imgConstr.setPixelColor(ix, iy, clr);
                     clr.setHsv((hue + 300) % 360, sat, val, alp);
-                    imgExt.setPixel(ix, iy, clr.rgba());
+                    imgExt.setPixelColor(ix, iy, clr);
+                    clr.setHsv((hue + 60) % 360, (int) (sat / 3), std::min((int) (val * 8 / 7), 255), alp);
+                    imgInt.setPixelColor(ix, iy, clr);
                 }
-                else if (sat < 64 && val > 192)
-                {
+                else if (sat < 64 && val > 192) { //change the color of white edges.
                     clr.setHsv(240, (255-sat), val, alp);
                     imgConstr.setPixel(ix, iy, clr.rgba());
                     clr.setHsv(300, (255-sat), val, alp);
                     imgExt.setPixel(ix, iy, clr.rgba());
+                    clr.setHsv(60, (int) (255-sat) / 2, val, alp);
+                    imgInt.setPixel(ix, iy, clr.rgba());
                 }
             }
         }
     }
     Construction = QIcon(QPixmap::fromImage(imgConstr));
     External = QIcon(QPixmap::fromImage(imgExt));
+    Internal = QIcon(QPixmap::fromImage(imgInt));
     return *this;
 }
 
-QIcon MultIcon::getIcon(bool construction, bool external) const {
-    if (construction && external) return QIcon();
-    if (construction) return Construction;
-    if (external) return External;
-    return Normal;
-}
 
 #include "moc_TaskSketcherElements.cpp"

@@ -24,39 +24,31 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QMessageBox>
 # include <QAction>
+# include <QMessageBox>
 # include <QTimer>
 #endif
 
-#include <Base/Console.h>
-#include <Base/Tools.h>
-#include <Base/UnitsApi.h>
 #include <App/Application.h>
 #include <App/Document.h>
+#include <App/DocumentObject.h>
 #include <App/Origin.h>
-#include <App/OriginFeature.h>
+#include <Base/Console.h>
+#include <Base/Tools.h>
 #include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
 #include <Gui/Selection.h>
 #include <Gui/Command.h>
 #include <Gui/ViewProviderOrigin.h>
-
-#include <Mod/PartDesign/App/FeatureLinearPattern.h>
-#include <Mod/PartDesign/App/DatumPlane.h>
-#include <Mod/PartDesign/App/DatumLine.h>
 #include <Mod/PartDesign/App/Body.h>
-#include <Mod/Sketcher/App/SketchObject.h>
-
-#include "ReferenceSelection.h"
-#include "TaskMultiTransformParameters.h"
-#include "Utils.h"
+#include <Mod/PartDesign/App/DatumLine.h>
+#include <Mod/PartDesign/App/DatumPlane.h>
+#include <Mod/PartDesign/App/FeatureLinearPattern.h>
 
 #include "ui_TaskLinearPatternParameters.h"
 #include "TaskLinearPatternParameters.h"
+#include "ReferenceSelection.h"
+#include "TaskMultiTransformParameters.h"
+
 
 using namespace PartDesignGui;
 using namespace Gui;
@@ -121,7 +113,7 @@ void TaskLinearPatternParameters::setupUI()
     ui->spinLength->setUnit(Base::Unit::Length);
     ui->spinLength->blockSignals(false);
     ui->spinOccurrences->setEnabled(true);
-    
+
     dirLinks.setCombo(*(ui->comboDirection));
     App::DocumentObject* sketch = getSketchObject();
     if (sketch && sketch->isDerivedFrom(Part::Part2DObject::getClassTypeId())) {
@@ -248,17 +240,17 @@ void TaskLinearPatternParameters::onDirectionChanged(int /*num*/)
         return;
     PartDesign::LinearPattern* pcLinearPattern = static_cast<PartDesign::LinearPattern*>(getObject());
     try{
-        if(dirLinks.getCurrentLink().getValue() == 0){
+        if (!dirLinks.getCurrentLink().getValue()) {
             // enter reference selection mode
             selectionMode = reference;
             Gui::Selection().clearSelection();
-            addReferenceSelectionGate(true, true);
+            addReferenceSelectionGate(AllowSelection::EDGE | AllowSelection::FACE | AllowSelection::PLANAR);
         } else {
             exitSelectionMode();
             pcLinearPattern->Direction.Paste(dirLinks.getCurrentLink());
         }
     } catch (Base::Exception &e) {
-        QMessageBox::warning(0,tr("Error"),QString::fromUtf8(e.what()));
+        QMessageBox::warning(nullptr,tr("Error"),QString::fromUtf8(e.what()));
     }
 
     kickUpdateViewTimer();

@@ -24,12 +24,11 @@
 #ifndef APP_GROUPEXTENSION_H
 #define APP_GROUPEXTENSION_H
 
-#include <boost_signals2.hpp>
-#include "FeaturePython.h"
-#include "DocumentObject.h"
-#include "PropertyLinks.h"
-#include "DocumentObjectExtension.h"
+#include <App/DocumentObject.h>
+#include <App/DocumentObjectExtension.h>
+#include <App/ExtensionPython.h>
 #include <vector>
+
 
 namespace App
 {
@@ -39,12 +38,12 @@ class GroupExtensionPy;
 class AppExport GroupExtension : public DocumentObjectExtension
 {
     EXTENSION_PROPERTY_HEADER_WITH_OVERRIDE(App::GroupExtension);
-    typedef DocumentObjectExtension inherited;
+    using inherited = DocumentObjectExtension;
 
 public:
     /// Constructor
-    GroupExtension(void);
-    virtual ~GroupExtension();
+    GroupExtension();
+    ~GroupExtension() override;
 
     /** @name Object handling  */
     //@{
@@ -113,28 +112,28 @@ public:
     static DocumentObject* getAnyGroupOfObject(const DocumentObject* obj);
     //@}
     
-    virtual PyObject* getExtensionPyObject(void) override;
+    PyObject* getExtensionPyObject() override;
 
-    virtual void extensionOnChanged(const Property* p) override;
+    void extensionOnChanged(const Property* p) override;
 
-    virtual bool extensionGetSubObject(DocumentObject *&ret, const char *subname,
+    bool extensionGetSubObject(DocumentObject *&ret, const char *subname,
         PyObject **pyObj, Base::Matrix4D *mat, bool transform, int depth) const override;
 
-    virtual bool extensionGetSubObjects(std::vector<std::string> &ret, int reason) const override;
+    bool extensionGetSubObjects(std::vector<std::string> &ret, int reason) const override;
 
     void enableSelectionSubObjects(bool enable) {
         _enableSubObjects = enable;
     }
 
-    virtual int extensionIsElementVisible(const char *element) const override;
+    int extensionIsElementVisible(const char *element) const override;
 
-    virtual int extensionIsElementVisibleEx(const char *element, int reason) const override;
+    int extensionIsElementVisibleEx(const char *element, int reason) const override;
 
-    virtual int extensionSetElementVisible(const char *element, bool vis) override;
+    int extensionSetElementVisible(const char *element, bool vis) override;
 
-    virtual void onExtendedDocumentRestored() override;
+    void onExtendedDocumentRestored() override;
 
-    virtual App::DocumentObjectExecReturn *extensionExecute(void) override;
+    App::DocumentObjectExecReturn *extensionExecute() override;
 
     virtual void onExtendedSetupObject() override;
 
@@ -190,8 +189,8 @@ protected:
 
 private:
     void removeObjectFromDocument(DocumentObject*);
-    //this version if has object stores the already searched objects to prevent infinite recursion
-    //in case of a cyclic group graph
+    // This function stores the already searched objects to prevent infinite recursion in case of a cyclic group graph
+    // It throws an exception of type Base::RuntimeError if a cyclic dependency is detected.
     bool recursiveHasObject(const DocumentObject* obj, const GroupExtension* group, std::vector<const GroupExtension*> history) const;
 
     // for tracking children visibility
@@ -209,11 +208,11 @@ class GroupExtensionPythonT : public ExtensionT {
          
 public:
     
-    GroupExtensionPythonT() {}
-    virtual ~GroupExtensionPythonT() {}
+    GroupExtensionPythonT() = default;
+    virtual ~GroupExtensionPythonT() = default;
  
     //override the documentobjectextension functions to make them available in python 
-    virtual bool allowObject(DocumentObject* obj)  override {
+    bool allowObject(DocumentObject* obj)  override {
         Py::Object pyobj = Py::asObject(obj->getPyObject());
         EXTENSION_PROXY_ONEARG(allowObject, pyobj);
                 
@@ -227,7 +226,7 @@ public:
     };
 };
 
-typedef ExtensionPythonT<GroupExtensionPythonT<GroupExtension>> GroupExtensionPython;
+using GroupExtensionPython = ExtensionPythonT<GroupExtensionPythonT<GroupExtension>>;
 
 } //namespace App
 

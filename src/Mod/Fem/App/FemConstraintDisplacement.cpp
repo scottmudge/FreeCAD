@@ -23,20 +23,10 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#include <BRepAdaptor_Curve.hxx>
-#include <BRepAdaptor_Surface.hxx>
-#include <Precision.hxx>
-#include <TopoDS.hxx>
-#include <gp_Lin.hxx>
-#include <gp_Pln.hxx>
-#include <gp_Pnt.hxx>
-#endif
-
 #include "FemConstraintDisplacement.h"
+
 
 using namespace Fem;
 
@@ -88,12 +78,12 @@ ConstraintDisplacement::ConstraintDisplacement()
     Normals.setValues(std::vector<Base::Vector3d>());
 }
 
-App::DocumentObjectExecReturn *ConstraintDisplacement::execute(void)
+App::DocumentObjectExecReturn *ConstraintDisplacement::execute()
 {
     return Constraint::execute();
 }
 
-const char* ConstraintDisplacement::getViewProviderName(void) const
+const char* ConstraintDisplacement::getViewProviderName() const
 {
     return "FemGui::ViewProviderFemConstraintDisplacement";
 }

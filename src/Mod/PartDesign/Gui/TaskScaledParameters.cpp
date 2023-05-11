@@ -24,27 +24,23 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QMessageBox>
 # include <QAction>
 #endif
+
+#include <App/DocumentObject.h>
+#include <Base/Console.h>
+#include <Base/ExceptionSafeCall.h>
+#include <Base/Tools.h>
+#include <Gui/Command.h>
+#include <Gui/Selection.h>
+#include <Gui/SelectionObject.h>
+#include <Gui/SpinBox.h>
+#include <Gui/ViewProvider.h>
+#include <Mod/PartDesign/App/FeatureScaled.h>
 
 #include "ui_TaskScaledParameters.h"
 #include "TaskScaledParameters.h"
 #include "TaskMultiTransformParameters.h"
-#include <Base/UnitsApi.h>
-#include <Base/Tools.h>
-#include <App/Application.h>
-#include <App/Document.h>
-#include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Base/Console.h>
-#include <Gui/Selection.h>
-#include <Gui/Command.h>
-#include <Mod/PartDesign/App/FeatureScaled.h>
-#include <Mod/Sketcher/App/SketchObject.h>
 
 using namespace PartDesignGui;
 using namespace Gui;
@@ -94,12 +90,12 @@ void TaskScaledParameters::setupUI()
 {
     TaskTransformedParameters::setupUI();
 
-    connect(ui->spinFactor, SIGNAL(valueChanged(double)),
-            this, SLOT(onFactor(double)));
-    connect(ui->spinOccurrences, SIGNAL(valueChanged(uint)),
-            this, SLOT(onOccurrences(uint)));
-    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
-            this, SLOT(onUpdateView(bool)));
+    Base::connect(ui->spinFactor, QOverload<double>::of(&Gui::QuantitySpinBox::valueChanged),
+            this, &TaskScaledParameters::onFactor);
+    Base::connect(ui->spinOccurrences, QOverload<uint>::of(&Gui::UIntSpinBox::valueChanged),
+            this, &TaskScaledParameters::onOccurrences);
+    Base::connect(ui->checkBoxUpdateView, &QCheckBox::toggled,
+            this, &TaskScaledParameters::onUpdateView);
     // ---------------------
 
     PartDesign::Scaled* pcScaled = static_cast<PartDesign::Scaled*>(getObject());

@@ -23,32 +23,29 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <BRep_Tool.hxx>
+# include <BRepBuilderAPI_MakeFace.hxx>
+# include <gp_Pln.hxx>
+# include <gp_Pnt.hxx>
 # include <Standard_Failure.hxx>
-# include <TopoDS_Solid.hxx>
 # include <TopExp_Explorer.hxx>
 # include <TopoDS.hxx>
-# include <BRep_Tool.hxx>
-# include <gp_Pnt.hxx>
-# include <gp_Pln.hxx>
-# include <BRepBuilderAPI_MakeFace.hxx>
 #endif
 
-// TODO Cleanup headers (2015-09-04, Fat-Zer)
-#include <Base/Exception.h>
-#include "App/Document.h"
+#include <App/Document.h>
+#include <App/DocumentObject.h>
 #include <App/FeaturePythonPyImp.h>
 #include <App/MappedElement.h>
 #include <App/OriginFeature.h>
-#include <Mod/Part/App/DatumFeature.h>
 #include <Mod/Part/App/PartParams.h>
-#include "Body.h"
-#include "ShapeBinder.h"
-#include "Feature.h"
-#include "FeaturePy.h"
-
 #include <Base/Console.h>
 
-FC_LOG_LEVEL_INIT("PartDesign",true,true)
+#include "Feature.h"
+#include "FeaturePy.h"
+#include "Body.h"
+#include "ShapeBinder.h"
+
+FC_LOG_LEVEL_INIT("PartDesign", true, true)
 
 
 namespace PartDesign {
@@ -58,8 +55,8 @@ PROPERTY_SOURCE(PartDesign::Feature,Part::Feature)
 
 Feature::Feature()
 {
-    ADD_PROPERTY(BaseFeature,(0));
-    ADD_PROPERTY_TYPE(_Body,(0),"Base",(App::PropertyType)(
+    ADD_PROPERTY(BaseFeature,(nullptr));
+    ADD_PROPERTY_TYPE(_Body,(nullptr),"Base",(App::PropertyType)(
                 App::Prop_ReadOnly|App::Prop_Hidden|App::Prop_Output|App::Prop_Transient),0);
     ADD_PROPERTY_TYPE(Suppress,(false),"Base",App::Prop_None, "Suppress the current feature");
     ADD_PROPERTY(SuppressedShape,(TopoShape()));
@@ -314,16 +311,15 @@ Body* Feature::getFeatureBody() const {
     }
 
     for (auto in : this->getInList()) {
-        if(!in->isDerivedFrom(Body::getClassTypeId()))
-            continue;
-        body = static_cast<Body*>(in);
-        if (body->Group.find(getNameInDocument())) {
-            if (!_Body.getValue())
-                _Body.setValue(body);
-            return body;
+        if (auto body = Base::freecad_dynamic_cast<Body>(in)) {
+            if (body->Group.find(getNameInDocument())) {
+                if (!_Body.getValue())
+                    _Body.setValue(body);
+                return body;
+            }
         }
     }
-    
+
     return nullptr;
 }
 
@@ -446,10 +442,10 @@ App::DocumentObject *Feature::getSubObject(const char *subname,
 namespace App {
 /// @cond DOXERR
 PROPERTY_SOURCE_TEMPLATE(PartDesign::FeaturePython, PartDesign::Feature)
-template<> const char* PartDesign::FeaturePython::getViewProviderName(void) const {
+template<> const char* PartDesign::FeaturePython::getViewProviderName() const {
     return "PartDesignGui::ViewProviderPython";
 }
-template<> PyObject* PartDesign::FeaturePython::getPyObject(void) {
+template<> PyObject* PartDesign::FeaturePython::getPyObject() {
     if (PythonObject.is(Py::_None())) {
         // ref counter is set to 1
         PythonObject = Py::Object(new FeaturePythonPyT<PartDesign::FeaturePy>(this),true);

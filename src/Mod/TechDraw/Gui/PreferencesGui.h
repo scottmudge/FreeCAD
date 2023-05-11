@@ -20,12 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef _PreferencesGui_h_
-#define _PreferencesGui_h_
+#ifndef PreferencesGui_h_
+#define PreferencesGui_h_
+
+#include <Mod/TechDraw/TechDrawGlobal.h>
+
+#include <QColor>
 
 class QFont;
 class QString;
-class QColor;
 
 #include <Mod/TechDraw/App/Preferences.h>
 
@@ -59,9 +62,14 @@ static double      dimArrowSize();
 static double      edgeFuzz();
 
 static Qt::PenStyle  sectionLineStyle();
-static int         mattingStyle();
+static bool          sectionLineMarks();
 
 static QString     weldingDirectory();
+
+static bool showGrid();
+static App::Color gridColor();
+static QColor gridQColor();
+static double gridSpacing();
 
 };
 

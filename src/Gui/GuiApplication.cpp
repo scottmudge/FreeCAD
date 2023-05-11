@@ -25,15 +25,12 @@
 
 #ifndef _PreComp_
 # include <sstream>
-# include <stdexcept>
 # include <QAbstractSpinBox>
 # include <QByteArray>
 # include <QComboBox>
 # include <QDataStream>
-# include <QDebug>
 # include <QFileInfo>
 # include <QFileOpenEvent>
-# include <QKeyEvent>
 # include <QSessionManager>
 # include <QTimer>
 # include <QMessageBox>
@@ -42,33 +39,32 @@
 #include <QLocalServer>
 #include <QLocalSocket>
 
-#if defined(Q_OS_WIN)
-# include <Windows.h>
-#endif
 #if defined(Q_OS_UNIX)
 # include <sys/types.h>
-# include <time.h>
+# include <ctime>
 # include <unistd.h>
 #endif
 
-#include "GuiApplication.h"
-#include "Application.h"
-#include "SpaceballEvent.h"
-#include "MainWindow.h"
-
+#include <App/Application.h>
 #include <Base/Console.h>
 #include <Base/Exception.h>
 
-#include <App/Application.h>
+#include "GuiApplication.h"
+#include "Application.h"
+#include "MainWindow.h"
+#include "SpaceballEvent.h"
+
 
 using namespace Gui;
 
 GUIApplication::GUIApplication(int & argc, char ** argv)
     : GUIApplicationNativeEventAware(argc, argv)
 {
-    connect(this, SIGNAL(commitDataRequest(QSessionManager &)),
-            SLOT(commitData(QSessionManager &)), Qt::DirectConnection);
+    connect(this, SIGNAL(commitDataRequest(QSessionManager&)),
+            SLOT(commitData(QSessionManager&)), Qt::DirectConnection);
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
     setFallbackSessionManagementEnabled(false);
+#endif
 }
 
 GUIApplication::~GUIApplication()
@@ -179,14 +175,14 @@ bool GUIApplication::event(QEvent * ev)
 
 class GUISingleApplication::Private {
 public:
-    Private(GUISingleApplication *q_ptr)
+    explicit Private(GUISingleApplication *q_ptr)
       : q_ptr(q_ptr)
       , timer(new QTimer(q_ptr))
-      , server(0)
+      , server(nullptr)
       , running(false)
     {
         timer->setSingleShot(true);
-        std::string exeName = App::GetApplication().getExecutableName();
+        std::string exeName = App::Application::getExecutableName();
         serverName = QString::fromStdString(exeName);
     }
 
@@ -322,7 +318,7 @@ bool WheelEventFilter::eventFilter(QObject* obj, QEvent* ev)
 {
     if (qobject_cast<QComboBox*>(obj) && ev->type() == QEvent::Wheel)
         return true;
-    QAbstractSpinBox* sb = qobject_cast<QAbstractSpinBox*>(obj);
+    auto sb = qobject_cast<QAbstractSpinBox*>(obj);
     if (sb) {
         if (ev->type() == QEvent::Show) {
             sb->setFocusPolicy(Qt::StrongFocus);
@@ -333,30 +329,5 @@ bool WheelEventFilter::eventFilter(QObject* obj, QEvent* ev)
     }
     return false;
 }
-
-KeyboardFilter::KeyboardFilter(QObject* parent)
-  : QObject(parent)
-{
-}
-
-bool KeyboardFilter::eventFilter(QObject* obj, QEvent* ev)
-{
-    if (ev->type() == QEvent::KeyPress || ev->type() == QEvent::KeyRelease) {
-        QKeyEvent *kev = static_cast<QKeyEvent *>(ev);
-        QAbstractSpinBox *target = dynamic_cast<QAbstractSpinBox *>(obj);
-        if (kev->key() == Qt::Key_Period && target)
-        {
-            QChar decimalPoint = QLocale().decimalPoint();
-            QChar groupSeparator = QLocale().groupSeparator();
-            if (decimalPoint != Qt::Key_Period && (groupSeparator != Qt::Key_Period || (kev->modifiers() & Qt::KeypadModifier))) {
-                QKeyEvent modifiedKeyEvent(kev->type(), decimalPoint.digitValue(), kev->modifiers(), QString(decimalPoint), kev->isAutoRepeat(), kev->count());
-                qApp->sendEvent(obj, &modifiedKeyEvent);
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 
 #include "moc_GuiApplication.cpp"

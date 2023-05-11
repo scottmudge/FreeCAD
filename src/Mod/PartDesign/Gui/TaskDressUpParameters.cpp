@@ -33,27 +33,30 @@
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
-#include "TaskDressUpParameters.h"
-#include "Utils.h"
-#include <Base/Tools.h>
+
 #include <App/Application.h>
 #include <App/Document.h>
+#include <App/DocumentObject.h>
 #include <App/MappedElement.h>
+#include <Base/Tools.h>
 #include <Gui/Application.h>
-#include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Base/Console.h>
-#include <Gui/Selection.h>
+#include <Gui/Document.h>
 #include <Gui/Command.h>
 #include <Gui/MainWindow.h>
 #include <Gui/ViewParams.h>
 #include <Gui/View3DInventor.h>
 #include <Gui/View3DInventorViewer.h>
+#include <Gui/Selection.h>
+#include <Gui/Tools.h>
+#include <Gui/WaitCursor.h>
 #include <Mod/PartDesign/App/Body.h>
 #include <Mod/PartDesign/App/FeatureDressUp.h>
 #include <Mod/PartDesign/Gui/ReferenceSelection.h>
+
+#include "TaskDressUpParameters.h"
+#include "Utils.h"
+
 
 FC_LOG_LEVEL_INIT("PartDesign",true,true)
 
@@ -64,10 +67,10 @@ using namespace Gui;
 
 TaskDressUpParameters::TaskDressUpParameters(ViewProviderDressUp *DressUpView, bool selectEdges, bool selectFaces, QWidget *parent)
     : TaskBox(Gui::BitmapFactory().pixmap((std::string("PartDesign_") + DressUpView->featureName()).c_str()),
-              QString::fromUtf8((DressUpView->featureName() + " parameters").c_str()),
+              QObject::tr((DressUpView->featureName() + " parameters").c_str()),
               true,
               parent)
-    , proxy(0)
+    , proxy(nullptr)
     , DressUpView(DressUpView)
     , allowFaces(selectFaces)
     , allowEdges(selectEdges)
@@ -261,6 +264,38 @@ bool TaskDressUpParameters::showOnTop(bool enable,
     return true;
 }
 
+void TaskDressUpParameters::addAllEdges()
+{
+    if (!DressUpView)
+        return;
+
+    PartDesign::DressUp* pcDressUp = static_cast<PartDesign::DressUp*>(DressUpView->getObject());
+    App::DocumentObject* base = pcDressUp->Base.getValue();
+    if (!base)
+        return;
+    int count = Part::Feature::getTopoShape(base).countSubShapes(TopAbs_EDGE);
+    auto subValues = pcDressUp->Base.getSubValues(false);
+    std::size_t len = subValues.size();
+    std::string name("Edge");
+    for (int i=0; i<count; ++i) {
+        name.resize(4);
+        name += std::to_string(i+1);
+        if (std::find(subValues.begin(), subValues.begin()+len, name) == subValues.begin()+len)
+            subValues.push_back(name);
+    }
+    if (subValues.size() == len)
+        return;
+    try {
+        setupTransaction();
+        pcDressUp->Base.setValue(base, subValues);
+        recompute();
+        populate(true);
+    }
+    catch (Base::Exception &e) {
+        e.ReportException();
+    }
+}
+
 void TaskDressUpParameters::clearButtons(const selectionModes notThis)
 {
     if (notThis != refToggle && btnAdd) {
@@ -421,7 +456,7 @@ void TaskDressUpParameters::onButtonRefAdd(bool checked)
     std::string subname;
     auto obj = getInEdit(subname);
     if(obj) {
-        blockConnection(true);
+        bool blocked = blockSelection(true);
         Base::StateLocker guard(busy);
         for(auto item : treeWidget->selectedItems()) {
             std::string sub = subname + getGeometryItemText(item).constData();
@@ -429,18 +464,18 @@ void TaskDressUpParameters::onButtonRefAdd(bool checked)
                     obj->getNameInDocument(), sub.c_str());
             delete item;
         }
-        blockConnection(false);
+        blockSelection(blocked);
         syncItems(Gui::Selection().getSelectionT());
     }
     exitSelectionMode();
     selectionMode = refToggle;
     clearButtons(refToggle);
     Gui::Selection().clearSelection();
-    ReferenceSelection::Config conf;
-    conf.edge = allowEdges;
-    conf.plane = allowFaces;
-    conf.planar = false;
-    Gui::Selection().addSelectionGate(new ReferenceSelection(this->getBase(), conf));
+    AllowSelectionFlags allow;
+    allow.setFlag(AllowSelection::EDGE, allowEdges);
+    allow.setFlag(AllowSelection::FACE, allowFaces);
+    allow.setFlag(AllowSelection::PLANAR, false);
+    Gui::Selection().addSelectionGate(new ReferenceSelection(this->getBase(), allow));
 }
 
 void TaskDressUpParameters::onRefDeleted() {
@@ -512,6 +547,22 @@ void TaskDressUpParameters::recompute() {
     }
 }
 
+void TaskDressUpParameters::createAddAllEdgesAction(QTreeWidget* parentList)
+{
+    // creates a context menu, a shortcut for it and connects it to a slot function
+
+    addAllEdgesAction = new QAction(tr("Add all edges"), this);
+    addAllEdgesAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+A")));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+    // display shortcut behind the context menu entry
+    addAllEdgesAction->setShortcutVisibleInContextMenu(true);
+#endif
+    parentList->addAction(addAllEdgesAction);
+    addAllEdgesAction->setEnabled(false);
+    addAllEdgesAction->setStatusTip(tr("Adds all edges to the list box (active only when in add selection mode)."));
+    parentList->setContextMenuPolicy(Qt::ActionsContextMenu);
+}
+
 void TaskDressUpParameters::showMessage(const char *msg) {
     if(!messageLabel || !DressUpView)
         return;
@@ -554,11 +605,11 @@ void TaskDressUpParameters::onItemSelectionChanged()
         }
     }
 
-    blockConnection(true);
+    bool blocked = blockSelection(true);
     Gui::Selection().clearSelection();
     Gui::Selection().addSelections(obj->getDocument()->getName(),
             obj->getNameInDocument(), subs);
-    blockConnection(false);
+    blockSelection(blocked);
 }
 
 App::SubObjectT TaskDressUpParameters::getInEdit(App::DocumentObject *base, const char *sub) {
@@ -683,7 +734,9 @@ void TaskDressUpParameters::onTimer() {
     if(obj && getItemElement(item, subname))
         Gui::Selection().setPreselect(obj->getDocument()->getName(),
                                       obj->getNameInDocument(),
-                                      subname.c_str(),0,0,0,2,true);
+                                      subname.c_str(),0,0,0,
+                                      Gui::SelectionChanges::MsgSource::TreeView,
+                                      true);
     else
         Gui::Selection().rmvPreselect();
 }
@@ -694,7 +747,7 @@ std::vector<std::string> TaskDressUpParameters::getReferences() const
         return {};
 
     PartDesign::DressUp* pcDressUp = static_cast<PartDesign::DressUp*>(DressUpView->getObject());
-    std::vector<std::string> result = pcDressUp->Base.getSubValues();
+    std::vector<std::string> result = pcDressUp->Base.getSubValues(false);
     return result;
 }
 
@@ -718,30 +771,43 @@ void TaskDressUpParameters::exitSelectionMode()
     Gui::Selection().clearSelection();
 }
 
-bool TaskDressUpParameters::event(QEvent *e)
+bool TaskDressUpParameters::handleEvent(QEvent *e)
 {
     if (e && e->type() == QEvent::ShortcutOverride) {
         QKeyEvent * kevent = static_cast<QKeyEvent*>(e);
-        if (kevent->modifiers() == Qt::NoModifier) {
-            if (kevent->key() == Qt::Key_Delete) {
-                kevent->accept();
-                return true;
-            }
+        if (deleteAction && Gui::QtTools::matches(kevent, deleteAction->shortcut())) {
+            kevent->accept();
+            return true;
+        }
+        if (addAllEdgesAction && Gui::QtTools::matches(kevent, addAllEdgesAction->shortcut())) {
+            kevent->accept();
+            return true;
         }
     }
     else if (e && e->type() == QEvent::KeyPress) {
         QKeyEvent * kevent = static_cast<QKeyEvent*>(e);
-        if (deleteAction && kevent->key() == Qt::Key_Delete) {
-            if (deleteAction->isEnabled())
-                deleteAction->trigger();
+        if (deleteAction && deleteAction->isEnabled() &&
+            Gui::QtTools::matches(kevent, deleteAction->shortcut())) {
+            deleteAction->trigger();
+            return true;
+        }
+        if (addAllEdgesAction && addAllEdgesAction->isEnabled() &&
+            Gui::QtTools::matches(kevent, addAllEdgesAction->shortcut())) {
+            addAllEdgesAction->trigger();
             return true;
         }
     }
     else if (e && e->type() == QEvent::Leave) {
+        enteredObject = nullptr;
+        timer->stop();
         Gui::Selection().rmvPreselect();
     }
+    return false;
+}
 
-    return Gui::TaskView::TaskBox::event(e);
+bool TaskDressUpParameters::event(QEvent *e)
+{
+    return handleEvent(e) || Gui::TaskView::TaskBox::event(e);
 }
 
 bool TaskDressUpParameters::eventFilter(QObject *o, QEvent *e)
@@ -749,21 +815,10 @@ bool TaskDressUpParameters::eventFilter(QObject *o, QEvent *e)
     if(treeWidget && o == treeWidget) {
         switch(e->type()) {
         case QEvent::Leave:
-            enteredObject = nullptr;
-            timer->stop();
-            Gui::Selection().rmvPreselect();
-            break;
         case QEvent::ShortcutOverride:
         case QEvent::KeyPress: {
-            QKeyEvent * kevent = static_cast<QKeyEvent*>(e);
-            if (kevent->modifiers() == Qt::NoModifier) {
-                if (kevent->key() == Qt::Key_Delete) {
-                    kevent->accept();
-                    if (e->type() == QEvent::KeyPress)
-                        onRefDeleted();
-                }
-            }
-            break;
+            if (handleEvent(e))
+                return true;
         }
         default:
             break;
@@ -779,7 +834,7 @@ bool TaskDressUpParameters::eventFilter(QObject *o, QEvent *e)
 
 TaskDlgDressUpParameters::TaskDlgDressUpParameters(ViewProviderDressUp *DressUpView)
     : TaskDlgFeatureParameters(DressUpView)
-    , parameter(0)
+    , parameter(nullptr)
 {
     assert(DressUpView);
 }
@@ -795,7 +850,7 @@ bool TaskDlgDressUpParameters::accept()
 {
     std::vector<std::string> refs = parameter->getReferences();
     std::stringstream str;
-    str << Gui::Command::getObjectCmd(vp->getObject()) << ".Base = (" 
+    str << Gui::Command::getObjectCmd(vp->getObject()) << ".Base = ("
         << Gui::Command::getObjectCmd(parameter->getBase()) << ",[";
     for (std::vector<std::string>::const_iterator it = refs.begin(); it != refs.end(); ++it)
         str << "\"" << *it << "\",";

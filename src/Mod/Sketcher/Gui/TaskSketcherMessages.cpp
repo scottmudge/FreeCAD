@@ -20,35 +20,24 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-# include <boost_bind_bind.hpp>
-#endif
+#include <Gui/Application.h>
+#include <Gui/BitmapFactory.h>
+#include <Gui/Command.h>
+#include <Mod/Sketcher/App/SketchObject.h>
 
 #include "ui_TaskSketcherMessages.h"
 #include "TaskSketcherMessages.h"
-#include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Gui/Selection.h>
-#include <Gui/Command.h>
-
-
-
-#include <Mod/Sketcher/App/SketchObject.h>
-
 #include "ViewProviderSketch.h"
+
 
 using namespace SketcherGui;
 using namespace Gui::TaskView;
 namespace bp = boost::placeholders;
 
 TaskSketcherMessages::TaskSketcherMessages(ViewProviderSketch *sketchView) :
-    TaskBox(Gui::BitmapFactory().pixmap("document-new"), tr("Solver messages"), true, 0),
+    TaskBox(Gui::BitmapFactory().pixmap("document-new"), tr("Solver messages"), true, nullptr),
     sketchView(sketchView),
     ui(new Ui_TaskSketcherMessages)
 {

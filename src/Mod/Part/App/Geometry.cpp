@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <Approx_Curve3d.hxx>
@@ -30,130 +29,124 @@
 # include <BRep_Tool.hxx>
 # include <BRepAdaptor_Curve.hxx>
 # include <BRepAdaptor_Surface.hxx>
-# include <Geom_CartesianPoint.hxx>
-# include <Geom_Circle.hxx>
-# include <Geom_Curve.hxx>
-# include <Geom_Ellipse.hxx>
-# include <Geom_Hyperbola.hxx>
-# include <Geom_Parabola.hxx>
-# include <Geom_OffsetCurve.hxx>
-# include <Geom_TrimmedCurve.hxx>
-# include <Geom_Line.hxx>
+# include <BSplCLib.hxx>
+# include <GC_MakeArcOfCircle.hxx>
+# include <GC_MakeArcOfEllipse.hxx>
+# include <GC_MakeArcOfHyperbola.hxx>
+# include <GC_MakeArcOfParabola.hxx>
+# include <GC_MakeCircle.hxx>
+# include <GC_MakeEllipse.hxx>
+# include <GC_MakeHyperbola.hxx>
+# include <GC_MakeSegment.hxx>
+# include <GCPnts_AbscissaPoint.hxx>
+# include <gce_ErrorType.hxx>
+# include <gce_MakeParab.hxx>
 # include <Geom_BezierCurve.hxx>
 # include <Geom_BezierSurface.hxx>
 # include <Geom_BSplineCurve.hxx>
 # include <Geom_BSplineSurface.hxx>
-# include <Geom_Surface.hxx>
-# include <Geom_Plane.hxx>
-# include <Geom_CylindricalSurface.hxx>
+# include <Geom_CartesianPoint.hxx>
+# include <Geom_Circle.hxx>
 # include <Geom_ConicalSurface.hxx>
-# include <Geom_SphericalSurface.hxx>
-# include <Geom_ToroidalSurface.hxx>
+# include <Geom_Curve.hxx>
+# include <Geom_CylindricalSurface.hxx>
+# include <Geom_Ellipse.hxx>
+# include <Geom_Hyperbola.hxx>
+# include <Geom_Line.hxx>
+# include <Geom_OffsetCurve.hxx>
 # include <Geom_OffsetSurface.hxx>
-# include <GeomPlate_Surface.hxx>
+# include <Geom_Parabola.hxx>
+# include <Geom_Plane.hxx>
 # include <Geom_RectangularTrimmedSurface.hxx>
-# include <Geom_SurfaceOfRevolution.hxx>
+# include <Geom_SphericalSurface.hxx>
+# include <Geom_Surface.hxx>
 # include <Geom_SurfaceOfLinearExtrusion.hxx>
+# include <Geom_SurfaceOfRevolution.hxx>
+# include <Geom_ToroidalSurface.hxx>
+# include <Geom_TrimmedCurve.hxx>
+# include <GeomAPI_ExtremaCurveCurve.hxx>
 # include <GeomAPI_Interpolate.hxx>
+# include <GeomAPI_ProjectPointOnCurve.hxx>
 # include <GeomConvert.hxx>
 # include <GeomConvert_CompCurveToBSplineCurve.hxx>
 # include <GeomLProp_CLProps.hxx>
 # include <GeomLProp_SLProps.hxx>
 # include <GeomLib_IsPlanarSurface.hxx>
+# include <GeomPlate_Surface.hxx>
 # include <gp.hxx>
 # include <gp_Ax2.hxx>
 # include <gp_Circ.hxx>
+# include <gp_Cone.hxx>
+# include <gp_Cylinder.hxx>
 # include <gp_Elips.hxx>
 # include <gp_Hypr.hxx>
-# include <gp_Parab.hxx>
-# include <gce_ErrorType.hxx>
 # include <gp_Lin.hxx>
+# include <gp_Parab.hxx>
 # include <gp_Pln.hxx>
 # include <gp_Pnt.hxx>
-# include <gp_Cylinder.hxx>
-# include <gp_Cone.hxx>
 # include <gp_Sphere.hxx>
 # include <gp_Torus.hxx>
+# include <LProp_NotDefined.hxx>
+# include <Precision.hxx>
+# include <ShapeConstruct_Curve.hxx>
+# include <Standard_ConstructionError.hxx>
 # include <Standard_Real.hxx>
 # include <Standard_Version.hxx>
-# include <Standard_ConstructionError.hxx>
 # include <TColgp_Array1OfPnt.hxx>
-# include <TColgp_Array2OfPnt.hxx>
 # include <TColgp_Array1OfVec.hxx>
+# include <TColgp_Array2OfPnt.hxx>
 # include <TColgp_HArray1OfPnt.hxx>
-# include <TColStd_HArray1OfBoolean.hxx>
 # include <TColStd_Array1OfReal.hxx>
 # include <TColStd_Array1OfInteger.hxx>
-# include <gp.hxx>
-# include <gp_Lin.hxx>
-# include <Geom_Line.hxx>
-# include <Geom_TrimmedCurve.hxx>
-# include <GC_MakeArcOfCircle.hxx>
-# include <GC_MakeCircle.hxx>
-# include <GC_MakeArcOfEllipse.hxx>
-# include <GC_MakeEllipse.hxx>
-# include <gce_MakeParab.hxx>
-# include <GC_MakeArcOfParabola.hxx>
-# include <GC_MakeHyperbola.hxx>
-# include <GC_MakeArcOfHyperbola.hxx>
-# include <GC_MakeLine.hxx>
-# include <GC_MakeSegment.hxx>
-# include <GCPnts_AbscissaPoint.hxx>
-# include <Precision.hxx>
-# include <GeomAPI_ProjectPointOnCurve.hxx>
-# include <GeomAPI_ExtremaCurveCurve.hxx>
-# include <ShapeConstruct_Curve.hxx>
-# include <LProp_NotDefined.hxx>
+# include <TColStd_HArray1OfBoolean.hxx>
 # include <TopoDS.hxx>
+
 # if OCC_VERSION_HEX < 0x070600
 #  include <GeomAdaptor_HCurve.hxx>
 #  include <BRepAdaptor_HSurface.hxx>
 # endif
 
-# include <memory>
-# include <ctime>
 # include <cmath>
+# include <ctime>
+# include <memory>
 #endif //_PreComp_
 
-#include <atomic>
-#include <Base/VectorPy.h>
-#include <Mod/Part/App/LinePy.h>
-#include <Mod/Part/App/LineSegmentPy.h>
-#include <Mod/Part/App/CirclePy.h>
-#include <Mod/Part/App/EllipsePy.h>
-#include <Mod/Part/App/ArcPy.h>
-#include <Mod/Part/App/ArcOfCirclePy.h>
-#include <Mod/Part/App/ArcOfEllipsePy.h>
-#include <Mod/Part/App/ArcOfParabolaPy.h>
-#include <Mod/Part/App/BezierCurvePy.h>
-#include <Mod/Part/App/BSplineCurvePy.h>
-#include <Mod/Part/App/HyperbolaPy.h>
-#include <Mod/Part/App/ArcOfHyperbolaPy.h>
-#include <Mod/Part/App/OffsetCurvePy.h>
-#include <Mod/Part/App/ParabolaPy.h>
-#include <Mod/Part/App/BezierSurfacePy.h>
-#include <Mod/Part/App/BSplineSurfacePy.h>
-#include <Mod/Part/App/ConePy.h>
-#include <Mod/Part/App/CylinderPy.h>
-#include <Mod/Part/App/OffsetSurfacePy.h>
-#include <Mod/Part/App/PointPy.h>
-#include <Mod/Part/App/PlateSurfacePy.h>
-#include <Mod/Part/App/PlanePy.h>
-#include <Mod/Part/App/RectangularTrimmedSurfacePy.h>
-#include <Mod/Part/App/SpherePy.h>
-#include <Mod/Part/App/SurfaceOfExtrusionPy.h>
-#include <Mod/Part/App/SurfaceOfRevolutionPy.h>
-#include <Mod/Part/App/ToroidPy.h>
-#include <Mod/Part/App/TopoShape.h>
-
 #include <Base/Exception.h>
-#include <Base/Writer.h>
 #include <Base/Reader.h>
-#include <Base/Tools.h>
-
-#include "GeometryMigrationExtension.h"
+#include <Base/Writer.h>
 
 #include "Geometry.h"
+#include "ArcOfCirclePy.h"
+#include "ArcOfEllipsePy.h"
+#include "ArcOfHyperbolaPy.h"
+#include "ArcOfParabolaPy.h"
+#include "BezierCurvePy.h"
+#include "BezierSurfacePy.h"
+#include "BSplineCurveBiArcs.h"
+#include "BSplineCurvePy.h"
+#include "BSplineSurfacePy.h"
+#include "CirclePy.h"
+#include "ConePy.h"
+#include "CylinderPy.h"
+#include "EllipsePy.h"
+#include "GeometryMigrationExtension.h"
+#include "HyperbolaPy.h"
+#include "LinePy.h"
+#include "LineSegmentPy.h"
+#include "OffsetCurvePy.h"
+#include "OffsetSurfacePy.h"
+#include "ParabolaPy.h"
+#include "PlanePy.h"
+#include "PlateSurfacePy.h"
+#include "PointPy.h"
+#include "RectangularTrimmedSurfacePy.h"
+#include "SpherePy.h"
+#include "SurfaceOfExtrusionPy.h"
+#include "SurfaceOfRevolutionPy.h"
+#include "Tools.h"
+#include "TopoShape.h"
+#include "ToroidPy.h"
+
 
 #if OCC_VERSION_HEX >= 0x070600
 using GeomAdaptor_HCurve = GeomAdaptor_Curve;
@@ -243,7 +236,7 @@ bool Geometry::hasSameExtensions(const Geometry &other) const
 }
 
 // Persistence implementer
-unsigned int Geometry::getMemSize (void) const
+unsigned int Geometry::getMemSize () const
 {
     return 1;
 }
@@ -289,7 +282,7 @@ void Geometry::Save(Base::Writer &writer) const
 
     // Get the number of persistent extensions
     int counter = 0;
-    for(auto att:extensions) {
+    for(const auto& att : extensions) {
         if(att->isDerivedFrom(Part::GeometryPersistenceExtension::getClassTypeId()))
             counter++;
     }
@@ -298,7 +291,7 @@ void Geometry::Save(Base::Writer &writer) const
 
     writer.incInd();
 
-    for(auto att:extensions) {
+    for(const auto& att : extensions) {
         if(att->isDerivedFrom(Part::GeometryPersistenceExtension::getClassTypeId()))
             std::static_pointer_cast<Part::GeometryPersistenceExtension>(att)->Save(writer);
     }
@@ -321,7 +314,7 @@ void Geometry::Restore(Base::XMLReader &reader)
             reader.readElement("GeoExtension");
             const char* TypeName = reader.getAttribute("type");
             Base::Type type = Base::Type::fromName(TypeName);
-            GeometryPersistenceExtension *newE = (GeometryPersistenceExtension *)type.createInstance();
+            GeometryPersistenceExtension *newE = static_cast<GeometryPersistenceExtension *>(type.createInstance());
             newE->Restore(reader);
 
             extensions.push_back(std::shared_ptr<GeometryExtension>(newE));
@@ -361,7 +354,7 @@ std::vector<std::weak_ptr<const GeometryExtension>> Geometry::getExtensions() co
 
 bool Geometry::hasExtension(Base::Type type) const
 {
-    for( auto ext : extensions) {
+    for(const auto& ext : extensions) {
         if(ext->getTypeId() == type)
             return true;
     }
@@ -369,9 +362,9 @@ bool Geometry::hasExtension(Base::Type type) const
     return false;
 }
 
-bool Geometry::hasExtension(std::string name) const
+bool Geometry::hasExtension(const std::string & name) const
 {
-    for( auto ext : extensions) {
+    for(const auto& ext : extensions) {
         if(ext->getName() == name)
             return true;
     }
@@ -381,7 +374,7 @@ bool Geometry::hasExtension(std::string name) const
 
 std::weak_ptr<GeometryExtension> Geometry::getExtension(Base::Type type)
 {
-    for( auto ext : extensions) {
+    for(const auto& ext : extensions) {
         if(ext->getTypeId() == type)
             return ext;
     }
@@ -389,9 +382,9 @@ std::weak_ptr<GeometryExtension> Geometry::getExtension(Base::Type type)
     throw Base::ValueError("No geometry extension of the requested type.");
 }
 
-std::weak_ptr<GeometryExtension> Geometry::getExtension(std::string name)
+std::weak_ptr<GeometryExtension> Geometry::getExtension(const std::string & name)
 {
-    for( auto ext : extensions) {
+    for(const auto& ext : extensions) {
         if(ext->getName() == name)
             return ext;
     }
@@ -404,7 +397,7 @@ std::weak_ptr<const GeometryExtension> Geometry::getExtension(Base::Type type) c
     return const_cast<Geometry*>(this)->getExtension(type).lock();
 }
 
-std::weak_ptr<const GeometryExtension> Geometry::getExtension(std::string name) const
+std::weak_ptr<const GeometryExtension> Geometry::getExtension(const std::string & name) const
 {
     return const_cast<Geometry*>(this)->getExtension(name).lock();
 }
@@ -442,7 +435,7 @@ void Geometry::deleteExtension(Base::Type type)
         extensions.end());
 }
 
-void Geometry::deleteExtension(std::string name)
+void Geometry::deleteExtension(const std::string & name)
 {
     extensions.erase(
         std::remove_if( extensions.begin(),
@@ -461,7 +454,7 @@ void Geometry::createNewTag()
     static bool seeded = false;
 
     if (!seeded) {
-        ran.seed(static_cast<unsigned int>(std::time(0)));
+        ran.seed(static_cast<unsigned int>(std::time(nullptr)));
         seeded = true;
     }
     static boost::uuids::basic_random_generator<boost::mt19937> gen(&ran);
@@ -485,7 +478,7 @@ void Geometry::copyNonTag(const Part::Geometry * src)
     }
 }
 
-Geometry *Geometry::clone(void) const
+Geometry *Geometry::clone() const
 {
     Geometry* cpy = this->copy();
     cpy->tag = this->tag;
@@ -532,11 +525,7 @@ void Geometry::transform(const Base::Matrix4D& mat)
     gp_Trsf trf;
     trf.SetValues(mat[0][0],mat[0][1],mat[0][2],mat[0][3],
                 mat[1][0],mat[1][1],mat[1][2],mat[1][3],
-                mat[2][0],mat[2][1],mat[2][2],mat[2][3]
-#if OCC_VERSION_HEX < 0x060800
-                , 0.00001,0.00001
-#endif
-                ); //precision was removed in OCCT CR0025194
+                mat[2][0],mat[2][1],mat[2][2],mat[2][3]);
     handle()->Transform(trf);
 }
 
@@ -581,7 +570,7 @@ void GeomPoint::setHandle(const Handle(Geom_CartesianPoint)& p)
     myPoint = Handle(Geom_CartesianPoint)::DownCast(p->Copy());
 }
 
-Geometry *GeomPoint::copy(void) const
+Geometry *GeomPoint::copy() const
 {
     GeomPoint *newPoint = new GeomPoint(myPoint);
     newPoint->copyNonTag(this);
@@ -593,7 +582,7 @@ TopoDS_Shape GeomPoint::toShape() const
     return BRepBuilderAPI_MakeVertex(myPoint->Pnt());
 }
 
-Base::Vector3d GeomPoint::getPoint(void)const
+Base::Vector3d GeomPoint::getPoint()const
 {
     return Base::Vector3d(myPoint->X(),myPoint->Y(),myPoint->Z());
 }
@@ -604,7 +593,7 @@ void GeomPoint::setPoint(const Base::Vector3d& p)
 }
 
 // Persistence implementer
-unsigned int GeomPoint::getMemSize (void) const
+unsigned int GeomPoint::getMemSize () const
 {
     return sizeof(Geom_CartesianPoint);
 }
@@ -641,7 +630,7 @@ void GeomPoint::Restore(Base::XMLReader &reader)
     setPoint(Base::Vector3d(X,Y,Z) );
 }
 
-PyObject *GeomPoint::getPyObject(void)
+PyObject *GeomPoint::getPyObject()
 {
     return new PointPy(new GeomPoint(getPoint()));
 }
@@ -820,6 +809,15 @@ bool GeomCurve::tangent(double u, Base::Vector3d& dir) const
     return false;
 }
 
+Base::Vector3d GeomCurve::value(double u) const
+{
+    Handle(Geom_Curve) c = Handle(Geom_Curve)::DownCast(handle());
+
+    const gp_Pnt &point = c->Value(u);
+
+    return Base::Vector3d(point.X(),point.Y(),point.Z());
+}
+
 Base::Vector3d GeomCurve::pointAtParameter(double u) const
 {
     Handle(Geom_Curve) c = Handle(Geom_Curve)::DownCast(handle());
@@ -873,6 +871,14 @@ bool GeomCurve::normalAt(double u, Base::Vector3d& dir) const
     }
 
     return false;
+}
+
+bool GeomCurve::normalAt(const Base::Vector3d & curvepoint, Base::Vector3d & dir) const
+{
+    double u;
+    closestParameter(curvepoint, u);
+
+    return normalAt(u, dir);
 }
 
 bool GeomCurve::intersect(  const GeomCurve *c,
@@ -938,14 +944,14 @@ bool GeomCurve::intersect(const Handle(Geom_Curve) curve1, const Handle(Geom_Cur
     }
     catch (Standard_Failure& e) {
         // Yes Extrema finding failed, but if we got an intersection then go on with it
-        if(points.size()>0)
-            return points.size()>0?true:false;
+        if(!points.empty())
+            return true;
         else
             THROWM(Base::CADKernelError,e.GetMessageString())
     }
 
 
-    return points.size()>0?true:false;
+    return !points.empty()?true:false;
 }
 
 bool GeomCurve::closestParameter(const Base::Vector3d& point, double &u) const
@@ -1064,7 +1070,7 @@ double GeomCurve::length(double u, double v) const
     }
 }
 
-void GeomCurve::reverse(void)
+void GeomCurve::reverse()
 {
     Handle(Geom_Curve) c = Handle(Geom_Curve)::DownCast(handle());
 
@@ -1153,7 +1159,7 @@ const Handle(Geom_Geometry)& GeomBezierCurve::handle() const
     return myCurve;
 }
 
-Geometry *GeomBezierCurve::copy(void) const
+Geometry *GeomBezierCurve::copy() const
 {
     GeomBezierCurve *newCurve = new GeomBezierCurve(myCurve);
     newCurve->copyNonTag(this);
@@ -1189,7 +1195,7 @@ std::vector<double> GeomBezierCurve::getWeights() const
 }
 
 // Persistence implementer
-unsigned int GeomBezierCurve::getMemSize (void) const
+unsigned int GeomBezierCurve::getMemSize () const
 {
     return sizeof(Geom_BezierCurve);
 }
@@ -1266,7 +1272,7 @@ void GeomBezierCurve::Restore(Base::XMLReader& reader)
     }
 }
 
-PyObject *GeomBezierCurve::getPyObject(void)
+PyObject *GeomBezierCurve::getPyObject()
 {
     return new BezierCurvePy(static_cast<GeomBezierCurve*>(this->clone()));
 }
@@ -1370,7 +1376,7 @@ const Handle(Geom_Geometry)& GeomBSplineCurve::handle() const
     return myCurve;
 }
 
-Geometry *GeomBSplineCurve::copy(void) const
+Geometry *GeomBSplineCurve::copy() const
 {
     try {
         GeomBSplineCurve *newCurve = new GeomBSplineCurve(myCurve);
@@ -1404,6 +1410,12 @@ void GeomBSplineCurve::setPole(int index, const Base::Vector3d& pole, double wei
     catch (Standard_Failure& e) {
         THROWM(Base::CADKernelError,e.GetMessageString())
     }
+}
+
+std::list<Geometry*> GeomBSplineCurve::toBiArcs(double tolerance) const
+{
+    BSplineCurveBiArcs arcs(this->myCurve);
+    return arcs.toBiArcs(tolerance);
 }
 
 void GeomBSplineCurve::workAroundOCCTBug(const std::vector<double>& weights)
@@ -1577,18 +1589,39 @@ bool GeomBSplineCurve::isPeriodic() const
     return myCurve->IsPeriodic()==Standard_True;
 }
 
+void GeomBSplineCurve::setPeriodic() const
+{
+    myCurve->SetPeriodic();
+}
+
 bool GeomBSplineCurve::isRational() const
 {
     return myCurve->IsRational()==Standard_True;
 }
 
-bool GeomBSplineCurve::join(const Handle(Geom_BSplineCurve)& spline)
+bool GeomBSplineCurve::join(const Handle(Geom_BoundedCurve)& other)
 {
     GeomConvert_CompCurveToBSplineCurve ccbc(this->myCurve);
-    if (!ccbc.Add(spline, Precision::Approximation()))
+    if (!ccbc.Add(other, Precision::Approximation()))
         return false;
     this->myCurve = ccbc.BSplineCurve();
     return true;
+}
+
+void GeomBSplineCurve::interpolate(const std::vector<gp_Pnt>& p, Standard_Boolean periodic)
+{
+    if (p.size() < 2)
+        Standard_ConstructionError::Raise();
+
+    double tol3d = Precision::Approximation();
+    Handle(TColgp_HArray1OfPnt) pts = new TColgp_HArray1OfPnt(1, p.size());
+    for (std::size_t i=0; i<p.size(); i++) {
+        pts->SetValue(i+1, p[i]);
+    }
+
+    GeomAPI_Interpolate interpolate(pts, periodic, tol3d);
+    interpolate.Perform();
+    this->myCurve = interpolate.Curve();
 }
 
 void GeomBSplineCurve::interpolate(const std::vector<gp_Pnt>& p,
@@ -1730,6 +1763,18 @@ void GeomBSplineCurve::increaseMultiplicity(int index, int multiplicity)
     }
     catch (Standard_Failure& e) {
         THROWM(Base::CADKernelError,e.GetMessageString())
+            }
+}
+
+void GeomBSplineCurve::insertKnot(double param, int multiplicity)
+{
+    try {
+        Handle(Geom_BSplineCurve) curve = Handle(Geom_BSplineCurve)::DownCast(this->handle());
+        curve->InsertKnot(param, multiplicity);
+        return;
+    }
+    catch (Standard_Failure& e) {
+        THROWM(Base::CADKernelError,e.GetMessageString())
     }
 }
 
@@ -1772,19 +1817,28 @@ void GeomBSplineCurve::Trim(double u, double v)
     };
 
     try {
-        if(!isPeriodic()) {
-            splitUnwrappedBSpline(u, v);
-        }
-        else { // periodic
-            if( v < u ) { // wraps over origin
-                v = v + 1.0; // v needs one extra lap (1.0)
+        if (isPeriodic() && (v < u))
+            v = v + myCurve->LastParameter() - myCurve->FirstParameter(); // v needs one extra lap
+        splitUnwrappedBSpline(u, v);
+    }
+    catch (Standard_Failure& e) {
+        THROWM(Base::CADKernelError,e.GetMessageString())
+    }
+}
 
-                splitUnwrappedBSpline(u, v);
-            }
-            else {
-                splitUnwrappedBSpline(u, v);
-            }
+void GeomBSplineCurve::scaleKnotsToBounds(double u0, double u1)
+{
+    try {
+        Handle(Geom_BSplineCurve) curve = Handle(Geom_BSplineCurve)::DownCast(myCurve->Copy());
+        Standard_RangeError_Raise_if (u1 <= u0, " ");
+        TColStd_Array1OfReal k(1,curve->NbKnots());
+        curve->Knots(k);
+        if ((abs(u0-k.First()) > Precision::Confusion()) || (abs(u1-k.Last()) > Precision::Confusion())) {
+            BSplCLib::Reparametrize(u0, u1, k);
+            curve->SetKnots(k);
         }
+        myCurve = curve;
+        return;
     }
     catch (Standard_Failure& e) {
         THROWM(Base::CADKernelError,e.GetMessageString())
@@ -1792,7 +1846,7 @@ void GeomBSplineCurve::Trim(double u, double v)
 }
 
 // Persistence implementer
-unsigned int GeomBSplineCurve::getMemSize (void) const
+unsigned int GeomBSplineCurve::getMemSize () const
 {
     return sizeof(Geom_BSplineCurve);
 }
@@ -1864,8 +1918,8 @@ void GeomBSplineCurve::Restore(Base::XMLReader& reader)
 
     // Handle(Geom_BSplineCurve) spline = new
     // Geom_BSplineCurve(occpoles,occweights,occknots,occmults,degree,
-    // PyObject_IsTrue(periodic) ? Standard_True : Standard_False,
-    // PyObject_IsTrue(CheckRational) ? Standard_True : Standard_False);
+    // Base::asBoolean(periodic),
+    // Base::asBoolean(CheckRational));
 
     TColgp_Array1OfPnt p(1,polescount);
     TColStd_Array1OfReal w(1,polescount);
@@ -1908,7 +1962,7 @@ void GeomBSplineCurve::Restore(Base::XMLReader& reader)
 }
 
 
-PyObject *GeomBSplineCurve::getPyObject(void)
+PyObject *GeomBSplineCurve::getPyObject()
 {
     return new BSplineCurvePy(static_cast<GeomBSplineCurve*>(this->clone()));
 }
@@ -1961,7 +2015,7 @@ GeomConic::~GeomConic()
 {
 }
 
-Base::Vector3d GeomConic::getLocation(void) const
+Base::Vector3d GeomConic::getLocation() const
 {
     Handle(Geom_Conic) conic =  Handle(Geom_Conic)::DownCast(handle());
     gp_Ax1 axis = conic->Axis();
@@ -1983,7 +2037,7 @@ void GeomConic::setLocation(const Base::Vector3d& Center)
     }
 }
 
-Base::Vector3d GeomConic::getCenter(void) const
+Base::Vector3d GeomConic::getCenter() const
 {
     Handle(Geom_Conic) conic =  Handle(Geom_Conic)::DownCast(handle());
     gp_Ax1 axis = conic->Axis();
@@ -2005,6 +2059,14 @@ void GeomConic::setCenter(const Base::Vector3d& Center)
     }
 }
 
+Base::Vector3d GeomConic::getAxisDirection() const
+{
+    Handle(Geom_Conic) conic =  Handle(Geom_Conic)::DownCast(handle());
+    gp_Ax1 axis = conic->Axis();
+    const gp_Dir& dir = axis.Direction();
+    return Base::Vector3d( dir.X(),dir.Y(),dir.Z());
+}
+
 /*!
  * \brief GeomConic::getAngleXU
  * \return The angle between ellipse's major axis (in direction to focus1) and
@@ -2015,7 +2077,7 @@ void GeomConic::setCenter(const Base::Vector3d& Center)
  * system is reversed compared to the global X axis. This angle, in conjunction
  * with ellipse's axis, fully defines the orientation of the ellipse.
  */
-double GeomConic::getAngleXU(void) const
+double GeomConic::getAngleXU() const
 {
     Handle(Geom_Conic) conic =  Handle(Geom_Conic)::DownCast(handle());
 
@@ -2108,7 +2170,7 @@ const Handle(Geom_Geometry)& GeomTrimmedCurve::handle() const
     return myCurve;
 }
 
-Geometry *GeomTrimmedCurve::copy(void) const
+Geometry *GeomTrimmedCurve::copy() const
 {
     GeomTrimmedCurve *newCurve =  new GeomTrimmedCurve(myCurve);
     newCurve->copyNonTag(this);
@@ -2116,19 +2178,22 @@ Geometry *GeomTrimmedCurve::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomTrimmedCurve::getMemSize (void) const {
-    throw Base::NotImplementedError();
+unsigned int GeomTrimmedCurve::getMemSize () const
+{
+    return sizeof(Geom_TrimmedCurve);
 }
 
-void GeomTrimmedCurve::Save (Base::Writer &/*writer*/) const {
-    throw Base::NotImplementedError();
+void GeomTrimmedCurve::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomTrimmedCurve::Save");
 }
 
-void GeomTrimmedCurve::Restore (Base::XMLReader &/*reader*/) {
-    throw Base::NotImplementedError();
+void GeomTrimmedCurve::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomTrimmedCurve::Restore");
 }
 
-PyObject *GeomTrimmedCurve::getPyObject(void)
+PyObject *GeomTrimmedCurve::getPyObject()
 {
     return new TrimmedCurvePy(static_cast<GeomTrimmedCurve*>(this->clone()));
 }
@@ -2241,7 +2306,7 @@ Base::Vector3d GeomArcOfConic::getEndPoint(bool emulateCCWXY) const
     return Base::Vector3d(pnt.X(), pnt.Y(), pnt.Z());
 }
 
-Base::Vector3d GeomArcOfConic::getCenter(void) const
+Base::Vector3d GeomArcOfConic::getCenter() const
 {
     Handle(Geom_TrimmedCurve) curve =  Handle(Geom_TrimmedCurve)::DownCast(handle());
     Handle(Geom_Conic) conic = Handle(Geom_Conic)::DownCast(curve->BasisCurve());
@@ -2250,7 +2315,7 @@ Base::Vector3d GeomArcOfConic::getCenter(void) const
     return Base::Vector3d(loc.X(),loc.Y(),loc.Z());
 }
 
-Base::Vector3d GeomArcOfConic::getLocation(void) const
+Base::Vector3d GeomArcOfConic::getLocation() const
 {
     Handle(Geom_TrimmedCurve) curve =  Handle(Geom_TrimmedCurve)::DownCast(handle());
     Handle(Geom_Conic) conic = Handle(Geom_Conic)::DownCast(curve->BasisCurve());
@@ -2289,6 +2354,15 @@ void GeomArcOfConic::setLocation(const Base::Vector3d& Center)
     }
 }
 
+Base::Vector3d GeomArcOfConic::getAxisDirection() const
+{
+    Handle(Geom_TrimmedCurve) curve =  Handle(Geom_TrimmedCurve)::DownCast(handle());
+    Handle(Geom_Conic) conic = Handle(Geom_Conic)::DownCast(curve->BasisCurve());
+    gp_Ax1 axis = conic->Axis();
+    const gp_Dir& dir = axis.Direction();
+    return Base::Vector3d( dir.X(),dir.Y(),dir.Z());
+}
+
 /*!
  * \brief GeomArcOfConic::isReversed
  * \return tests if an arc that lies in XY plane is reversed (i.e. drawn from
@@ -2313,7 +2387,7 @@ bool GeomArcOfConic::isReversed() const
  * system is reversed compared to the global X axis. This angle, in conjunction
  * with ellipse's axis, fully defines the orientation of the ellipse.
  */
-double GeomArcOfConic::getAngleXU(void) const
+double GeomArcOfConic::getAngleXU() const
 {
     Handle(Geom_TrimmedCurve) curve =  Handle(Geom_TrimmedCurve)::DownCast(handle());
     Handle(Geom_Conic) conic = Handle(Geom_Conic)::DownCast(curve->BasisCurve());
@@ -2378,11 +2452,8 @@ void GeomArcOfConic::setXAxisDir(const Base::Vector3d& newdir)
     Handle(Geom_TrimmedCurve) curve =  Handle(Geom_TrimmedCurve)::DownCast(handle());
     Handle(Geom_Conic) c = Handle(Geom_Conic)::DownCast( curve->BasisCurve() );
     assert(!c.IsNull());
-#if OCC_VERSION_HEX >= 0x060504
+
     if (newdir.Sqr() < Precision::SquareConfusion())
-#else
-    if (newdir.Length() < Precision::Confusion())
-#endif
         return;//zero vector was passed. Keep the old orientation.
 
     try {
@@ -2427,7 +2498,7 @@ void GeomCircle::setHandle(const Handle(Geom_Circle)& c)
     myCurve = Handle(Geom_Circle)::DownCast(c->Copy());
 }
 
-Geometry *GeomCircle::copy(void) const
+Geometry *GeomCircle::copy() const
 {
     GeomCircle *newCirc = new GeomCircle(myCurve);
     newCirc->copyNonTag(this);
@@ -2481,7 +2552,7 @@ GeomBSplineCurve* GeomCircle::toNurbs(double first, double last) const
     return new GeomBSplineCurve(spline);
 }
 
-double GeomCircle::getRadius(void) const
+double GeomCircle::getRadius() const
 {
     Handle(Geom_Circle) circle = Handle(Geom_Circle)::DownCast(handle());
     return circle->Radius();
@@ -2503,7 +2574,7 @@ void GeomCircle::setRadius(double Radius)
 }
 
 // Persistence implementer
-unsigned int GeomCircle::getMemSize (void) const
+unsigned int GeomCircle::getMemSize () const
 {
     return sizeof(Geom_Circle);
 }
@@ -2575,7 +2646,7 @@ void GeomCircle::Restore(Base::XMLReader& reader)
     }
 }
 
-PyObject *GeomCircle::getPyObject(void)
+PyObject *GeomCircle::getPyObject()
 {
     return new CirclePy(static_cast<GeomCircle*>(this->clone()));
 }
@@ -2628,7 +2699,7 @@ const Handle(Geom_Geometry)& GeomArcOfCircle::handle() const
     return myCurve;
 }
 
-Geometry *GeomArcOfCircle::copy(void) const
+Geometry *GeomArcOfCircle::copy() const
 {
     GeomArcOfCircle* copy = new GeomArcOfCircle();
     copy->setHandle(this->myCurve);
@@ -2643,7 +2714,7 @@ GeomBSplineCurve* GeomArcOfCircle::toNurbs(double first, double last) const
     return GeomCircle(circle).toNurbs(first, last);
 }
 
-double GeomArcOfCircle::getRadius(void) const
+double GeomArcOfCircle::getRadius() const
 {
     Handle(Geom_Circle) circle = Handle(Geom_Circle)::DownCast(myCurve->BasisCurve());
     return circle->Radius();
@@ -2738,7 +2809,7 @@ void GeomArcOfCircle::setRange(double u, double v, bool emulateCCWXY)
 }
 
 // Persistence implementer
-unsigned int GeomArcOfCircle::getMemSize (void) const
+unsigned int GeomArcOfCircle::getMemSize () const
 {
     return sizeof(Geom_Circle) + 2 *sizeof(double);
 }
@@ -2824,7 +2895,7 @@ void GeomArcOfCircle::Restore(Base::XMLReader &reader)
     }
 }
 
-PyObject *GeomArcOfCircle::getPyObject(void)
+PyObject *GeomArcOfCircle::getPyObject()
 {
     return new ArcOfCirclePy(static_cast<GeomArcOfCircle*>(this->clone()));
 }
@@ -2858,7 +2929,7 @@ void GeomEllipse::setHandle(const Handle(Geom_Ellipse) &e)
     this->myCurve = Handle(Geom_Ellipse)::DownCast(e->Copy());
 }
 
-Geometry *GeomEllipse::copy(void) const
+Geometry *GeomEllipse::copy() const
 {
     GeomEllipse *newEllipse = new GeomEllipse(myCurve);
     newEllipse->copyNonTag(this);
@@ -2913,7 +2984,7 @@ GeomBSplineCurve* GeomEllipse::toNurbs(double first, double last) const
     return new GeomBSplineCurve(spline);
 }
 
-double GeomEllipse::getMajorRadius(void) const
+double GeomEllipse::getMajorRadius() const
 {
     Handle(Geom_Ellipse) ellipse = Handle(Geom_Ellipse)::DownCast(handle());
     return ellipse->MajorRadius();
@@ -2932,7 +3003,7 @@ void GeomEllipse::setMajorRadius(double Radius)
     }
 }
 
-double GeomEllipse::getMinorRadius(void) const
+double GeomEllipse::getMinorRadius() const
 {
     Handle(Geom_Ellipse) ellipse = Handle(Geom_Ellipse)::DownCast(handle());
     return ellipse->MinorRadius();
@@ -2963,6 +3034,17 @@ Base::Vector3d GeomEllipse::getMajorAxisDir() const
 }
 
 /*!
+ * \brief GeomEllipse::getMinorAxisDir
+ * \return the direction vector (unit-length) of minor axis of the ellipse.
+ */
+Base::Vector3d GeomEllipse::getMinorAxisDir() const
+{
+    gp_Dir ydir = myCurve->YAxis().Direction();
+    return Base::Vector3d(ydir.X(), ydir.Y(), ydir.Z());
+}
+
+
+/*!
  * \brief GeomEllipse::setMajorAxisDir Rotates the ellipse in its plane, so
  * that its major axis is as close as possible to the provided direction.
  * \param newdir [in] is the new direction. If the vector is small, the
@@ -2972,11 +3054,7 @@ Base::Vector3d GeomEllipse::getMajorAxisDir() const
  */
 void GeomEllipse::setMajorAxisDir(Base::Vector3d newdir)
 {
-#if OCC_VERSION_HEX >= 0x060504
     if (newdir.Sqr() < Precision::SquareConfusion())
-#else
-    if (newdir.Length() < Precision::Confusion())
-#endif
         return;//zero vector was passed. Keep the old orientation.
     try {
         gp_Ax2 pos = myCurve->Position();
@@ -2990,7 +3068,7 @@ void GeomEllipse::setMajorAxisDir(Base::Vector3d newdir)
 }
 
 // Persistence implementer
-unsigned int GeomEllipse::getMemSize (void) const
+unsigned int GeomEllipse::getMemSize () const
 {
     return sizeof(Geom_Ellipse);
 }
@@ -3071,7 +3149,7 @@ void GeomEllipse::Restore(Base::XMLReader& reader)
     }
 }
 
-PyObject *GeomEllipse::getPyObject(void)
+PyObject *GeomEllipse::getPyObject()
 {
     return new EllipsePy(static_cast<GeomEllipse*>(this->clone()));
 }
@@ -3125,7 +3203,7 @@ const Handle(Geom_Geometry)& GeomArcOfEllipse::handle() const
     return myCurve;
 }
 
-Geometry *GeomArcOfEllipse::copy(void) const
+Geometry *GeomArcOfEllipse::copy() const
 {
     GeomArcOfEllipse* copy = new GeomArcOfEllipse();
     copy->setHandle(this->myCurve);
@@ -3140,7 +3218,7 @@ GeomBSplineCurve* GeomArcOfEllipse::toNurbs(double first, double last) const
     return GeomEllipse(ellipse).toNurbs(first, last);
 }
 
-double GeomArcOfEllipse::getMajorRadius(void) const
+double GeomArcOfEllipse::getMajorRadius() const
 {
     Handle(Geom_Ellipse) ellipse = Handle(Geom_Ellipse)::DownCast(myCurve->BasisCurve());
     return ellipse->MajorRadius();
@@ -3159,7 +3237,7 @@ void GeomArcOfEllipse::setMajorRadius(double Radius)
     }
 }
 
-double GeomArcOfEllipse::getMinorRadius(void) const
+double GeomArcOfEllipse::getMinorRadius() const
 {
     Handle(Geom_Ellipse) ellipse = Handle(Geom_Ellipse)::DownCast(myCurve->BasisCurve());
     return ellipse->MinorRadius();
@@ -3203,11 +3281,7 @@ void GeomArcOfEllipse::setMajorAxisDir(Base::Vector3d newdir)
 {
     Handle(Geom_Ellipse) c = Handle(Geom_Ellipse)::DownCast( myCurve->BasisCurve() );
     assert(!c.IsNull());
-#if OCC_VERSION_HEX >= 0x060504
     if (newdir.Sqr() < Precision::SquareConfusion())
-#else
-    if (newdir.Length() < Precision::Confusion())
-#endif
         return;//zero vector was passed. Keep the old orientation.
     try {
         gp_Ax2 pos = c->Position();
@@ -3268,7 +3342,7 @@ void GeomArcOfEllipse::setRange(double u, double v, bool emulateCCWXY)
 }
 
 // Persistence implementer
-unsigned int GeomArcOfEllipse::getMemSize (void) const
+unsigned int GeomArcOfEllipse::getMemSize () const
 {
     return sizeof(Geom_Ellipse) + 2 *sizeof(double);
 }
@@ -3360,7 +3434,7 @@ void GeomArcOfEllipse::Restore(Base::XMLReader &reader)
     }
 }
 
-PyObject *GeomArcOfEllipse::getPyObject(void)
+PyObject *GeomArcOfEllipse::getPyObject()
 {
     return new ArcOfEllipsePy(static_cast<GeomArcOfEllipse*>(this->clone()));
 }
@@ -3395,7 +3469,7 @@ void GeomHyperbola::setHandle(const Handle(Geom_Hyperbola)& c)
     myCurve = Handle(Geom_Hyperbola)::DownCast(c->Copy());
 }
 
-Geometry *GeomHyperbola::copy(void) const
+Geometry *GeomHyperbola::copy() const
 {
     GeomHyperbola *newHyp = new GeomHyperbola(myCurve);
     newHyp->copyNonTag(this);
@@ -3407,7 +3481,7 @@ GeomBSplineCurve* GeomHyperbola::toNurbs(double first, double last) const
     return GeomCurve::toNurbs(first, last);
 }
 
-double GeomHyperbola::getMajorRadius(void) const
+double GeomHyperbola::getMajorRadius() const
 {
     Handle(Geom_Hyperbola) h = Handle(Geom_Hyperbola)::DownCast(handle());
     return h->MajorRadius();
@@ -3426,7 +3500,7 @@ void GeomHyperbola::setMajorRadius(double Radius)
     }
 }
 
-double GeomHyperbola::getMinorRadius(void) const
+double GeomHyperbola::getMinorRadius() const
 {
     Handle(Geom_Hyperbola) h = Handle(Geom_Hyperbola)::DownCast(handle());
     return h->MinorRadius();
@@ -3446,7 +3520,7 @@ void GeomHyperbola::setMinorRadius(double Radius)
 }
 
 // Persistence implementer
-unsigned int GeomHyperbola::getMemSize (void) const
+unsigned int GeomHyperbola::getMemSize () const
 {
     return sizeof(Geom_Hyperbola);
 }
@@ -3521,7 +3595,7 @@ void GeomHyperbola::Restore(Base::XMLReader& reader)
     }
 }
 
-PyObject *GeomHyperbola::getPyObject(void)
+PyObject *GeomHyperbola::getPyObject()
 {
     return new HyperbolaPy(static_cast<GeomHyperbola*>(this->clone()));
 }
@@ -3576,7 +3650,7 @@ const Handle(Geom_Geometry)& GeomArcOfHyperbola::handle() const
     return myCurve;
 }
 
-Geometry *GeomArcOfHyperbola::copy(void) const
+Geometry *GeomArcOfHyperbola::copy() const
 {
     GeomArcOfHyperbola* copy = new GeomArcOfHyperbola();
     copy->setHandle(this->myCurve);
@@ -3591,7 +3665,7 @@ GeomBSplineCurve* GeomArcOfHyperbola::toNurbs(double first, double last) const
     return GeomHyperbola(hyperbola).toNurbs(first, last);
 }
 
-double GeomArcOfHyperbola::getMajorRadius(void) const
+double GeomArcOfHyperbola::getMajorRadius() const
 {
     Handle(Geom_Hyperbola) h = Handle(Geom_Hyperbola)::DownCast(myCurve->BasisCurve());
     return h->MajorRadius();
@@ -3610,7 +3684,7 @@ void GeomArcOfHyperbola::setMajorRadius(double Radius)
     }
 }
 
-double GeomArcOfHyperbola::getMinorRadius(void) const
+double GeomArcOfHyperbola::getMinorRadius() const
 {
     Handle(Geom_Hyperbola) h = Handle(Geom_Hyperbola)::DownCast(myCurve->BasisCurve());
     return h->MinorRadius();
@@ -3654,11 +3728,7 @@ void GeomArcOfHyperbola::setMajorAxisDir(Base::Vector3d newdir)
 {
     Handle(Geom_Hyperbola) c = Handle(Geom_Hyperbola)::DownCast( myCurve->BasisCurve() );
     assert(!c.IsNull());
-    #if OCC_VERSION_HEX >= 0x060504
     if (newdir.Sqr() < Precision::SquareConfusion())
-    #else
-    if (newdir.Length() < Precision::Confusion())
-    #endif
         return;//zero vector was passed. Keep the old orientation.
 
     try {
@@ -3712,7 +3782,7 @@ void GeomArcOfHyperbola::setRange(double u, double v, bool emulateCCWXY)
 }
 
 // Persistence implementer
-unsigned int GeomArcOfHyperbola::getMemSize (void) const
+unsigned int GeomArcOfHyperbola::getMemSize () const
 {
     return sizeof(Geom_Hyperbola) + 2 *sizeof(double);
 }
@@ -3803,7 +3873,7 @@ void GeomArcOfHyperbola::Restore(Base::XMLReader &reader)
     }
 }
 
-PyObject *GeomArcOfHyperbola::getPyObject(void)
+PyObject *GeomArcOfHyperbola::getPyObject()
 {
     return new ArcOfHyperbolaPy(static_cast<GeomArcOfHyperbola*>(this->clone()));
 }
@@ -3836,7 +3906,7 @@ void GeomParabola::setHandle(const Handle(Geom_Parabola)& c)
     myCurve = Handle(Geom_Parabola)::DownCast(c->Copy());
 }
 
-Geometry *GeomParabola::copy(void) const
+Geometry *GeomParabola::copy() const
 {
     GeomParabola *newPar = new GeomParabola(myCurve);
     newPar->copyNonTag(this);
@@ -3850,7 +3920,7 @@ GeomBSplineCurve* GeomParabola::toNurbs(double first, double last) const
     return GeomCurve::toNurbs(first, last);
 }
 
-double GeomParabola::getFocal(void) const
+double GeomParabola::getFocal() const
 {
     Handle(Geom_Parabola) p = Handle(Geom_Parabola)::DownCast(handle());
     return p->Focal();
@@ -3870,7 +3940,7 @@ void GeomParabola::setFocal(double length)
 }
 
 // Persistence implementer
-unsigned int GeomParabola::getMemSize (void) const
+unsigned int GeomParabola::getMemSize () const
 {
     return sizeof(Geom_Parabola);
 }
@@ -3943,7 +4013,7 @@ void GeomParabola::Restore(Base::XMLReader& reader)
     }
 }
 
-PyObject *GeomParabola::getPyObject(void)
+PyObject *GeomParabola::getPyObject()
 {
     return new ParabolaPy(static_cast<GeomParabola*>(this->clone()));
 }
@@ -3994,7 +4064,7 @@ const Handle(Geom_Geometry)& GeomArcOfParabola::handle() const
     return myCurve;
 }
 
-Geometry *GeomArcOfParabola::copy(void) const
+Geometry *GeomArcOfParabola::copy() const
 {
     GeomArcOfParabola* copy = new GeomArcOfParabola();
     copy->setHandle(this->myCurve);
@@ -4009,7 +4079,7 @@ GeomBSplineCurve* GeomArcOfParabola::toNurbs(double first, double last) const
     return GeomParabola(parabola).toNurbs(first, last);
 }
 
-double GeomArcOfParabola::getFocal(void) const
+double GeomArcOfParabola::getFocal() const
 {
     Handle(Geom_Parabola) p = Handle(Geom_Parabola)::DownCast(myCurve->BasisCurve());
     return p->Focal();
@@ -4028,7 +4098,7 @@ void GeomArcOfParabola::setFocal(double length)
     }
 }
 
-Base::Vector3d GeomArcOfParabola::getFocus(void) const
+Base::Vector3d GeomArcOfParabola::getFocus() const
 {
     Handle(Geom_Parabola) p = Handle(Geom_Parabola)::DownCast(myCurve->BasisCurve());
     gp_Pnt gp = p->Focus();
@@ -4075,7 +4145,7 @@ void GeomArcOfParabola::setRange(double u, double v, bool emulateCCWXY)
 }
 
 // Persistence implementer
-unsigned int GeomArcOfParabola::getMemSize (void) const
+unsigned int GeomArcOfParabola::getMemSize () const
 {
     return sizeof(Geom_Parabola) + 2 *sizeof(double);
 }
@@ -4164,7 +4234,7 @@ void GeomArcOfParabola::Restore(Base::XMLReader &reader)
     }
 }
 
-PyObject *GeomArcOfParabola::getPyObject(void)
+PyObject *GeomArcOfParabola::getPyObject()
 {
     return new ArcOfParabolaPy(static_cast<GeomArcOfParabola*>(this->clone()));
 }
@@ -4199,13 +4269,13 @@ void GeomLine::setLine(const Base::Vector3d& Pos, const Base::Vector3d& Dir)
     this->myCurve->SetDirection(gp_Dir(Dir.x,Dir.y,Dir.z));
 }
 
-Base::Vector3d GeomLine::getPos(void) const
+Base::Vector3d GeomLine::getPos() const
 {
     gp_Pnt Pos = this->myCurve->Lin().Location();
     return Base::Vector3d(Pos.X(),Pos.Y(),Pos.Z());
 }
 
-Base::Vector3d GeomLine::getDir(void) const
+Base::Vector3d GeomLine::getDir() const
 {
     gp_Dir Dir = this->myCurve->Lin().Direction();
     return Base::Vector3d(Dir.X(),Dir.Y(),Dir.Z());
@@ -4222,7 +4292,7 @@ void GeomLine::setHandle(const Handle(Geom_Line)& l)
     this->myCurve = Handle(Geom_Line)::DownCast(l->Copy());
 }
 
-Geometry *GeomLine::copy(void) const
+Geometry *GeomLine::copy() const
 {
     GeomLine *newLine = new GeomLine(myCurve);
     newLine->copyNonTag(this);
@@ -4230,7 +4300,7 @@ Geometry *GeomLine::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomLine::getMemSize (void) const
+unsigned int GeomLine::getMemSize () const
 {
     return sizeof(Geom_Line);
 }
@@ -4274,7 +4344,7 @@ void GeomLine::Restore(Base::XMLReader &reader)
     setLine(Base::Vector3d(PosX,PosY,PosZ),Base::Vector3d(DirX,DirY,DirZ) );
 }
 
-PyObject *GeomLine::getPyObject(void)
+PyObject *GeomLine::getPyObject()
 {
     return new LinePy(static_cast<GeomLine*>(this->clone()));
 }
@@ -4335,7 +4405,7 @@ const Handle(Geom_Geometry)& GeomLineSegment::handle() const
     return myCurve;
 }
 
-Geometry *GeomLineSegment::copy(void)const
+Geometry *GeomLineSegment::copy()const
 {
     GeomLineSegment *tempCurve = new GeomLineSegment();
     tempCurve->myCurve = Handle(Geom_TrimmedCurve)::DownCast(myCurve->Copy());
@@ -4387,7 +4457,7 @@ void GeomLineSegment::setPoints(const Base::Vector3d& Start, const Base::Vector3
 }
 
 // Persistence implementer
-unsigned int GeomLineSegment::getMemSize (void) const
+unsigned int GeomLineSegment::getMemSize () const
 {
     return sizeof(Geom_TrimmedCurve) + sizeof(Geom_Line);
 }
@@ -4451,7 +4521,7 @@ void GeomLineSegment::Restore    (Base::XMLReader &reader)
     }
 }
 
-PyObject *GeomLineSegment::getPyObject(void)
+PyObject *GeomLineSegment::getPyObject()
 {
     return new LineSegmentPy(static_cast<GeomLineSegment*>(this->clone()));
 }
@@ -4482,7 +4552,7 @@ GeomOffsetCurve::~GeomOffsetCurve()
 {
 }
 
-Geometry *GeomOffsetCurve::copy(void) const
+Geometry *GeomOffsetCurve::copy() const
 {
     GeomOffsetCurve *newCurve = new GeomOffsetCurve(myCurve);
     newCurve->copyNonTag(this);
@@ -4511,19 +4581,22 @@ const Handle(Geom_Geometry)& GeomOffsetCurve::handle() const
 }
 
 // Persistence implementer
-unsigned int GeomOffsetCurve::getMemSize (void) const {
-    throw Base::NotImplementedError();
+unsigned int GeomOffsetCurve::getMemSize () const
+{
+    return sizeof(Geom_OffsetCurve);
 }
 
-void GeomOffsetCurve::Save (Base::Writer &/*writer*/) const {
-    throw Base::NotImplementedError();
+void GeomOffsetCurve::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomOffsetCurve::Save");
 }
 
-void GeomOffsetCurve::Restore (Base::XMLReader &/*reader*/) {
-    throw Base::NotImplementedError();
+void GeomOffsetCurve::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomOffsetCurve::Restore");
 }
 
-PyObject *GeomOffsetCurve::getPyObject(void)
+PyObject *GeomOffsetCurve::getPyObject()
 {
     return new OffsetCurvePy(static_cast<GeomOffsetCurve*>(this->clone()));
 }
@@ -4647,11 +4720,7 @@ TopoDS_Shape GeomSurface::toShape() const
     Handle(Geom_Surface) s = Handle(Geom_Surface)::DownCast(handle());
     Standard_Real u1,u2,v1,v2;
     s->Bounds(u1,u2,v1,v2);
-    BRepBuilderAPI_MakeFace mkBuilder(s, u1, u2, v1, v2
-#if OCC_VERSION_HEX >= 0x060502
-      , Precision::Confusion()
-#endif
-      );
+    BRepBuilderAPI_MakeFace mkBuilder(s, u1, u2, v1, v2, Precision::Confusion() );
     return mkBuilder.Shape();
 }
 
@@ -4663,7 +4732,6 @@ bool GeomSurface::tangentU(double u, double v, gp_Dir& dirU) const
         prop.TangentU(dirU);
         return true;
     }
-
     return false;
 }
 
@@ -4682,13 +4750,20 @@ bool GeomSurface::tangentV(double u, double v, gp_Dir& dirV) const
 bool GeomSurface::normal(double u, double v, gp_Dir& dir) const
 {
     Handle(Geom_Surface) s = Handle(Geom_Surface)::DownCast(handle());
-    GeomLProp_SLProps prop(s,u,v,2,Precision::Confusion());
-    if (prop.IsNormalDefined()) {
-        dir = prop.Normal();
+    Standard_Boolean done;
+
+    Tools::getNormal(s, u, v, Precision::Confusion(), dir, done);
+
+    if (done)
         return true;
-    }
 
     return false;
+}
+
+gp_Vec GeomSurface::getDN(double u, double v, int Nu, int Nv) const
+{
+    Handle(Geom_Surface) s = Handle(Geom_Surface)::DownCast(handle());
+    return s->DN(u, v, Nu, Nv);
 }
 
 bool GeomSurface::isUmbillic(double u, double v) const
@@ -4774,7 +4849,7 @@ void GeomBezierSurface::setHandle(const Handle(Geom_BezierSurface)& b)
     this->mySurface = Handle(Geom_BezierSurface)::DownCast(b->Copy());
 }
 
-Geometry *GeomBezierSurface::copy(void) const
+Geometry *GeomBezierSurface::copy() const
 {
     GeomBezierSurface *newSurf =  new GeomBezierSurface(mySurface);
     newSurf->copyNonTag(this);
@@ -4782,19 +4857,29 @@ Geometry *GeomBezierSurface::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomBezierSurface::getMemSize (void) const {
-    throw Base::NotImplementedError();
+unsigned int GeomBezierSurface::getMemSize () const
+{
+    unsigned int size = sizeof(Geom_BezierSurface);
+    if (!mySurface.IsNull()) {
+        unsigned int poles = mySurface->NbUPoles();
+        poles *= mySurface->NbVPoles();
+        size += poles * sizeof(gp_Pnt);
+        size += poles * sizeof(Standard_Real);
+    }
+    return size;
 }
 
-void GeomBezierSurface::Save (Base::Writer &/*writer*/) const {
-    throw Base::NotImplementedError();
+void GeomBezierSurface::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomBezierSurface::Save");
 }
 
-void GeomBezierSurface::Restore (Base::XMLReader &/*reader*/) {
-    throw Base::NotImplementedError();
+void GeomBezierSurface::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomBezierSurface::Restore");
 }
 
-PyObject *GeomBezierSurface::getPyObject(void)
+PyObject *GeomBezierSurface::getPyObject()
 {
     return new BezierSurfacePy(static_cast<GeomBezierSurface*>(this->clone()));
 }
@@ -4899,27 +4984,68 @@ const Handle(Geom_Geometry)& GeomBSplineSurface::handle() const
     return mySurface;
 }
 
-Geometry *GeomBSplineSurface::copy(void) const
+Geometry *GeomBSplineSurface::copy() const
 {
     GeomBSplineSurface *newSurf =  new GeomBSplineSurface(mySurface);
     newSurf->copyNonTag(this);
     return newSurf;
 }
 
+void GeomBSplineSurface::scaleKnotsToBounds(double u0, double u1, double v0, double v1)
+{
+    try {
+        Handle(Geom_BSplineSurface) surf = Handle(Geom_BSplineSurface)::DownCast(mySurface->Copy());
+        Standard_RangeError_Raise_if (u1 <= u0 || v1 <= v0, " ");
+        Standard_Real bu0,bu1,bv0,bv1;
+        surf->Bounds(bu0,bu1,bv0,bv1);
+        if ((abs(u0-bu0) > Precision::Confusion()) || (abs(u1-bu1) > Precision::Confusion())) {
+            TColStd_Array1OfReal uk(1,surf->NbUKnots());
+            surf->UKnots(uk);
+            BSplCLib::Reparametrize(u0, u1, uk);
+            surf->SetUKnots(uk);
+        }
+        if ((abs(v0-bv0) > Precision::Confusion()) || (abs(v1-bv1) > Precision::Confusion())) {
+            TColStd_Array1OfReal vk(1,surf->NbVKnots());
+            surf->VKnots(vk);
+            BSplCLib::Reparametrize(v0, v1, vk);
+            surf->SetVKnots(vk);
+        }
+        mySurface = surf;
+        return;
+    }
+    catch (Standard_Failure& e) {
+        THROWM(Base::CADKernelError,e.GetMessageString())
+    }
+}
+
 // Persistence implementer
-unsigned int GeomBSplineSurface::getMemSize (void) const {
-    throw Base::NotImplementedError();
+unsigned int GeomBSplineSurface::getMemSize () const
+{
+    unsigned int size = sizeof(Geom_BSplineSurface);
+    if (!mySurface.IsNull()) {
+        size += mySurface->NbUKnots() * sizeof(Standard_Real);
+        size += mySurface->NbUKnots() * sizeof(Standard_Integer);
+        size += mySurface->NbVKnots() * sizeof(Standard_Real);
+        size += mySurface->NbVKnots() * sizeof(Standard_Integer);
+        unsigned int poles = mySurface->NbUPoles();
+        poles *= mySurface->NbVPoles();
+        size += poles * sizeof(gp_Pnt);
+        size += poles * sizeof(Standard_Real);
+    }
+    return size;
 }
 
-void GeomBSplineSurface::Save (Base::Writer &/*writer*/) const {
-    throw Base::NotImplementedError();
+void GeomBSplineSurface::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomBSplineSurface::Save");
 }
 
-void GeomBSplineSurface::Restore (Base::XMLReader &/*reader*/) {
-    throw Base::NotImplementedError();
+void GeomBSplineSurface::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomBSplineSurface::Restore");
 }
 
-PyObject *GeomBSplineSurface::getPyObject(void)
+PyObject *GeomBSplineSurface::getPyObject()
 {
     return new BSplineSurfacePy(static_cast<GeomBSplineSurface*>(this->clone()));
 }
@@ -5059,7 +5185,7 @@ const Handle(Geom_Geometry)& GeomCylinder::handle() const
     return mySurface;
 }
 
-Geometry *GeomCylinder::copy(void) const
+Geometry *GeomCylinder::copy() const
 {
     GeomCylinder *tempCurve = new GeomCylinder();
     tempCurve->mySurface = Handle(Geom_CylindricalSurface)::DownCast(mySurface->Copy());
@@ -5068,19 +5194,22 @@ Geometry *GeomCylinder::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomCylinder::getMemSize (void) const {
-    throw Base::NotImplementedError();
+unsigned int GeomCylinder::getMemSize () const
+{
+    return sizeof(Geom_CylindricalSurface);
 }
 
-void GeomCylinder::Save (Base::Writer &/*writer*/) const {
-    throw Base::NotImplementedError();
+void GeomCylinder::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomCylinder::Save");
 }
 
-void GeomCylinder::Restore (Base::XMLReader &/*reader*/) {
-    throw Base::NotImplementedError();
+void GeomCylinder::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomCylinder::Restore");
 }
 
-PyObject *GeomCylinder::getPyObject(void)
+PyObject *GeomCylinder::getPyObject()
 {
     return new CylinderPy(static_cast<GeomCylinder*>(this->clone()));
 }
@@ -5131,7 +5260,7 @@ const Handle(Geom_Geometry)& GeomCone::handle() const
     return mySurface;
 }
 
-Geometry *GeomCone::copy(void) const
+Geometry *GeomCone::copy() const
 {
     GeomCone *tempCurve = new GeomCone();
     tempCurve->mySurface = Handle(Geom_ConicalSurface)::DownCast(mySurface->Copy());
@@ -5140,11 +5269,22 @@ Geometry *GeomCone::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomCone::getMemSize (void) const               {assert(0); return 0;/* not implemented yet */}
-void         GeomCone::Save       (Base::Writer &/*writer*/) const {assert(0);          /* not implemented yet */}
-void         GeomCone::Restore    (Base::XMLReader &/*reader*/)    {assert(0);          /* not implemented yet */}
+unsigned int GeomCone::getMemSize () const
+{
+    return sizeof(Geom_ConicalSurface);
+}
 
-PyObject *GeomCone::getPyObject(void)
+void GeomCone::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomCone::Save");
+}
+
+void GeomCone::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomCone::Restore");
+}
+
+PyObject *GeomCone::getPyObject()
 {
     return new ConePy(static_cast<GeomCone*>(this->clone()));
 }
@@ -5170,6 +5310,54 @@ bool GeomCone::isSame(const Geometry &_other, double tol, double atol) const
         && fabs(getSemiAngle() - other.getSemiAngle()) <= atol;
 }
 
+
+gp_Vec GeomCone::getDN(double u, double v, int Nu, int Nv) const
+{
+    // Will be fixed in OCC 7.7
+#if OCC_VERSION_HEX >= 0x070700
+    return GeomSurface::getDN(u, v, Nu, Nv);
+#else
+    // Copied from ElSLib::ConeDN() and applied the needed fix
+    auto ElSLib__ConeDN = [](const Standard_Real U,
+                             const Standard_Real V,
+                             const gp_Ax3& Pos,
+                             const Standard_Real Radius,
+                             const Standard_Real SAngle,
+                             const Standard_Integer Nu,
+                             const Standard_Integer Nv)
+    {
+       gp_XYZ Xdir = Pos.XDirection().XYZ();
+       gp_XYZ Ydir = Pos.YDirection().XYZ();
+       Standard_Real Um = U + Nu * M_PI_2;  // M_PI * 0.5
+       Xdir.Multiply(cos(Um));
+       Ydir.Multiply(sin(Um));
+       Xdir.Add(Ydir);
+       if(Nv == 0) {
+         Xdir.Multiply(Radius + V * sin(SAngle));
+         if(Nu == 0) Xdir.Add(Pos.Location().XYZ());
+         return gp_Vec(Xdir);
+       }
+       else if(Nv == 1) {
+         Xdir.Multiply(sin(SAngle));
+         if (Nu == 0)
+           Xdir.Add(Pos.Direction().XYZ() * cos(SAngle));
+         return gp_Vec(Xdir);
+       }
+       return gp_Vec(0.0,0.0,0.0);
+    };
+
+    // Workaround for cones to get the correct derivatives
+    // https://forum.freecadweb.org/viewtopic.php?f=10&t=66677
+    Handle(Geom_ConicalSurface) s = Handle(Geom_ConicalSurface)::DownCast(handle());
+    Standard_RangeError_Raise_if (Nu + Nv < 1 || Nu < 0 || Nv < 0, " ");
+    if (Nv > 1) {
+        return gp_Vec (0.0, 0.0, 0.0);
+    }
+    else {
+      return ElSLib__ConeDN(u, v, s->Position(), s->RefRadius(), s->SemiAngle(), Nu, Nv);
+    }
+#endif
+}
 
 // -------------------------------------------------
 
@@ -5200,7 +5388,7 @@ const Handle(Geom_Geometry)& GeomToroid::handle() const
     return mySurface;
 }
 
-Geometry *GeomToroid::copy(void) const
+Geometry *GeomToroid::copy() const
 {
     GeomToroid *tempCurve = new GeomToroid();
     tempCurve->mySurface = Handle(Geom_ToroidalSurface)::DownCast(mySurface->Copy());
@@ -5209,11 +5397,22 @@ Geometry *GeomToroid::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomToroid::getMemSize (void) const               {assert(0); return 0;/* not implemented yet */}
-void         GeomToroid::Save       (Base::Writer &/*writer*/) const {assert(0);          /* not implemented yet */}
-void         GeomToroid::Restore    (Base::XMLReader &/*reader*/)    {assert(0);          /* not implemented yet */}
+unsigned int GeomToroid::getMemSize () const
+{
+    return sizeof(Geom_ToroidalSurface);
+}
 
-PyObject *GeomToroid::getPyObject(void)
+void GeomToroid::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomToroid::Save");
+}
+
+void GeomToroid::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomToroid::Restore");
+}
+
+PyObject *GeomToroid::getPyObject()
 {
     return new ToroidPy(static_cast<GeomToroid*>(this->clone()));
 }
@@ -5270,7 +5469,7 @@ const Handle(Geom_Geometry)& GeomSphere::handle() const
     return mySurface;
 }
 
-Geometry *GeomSphere::copy(void) const
+Geometry *GeomSphere::copy() const
 {
     GeomSphere *tempCurve = new GeomSphere();
     tempCurve->mySurface = Handle(Geom_SphericalSurface)::DownCast(mySurface->Copy());
@@ -5279,11 +5478,22 @@ Geometry *GeomSphere::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomSphere::getMemSize (void) const               {assert(0); return 0;/* not implemented yet */}
-void         GeomSphere::Save       (Base::Writer &/*writer*/) const {assert(0);          /* not implemented yet */}
-void         GeomSphere::Restore    (Base::XMLReader &/*reader*/)    {assert(0);          /* not implemented yet */}
+unsigned int GeomSphere::getMemSize () const
+{
+    return sizeof(Geom_SphericalSurface);
+}
 
-PyObject *GeomSphere::getPyObject(void)
+void GeomSphere::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomSphere::Save");
+}
+
+void GeomSphere::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomSphere::Restore");
+}
+
+PyObject *GeomSphere::getPyObject()
 {
     return new SpherePy(static_cast<GeomSphere*>(this->clone()));
 }
@@ -5340,7 +5550,7 @@ const Handle(Geom_Geometry)& GeomPlane::handle() const
     return mySurface;
 }
 
-Geometry *GeomPlane::copy(void) const
+Geometry *GeomPlane::copy() const
 {
     GeomPlane *tempCurve = new GeomPlane();
     tempCurve->mySurface = Handle(Geom_Plane)::DownCast(mySurface->Copy());
@@ -5349,11 +5559,22 @@ Geometry *GeomPlane::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomPlane::getMemSize (void) const               {assert(0); return 0;/* not implemented yet */}
-void         GeomPlane::Save       (Base::Writer &/*writer*/) const {assert(0);          /* not implemented yet */}
-void         GeomPlane::Restore    (Base::XMLReader &/*reader*/)    {assert(0);          /* not implemented yet */}
+unsigned int GeomPlane::getMemSize () const
+{
+    return sizeof(Geom_Plane);
+}
 
-PyObject *GeomPlane::getPyObject(void)
+void GeomPlane::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomPlane::Save");
+}
+
+void GeomPlane::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomPlane::Restore");
+}
+
+PyObject *GeomPlane::getPyObject()
 {
     return new PlanePy(static_cast<GeomPlane*>(this->clone()));
 }
@@ -5405,7 +5626,7 @@ const Handle(Geom_Geometry)& GeomOffsetSurface::handle() const
     return mySurface;
 }
 
-Geometry *GeomOffsetSurface::copy(void) const
+Geometry *GeomOffsetSurface::copy() const
 {
     GeomOffsetSurface *newSurf = new GeomOffsetSurface(mySurface);
     newSurf->copyNonTag(this);
@@ -5413,11 +5634,22 @@ Geometry *GeomOffsetSurface::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomOffsetSurface::getMemSize (void) const               {assert(0); return 0;/* not implemented yet */}
-void         GeomOffsetSurface::Save       (Base::Writer &/*writer*/) const {assert(0);          /* not implemented yet */}
-void         GeomOffsetSurface::Restore    (Base::XMLReader &/*reader*/)    {assert(0);          /* not implemented yet */}
+unsigned int GeomOffsetSurface::getMemSize () const
+{
+    return sizeof(Geom_OffsetSurface);
+}
 
-PyObject *GeomOffsetSurface::getPyObject(void)
+void GeomOffsetSurface::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomOffsetSurface::Save");
+}
+
+void GeomOffsetSurface::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomOffsetSurface::Restore");
+}
+
+PyObject *GeomOffsetSurface::getPyObject()
 {
     return new OffsetSurfacePy(static_cast<GeomOffsetSurface*>(this->clone()));
 }
@@ -5484,7 +5716,7 @@ const Handle(Geom_Geometry)& GeomPlateSurface::handle() const
     return mySurface;
 }
 
-Geometry *GeomPlateSurface::copy(void) const
+Geometry *GeomPlateSurface::copy() const
 {
     GeomPlateSurface *newSurf = new GeomPlateSurface(mySurface);
     newSurf->copyNonTag(this);
@@ -5492,7 +5724,7 @@ Geometry *GeomPlateSurface::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomPlateSurface::getMemSize (void) const
+unsigned int GeomPlateSurface::getMemSize () const
 {
     throw Base::NotImplementedError("GeomPlateSurface::getMemSize");
 }
@@ -5507,7 +5739,7 @@ void GeomPlateSurface::Restore(Base::XMLReader &/*reader*/)
     throw Base::NotImplementedError("GeomPlateSurface::Restore");
 }
 
-PyObject *GeomPlateSurface::getPyObject(void)
+PyObject *GeomPlateSurface::getPyObject()
 {
     return new PlateSurfacePy(static_cast<GeomPlateSurface*>(this->clone()));
 }
@@ -5545,7 +5777,7 @@ const Handle(Geom_Geometry)& GeomTrimmedSurface::handle() const
     return mySurface;
 }
 
-Geometry *GeomTrimmedSurface::copy(void) const
+Geometry *GeomTrimmedSurface::copy() const
 {
     GeomTrimmedSurface *newSurf = new GeomTrimmedSurface(mySurface);
     newSurf->copyNonTag(this);
@@ -5553,11 +5785,22 @@ Geometry *GeomTrimmedSurface::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomTrimmedSurface::getMemSize (void) const {assert(0); return 0;/* not implemented yet */}
-void         GeomTrimmedSurface::Save       (Base::Writer &/*writer*/) const {assert(0);          /* not implemented yet */}
-void         GeomTrimmedSurface::Restore    (Base::XMLReader &/*reader*/)    {assert(0);          /* not implemented yet */}
+unsigned int GeomTrimmedSurface::getMemSize () const
+{
+    return sizeof(Geom_RectangularTrimmedSurface);
+}
 
-PyObject *GeomTrimmedSurface::getPyObject(void)
+void GeomTrimmedSurface::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomTrimmedSurface::Save");
+}
+
+void GeomTrimmedSurface::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomTrimmedSurface::Restore");
+}
+
+PyObject *GeomTrimmedSurface::getPyObject()
 {
     return new RectangularTrimmedSurfacePy(static_cast<GeomTrimmedSurface*>(this->clone()));
 }
@@ -5658,7 +5901,7 @@ const Handle(Geom_Geometry)& GeomSurfaceOfRevolution::handle() const
     return mySurface;
 }
 
-Geometry *GeomSurfaceOfRevolution::copy(void) const
+Geometry *GeomSurfaceOfRevolution::copy() const
 {
     GeomSurfaceOfRevolution *newSurf = new GeomSurfaceOfRevolution(mySurface);
     newSurf->copyNonTag(this);
@@ -5666,11 +5909,22 @@ Geometry *GeomSurfaceOfRevolution::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomSurfaceOfRevolution::getMemSize (void) const               {assert(0); return 0;/* not implemented yet */}
-void         GeomSurfaceOfRevolution::Save       (Base::Writer &/*writer*/) const {assert(0);          /* not implemented yet */}
-void         GeomSurfaceOfRevolution::Restore    (Base::XMLReader &/*reader*/)    {assert(0);          /* not implemented yet */}
+unsigned int GeomSurfaceOfRevolution::getMemSize () const
+{
+    return sizeof(Geom_SurfaceOfRevolution);
+}
 
-PyObject *GeomSurfaceOfRevolution::getPyObject(void)
+void GeomSurfaceOfRevolution::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomSurfaceOfRevolution::Save");
+}
+
+void GeomSurfaceOfRevolution::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomSurfaceOfRevolution::Restore");
+}
+
+PyObject *GeomSurfaceOfRevolution::getPyObject()
 {
     return new SurfaceOfRevolutionPy(static_cast<GeomSurfaceOfRevolution*>(this->clone()));
 }
@@ -5707,7 +5961,7 @@ const Handle(Geom_Geometry)& GeomSurfaceOfExtrusion::handle() const
     return mySurface;
 }
 
-Geometry *GeomSurfaceOfExtrusion::copy(void) const
+Geometry *GeomSurfaceOfExtrusion::copy() const
 {
     GeomSurfaceOfExtrusion *newSurf = new GeomSurfaceOfExtrusion(mySurface);
     newSurf->copyNonTag(this);
@@ -5715,11 +5969,22 @@ Geometry *GeomSurfaceOfExtrusion::copy(void) const
 }
 
 // Persistence implementer
-unsigned int GeomSurfaceOfExtrusion::getMemSize (void) const               {assert(0); return 0;/* not implemented yet */}
-void         GeomSurfaceOfExtrusion::Save       (Base::Writer &/*writer*/) const {assert(0);          /* not implemented yet */}
-void         GeomSurfaceOfExtrusion::Restore    (Base::XMLReader &/*reader*/)    {assert(0);          /* not implemented yet */}
+unsigned int GeomSurfaceOfExtrusion::getMemSize () const
+{
+   return sizeof(Geom_SurfaceOfLinearExtrusion);
+}
 
-PyObject *GeomSurfaceOfExtrusion::getPyObject(void)
+void GeomSurfaceOfExtrusion::Save(Base::Writer &/*writer*/) const
+{
+    throw Base::NotImplementedError("GeomSurfaceOfExtrusion::Save");
+}
+
+void GeomSurfaceOfExtrusion::Restore(Base::XMLReader &/*reader*/)
+{
+    throw Base::NotImplementedError("GeomSurfaceOfExtrusion::Restore");
+}
+
+PyObject *GeomSurfaceOfExtrusion::getPyObject()
 {
     return new SurfaceOfExtrusionPy(static_cast<GeomSurfaceOfExtrusion*>(this->clone()));
 }
@@ -5861,7 +6126,7 @@ GeomArcOfCircle *createFilletGeometry(const GeomLineSegment *lineSeg1, const Geo
     Base::Vector3d corner;
     if (!Part::find2DLinesIntersection(lineSeg1, lineSeg2, corner))
         // Parallel Lines so return null pointer
-        return 0;
+        return nullptr;
 
     Base::Vector3d dir1 = lineSeg1->getEndPoint() - lineSeg1->getStartPoint();
     Base::Vector3d dir2 = lineSeg2->getEndPoint() - lineSeg2->getStartPoint();
@@ -6283,13 +6548,11 @@ std::unique_ptr<GeomCurve> makeFromCurveAdaptor(const Adaptor3d_Curve& adapt, bo
             geoCurve.reset(new GeomBSplineCurve(adapt));
             break;
         }
-#if OCC_VERSION_HEX >= 0x070000
     case GeomAbs_OffsetCurve:
         {
             geoCurve.reset(new GeomOffsetCurve(adapt.OffsetCurve()));
             break;
         }
-#endif
     case GeomAbs_OtherCurve:
     default:
         break;

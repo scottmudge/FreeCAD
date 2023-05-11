@@ -24,10 +24,6 @@
 #ifndef BASE_MATRIX_H
 #define BASE_MATRIX_H
 
-#include <cassert>
-#include <cfloat>
-#include <cmath>
-#include <cstdio>
 #include <string>
 
 #include "Vector3D.h"
@@ -35,23 +31,32 @@
 #include <FCGlobal.h>
 #endif
 
+
 namespace Base {
 
 class Rotation;
+
+enum class ScaleType {
+    Other = -1,
+    NoScaling = 0,
+    NonUniformRight = 1,
+    NonUniformLeft = 2,
+    Uniform = 3
+};
 
 /**
  * The Matrix4D class.
  */
 class BaseExport Matrix4D
 {
-  typedef float_traits<double> traits_type;
+  using traits_type = float_traits<double>;
 
 public:
   /// Default constructor
   /*!
    * Initialises to an identity matrix
    */
-  Matrix4D(void);
+  Matrix4D();
 
   /// Construction
   Matrix4D (float a11, float a12, float a13, float a14,
@@ -69,7 +74,7 @@ public:
   Matrix4D (const Vector3f& rclBase, const Vector3f& rclDir, float fAngle);
   Matrix4D (const Vector3d& rclBase, const Vector3d& rclDir, double fAngle);
   /// Destruction
-  ~Matrix4D () {}
+  ~Matrix4D () = default;
 
   /** @name Operators */
   //@{
@@ -90,6 +95,8 @@ public:
   inline Vector3d  operator *  (const Vector3d& rclVct) const;
   inline void multVec(const Vector3d & src, Vector3d & dst) const;
   inline void multVec(const Vector3f & src, Vector3f & dst) const;
+  inline Matrix4D  operator *  (double) const;
+  inline Matrix4D& operator *= (double);
   /// Comparison
   inline bool      operator != (const Matrix4D& rclMtrx) const;
   /// Comparison
@@ -98,10 +105,24 @@ public:
   inline double*   operator [] (unsigned short usNdx);
   /// Index operator
   inline const double*    operator[] (unsigned short usNdx) const;
+  /// Get vector of row
+  inline Vector3d getRow(unsigned short usNdx) const;
+  /// Get vector of column
+  inline Vector3d getCol(unsigned short usNdx) const;
+  /// Get vector of trace
+  inline Vector3d trace() const;
+  /// Set row to vector
+  inline void setRow(unsigned short usNdx, const Vector3d&);
+  /// Set column to vector
+  inline void setCol(unsigned short usNdx, const Vector3d&);
+  /// Set trace to vector
+  inline void setTrace(const Vector3d&);
   /// Compute the determinant of the matrix
   double determinant() const;
+  /// Compute the determinant of the 3x3 sub-matrix
+  double determinant3() const;
   /// Analyse the transformation
-  std::string analyse(void) const;
+  std::string analyse() const;
   /// Outer product (Dyadic product)
   Matrix4D& Outer(const Vector3f& rV1, const Vector3f& rV2);
   Matrix4D& Outer(const Vector3d& rV1, const Vector3d& rV2);
@@ -117,14 +138,18 @@ public:
   /// set the matrix in OpenGL style
   void setGLMatrix  (const double dMtrx[16]);
 
-  unsigned long getMemSpace (void);
+  unsigned long getMemSpace ();
 
   /** @name Manipulation */
   //@{
   /// Makes unity matrix
-  void setToUnity(void);
+  void setToUnity();
+  /// Checks if this is the unit matrix
+  bool isUnity() const;
   /// Makes a null matrix
-  void nullify(void);
+  void nullify();
+  /// Checks if this is the null matrix
+  bool isNull() const;
   /// moves the coordinatesystem for the x,y,z value
   void move         (float x, float y, float z)
   { move(Vector3f(x,y,z)); }
@@ -141,8 +166,13 @@ public:
   /// scale for the x,y,z value
   void scale        (const Vector3f& rclVct);
   void scale        (const Vector3d& rclVct);
-  /// Check for scaling factor, 0: not scale, 1: uniform scale, or else -1
-  int hasScale(double tol=0.0) const;
+  /// uniform scale
+  void scale        (float scalexyz)
+  { scale(Vector3f(scalexyz, scalexyz, scalexyz)); }
+  void scale        (double scalexyz)
+  { scale(Vector3d(scalexyz, scalexyz, scalexyz)); }
+  /// Check for scaling factor
+  ScaleType hasScale(double tol=0.0) const;
   /// Rotate around the X axis (in transformed space) for the given value in radians
   void rotX         (double fAngle);
   /// Rotate around the Y axis (in transformed space) for the given value in radians
@@ -164,12 +194,12 @@ public:
   void transform    (const Vector3f& rclVct, const Matrix4D& rclMtrx);
   void transform    (const Vector3d& rclVct, const Matrix4D& rclMtrx);
   /// Matrix is expected to have a 3x3 rotation submatrix.
-  void inverse      (void);
+  void inverse      ();
   /// Matrix is expected to have a 3x3 rotation submatrix.
-  void inverseOrthogonal(void);
+  void inverseOrthogonal();
   /// Arbitrary, non-singular matrix
-  void inverseGauss (void);
-  void transpose    (void);
+  void inverseGauss ();
+  void transpose    ();
   //@}
 
   /** @name Compose/Decompose matrix into translation, rotation, scale and scale orientation*/
@@ -194,9 +224,9 @@ public:
                     const Vector3d & center);
   //@}
 
-  void Print        (void) const;
+  void Print        () const;
   /// write the 16 double of the matrix into a string
-  std::string toString(void) const;
+  std::string toString() const;
   /// read the 16 double of the matrix from a string
   void fromString (const std::string &str);
 
@@ -281,13 +311,15 @@ inline Matrix4D Matrix4D::operator * (const Matrix4D& rclMtrx) const
   Matrix4D  clMat;
   unsigned short ie, iz, is;
 
-  for (iz = 0; iz < 4; iz++)
+  for (iz = 0; iz < 4; iz++) {
     for (is = 0; is < 4; is++) {
       clMat.dMtrx4D[iz][is] = 0;
-      for (ie = 0; ie < 4; ie++)
-       	clMat.dMtrx4D[iz][is] += dMtrx4D[iz][ie] *
+      for (ie = 0; ie < 4; ie++) {
+        clMat.dMtrx4D[iz][is] += dMtrx4D[iz][ie] *
                           rclMtrx.dMtrx4D[ie][is];
+      }
     }
+  }
 
   return clMat;
 }
@@ -358,6 +390,28 @@ inline void Matrix4D::multVec(const Vector3f & src, Vector3f & dst) const
           static_cast<float>(z));
 }
 
+inline Matrix4D  Matrix4D::operator *  (double scalar) const
+{
+    Matrix4D  matrix;
+    for (unsigned short i = 0; i < 4; i++) {
+        for (unsigned short j = 0; j < 4; j++) {
+            matrix.dMtrx4D[i][j] = dMtrx4D[i][j] * scalar;
+        }
+    }
+
+    return matrix;
+}
+
+inline Matrix4D& Matrix4D::operator *= (double scalar)
+{
+    for (unsigned short i = 0; i < 4; i++) {
+        for (unsigned short j = 0; j < 4; j++) {
+            dMtrx4D[i][j] *= scalar;
+        }
+    }
+    return *this;
+}
+
 inline bool Matrix4D::operator== (const Matrix4D& rclMtrx) const
 {
   unsigned short iz, is;
@@ -392,6 +446,42 @@ inline double* Matrix4D::operator[] (unsigned short usNdx)
 inline const double* Matrix4D::operator[] (unsigned short usNdx) const
 {
   return dMtrx4D[usNdx];
+}
+
+inline Vector3d Matrix4D::getRow(unsigned short usNdx) const
+{
+    return Vector3d(dMtrx4D[usNdx][0], dMtrx4D[usNdx][1], dMtrx4D[usNdx][2]);
+}
+
+inline Vector3d Matrix4D::getCol(unsigned short usNdx) const
+{
+    return Vector3d(dMtrx4D[0][usNdx], dMtrx4D[1][usNdx], dMtrx4D[2][usNdx]);
+}
+
+inline Vector3d Matrix4D::trace() const
+{
+    return Vector3d(dMtrx4D[0][0], dMtrx4D[1][1], dMtrx4D[2][2]);
+}
+
+inline void Matrix4D::setRow(unsigned short usNdx, const Vector3d& v)
+{
+    dMtrx4D[usNdx][0] = v.x;
+    dMtrx4D[usNdx][1] = v.y;
+    dMtrx4D[usNdx][2] = v.z;
+}
+
+inline void Matrix4D::setCol(unsigned short usNdx, const Vector3d& v)
+{
+    dMtrx4D[0][usNdx] = v.x;
+    dMtrx4D[1][usNdx] = v.y;
+    dMtrx4D[2][usNdx] = v.z;
+}
+
+inline void Matrix4D::setTrace(const Vector3d& v)
+{
+    dMtrx4D[0][0] = v.x;
+    dMtrx4D[1][1] = v.y;
+    dMtrx4D[2][2] = v.z;
 }
 
 } // namespace Base

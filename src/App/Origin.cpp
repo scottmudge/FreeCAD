@@ -30,14 +30,16 @@
 
 #include <boost/range.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <Base/Exception.h>
-#include <Base/Placement.h>
+
 #include <App/Application.h>
 #include <App/Document.h>
-#include "OriginFeature.h"
-#include "GroupParams.h"
+#include <Base/Exception.h>
+#include <Base/Placement.h>
 
 #include "Origin.h"
+
+#include "GroupParams.h"
+#include "OriginFeature.h"
 
 #ifndef M_PI
 #define M_PI       3.14159265358979323846
@@ -52,16 +54,15 @@ PROPERTY_SOURCE(App::Origin, App::DocumentObject)
 const char* Origin::AxisRoles[3] = {"X_Axis", "Y_Axis", "Z_Axis"};
 const char* Origin::PlaneRoles[3] = {"XY_Plane", "XZ_Plane", "YZ_Plane"};
 
-Origin::Origin(void) : extension(this) {
-    ADD_PROPERTY_TYPE ( OriginFeatures, (0), 0, (PropertyType)(Prop_Hidden|Prop_Output),
+Origin::Origin() : extension(this) {
+    ADD_PROPERTY_TYPE ( OriginFeatures, (nullptr), 0, (PropertyType)(Prop_Hidden|Prop_Output),
             "Axis and baseplanes controlled by the origin" );
 
     setStatus(App::NoAutoExpand,true);
     extension.initExtension(this);
 }
 
-Origin::~Origin(void)
-{ }
+Origin::~Origin() = default;
 
 App::OriginFeature *Origin::getOriginFeature( const char *role) const {
     initObjects();
@@ -122,11 +123,11 @@ bool Origin::hasObject (const DocumentObject *obj) const {
     return std::find (features.begin(), features.end(), obj) != features.end ();
 }
 
-short Origin::mustExecute(void) const {
+short Origin::mustExecute() const {
     return DocumentObject::mustExecute();
 }
 
-App::DocumentObjectExecReturn *Origin::execute(void) {
+App::DocumentObjectExecReturn *Origin::execute() {
     return DocumentObject::execute ();
 }
 

@@ -21,54 +21,47 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
-#ifndef _PreComp_
-#endif  // #ifndef _PreComp_
-
-#include "CosmeticExtension.h"
 
 #include <Base/Console.h>
 
-#include <App/Application.h>
-#include <App/FeaturePythonPyImp.h>
-
+#include "CosmeticExtension.h"
 #include "CosmeticExtensionPy.h"
-
 #include "Cosmetic.h"
 #include "DrawUtil.h"
 #include "DrawViewPart.h"
 
+
 using namespace TechDraw;
 using namespace std;
 
-
 EXTENSION_PROPERTY_SOURCE(TechDraw::CosmeticExtension, App::DocumentObjectExtension)
 
-CosmeticExtension::CosmeticExtension() 
+CosmeticExtension::CosmeticExtension()
 {
     static const char *cgroup = "Cosmetics";
 
-    EXTENSION_ADD_PROPERTY_TYPE(CosmeticVertexes, (0), cgroup, App::Prop_None, "CosmeticVertex Save/Restore");
-    EXTENSION_ADD_PROPERTY_TYPE(CosmeticEdges, (0), cgroup, App::Prop_None, "CosmeticEdge Save/Restore");
-    EXTENSION_ADD_PROPERTY_TYPE(CenterLines ,(0),cgroup,App::Prop_None,"Geometry format Save/Restore");
-    EXTENSION_ADD_PROPERTY_TYPE(GeomFormats ,(0),cgroup,App::Prop_None,"Geometry format Save/Restore");
+    EXTENSION_ADD_PROPERTY_TYPE(CosmeticVertexes, (nullptr), cgroup, App::Prop_Output, "CosmeticVertex Save/Restore");
+    EXTENSION_ADD_PROPERTY_TYPE(CosmeticEdges, (nullptr), cgroup, App::Prop_Output, "CosmeticEdge Save/Restore");
+    EXTENSION_ADD_PROPERTY_TYPE(CenterLines ,(nullptr), cgroup, App::Prop_Output, "Geometry format Save/Restore");
+    EXTENSION_ADD_PROPERTY_TYPE(GeomFormats ,(nullptr), cgroup, App::Prop_Output, "Geometry format Save/Restore");
 
     initExtensionType(CosmeticExtension::getExtensionClassTypeId());
 }
 
-CosmeticExtension::~CosmeticExtension() 
+CosmeticExtension::~CosmeticExtension()
 {
 }
 
-//void CosmeticExtension::extHandleChangedPropertyName(Base::XMLReader &reader, 
-//                                                     const char* TypeName, 
+//void CosmeticExtension::extHandleChangedPropertyName(Base::XMLReader &reader,
+//                                                     const char* TypeName,
 //                                                     const char* PropName)
 //{
 //}
 
 //==============================================================================
-//CosmeticVertex x,y are stored as unscaled, but mirrored (inverted Y) values.
-//if you are creating a CV based on calculations of scaled geometry, you need to 
-//unscale x,y before creation.
+//CosmeticVertex x, y are stored as unscaled, but mirrored (inverted Y) values.
+//if you are creating a CV based on calculations of scaled geometry, you need to
+//unscale x, y before creation.
 //if you are creating a CV based on calculations of mirrored geometry, you need to
 //mirror again before creation.
 
@@ -107,25 +100,22 @@ TechDraw::CosmeticVertex* CosmeticExtension::getCosmeticVertex(std::string tagSt
 // used when selecting
 TechDraw::CosmeticVertex* CosmeticExtension::getCosmeticVertexBySelection(std::string name) const
 {
-//    Base::Console().Message("CEx::getCVBySelection(%s)\n",name.c_str());
+//    Base::Console().Message("CEx::getCVBySelection(%s)\n", name.c_str());
     CosmeticVertex* result = nullptr;
     App::DocumentObject* extObj = const_cast<App::DocumentObject*> (getExtendedObject());
     TechDraw::DrawViewPart* dvp = dynamic_cast<TechDraw::DrawViewPart*>(extObj);
-    if (dvp == nullptr) {
+    if (!dvp)
         return result;
-    }
     int idx = DrawUtil::getIndexFromName(name);
-    TechDraw::Vertex* v = dvp->getProjVertexByIndex(idx);
-    if (v == nullptr) {
+    TechDraw::VertexPtr v = dvp->getProjVertexByIndex(idx);
+    if (!v)
         return result;
-    }
-    if (!v->cosmeticTag.empty()) {
+    if (!v->cosmeticTag.empty())
         result = getCosmeticVertex(v->cosmeticTag);
-    }
     return result;
 }
 
-//overload for index only 
+//overload for index only
 TechDraw::CosmeticVertex* CosmeticExtension::getCosmeticVertexBySelection(int i) const
 {
 //    Base::Console().Message("CEx::getCVBySelection(%d)\n", i);
@@ -155,14 +145,6 @@ void CosmeticExtension::removeCosmeticVertex(std::vector<std::string> delTags)
     }
 }
 
-bool CosmeticExtension::replaceCosmeticVertex(CosmeticVertex* newCV)
-{
-    (void) newCV;
-    Base::Console().Message("CX::replaceCosmeticVertex() - deprecated. do not use.\n");
-    bool result = false;
-    return result;
-}
-
 //********** Cosmetic Edge *****************************************************
 
 //returns unique CE id
@@ -170,7 +152,7 @@ bool CosmeticExtension::replaceCosmeticVertex(CosmeticVertex* newCV)
 std::string CosmeticExtension::addCosmeticEdge(Base::Vector3d start,
                                                Base::Vector3d end)
 {
-//    Base::Console().Message("CEx::addCosmeticEdge(s,e)\n");
+//    Base::Console().Message("CEx::addCosmeticEdge(s, e)\n");
     std::vector<CosmeticEdge*> edges = CosmeticEdges.getValues();
     TechDraw::CosmeticEdge* ce = new TechDraw::CosmeticEdge(start, end);
     edges.push_back(ce);
@@ -179,7 +161,7 @@ std::string CosmeticExtension::addCosmeticEdge(Base::Vector3d start,
     return result;
 }
 
-std::string CosmeticExtension::addCosmeticEdge(TechDraw::BaseGeom* bg)
+std::string CosmeticExtension::addCosmeticEdge(TechDraw::BaseGeomPtr bg)
 {
 //    Base::Console().Message("CEx::addCosmeticEdge(bg: %X)\n", bg);
     std::vector<CosmeticEdge*> edges = CosmeticEdges.getValues();
@@ -215,26 +197,23 @@ TechDraw::CosmeticEdge* CosmeticExtension::getCosmeticEdge(std::string tagString
 // used when selecting
 TechDraw::CosmeticEdge* CosmeticExtension::getCosmeticEdgeBySelection(std::string name) const
 {
-//    Base::Console().Message("CEx::getCEBySelection(%s)\n",name.c_str());
+//    Base::Console().Message("CEx::getCEBySelection(%s)\n", name.c_str());
     CosmeticEdge* result = nullptr;
     App::DocumentObject* extObj = const_cast<App::DocumentObject*> (getExtendedObject());
     TechDraw::DrawViewPart* dvp = dynamic_cast<TechDraw::DrawViewPart*>(extObj);
-    if (dvp == nullptr) {
+    if (!dvp)
         return result;
-    }
     int idx = DrawUtil::getIndexFromName(name);
-    TechDraw::BaseGeom* base = dvp->getGeomByIndex(idx);
-    if (base == nullptr) {
+    TechDraw::BaseGeomPtr base = dvp->getGeomByIndex(idx);
+    if (!base)
         return result;
-    }
-    
-    if (!base->getCosmeticTag().empty()) {
+
+    if (!base->getCosmeticTag().empty())
         result = getCosmeticEdge(base->getCosmeticTag());
-    }
     return result;
 }
 
-//overload for index only 
+//overload for index only
 TechDraw::CosmeticEdge* CosmeticExtension::getCosmeticEdgeBySelection(int i) const
 {
 //    Base::Console().Message("CEx::getCEBySelection(%d)\n", i);
@@ -264,15 +243,6 @@ void CosmeticExtension::removeCosmeticEdge(std::vector<std::string> delTags)
     }
 }
 
-
-bool CosmeticExtension::replaceCosmeticEdge(CosmeticEdge* newCE)
-{
-    (void) newCE;
-    Base::Console().Message("CX::replaceCosmeticEdge() - deprecated. do not use.\n");
-    bool result = false;
-    return result;
-}
-
 //********** Center Line *******************************************************
 
 //returns unique CL id
@@ -281,7 +251,8 @@ std::string CosmeticExtension::addCenterLine(Base::Vector3d start,
                                                Base::Vector3d end)
 {
 //    Base::Console().Message("CEx::addCenterLine(%s)\n",
- //                           DrawUtil::formatVector(pos).c_str());
+//                            DrawUtil::formatVector(start).c_str(),
+//                            DrawUtil::formatVector(end).c_str());
     std::vector<CenterLine*> cLines = CenterLines.getValues();
     TechDraw::CenterLine* cl = new TechDraw::CenterLine(start, end);
     cLines.push_back(cl);
@@ -301,7 +272,7 @@ std::string CosmeticExtension::addCenterLine(TechDraw::CenterLine* cl)
 }
 
 
-std::string CosmeticExtension::addCenterLine(TechDraw::BaseGeom* bg)
+std::string CosmeticExtension::addCenterLine(TechDraw::BaseGeomPtr bg)
 {
 //    Base::Console().Message("CEx::addCenterLine(bg: %X)\n", bg);
     std::vector<CenterLine*> cLines = CenterLines.getValues();
@@ -333,25 +304,22 @@ TechDraw::CenterLine* CosmeticExtension::getCenterLine(std::string tagString) co
 // used when selecting
 TechDraw::CenterLine* CosmeticExtension::getCenterLineBySelection(std::string name) const
 {
-//    Base::Console().Message("CEx::getCLBySelection(%s)\n",name.c_str());
+//    Base::Console().Message("CEx::getCLBySelection(%s)\n", name.c_str());
     CenterLine* result = nullptr;
     App::DocumentObject* extObj = const_cast<App::DocumentObject*> (getExtendedObject());
     TechDraw::DrawViewPart* dvp = dynamic_cast<TechDraw::DrawViewPart*>(extObj);
-    if (dvp == nullptr) {
+    if (!dvp)
         return result;
-    }
     int idx = DrawUtil::getIndexFromName(name);
-    TechDraw::BaseGeom* base = dvp->getGeomByIndex(idx);
-    if (base == nullptr) {
+    TechDraw::BaseGeomPtr base = dvp->getGeomByIndex(idx);
+    if (!base)
         return result;
-    }
-    if (!base->getCosmeticTag().empty()) {
+    if (!base->getCosmeticTag().empty())
         result = getCenterLine(base->getCosmeticTag());
-    }
     return result;
 }
 
-//overload for index only 
+//overload for index only
 TechDraw::CenterLine* CosmeticExtension::getCenterLineBySelection(int i) const
 {
 //    Base::Console().Message("CEx::getCLBySelection(%d)\n", i);
@@ -379,14 +347,6 @@ void CosmeticExtension::removeCenterLine(std::vector<std::string> delTags)
     for (auto& t: delTags) {
         removeCenterLine(t);
     }
-}
-
-bool CosmeticExtension::replaceCenterLine(CenterLine* newCL)
-{
-    (void) newCL;
-    Base::Console().Message("CX::replaceCenterLine() - deprecated. do not use.\n");
-    bool result = false;
-    return result;
 }
 
 
@@ -425,13 +385,12 @@ TechDraw::GeomFormat* CosmeticExtension::getGeomFormat(std::string tagString) co
 // used when selecting
 TechDraw::GeomFormat* CosmeticExtension::getGeomFormatBySelection(std::string name) const
 {
-//    Base::Console().Message("CEx::getCEBySelection(%s)\n",name.c_str());
+//    Base::Console().Message("CEx::getCEBySelection(%s)\n", name.c_str());
     GeomFormat* result = nullptr;
     App::DocumentObject* extObj = const_cast<App::DocumentObject*> (getExtendedObject());
     TechDraw::DrawViewPart* dvp = dynamic_cast<TechDraw::DrawViewPart*>(extObj);
-    if (dvp == nullptr) {
+    if (!dvp)
         return result;
-    }
     int idx = DrawUtil::getIndexFromName(name);
     const std::vector<TechDraw::GeomFormat*> formats = GeomFormats.getValues();
     for (auto& gf: formats) {
@@ -443,7 +402,7 @@ TechDraw::GeomFormat* CosmeticExtension::getGeomFormatBySelection(std::string na
     return result;
 }
 
-//overload for index only 
+//overload for index only
 TechDraw::GeomFormat* CosmeticExtension::getGeomFormatBySelection(int i) const
 {
 //    Base::Console().Message("CEx::getCEBySelection(%d)\n", i);
@@ -451,14 +410,6 @@ TechDraw::GeomFormat* CosmeticExtension::getGeomFormatBySelection(int i) const
     ss << "Edge" << i;
     std::string eName = ss.str();
     return getGeomFormatBySelection(eName);
-}
-
-bool CosmeticExtension::replaceGeomFormat(GeomFormat* newGF)
-{
-    (void) newGF;
-    Base::Console().Message("CX::replaceGeomFormat() - deprecated. do not use.\n");
-    bool result = false;
-    return result;
 }
 
 void CosmeticExtension::removeGeomFormat(std::string delTag)
@@ -478,7 +429,7 @@ void CosmeticExtension::removeGeomFormat(std::string delTag)
 PyObject* CosmeticExtension::getExtensionPyObject(void) {
     if (ExtensionPythonObject.is(Py::_None())){
         // ref counter is set to 1
-        ExtensionPythonObject = Py::Object(new CosmeticExtensionPy(this),true);
+        ExtensionPythonObject = Py::Object(new CosmeticExtensionPy(this), true);
     }
     return Py::new_reference_to(ExtensionPythonObject);
 }

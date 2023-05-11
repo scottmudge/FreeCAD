@@ -20,18 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef PARTGUI_ViewProviderShapeBinder_H
 #define PARTGUI_ViewProviderShapeBinder_H
 
-#include <boost/signals2.hpp>
 #include <Gui/ViewProviderPythonFeature.h>
-#include <Mod/Part/Gui/ViewProvider.h>
 #include <Mod/Part/Gui/ViewProviderSubShapeBinder.h>
+#include <Mod/PartDesign/PartDesignGlobal.h>
 
 namespace PartDesignGui {
 
-// TODO may be derive from something else e.g. ViewProviderGeometryObject (2015-09-11, Fat-Zer)
 class PartDesignGuiExport ViewProviderShapeBinder : public PartGui::ViewProviderPart
 {
     PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderShapeBinder);
@@ -39,15 +36,15 @@ class PartDesignGuiExport ViewProviderShapeBinder : public PartGui::ViewProvider
 public:
     /// Constructor
     ViewProviderShapeBinder();
-    virtual ~ViewProviderShapeBinder();
+    ~ViewProviderShapeBinder() override;
 
     void setupContextMenu(QMenu*, QObject*, const char*) override;
-    void highlightReferences(const bool on, bool auxiliary);
-    
+    void highlightReferences(bool on);
+
 protected:
-    virtual bool setEdit(int ModNum) override;
-    virtual void unsetEdit(int ModNum) override;
-    
+    bool setEdit(int ModNum) override;
+    void unsetEdit(int ModNum) override;
+
 private:
     std::vector<App::Color> originalLineColors;
     std::vector<App::Color> originalFaceColors;

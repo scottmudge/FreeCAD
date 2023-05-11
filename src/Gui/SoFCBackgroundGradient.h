@@ -20,13 +20,13 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_SOFCBACKGROUNDGRADIENT_H
 #define GUI_SOFCBACKGROUNDGRADIENT_H
 
-#ifndef __InventorAll__
-# include "InventorAll.h"
-#endif
+#include <Inventor/SbColor.h>
+#include <Inventor/nodes/SoNode.h>
+#include <Inventor/nodes/SoSubNode.h>
+
 
 class SbColor;
 class SoGLRenderAction;
@@ -34,14 +34,14 @@ class SoGLRenderAction;
 namespace Gui {
 
 class GuiExport SoFCBackgroundGradient : public SoNode {
-    typedef SoNode inherited;
+    using inherited = SoNode;
 
     SO_NODE_HEADER(Gui::SoFCBackgroundGradient);
 
 public:
-    static void initClass(void);
-    static void finish(void);
-    SoFCBackgroundGradient(void);
+    static void initClass();
+    static void finish();
+    SoFCBackgroundGradient();
 
     void GLRender (SoGLRenderAction *action);
     void setColorGradient(const SbColor& fromColor, const SbColor& toColor);

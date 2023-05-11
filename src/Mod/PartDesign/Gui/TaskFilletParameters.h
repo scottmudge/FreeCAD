@@ -43,14 +43,14 @@ class FilletSegmentDelegate : public QItemDelegate
     Q_OBJECT
 
 public:
-    FilletSegmentDelegate(QObject *parent = 0);
+    FilletSegmentDelegate(QObject *parent = nullptr);
 
     QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
-                          const QModelIndex &index) const;
+                          const QModelIndex &index) const override;
 
-    void setEditorData(QWidget *editor, const QModelIndex &index) const;
+    void setEditorData(QWidget *editor, const QModelIndex &index) const override;
     void setModelData(QWidget *editor, QAbstractItemModel *model,
-                      const QModelIndex &index) const;
+                      const QModelIndex &index) const override;
 };
 
 class TaskFilletParameters : public TaskDressUpParameters
@@ -58,27 +58,30 @@ class TaskFilletParameters : public TaskDressUpParameters
     Q_OBJECT
 
 public:
-    TaskFilletParameters(ViewProviderDressUp *DressUpView, QWidget *parent=0);
-    ~TaskFilletParameters();
+    explicit TaskFilletParameters(ViewProviderDressUp *DressUpView, QWidget *parent=nullptr);
+    ~TaskFilletParameters() override;
 
-    virtual void apply();
+    void apply() override;
     void setBinding(Gui::ExpressionBinding *binding, const QModelIndex &index);
 
 private Q_SLOTS:
+    void onAddAllEdges();
+    void onCheckBoxUseAllEdgesToggled(bool checked);
     void onLengthChanged(double);
 
 protected:
-    double getRadius() const;
-    void changeEvent(QEvent *e);
-    virtual void refresh();
+    void changeEvent(QEvent *e) override;
+    void refresh() override;
+    void onNewItem(QTreeWidgetItem *item) override;
+    void onRefDeleted() override;
+
     void removeSegments();
     void clearSegments();
     void newSegment(int editColumn=0);
     void updateSegments(QTreeWidgetItem *);
     void updateSegment(QTreeWidgetItem *, int column);
     void setSegment(QTreeWidgetItem *item, double param, double radius, double length=0.0);
-    void onNewItem(QTreeWidgetItem *item);
-    virtual void onRefDeleted();
+    double getRadius() const;
 
     friend class FilletSegmentDelegate;
 
@@ -92,12 +95,12 @@ class TaskDlgFilletParameters : public TaskDlgDressUpParameters
     Q_OBJECT
 
 public:
-    TaskDlgFilletParameters(ViewProviderFillet *DressUpView);
-    ~TaskDlgFilletParameters();
+    explicit TaskDlgFilletParameters(ViewProviderFillet *DressUpView);
+    ~TaskDlgFilletParameters() override;
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
+    bool accept() override;
 };
 
 } //namespace PartDesignGui

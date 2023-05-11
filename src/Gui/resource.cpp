@@ -38,11 +38,11 @@
 #include "DlgSettingsDrawStyles.h"
 #include "DlgGeneralImp.h"
 #include "DlgEditorImp.h"
+#include "DlgSettingsPythonConsole.h"
 #include "DlgSettingsMacroImp.h"
 #include "DlgSettingsUnitsImp.h"
 #include "DlgSettingsDocumentImp.h"
 #include "DlgSettingsObjects.h"
-//#include "DlgOnlineHelpImp.h"
 #include "DlgReportViewImp.h"
 #include "DlgSettingsLazyLoadedImp.h"
 
@@ -54,6 +54,7 @@
 #include "DlgCustomizeSpaceball.h"
 #include "DlgCustomizeSpNavSettings.h"
 #include "DlgIconBrowser.h"
+#include "DlgSettingsCacheDirectory.h"
 #include "InputField.h"
 #include "QuantitySpinBox.h"
 #include "PrefWidgets.h"
@@ -71,11 +72,12 @@ WidgetFactorySupplier::WidgetFactorySupplier()
     //
     new PrefPageProducer<DlgGeneralImp>            ( QT_TRANSLATE_NOOP("QObject","General") );
     DlgGeneralImp::attachObserver();
-  //new PrefPageProducer<DlgOnlineHelpImp>         ( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgSettingsDocumentImp>   ( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgSettingsObjects>       ( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgSettingsSelection>     ( QT_TRANSLATE_NOOP("QObject","General") );
+    new PrefPageProducer<DlgSettingsCacheDirectory>( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgSettingsEditorImp>     ( QT_TRANSLATE_NOOP("QObject","General") );
+    new PrefPageProducer<DlgSettingsPythonConsole> ( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgReportViewImp>         ( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgSettingsMacroImp>      ( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgSettingsUnitsImp>      ( QT_TRANSLATE_NOOP("QObject","General") );
@@ -94,7 +96,6 @@ WidgetFactorySupplier::WidgetFactorySupplier()
     new CustomPageProducer<DlgCustomKeyboardImp>;
     new CustomPageProducer<DlgWorkbenchesImp>;
     new CustomPageProducer<DlgCustomToolbarsImp>;
-  //new CustomPageProducer<DlgCustomToolBoxbarsImp>;
     new CustomPageProducer<DlgCustomActionsImp>;
     new CustomPageProducer<DlgIconBrowser>;
     new CustomPageProducer<DlgCustomizeSpNavSettings>;
@@ -107,6 +108,7 @@ WidgetFactorySupplier::WidgetFactorySupplier()
     new WidgetProducer<Gui::PrefSpinBox>;
     new WidgetProducer<Gui::PrefDoubleSpinBox>;
     new WidgetProducer<Gui::PrefLineEdit>;
+    new WidgetProducer<Gui::PrefTextEdit>;
     new WidgetProducer<Gui::PrefComboBox>;
     new WidgetProducer<Gui::PrefFontBox>;
     new WidgetProducer<Gui::PrefCheckBox>;

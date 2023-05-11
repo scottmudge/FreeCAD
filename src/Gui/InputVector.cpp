@@ -26,11 +26,13 @@
 # include <QComboBox>
 #endif
 
-#include "PrefWidgets.h"
+#include <Base/UnitsApi.h>
+
 #include "InputVector.h"
 #include "ui_InputVector.h"
+#include "PrefWidgets.h"
 #include "QuantitySpinBox.h"
-#include <Base/UnitsApi.h>
+
 
 using namespace Gui;
 
@@ -73,7 +75,7 @@ LocationWidget::LocationWidget (QWidget * parent)
     yValue->setUnit(Base::Unit::Length);
     zValue->setUnit(Base::Unit::Length);
 
-    QGridLayout* gridLayout = new QGridLayout(this);
+    auto gridLayout = new QGridLayout(this);
     gridLayout->addLayout(box, 0, 0, 1, 2);
 
     connect(dValue, SIGNAL(activated(int)),
@@ -153,7 +155,7 @@ void LocationWidget::setDirection(const Base::Vector3d& dir)
     for (int i=0; i<dValue->count()-1; i++) {
         QVariant data = dValue->itemData (i);
         if (data.canConvert<Base::Vector3d>()) {
-            const Base::Vector3d val = data.value<Base::Vector3d>();
+            const auto val = data.value<Base::Vector3d>();
             if (val == dir) {
                 dValue->setCurrentIndex(i);
                 return;

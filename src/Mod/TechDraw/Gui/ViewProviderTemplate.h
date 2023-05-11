@@ -20,11 +20,10 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef DRAWINGGUI_VIEWPROVIDERTEMPLATE_H
 #define DRAWINGGUI_VIEWPROVIDERTEMPLATE_H
 
-#include <Gui/ViewProviderFeature.h>
+#include <Mod/TechDraw/TechDrawGlobal.h>
 
 namespace TechDraw{
     class DrawTemplate;
@@ -44,11 +43,7 @@ public:
     /// destructor
     virtual ~ViewProviderTemplate();
 
-    virtual void attach(App::DocumentObject *) override;
-    virtual void setDisplayMode(const char* ModeName) override;
     virtual bool useNewSelectionModel(void) const override {return false;}
-    /// returns a list of all possible modes
-    virtual std::vector<std::string> getDisplayModes(void) const override;
     virtual void updateData(const App::Property*) override;
     virtual void onChanged(const App::Property *prop) override;
     virtual void hide(void) override;

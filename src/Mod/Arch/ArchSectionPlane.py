@@ -34,7 +34,7 @@ from FreeCAD import Vector
 if FreeCAD.GuiUp:
     import FreeCADGui
     from PySide import QtCore, QtGui
-    from DraftTools import translate
+    from draftutils.translate import translate
     from pivy import coin
     from PySide.QtCore import QT_TRANSLATE_NOOP
 else:
@@ -85,7 +85,8 @@ def makeSectionPlane(objectslist=None,name="Section"):
 
 def makeSectionView(section,name="View"):
 
-    """makeSectionView(section) : Creates a Drawing view of the given Section Plane
+    """OBSOLETE
+    makeSectionView(section) : Creates a Drawing view of the given Section Plane
     in the active Page object (a new page will be created if none exists"""
 
     page = None
@@ -483,12 +484,12 @@ def getSVG(source,
         if should_update_svg_cache:
             svgcache = ""
             # render using the Drawing module
-            import Drawing, Part
+            import TechDraw, Part
             if vshapes:
                 baseshape = Part.makeCompound(vshapes)
                 style = {'stroke':       "SVGLINECOLOR",
                          'stroke-width': "SVGLINEWIDTH"}
-                svgcache += Drawing.projectToSVG(
+                svgcache += TechDraw.projectToSVG(
                     baseshape, direction,
                     hStyle=style, h0Style=style, h1Style=style,
                     vStyle=style, v0Style=style, v1Style=style)
@@ -497,7 +498,7 @@ def getSVG(source,
                 style = {'stroke':           "SVGLINECOLOR",
                          'stroke-width':     "SVGLINEWIDTH",
                          'stroke-dasharray': "SVGHIDDENPATTERN"}
-                svgcache += Drawing.projectToSVG(
+                svgcache += TechDraw.projectToSVG(
                     hshapes, direction,
                     hStyle=style, h0Style=style, h1Style=style,
                     vStyle=style, v0Style=style, v1Style=style)
@@ -524,7 +525,7 @@ def getSVG(source,
                 sshapes = Part.makeCompound(sshapes)
                 style = {'stroke':       "SVGLINECOLOR",
                          'stroke-width': "SVGCUTLINEWIDTH"}
-                svgcache += Drawing.projectToSVG(
+                svgcache += TechDraw.projectToSVG(
                     sshapes, direction,
                     hStyle=style, h0Style=style, h1Style=style,
                     vStyle=style, v0Style=style, v1Style=style)
@@ -583,20 +584,15 @@ def getSVG(source,
     if windows:
         sh = []
         for w in windows:
-            wlo = w.getLinkedObject()  # To support Link of Windows(Doors)
-            if not hasattr(wlo.Proxy,"sshapes"):
-                wlo.Proxy.execute(wlo)
-            if hasattr(wlo.Proxy,"sshapes"):
-                if wlo.Proxy.sshapes and (w.Name in cutwindows):
-                    c = Part.makeCompound(wlo.Proxy.sshapes)
-                    c.Placement = w.Placement
-                    sh.append(c)
-            # buggy for now...
-            #if hasattr(w.Proxy,"vshapes"):
-            #    if w.Proxy.vshapes:
-            #        c = Part.makeCompound(w.Proxy.vshapes)
-            #        c.Placement = w.Placement
-            #        sh.append(c)
+            if w.Name in cutwindows:
+                wlo = w.getLinkedObject()  # To support Link of Windows(Doors)
+                if hasattr(wlo, "SymbolPlan") and wlo.SymbolPlan:
+                    if not hasattr(wlo.Proxy, "sshapes"):
+                        wlo.Proxy.execute(wlo)
+                    if hasattr(wlo.Proxy, "sshapes") and wlo.Proxy.sshapes:
+                        c = Part.makeCompound(wlo.Proxy.sshapes)
+                        c.Placement = w.Placement
+                        sh.append(c)
         if sh:
             if not techdraw:
                 svg += '<g transform="scale(1,-1)">'
@@ -629,7 +625,7 @@ def getDXF(obj):
     elif hasattr(obj,"showHidden"):
         showHidden = obj.showHidden
     result = []
-    import Drawing,Part
+    import TechDraw, Part
     if not obj.Source:
         return result
     source = obj.Source
@@ -641,11 +637,11 @@ def getDXF(obj):
     objs = [o for o in objs if ((not(Draft.getType(o) in ["Space","Dimension","Annotation"])) and (not (o.isDerivedFrom("Part::Part2DObject"))))]
     vshapes,hshapes,sshapes,cutface,cutvolume,invcutvolume = getCutShapes(objs,cutplane,onlySolids,clip,False,showHidden)
     if vshapes:
-        result.append(Drawing.projectToDXF(Part.makeCompound(vshapes),direction))
+        result.append(TechDraw.projectToDXF(Part.makeCompound(vshapes),direction))
     if sshapes:
-        result.append(Drawing.projectToDXF(Part.makeCompound(sshapes),direction))
+        result.append(TechDraw.projectToDXF(Part.makeCompound(sshapes),direction))
     if hshapes:
-        result.append(Drawing.projectToDXF(Part.makeCompound(hshapes),direction))
+        result.append(TechDraw.projectToDXF(Part.makeCompound(hshapes),direction))
     return result
 
 
@@ -1058,6 +1054,7 @@ class _ViewProviderSectionPlane:
         self.drawstyle = coin.SoDrawStyle()
         self.drawstyle.style = coin.SoDrawStyle.LINES
         self.lcoords = coin.SoCoordinate3()
+        import PartGui # Required for "SoBrepEdgeSet" (because a SectionPlane is not a Part::FeaturePython object).
         ls = coin.SoType.fromName("SoBrepEdgeSet").createInstance()
         ls.coordIndex.setValues(0,57,[0,1,-1,2,3,4,5,-1,6,7,8,9,-1,10,11,-1,12,13,14,15,-1,16,17,18,19,-1,20,21,-1,22,23,24,25,-1,26,27,28,29,-1,30,31,-1,32,33,34,35,-1,36,37,38,39,-1,40,41,42,43,44])
         self.txtcoords = coin.SoTransform()

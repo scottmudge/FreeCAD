@@ -23,29 +23,20 @@
 #ifndef PARTGUI_SOBREPPOINTSET_H
 #define PARTGUI_SOBREPPOINTSET_H
 
-#include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/fields/SoMFInt32.h>
-#include <Inventor/fields/SoSFNode.h>
-#include <Inventor/fields/SoSubField.h>
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoSFColor.h>
-#include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoPointSet.h>
-#include <Inventor/elements/SoLazyElement.h>
-#include <Inventor/elements/SoReplacedElement.h>
-#include <vector>
 #include <memory>
+#include <vector>
 #include <Gui/SoFCSelectionContext.h>
 #include "BoundBoxRayPick.h"
-
-class SoCoordinateElement;
-class SoGLCoordinateElement;
-class SoTextureCoordinateBundle;
+#include <Mod/Part/PartGlobal.h>
 
 namespace PartGui {
 
 class PartGuiExport SoBrepPointSet : public SoPointSet {
-    typedef SoPointSet inherited;
+    using inherited = SoPointSet;
 
     SO_NODE_HEADER(SoBrepPointSet);
 
@@ -60,18 +51,17 @@ public:
     void setSiblings(std::vector<SoNode*> &&);
 
 protected:
-    virtual ~SoBrepPointSet() {};
-    virtual void GLRender(SoGLRenderAction *action);
-    virtual void GLRenderInPath(SoGLRenderAction *action);
-    virtual void GLRenderBelowPath(SoGLRenderAction * action);
-    virtual void doAction(SoAction* action); 
-    virtual void rayPick(SoRayPickAction *action);
-
-    virtual void getBoundingBox(SoGetBoundingBoxAction * action);
+    ~SoBrepPointSet() override {}
+    void GLRender(SoGLRenderAction *action) override;
+    void GLRenderInPath(SoGLRenderAction *action) override;
+    void GLRenderBelowPath(SoGLRenderAction * action) override;
+    void doAction(SoAction* action) override;
+    void rayPick(SoRayPickAction *action) override;
+    void getBoundingBox(SoGetBoundingBoxAction * action) override;
 
 private:
-    typedef Gui::SoFCSelectionContextEx SelContext;
-    typedef Gui::SoFCSelectionContextExPtr SelContextPtr;
+    using SelContext = Gui::SoFCSelectionContextEx;
+    using SelContextPtr = Gui::SoFCSelectionContextExPtr;
     void glRender(SoGLRenderAction *action, bool inpath);
     void renderHighlight(SoGLRenderAction *action, SelContextPtr);
     void renderSelection(SoGLRenderAction *action, SelContextPtr, bool push=true);

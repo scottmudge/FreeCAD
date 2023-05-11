@@ -20,14 +20,13 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #include "PropertyRowHeights.h"
-
 // inclusion of the generated files (generated out of PropertyRowHeightsPy.xml)
 #include "PropertyRowHeightsPy.h"
 #include "PropertyRowHeightsPy.cpp"
+
 
 using namespace Spreadsheet;
 
@@ -51,7 +50,7 @@ int PropertyRowHeightsPy::PyInit(PyObject* /*args*/, PyObject* /*kwd*/)
 
 PyObject *PropertyRowHeightsPy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int PropertyRowHeightsPy::setCustomAttributes(const char* /*attr*/, PyObject* /*obj*/)

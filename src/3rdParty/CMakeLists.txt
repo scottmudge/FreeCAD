@@ -18,4 +18,4 @@ if (BUILD_DILIGENT)
 endif()
 
 add_subdirectory(lazy_loader)
-
+add_subdirectory(libE57Format)

@@ -55,10 +55,10 @@ public:
 
     TaskFeatureParameters(PartDesignGui::ViewProvider* vp, QWidget *parent, const QString& parname);
 
-    virtual ~TaskFeatureParameters() {}
+    ~TaskFeatureParameters() override {}
 
     /// save field history
-    virtual void saveHistory(void);
+    virtual void saveHistory();
     /// apply changes made in the parameters input to the model via commands
     virtual void apply() {}
 
@@ -88,12 +88,12 @@ protected:
 
 private:
     /** Notifies when the object is about to be removed. */
-    virtual void slotDeletedObject(const Gui::ViewProviderDocumentObject& Obj);
-    virtual void slotDeleteDocument(const Gui::Document& Doc);
+    void slotDeletedObject(const Gui::ViewProviderDocumentObject& Obj) override;
+    void slotDeleteDocument(const Gui::Document& Doc) override;
     /** Notifies on undo */
-    virtual void slotUndoDocument(const Gui::Document& Doc);
+    void slotUndoDocument(const Gui::Document& Doc) override;
     /** Notifies on redo */
-    virtual void slotRedoDocument(const Gui::Document& Doc);
+    void slotRedoDocument(const Gui::Document& Doc) override;
 
 protected:
     PartDesignGui::ViewProvider *vp;
@@ -123,14 +123,14 @@ class TaskDlgFeatureParameters : public Gui::TaskView::TaskDialog
     Q_OBJECT
 
 public:
-    TaskDlgFeatureParameters(PartDesignGui::ViewProvider *vp);
-    virtual ~TaskDlgFeatureParameters();
+    explicit TaskDlgFeatureParameters(PartDesignGui::ViewProvider *vp);
+    ~TaskDlgFeatureParameters() override;
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
+    bool accept() override;
     /// is called by the framework if the dialog is rejected (Cancel)
-    virtual bool reject();
+    bool reject() override;
 
     /// Returns the view provider dialog is runed for
      PartDesignGui::ViewProvider *viewProvider() const { return vp; }

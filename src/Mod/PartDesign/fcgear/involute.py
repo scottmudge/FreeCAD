@@ -24,9 +24,7 @@
 
 from math import cos, sin, pi, acos, atan, sqrt
 
-import sys
-if sys.version_info.major >= 3:
-    xrange = range
+xrange = range
 
 
 def CreateExternalGear(w, m, Z, phi, split=True):
@@ -151,7 +149,7 @@ def CreateInternalGear(w, m, Z, phi, split=True):
     Rroot = Rpitch + dedendum       # root circle radius
     fRad = 1.5 * clearance          # fillet radius, max 1.5*clearance
     Rf = Rroot - clearance # radius at top of fillet (end of profile)
- 
+
     # ****** calculate angles (all in radians)
     pitchAngle = 2 * pi / Z  # angle subtended by whole tooth (rads)
     baseToPitchAngle = genInvolutePolar(Rb, Rpitch)
@@ -234,8 +232,8 @@ def CreateInternalGear(w, m, Z, phi, split=True):
             w.arc(rootNext, Rroot, 0) # root circle arc
 
         w.arc(filletNext, fRad, 1)
-    
-    
+
+
     w.close()
     return w
 

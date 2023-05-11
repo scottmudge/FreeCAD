@@ -20,16 +20,12 @@
  *                                                                            *
  ******************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskMultiTransformParameters_H
 #define GUI_TASKVIEW_TaskMultiTransformParameters_H
 
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-#include <Gui/TaskView/TaskDialog.h>
-
 #include "TaskTransformedParameters.h"
 #include "ViewProviderMultiTransform.h"
+
 
 class Ui_TaskMultiTransformParameters;
 class QModelIndex;
@@ -55,17 +51,17 @@ class TaskMultiTransformParameters : public TaskTransformedParameters
     Q_OBJECT
 
 public:
-    TaskMultiTransformParameters(ViewProviderTransformed *TransformedView,QWidget *parent = 0);
-    virtual ~TaskMultiTransformParameters();
+    explicit TaskMultiTransformParameters(ViewProviderTransformed *TransformedView,QWidget *parent = nullptr);
+    ~TaskMultiTransformParameters() override;
 
-    const std::vector<App::DocumentObject*> getTransformFeatures(void) const;
+    const std::vector<App::DocumentObject*> getTransformFeatures() const;
 
     /// Return the currently active subFeature
-    PartDesign::Transformed* getSubFeature(void) {
+    PartDesign::Transformed* getSubFeature() {
         return subFeature;
     }
 
-    virtual void apply();
+    void apply() override;
 
 private Q_SLOTS:
     void onTransformDelete();
@@ -78,15 +74,15 @@ private Q_SLOTS:
     void onMoveUp();
     void onMoveDown();
     /// User finished editing a subFeature
-    virtual void onSubTaskButtonOK();
+    void onSubTaskButtonOK() override;
     // Note: There is no Cancel button because I couldn't work out how to save the state of
     // a subFeature so as to revert the changes of an edit operation
     virtual void onUpdateView(bool);
     /** Notifies when the object is about to be removed. */
-    virtual void slotDeletedObject(const Gui::ViewProviderDocumentObject& Obj);
+    void slotDeletedObject(const Gui::ViewProviderDocumentObject& Obj) override;
 
 protected:
-    virtual void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
 
 private:
     void updateUI();
@@ -109,12 +105,12 @@ class TaskDlgMultiTransformParameters : public TaskDlgTransformedParameters
     Q_OBJECT
 
 public:
-    TaskDlgMultiTransformParameters(ViewProviderMultiTransform *MultiTransformView);
-    virtual ~TaskDlgMultiTransformParameters() {}
+    explicit TaskDlgMultiTransformParameters(ViewProviderMultiTransform *MultiTransformView);
+    ~TaskDlgMultiTransformParameters() override {}
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
+    bool accept() override;
     /// is called by the framework if the dialog is rejected (Cancel)
     // virtual bool reject();
 };

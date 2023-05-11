@@ -25,10 +25,8 @@
 #ifndef PARTDESIGN_DATUMPOINT_H
 #define PARTDESIGN_DATUMPOINT_H
 
-#include <QString>
-#include <App/PropertyLinks.h>
-#include <App/GeoFeature.h>
 #include <Mod/Part/App/DatumFeature.h>
+#include <Mod/PartDesign/PartDesignGlobal.h>
 
 namespace PartDesign
 {
@@ -39,9 +37,9 @@ class PartDesignExport Point : public Part::Datum
 
 public:
     Point();
-    virtual ~Point();
+    ~Point() override;
 
-    const char* getViewProviderName(void) const override {
+    const char* getViewProviderName() const override {
         return "PartDesignGui::ViewProviderDatumPoint";
     }
 
@@ -50,11 +48,11 @@ public:
 
     Base::Vector3d getPoint();
 
-    typedef Part::Datum Superclass;
+    using Superclass = Part::Datum;
 
 protected:
-    virtual void onChanged(const App::Property* prop) override;
-    virtual void onDocumentRestored() override;
+    void onChanged(const App::Property* prop) override;
+    void onDocumentRestored() override;
 
 private:
     void makeShape();

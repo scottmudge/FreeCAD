@@ -39,31 +39,28 @@
 # include <stdexcept>
 # include <vector>
 
-# include <BRepLib.hxx>
 # include <BRepBuilderAPI_MakeEdge.hxx>
 # include <BRepBuilderAPI_MakeWire.hxx>
 # include <BRepBuilderAPI_Transform.hxx>
+# include <BRepLib.hxx>
+# include <GCE2d_MakeSegment.hxx>
+# include <Geom_Plane.hxx>
+# include <Geom2d_BezierCurve.hxx>
+# include <Geom2d_BSplineCurve.hxx>
+# include <Geom2d_TrimmedCurve.hxx>
 # include <gp_Pnt.hxx>
+# include <gp_Trsf.hxx>
 # include <gp_Vec.hxx>
+# include <Precision.hxx>
+# include <ShapeConstruct_Curve.hxx>
+# include <TColgp_Array1OfPnt2d.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Edge.hxx>
 # include <TopoDS_Wire.hxx>
-# include <TopExp_Explorer.hxx>
-# include <TColgp_Array1OfPnt2d.hxx>
-# include <GCE2d_MakeSegment.hxx>
-# include <Geom2d_TrimmedCurve.hxx>
-# include <Geom_Plane.hxx>
-# include <Geom2d_BezierCurve.hxx>
-# include <gp_Trsf.hxx>
-# include <Precision.hxx>
-#include <ShapeConstruct_Curve.hxx>
-#include <Geom2d_BSplineCurve.hxx>
 #endif // _PreComp
 
 #include <Base/Console.h>
-#include "TopoShape.h"
-#include "TopoShapePy.h"
-#include "TopoShapeEdgePy.h"
+
 #include "TopoShapeWirePy.h"
 
 #include <ft2build.h>
@@ -76,9 +73,11 @@
 
 #define CLOCKWISE 0
 #define ANTICLOCKWISE 1
+
+
 using namespace Part;
 
-typedef unsigned long UNICHAR;           // ul is FT2's codepoint type <=> Py_UNICODE2/4
+using UNICHAR = unsigned long;           // ul is FT2's codepoint type <=> Py_UNICODE2/4
 
 // Private function prototypes
 PyObject* getGlyphContours(FT_Face FTFont, UNICHAR currchar, double PenPos, double Scale,int charNum, double tracking);
@@ -150,13 +149,13 @@ PyObject* FT2FC(const Py_UNICODE *PyUString,
         throw std::runtime_error(ErrorMsg.str());
     }
 
-//TODO: check that FTFont is scalable?  only relevant for hinting etc?
+    //TODO: check that FTFont is scalable?  only relevant for hinting etc?
 
-//  FT2 blows up if char size is not set to some non-zero value.
-//  This sets size to 48 point. Magic.
+    //  FT2 blows up if char size is not set to some non-zero value.
+    //  This sets size to 48 point. Magic.
     error = FT_Set_Char_Size(FTFont,
                              0,             /* char_width in 1/64th of points */
-                             48*64,         /* char_height in 1/64th of points */
+                             48*64*10,      /* char_height in 1/64th of points */ // increased 10X to preserve very small details
                              0,             /* horizontal device resolution */
                              0 );           /* vertical device resolution */
     if (error) {
@@ -164,7 +163,7 @@ PyObject* FT2FC(const Py_UNICODE *PyUString,
         throw std::runtime_error(ErrorMsg.str());
     }
 
-    scalefactor = stringheight/float(FTFont->height);
+    scalefactor = (stringheight/float(FTFont->height))/10;  // divide scale by 10 to offset the 10X increased scale in FT_Set_Char_Size above
     for (i=0; i<length; i++) {
         currchar = PyUString[i];
         error = FT_Load_Char(FTFont,
@@ -215,7 +214,7 @@ struct FTDC_Ctx {
 // move_cb called for start of new contour. pt is xy of contour start.
 // p points to the context where we remember what happened previously (last point, etc)
 static int move_cb(const FT_Vector* pt, void* p) {
-   FTDC_Ctx* dc = (FTDC_Ctx*) p;
+   FTDC_Ctx* dc = static_cast<FTDC_Ctx*>(p);
    if (!dc->Edges.empty()){
        TopoDS_Wire newwire = edgesToWire(dc->Edges);
        dc->Wires.push_back(newwire);
@@ -225,7 +224,7 @@ static int move_cb(const FT_Vector* pt, void* p) {
    }
    dc->LastVert = *pt;
    if (dc->polyPoints.empty()) {
-        dc->polyPoints.push_back(Base::Vector3d(pt->x, pt->y, 0.0));
+        dc->polyPoints.emplace_back(pt->x, pt->y, 0.0);
    }
 
    return 0;
@@ -233,7 +232,7 @@ static int move_cb(const FT_Vector* pt, void* p) {
 
 // line_cb called for line segment in the current contour: line(LastVert -- pt)
 static int line_cb(const FT_Vector* pt, void* p) {
-   FTDC_Ctx* dc = (FTDC_Ctx*) p;
+   FTDC_Ctx* dc = static_cast<FTDC_Ctx*>(p);
    gp_Pnt2d v1(dc->LastVert.x, dc->LastVert.y);
    gp_Pnt2d v2(pt->x, pt->y);
    if (!v1.IsEqual(v2, Precision::Confusion())) {
@@ -241,7 +240,7 @@ static int line_cb(const FT_Vector* pt, void* p) {
        TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(lseg , dc->surf);
        dc->Edges.push_back(edge);
        dc->LastVert = *pt;
-       dc->polyPoints.push_back(Base::Vector3d(pt->x, pt->y, 0.0));
+       dc->polyPoints.emplace_back(pt->x, pt->y, 0.0);
    }
    return 0;
 }
@@ -249,7 +248,7 @@ static int line_cb(const FT_Vector* pt, void* p) {
 // quad_cb called for quadratic (conic) BCurve segment in the current contour
 // (ie V-C-V in TTF fonts). BCurve(LastVert -- pt0 -- pt1)
 static int quad_cb(const FT_Vector* pt0, const FT_Vector* pt1, void* p) {
-   FTDC_Ctx* dc = (FTDC_Ctx*) p;
+   FTDC_Ctx* dc = static_cast<FTDC_Ctx*>(p);
    TColgp_Array1OfPnt2d Poles(1,3);
    gp_Pnt2d v1(dc->LastVert.x, dc->LastVert.y);
    gp_Pnt2d c1(pt0->x, pt0->y);
@@ -269,14 +268,14 @@ static int quad_cb(const FT_Vector* pt0, const FT_Vector* pt1, void* p) {
    TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(spline , dc->surf);
    dc->Edges.push_back(edge);
    dc->LastVert = *pt1;
-   dc->polyPoints.push_back(Base::Vector3d(pt1->x, pt1->y, 0.0));
+   dc->polyPoints.emplace_back(pt1->x, pt1->y, 0.0);
    return 0;
 }
 
 // cubic_cb called for cubic BCurve segment in the current contour (ie V-C-C-V in
 // Type 1 fonts). BCurve(LastVert -- pt0 -- pt1 -- pt2)
 static int cubic_cb(const FT_Vector* pt0, const FT_Vector* pt1, const FT_Vector* pt2, void* p) {
-   FTDC_Ctx* dc = (FTDC_Ctx*) p;
+   FTDC_Ctx* dc = static_cast<FTDC_Ctx*>(p);
    TColgp_Array1OfPnt2d Poles(1,4);
    gp_Pnt2d v1(dc->LastVert.x, dc->LastVert.y);
    gp_Pnt2d c1(pt0->x, pt0->y);
@@ -298,7 +297,7 @@ static int cubic_cb(const FT_Vector* pt0, const FT_Vector* pt1, const FT_Vector*
    TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(spline , dc->surf);
    dc->Edges.push_back(edge);
    dc->LastVert = *pt2;
-   dc->polyPoints.push_back(Base::Vector3d(pt2->x, pt2->y, 0.0));
+   dc->polyPoints.emplace_back(pt2->x, pt2->y, 0.0);
    return 0;
 }
 

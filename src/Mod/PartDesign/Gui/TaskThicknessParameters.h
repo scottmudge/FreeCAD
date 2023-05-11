@@ -36,8 +36,8 @@ class TaskThicknessParameters : public TaskDressUpParameters
     Q_OBJECT
 
 public:
-    TaskThicknessParameters(ViewProviderDressUp *DressUpView, QWidget *parent=0);
-    ~TaskThicknessParameters();
+    explicit TaskThicknessParameters(ViewProviderDressUp *DressUpView, QWidget *parent=nullptr);
+    ~TaskThicknessParameters() override;
 
     double getValue(void) const;
     bool getReversed(void) const;
@@ -53,8 +53,8 @@ private Q_SLOTS:
     void onMakeOffsetChanged(bool checked);
 
 protected:
-    void changeEvent(QEvent *e);
-    virtual void refresh();
+    void changeEvent(QEvent *e) override;
+    void refresh() override;
 
 private:
     std::unique_ptr<Ui_TaskThicknessParameters> ui;
@@ -66,12 +66,12 @@ class TaskDlgThicknessParameters : public TaskDlgDressUpParameters
     Q_OBJECT
 
 public:
-    TaskDlgThicknessParameters(ViewProviderThickness *ThicknessView);
-    ~TaskDlgThicknessParameters();
+    explicit TaskDlgThicknessParameters(ViewProviderThickness *ThicknessView);
+    ~TaskDlgThicknessParameters() override;
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
+    bool accept() override;
 };
 
 } //namespace PartDesignGui

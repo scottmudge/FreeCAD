@@ -20,10 +20,11 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <QApplication>
 # include <QContextMenuEvent>
+# include <QHBoxLayout>
 # include <QMenu>
 # include <QMessageBox>
 # include <QSplitter>
@@ -128,6 +129,12 @@ void PrefWidget::setEntryName( const QByteArray& name )
   m_sPrefName = name;
 }
 
+/** Sets the preference name to \a name. */
+void PrefWidget::setPrefEntry(const QByteArray& name)
+{
+  setEntryName(name);
+}
+
 /** Returns the widget's preference name. */
 QByteArray PrefWidget::entryName() const
 {
@@ -154,6 +161,12 @@ void PrefWidget::setParamGrpPath( const QByteArray& path )
       getWindowParameter()->Attach(this);
     }
   }
+}
+
+/** Sets the preference path to \a path. */
+void PrefWidget::setPrefPath(const QByteArray& name)
+{
+  setParamGrpPath(name);
 }
 
 /** Returns the widget's preferences path. */
@@ -831,6 +844,54 @@ void PrefAccelLineEdit::savePreferences()
   getWindowParameter()->SetASCII(entryName(), text().toUtf8());
 }
 
+PrefTextEdit::PrefTextEdit(QWidget* parent)
+    : QTextEdit(parent), PrefWidget()
+{
+    setAutoSave(PrefParam::AutoSave());
+}
+
+PrefTextEdit::~PrefTextEdit()
+{
+}
+
+void PrefTextEdit::setAutoSave(bool enable)
+{
+    autoSave(enable, this, &PrefTextEdit::focusChanged);
+}
+
+void PrefTextEdit::focusOutEvent(QFocusEvent *event)
+{
+    QTextEdit::focusOutEvent(event);
+    Q_EMIT focusChanged();
+}
+
+void PrefTextEdit::restorePreferences()
+{
+    if (getWindowParameter().isNull())
+    {
+        failedToRestore(objectName());
+        return;
+    }
+
+    if (!m_Restored)
+      m_Default = this->toPlainText();
+
+    QString text = QString::fromUtf8(getWindowParameter()->GetASCII(entryName(), m_Default.toUtf8()).c_str());
+    setText(text);
+}
+
+void PrefTextEdit::savePreferences()
+{
+    if (getWindowParameter().isNull())
+    {
+        failedToSave(objectName());
+        return;
+    }
+
+    QString text = this->toPlainText();
+    getWindowParameter()->SetASCII(entryName(), text.toUtf8());
+}
+
 // --------------------------------------------------------------------
 
 PrefFileChooser::PrefFileChooser ( QWidget * parent )
@@ -911,11 +972,11 @@ void PrefComboBox::restorePreferences()
   switch(static_cast<int>(getParamType())) {
   case QMetaType::Int:
   case QMetaType::LongLong:
-    index = findData((int)getWindowParameter()->GetInt(entryName(), m_Default.toInt()));
+    index = findData(static_cast<int>(getWindowParameter()->GetInt(entryName(), m_Default.toInt())));
     break;
   case QMetaType::UInt:
   case QMetaType::ULongLong:
-    index = findData((uint)getWindowParameter()->GetUnsigned(entryName(), m_Default.toUInt()));
+    index = findData(static_cast<uint>(getWindowParameter()->GetUnsigned(entryName(), m_Default.toUInt())));
     break;
   case QMetaType::Bool:
     index = findData(getWindowParameter()->GetBool(entryName(), m_Default.toBool()));

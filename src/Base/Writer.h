@@ -60,13 +60,13 @@ class BaseExport Writer
 {
 
 public:
-    Writer(short indent_size=2);
+    explicit Writer(short indent_size=2);
     virtual ~Writer();
 
     /// switch the writer in XML only mode (no files allowed)
     void setForceXML(int on);
     /// check on state
-    int isForceXML(void);
+    int isForceXML();
 
     /// split xml among each object
     void setSplitXML(bool on);
@@ -81,7 +81,7 @@ public:
     int getFileVersion() const;
 
     /// put the next entry with a give name
-    virtual void putNextEntry(const char *filename, const char *objName=0);
+    virtual void putNextEntry(const char *filename, const char *objName=nullptr);
 
     /// insert a file as CDATA section in the XML file
     void insertAsciiFile(const char* FileName);
@@ -99,7 +99,7 @@ public:
         return addFile(Name.c_str(),Object);
     }
     /// process the requested file storing
-    virtual void writeFiles(void)=0;
+    virtual void writeFiles()=0;
     /// get all registered file names
     const std::vector<std::string>& getFilenames() const;
     /// Set mode
@@ -132,14 +132,14 @@ public:
     /** @name pretty formatting for XML */
     //@{
     /// get the current indentation
-    const char* ind(void) const {return indBuf;}
+    const char* ind() const {return indBuf;}
     /// increase indentation by one tab
-    void incInd(void);
+    void incInd();
     /// decrease indentation by one tab
-    void decInd(void);
+    void decInd();
     //@}
 
-    virtual std::ostream &Stream(void)=0;
+    virtual std::ostream &Stream()=0;
 
     /** Create an output stream for storing character content
      * @param base64: If true, the input will be base64 encoded before storing.
@@ -187,6 +187,11 @@ private:
     std::string ObjectName;
     std::unique_ptr<std::ostream> CharStream;
     bool CharBase64 = false;
+
+private:
+    Writer(const Writer&);
+    Writer& operator=(const Writer&);
+
 };
 
 
@@ -201,15 +206,15 @@ class BaseExport ZipWriter : public Writer
 public:
     ZipWriter(const char* FileName);
     ZipWriter(std::ostream&);
-    virtual ~ZipWriter();
+    ~ZipWriter() override;
 
-    virtual void writeFiles(void);
+    void writeFiles() override;
 
-    virtual std::ostream &Stream(void){return ZipStream;}
+    std::ostream &Stream() override{return ZipStream;}
 
     void setComment(const char* str){ZipStream.setComment(str);}
     void setLevel(int level){ZipStream.setLevel( level );}
-    virtual void putNextEntry(const char *filename, const char *objName=0);
+    void putNextEntry(const char *filename, const char *objName=nullptr) override;
 
 private:
     zipios::ZipOutputStream ZipStream;
@@ -227,9 +232,9 @@ class BaseExport StringWriter : public Writer
 public:
     StringWriter();
 
-    virtual std::ostream &Stream(void){return StrStream;}
-    std::string getString(void) const {return StrStream.str();}
-    virtual void writeFiles(void);
+    std::ostream &Stream() override{return StrStream;}
+    std::string getString() const {return StrStream.str();}
+    void writeFiles() override;
     void clear() { StrStream.str(""); }
 
 private:
@@ -245,12 +250,12 @@ class BaseExport FileWriter : public Writer
 {
 public:
     FileWriter(const char* DirName);
-    virtual ~FileWriter();
+    ~FileWriter() override;
 
-    virtual void putNextEntry(const char *filename, const char *objName=0);
-    virtual void writeFiles(void);
+    void putNextEntry(const char *filename, const char *objName=nullptr) override;
+    void writeFiles(void) override;
 
-    virtual std::ostream &Stream(void){return FileStream;}
+    std::ostream &Stream() override{return FileStream;}
     void close() {FileStream.close();}
     /*!
      This method can be re-implemented in sub-classes to avoid

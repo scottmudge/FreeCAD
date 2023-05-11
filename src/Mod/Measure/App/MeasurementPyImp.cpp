@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Luke Parry             (l.parry@warwick.ac.uk) 2013     *
+ *   Copyright (c) 2013 Luke Parry <l.parry@warwick.ac.uk>                 *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -25,23 +25,20 @@
 # include <sstream>
 #endif
 
-#include "Mod/Measure/App/Measurement.h"
-#include <Mod/Part/App/Geometry.h>
-#include <Mod/Part/App/OCCError.h>
-#include <Base/GeometryPyCXX.h>
-#include <Base/VectorPy.h>
-#include <Base/AxisPy.h>
 #include <App/Application.h>
 #include <App/Document.h>
+#include <Base/GeometryPyCXX.h>
+#include <Mod/Part/App/OCCError.h>
 
 // inclusion of the generated files (generated out of SketchObjectSFPy.xml)
 #include "MeasurementPy.h"
 #include "MeasurementPy.cpp"
 
+
 using namespace Measure;
 
 // returns a string which represents the object e.g. when printed in python
-std::string MeasurementPy::representation(void) const
+std::string MeasurementPy::representation() const
 {
     return "<Measure::Measurement>";
 }
@@ -67,7 +64,7 @@ PyObject* MeasurementPy::addReference3D(PyObject *args)
     char *ObjectName;
     char *SubName;
     if (!PyArg_ParseTuple(args, "ss:Give an object and subelement name", &ObjectName,&SubName))
-        return 0;
+        return nullptr;
 
     // get the target object for the external link
     App::DocumentObject * Obj = App::GetApplication().getActiveDocument()->getObject(ObjectName);
@@ -75,10 +72,10 @@ PyObject* MeasurementPy::addReference3D(PyObject *args)
         std::stringstream str;
         str << ObjectName << "does not exist in the document";
         PyErr_SetString(PyExc_ValueError, str.str().c_str());
-        return 0;
+        return nullptr;
     }
 
-    PY_TRY {
+    try {
         // add the external
         if (this->getMeasurementPtr()->addReference3D(Obj,SubName) < 0) {
             std::stringstream str;
@@ -94,7 +91,7 @@ PyObject* MeasurementPy::has3DReferences(PyObject *args)
 {
     PyObject *result=Py_False;
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     if (getMeasurementPtr()->has3DReferences()) {
         result = Py_True;
@@ -107,7 +104,7 @@ PyObject* MeasurementPy::has3DReferences(PyObject *args)
 PyObject* MeasurementPy::clear(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     this->getMeasurementPtr()->clear();
 
@@ -117,7 +114,7 @@ PyObject* MeasurementPy::clear(PyObject *args)
 PyObject* MeasurementPy::delta(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     PY_TRY {
         Py::Vector delta(this->getMeasurementPtr()->delta());
@@ -128,7 +125,7 @@ PyObject* MeasurementPy::delta(PyObject *args)
 PyObject* MeasurementPy::length(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     PY_TRY {
         Py::Float length;
@@ -180,7 +177,7 @@ PyObject* MeasurementPy::volume(PyObject *args)
 PyObject* MeasurementPy::radius(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     PY_TRY {
         Py::Float radius;
@@ -193,7 +190,7 @@ PyObject* MeasurementPy::radius(PyObject *args)
 PyObject* MeasurementPy::angle(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     PY_TRY {
         Py::Float angle;
@@ -206,7 +203,7 @@ PyObject* MeasurementPy::angle(PyObject *args)
 PyObject* MeasurementPy::com(PyObject *args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     PY_TRY {
         Py::Vector com(this->getMeasurementPtr()->massCenter());
@@ -217,7 +214,7 @@ PyObject* MeasurementPy::com(PyObject *args)
 
 PyObject *MeasurementPy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int MeasurementPy::setCustomAttributes(const char* /*attr*/, PyObject* /*obj*/)

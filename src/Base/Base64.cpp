@@ -34,10 +34,15 @@
 # include <string>
 #endif
 
+#include "PreCompiled.h"
+
+#ifndef _PreComp_
+# include <string>
+#endif
+
 #include "Base64.h"
 
-
-
+// clazy:excludeall=non-pod-global-static
 static const std::string base64_chars = 
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
              "abcdefghijklmnopqrstuvwxyz"

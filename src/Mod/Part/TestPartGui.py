@@ -1,4 +1,5 @@
-#   (c) Juergen Riegel (FreeCAD@juergen-riegel.net) 2011      LGPL        *
+#**************************************************************************
+#   Copyright (c) 2011 Juergen Riegel <FreeCAD@juergen-riegel.net>        *
 #                                                                         *
 #   This file is part of the FreeCAD CAx development system.              *
 #                                                                         *
@@ -37,7 +38,25 @@ import FreeCAD, FreeCADGui, os, sys, unittest, Part, PartGui
 #		self.Box.addGeometry(Part.LineSegment(App.Vector(69.432587,36.960674,0),App.Vector(69.432587,-53.196629,0)))
 #		self.Box.addGeometry(Part.LineSegment(App.Vector(69.432587,-53.196629,0),App.Vector(-99.230339,-53.196629,0)))
 #		self.Box.addGeometry(Part.LineSegment(App.Vector(-99.230339,-53.196629,0),App.Vector(-99.230339,36.960674,0)))
-#		
+#
 #	def tearDown(self):
 #		#closing doc
 #		FreeCAD.closeDocument("PartGuiTest")
+class PartGuiViewProviderTestCases(unittest.TestCase):
+    def setUp(self):
+        self.Doc = FreeCAD.newDocument("PartGuiTest")
+
+    def testCanDropObject(self):
+        # https://github.com/FreeCAD/FreeCAD/pull/6850
+        box = self.Doc.addObject("Part::Box", "Box")
+        with self.assertRaises(TypeError):
+            box.ViewObject.canDragObject(0)
+        with self.assertRaises(TypeError):
+            box.ViewObject.canDropObject(0)
+        box.ViewObject.canDropObject()
+        with self.assertRaises(TypeError):
+            box.ViewObject.dropObject(box, 0)
+
+    def tearDown(self):
+        #closing doc
+        FreeCAD.closeDocument("PartGuiTest")

@@ -23,11 +23,12 @@
 #ifndef EXPRESSIONBINDING_H
 #define EXPRESSIONBINDING_H
 
+#include <memory>
 #include <string>
 #include <App/ObjectIdentifier.h>
-#include <memory>
-#include <QLabel>
+#include <QPalette>
 #include <boost_signals2.hpp>
+
 
 namespace App {
 class Expression;
@@ -67,6 +68,7 @@ protected:
     std::string getExpressionString(bool no_throw=true) const;
     std::string getEscapedExpressionString() const;
     bool setExpressionString(const char *str, bool no_throw=false);
+    bool assignToProperty(const std::string & propName, double);
     virtual void setExpression(std::shared_ptr<App::Expression> expr);
 
     //gets called when the bound expression is changed, either by this binding or any external action

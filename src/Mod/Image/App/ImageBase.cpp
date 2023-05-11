@@ -16,20 +16,17 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
-#ifndef _PreComp_
-# include <cmath>
-# include <cstring>
-#endif
 
-#include "ImageBase.h"
 #include <Base/Exception.h>
+#include "ImageBase.h"
+
 
 using namespace Image;
 
 // Constructor (constructs an empty image)
 ImageBase::ImageBase()
 {
-    _pPixelData = NULL;
+    _pPixelData = nullptr;
     _owner = true;
     _width = 0;
     _height = 0;
@@ -50,10 +47,10 @@ ImageBase::~ImageBase()
 ImageBase::ImageBase(const ImageBase &rhs)
 {
 	// Do the copy
-    if (rhs._owner == true)
+    if (rhs._owner)
     {
         // rhs is the owner - do a deep copy
-        _pPixelData = NULL;
+        _pPixelData = nullptr;
         _owner = false; // avoids a superfluous delete
         if (createCopy((void *)(rhs._pPixelData), rhs._width, rhs._height, rhs._format, rhs._numSigBitsPerSample) != 0)
             throw Base::RuntimeError("ImageBase::ImageBase. Error creating copy of image");
@@ -79,7 +76,7 @@ ImageBase & ImageBase::operator=(const ImageBase &rhs)
 	clear();
 
 	// Do the copy
-    if (rhs._owner == true)
+    if (rhs._owner)
     {
         // rhs is the owner - do a deep copy
         _owner = false; // avoids a superfluous delete
@@ -105,15 +102,15 @@ ImageBase & ImageBase::operator=(const ImageBase &rhs)
 void ImageBase::clear()
 {
     // If object is the owner of the data then delete the allocated memory
-    if (_owner == true)
+    if (_owner)
     {
         delete [] _pPixelData;
-        _pPixelData = NULL;
+        _pPixelData = nullptr;
     }
     // Else just reset the pointer (the owner of the pixel data must be responsible for deleting it)
     else
     {
-        _pPixelData = NULL;
+        _pPixelData = nullptr;
     }
 
     // Re-initialise the other variables
@@ -204,7 +201,7 @@ int ImageBase::_setColorFormat(int format, unsigned short numSigBitsPerSample)
 int ImageBase::_allocate()
 {
     // Check that pixel data pointer is null
-    if (_pPixelData != NULL)
+    if (_pPixelData)
         return -1;
 
     // Allocate the space needed to store the pixel data
@@ -286,7 +283,7 @@ int ImageBase::pointTo(void* pSrcPixelData, unsigned long width, unsigned long h
     _pPixelData = (unsigned char *)pSrcPixelData;
 
     // Flag ownership
-    if (takeOwnership == true)
+    if (takeOwnership)
         _owner = true;
     else
         _owner = false;
@@ -295,13 +292,13 @@ int ImageBase::pointTo(void* pSrcPixelData, unsigned long width, unsigned long h
 }
 
 // Gets the value of a sample at the given pixel position
-// Returns 0 for valid value or -1 if coordinates or sample index are out of range or 
+// Returns 0 for valid value or -1 if coordinates or sample index are out of range or
 // if there is no image data
 int ImageBase::getSample(int x, int y, unsigned short sampleIndex, double &value)
 {
-    if ((_pPixelData == NULL) || 
+    if ((!_pPixelData) ||
         (sampleIndex >= _numSamples) ||
-        (x < 0) || (x >= (int)_width) || 
+        (x < 0) || (x >= (int)_width) ||
         (y < 0) || (y >= (int)_height))
         return -1;
 

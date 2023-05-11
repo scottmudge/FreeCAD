@@ -21,31 +21,30 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #include <memory>
 
 #ifndef _PreComp_
-#include <boost_bind_bind.hpp>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <QTimer>
 #endif
 
+#include <App/Document.h>
+#include <App/DocumentObserver.h>
+#include <App/Origin.h>
+#include <App/OriginGroupExtension.h>
+#include <Base/Console.h>
+
 #include "ViewProviderOriginGroupExtension.h"
 #include "ViewProviderDatum.h"
 #include "Application.h"
 #include "Document.h"
-#include "ViewProviderOriginFeature.h"
-#include "ViewProviderOrigin.h"
-#include "View3DInventorViewer.h"
 #include "View3DInventor.h"
-#include "Command.h"
-#include <App/OriginGroupExtension.h>
-#include <App/Document.h>
-#include <App/DocumentObserver.h>
-#include <App/Origin.h>
-#include <Base/Console.h>
+#include "View3DInventorViewer.h"
+#include "ViewProviderOrigin.h"
+#include "ViewProviderOriginFeature.h"
+
 
 using namespace Gui;
 namespace bp = boost::placeholders;

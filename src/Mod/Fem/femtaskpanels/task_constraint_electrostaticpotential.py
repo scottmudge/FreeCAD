@@ -32,9 +32,8 @@ __url__ = "https://www.freecadweb.org"
 
 import FreeCAD
 import FreeCADGui
-from FreeCAD import Units
-
 from femguiutils import selection_widgets
+
 from femtools import femutils
 from femtools import membertools
 
@@ -43,12 +42,23 @@ class _TaskPanel(object):
 
     def __init__(self, obj):
         self._obj = obj
-        self._refWidget = selection_widgets.BoundarySelector()
-        self._refWidget.setReferences(obj.References)
+
         self._paramWidget = FreeCADGui.PySideUic.loadUi(
             FreeCAD.getHomePath() + "Mod/Fem/Resources/ui/ElectrostaticPotential.ui")
         self._initParamWidget()
-        self.form = [self._refWidget, self._paramWidget]
+
+        # geometry selection widget
+        # start with Solid in list!
+        self._selectionWidget = selection_widgets.GeometryElementsSelection(
+            obj.References,
+            ["Solid", "Face", "Edge", "Vertex"],
+            True,
+            False
+        )
+
+        # form made from param and selection widget
+        self.form = [self._paramWidget, self._selectionWidget]
+
         analysis = obj.getParentGroup()
         self._mesh = None
         self._part = None
@@ -72,8 +82,8 @@ class _TaskPanel(object):
         return True
 
     def accept(self):
-        if self._obj.References != self._refWidget.references():
-            self._obj.References = self._refWidget.references()
+        if self._obj.References != self._selectionWidget.references:
+            self._obj.References = self._selectionWidget.references
         self._applyWidgetChanges()
         self._obj.Document.recompute()
         FreeCADGui.ActiveDocument.resetEdit()
@@ -92,11 +102,10 @@ class _TaskPanel(object):
                 self._part.ViewObject.hide()
 
     def _initParamWidget(self):
-        unit = "V"
-        q = Units.Quantity("{} {}".format(self._obj.Potential, unit))
-
-        self._paramWidget.potentialTxt.setText(
-            q.UserString)
+        self._paramWidget.potentialQSB.setProperty(
+            'value', self._obj.Potential)
+        FreeCADGui.ExpressionBinding(
+            self._paramWidget.potentialQSB).bind(self._obj, "Potential")
         self._paramWidget.potentialBox.setChecked(
             not self._obj.PotentialEnabled)
         self._paramWidget.potentialConstantBox.setChecked(
@@ -112,26 +121,24 @@ class _TaskPanel(object):
             not self._obj.CapacitanceBodyEnabled)
         self._paramWidget.capacitanceBody_spinBox.setValue(
             self._obj.CapacitanceBody)
+        self._paramWidget.capacitanceBody_spinBox.setEnabled(
+            not self._paramWidget.capacitanceBodyBox.isChecked())
 
     def _applyWidgetChanges(self):
-        unit = "V"
         self._obj.PotentialEnabled = \
             not self._paramWidget.potentialBox.isChecked()
         if self._obj.PotentialEnabled:
-            # if the input widget shows not a green hook, but the user presses ok
-            # we could run into a syntax error on getting the quantity, try mV
-            quantity = None
+            potential = None
             try:
-                quantity = Units.Quantity(self._paramWidget.potentialTxt.text())
+                potential = self._paramWidget.potentialQSB.property('value')
             except ValueError:
                 FreeCAD.Console.PrintMessage(
-                    "Wrong input. OK has been triggered without a green hook "
-                    "in the input field. Not recognised input: '{}' "
+                    "Wrong input. Not recognised input: '{}' "
                     "Potential has not been set.\n"
-                    .format(self._paramWidget.potentialTxt.text())
+                    .format(self._paramWidget.potentialQSB.text())
                 )
-            if quantity is not None:
-                self._obj.Potential = quantity.getValueAs(unit).Value
+            if potential is not None:
+                self._obj.Potential = potential
 
         self._obj.PotentialConstant = self._paramWidget.potentialConstantBox.isChecked()
 

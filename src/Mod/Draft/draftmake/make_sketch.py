@@ -40,8 +40,8 @@ from draftutils.translate import translate
 
 def make_sketch(objects_list, autoconstraints=False, addTo=None,
                 delete=False, name="Sketch", radiusPrecision=-1, tol=1e-3):
-    """makeSketch(objects_list,[autoconstraints],[addTo],[delete],
-                  [name],[radiusPrecision],[tol])
+    """make_sketch(objects_list, [autoconstraints], [addTo], [delete],
+                   [name], [radiusPrecision], [tol])
 
     Makes a Sketch objects_list with the given Draft objects.
 
@@ -100,13 +100,15 @@ def make_sketch(objects_list, autoconstraints=False, addTo=None,
         if isinstance(obj,Part.Shape):
             shape = obj
         elif not hasattr(obj,'Shape'):
-            App.Console.PrintError(translate("draft","No shape found\n"))
+            App.Console.PrintError(translate("draft",
+                                   "No shape found")+"\n")
             return None
         else:
             shape = obj.Shape
 
         if not DraftGeomUtils.is_planar(shape, tol):
-            App.Console.PrintError(translate("draft","All Shapes must be planar\n"))
+            App.Console.PrintError(translate("draft",
+                                   "All Shapes must be planar")+"\n")
             return None
 
         if DraftGeomUtils.get_normal(shape, tol):
@@ -121,7 +123,8 @@ def make_sketch(objects_list, autoconstraints=False, addTo=None,
     if len(shape_norm_yes) >= 1:
         for shape in shapes_list[1:]:
             if not DraftGeomUtils.are_coplanar(shapes_list[0], shape, tol):
-                App.Console.PrintError(translate("draft","All Shapes must be coplanar\n"))
+                App.Console.PrintError(translate("draft",
+                                       "All Shapes must be coplanar")+"\n")
                 return None
         # define sketch normal
         normal = DraftGeomUtils.get_normal(shapes_list[0], tol)
@@ -132,7 +135,8 @@ def make_sketch(objects_list, autoconstraints=False, addTo=None,
         if len(points) >= 2:
             poly = Part.makePolygon(points)
             if not DraftGeomUtils.is_planar(poly, tol):
-                App.Console.PrintError(translate("draft","All Shapes must be coplanar\n"))
+                App.Console.PrintError(translate("draft",
+                                       "All Shapes must be coplanar")+"\n")
                 return None
             normal = DraftGeomUtils.get_normal(poly, tol)
             if not normal:
@@ -194,6 +198,7 @@ def make_sketch(objects_list, autoconstraints=False, addTo=None,
     for obj in objects_list:
         ok = False
         tp = utils.get_type(obj)
+
         if tp in ["Circle","Ellipse"]:
             if obj.Shape.Edges:
                 edge = obj.Shape.Edges[0]
@@ -209,61 +214,24 @@ def make_sketch(objects_list, autoconstraints=False, addTo=None,
                     nobj.addGeometry(arc)
                 addRadiusConstraint(edge)
                 ok = True
-        elif tp == "Rectangle":
-            if obj.FilletRadius.Value == 0:
+
+        elif tp in ["Wire", "Rectangle", "Polygon"] and obj.FilletRadius.Value == 0:
+            if obj.Shape.Edges:
                 for edge in obj.Shape.Edges:
                     nobj.addGeometry(DraftGeomUtils.orientEdge(edge, normal))
-                # TODO: the previous implementation for autoconstraints fails in front
-                # and side view. So the autoconstraints for wires is used. This need
-                # more checking
                 if autoconstraints:
+                    closed = tp in ["Rectangle", "Polygon"] or obj.Closed
                     last = nobj.GeometryCount
-                    segs = list(range(last-len(obj.Shape.Edges),last-1))
-                    for seg in segs:
-                        constraints.append(Constraint("Coincident",seg,end_point,seg+1,start_point))
-                        if DraftGeomUtils.isAligned(nobj.Geometry[seg],"x"):
-                            constraints.append(Constraint("Vertical",seg))
-                        elif DraftGeomUtils.isAligned(nobj.Geometry[seg],"y"):
-                            constraints.append(Constraint("Horizontal",seg))
-                    constraints.append(Constraint("Coincident",last-1,end_point,segs[0],start_point))
+                    segs = list(range(last - len(obj.Shape.Edges), last))
+                    nexts = segs[1:] + ([segs[0]] if closed else [None])
+                    for seg, next in zip(segs, nexts):
+                        if next is not None:
+                            constraints.append(Constraint("Coincident",seg, end_point, next, start_point))
+                        if DraftGeomUtils.isAligned(nobj.Geometry[seg], "x"):
+                            constraints.append(Constraint("Vertical", seg))
+                        elif DraftGeomUtils.isAligned(nobj.Geometry[seg], "y"):
+                            constraints.append(Constraint("Horizontal", seg))
                 ok = True
-                # if autoconstraints:
-                #     last = nobj.GeometryCount - 1
-                #     segs = [last-3,last-2,last-1,last]
-                #     if obj.Placement.Rotation.Q == (0,0,0,1):
-                #         constraints.append(Constraint("Coincident",last-3,end_point,last-2,start_point))
-                #         constraints.append(Constraint("Coincident",last-2,end_point,last-1,start_point))
-                #         constraints.append(Constraint("Coincident",last-1,end_point,last,start_point))
-                #         constraints.append(Constraint("Coincident",last,end_point,last-3,start_point))
-                #     constraints.append(Constraint("Horizontal",last-3))
-                #     constraints.append(Constraint("Vertical",last-2))
-                #     constraints.append(Constraint("Horizontal",last-1))
-                #     constraints.append(Constraint("Vertical",last))
-                # ok = True
-        elif tp in ["Wire","Polygon"]:
-            if obj.FilletRadius.Value == 0:
-                closed = False
-                if tp == "Polygon":
-                    closed = True
-                elif hasattr(obj,"Closed"):
-                    closed = obj.Closed
-
-                if obj.Shape.Edges:
-                    for edge in obj.Shape.Edges:
-                        edge = DraftGeomUtils.orientEdge(edge, normal)
-                        nobj.addGeometry(edge)
-                    if autoconstraints:
-                        last = nobj.GeometryCount
-                        segs = list(range(last-len(obj.Shape.Edges),last-1))
-                        for seg in segs:
-                            constraints.append(Constraint("Coincident",seg,end_point,seg+1,start_point))
-                            if DraftGeomUtils.isAligned(nobj.Geometry[seg],"x"):
-                                constraints.append(Constraint("Vertical",seg))
-                            elif DraftGeomUtils.isAligned(nobj.Geometry[seg],"y"):
-                                constraints.append(Constraint("Horizontal",seg))
-                        if closed:
-                            constraints.append(Constraint("Coincident",last-1,end_point,segs[0],start_point))
-                    ok = True
 
         elif tp == "BSpline":
             if obj.Shape.Edges:

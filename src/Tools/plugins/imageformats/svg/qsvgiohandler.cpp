@@ -111,13 +111,13 @@ bool QSvgIOHandlerPrivate::load(QIODevice *device)
         loaded = true;
     }
 #else
-    webView.setContent(device->readAll(), QString::fromLatin1("image/svg+xml"));
-    QString node = QString::fromLatin1("document.rootElement.nodeName");
+    webView.setContent(device->readAll(), QStringLiteral("image/svg+xml"));
+    QString node = QStringLiteral("document.rootElement.nodeName");
     QString root = webView.page()->mainFrame()->evaluateJavaScript(node).toString();
 
-    if (!root.isEmpty() && root.compare(QLatin1String("svg"), Qt::CaseInsensitive) == 0) {
-        QString w = QString::fromLatin1("document.rootElement.width.baseVal.value");
-        QString h = QString::fromLatin1("document.rootElement.height.baseVal.value");
+    if (!root.isEmpty() && root.compare(QStringLiteral("svg"), Qt::CaseInsensitive) == 0) {
+        QString w = QStringLiteral("document.rootElement.width.baseVal.value");
+        QString h = QStringLiteral("document.rootElement.height.baseVal.value");
         double ww = webView.page()->mainFrame()->evaluateJavaScript(w).toDouble();
         double hh = webView.page()->mainFrame()->evaluateJavaScript(h).toDouble();
 

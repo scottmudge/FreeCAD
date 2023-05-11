@@ -20,41 +20,32 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <QApplication>
 # include <QClipboard>
 # include <QDockWidget>
-# include <QGridLayout>
-# include <QHBoxLayout>
 # include <QKeyEvent>
 # include <QMenu>
 # include <QMessageBox>
-# include <QPushButton>
-# include <QSpacerItem>
+# include <QMimeData>
 # include <QTextCursor>
 # include <QTextDocumentFragment>
 # include <QTextStream>
 # include <QUrl>
-# include <QMimeData>
 #endif
+
+#include <Base/Interpreter.h>
 
 #include "PythonConsole.h"
 #include "PythonConsolePy.h"
-#include "CallTips.h"
 #include "Application.h"
-#include "Action.h"
-#include "Command.h"
-#include "DlgEditorImp.h"
+#include "CallTips.h"
 #include "FileDialog.h"
 #include "MainWindow.h"
 #include "Tools.h"
 #include "Widgets.h"
 
-#include <Base/Interpreter.h>
-#include <Base/Exception.h>
-#include <CXX/Exception.hxx>
 
 using namespace Gui;
 
@@ -64,10 +55,14 @@ namespace Gui
 static const QChar promptEnd( QLatin1Char(' ') );  //< char for detecting prompt end
 
 inline int promptLength( const QString &lineStr )
-  { return lineStr.indexOf( promptEnd ) + 1; }
+{
+    return lineStr.indexOf( promptEnd ) + 1;
+}
 
 inline QString stripPromptFrom( const QString &lineStr )
-  { return lineStr.mid( promptLength(lineStr) ); }
+{
+    return lineStr.mid( promptLength(lineStr) );
+}
 
 /**
  * cursorBeyond checks if cursor is at a valid position to accept keyEvents.
@@ -78,11 +73,13 @@ inline QString stripPromptFrom( const QString &lineStr )
  */
 inline bool cursorBeyond( const QTextCursor &cursor, const QTextCursor &limit, int shift = 0 )
 {
-  int pos = limit.position();
-  if (cursor.hasSelection())
-    return (cursor.selectionStart() >= pos && cursor.selectionEnd() >= pos);
-  else
-    return cursor.position() >= (pos + shift);
+    int pos = limit.position();
+    if (cursor.hasSelection()) {
+        return (cursor.selectionStart() >= pos && cursor.selectionEnd() >= pos);
+    }
+    else {
+        return cursor.position() >= (pos + shift);
+    }
 }
 
 struct PythonConsoleP
@@ -98,18 +95,19 @@ struct PythonConsoleP
     QStringList statements;
     bool interactive;
     QMap<QString, QColor> colormap; // Color map
+    ParameterGrp::handle hGrpSettings;
     PythonConsoleP()
     {
         type = Normal;
-        _stdoutPy = 0;
-        _stderrPy = 0;
-        _stdinPy = 0;
-        _stdin = 0;
-        interpreter = 0;
-        callTipsList = 0;
+        _stdoutPy = nullptr;
+        _stderrPy = nullptr;
+        _stdinPy = nullptr;
+        _stdin = nullptr;
+        interpreter = nullptr;
+        callTipsList = nullptr;
         interactive = false;
         historyFile = QString::fromUtf8((App::Application::getUserAppDataDir() + "PythonHistory.log").c_str());
-        colormap[QStringLiteral("Text")] = Qt::black;
+        colormap[QStringLiteral("Text")] = qApp->palette().windowText().color();
         colormap[QStringLiteral("Bookmark")] = Qt::cyan;
         colormap[QStringLiteral("Breakpoint")] = Qt::red;
         colormap[QStringLiteral("Keyword")] = Qt::blue;
@@ -139,8 +137,9 @@ InteractiveInterpreter::InteractiveInterpreter()
     // import code.py and create an instance of InteractiveInterpreter
     Base::PyGILStateLocker lock;
     PyObject* module = PyImport_ImportModule("code");
-    if (!module)
+    if (!module) {
         throw Base::PyException();
+    }
     PyObject* func = PyObject_GetAttrString(module, "InteractiveInterpreter");
     PyObject* args = Py_BuildValue("()");
     d = new InteractiveInterpreterP;
@@ -172,10 +171,12 @@ void InteractiveInterpreter::setPrompt()
     // import code.py and create an instance of InteractiveInterpreter
     Base::PyGILStateLocker lock;
     d->sysmodule = PyImport_ImportModule("sys");
-    if (!PyObject_HasAttrString(d->sysmodule, "ps1"))
+    if (!PyObject_HasAttrString(d->sysmodule, "ps1")) {
         PyObject_SetAttrString(d->sysmodule, "ps1", PyUnicode_FromString(">>> "));
-    if (!PyObject_HasAttrString(d->sysmodule, "ps2"))
+    }
+    if (!PyObject_HasAttrString(d->sysmodule, "ps2")) {
         PyObject_SetAttrString(d->sysmodule, "ps2", PyUnicode_FromString("... "));
+    }
 }
 
 /**
@@ -200,8 +201,8 @@ PyObject* InteractiveInterpreter::compile(const char* source) const
     PyObject* eval = PyObject_CallObject(func,args);  // must decref later
 #endif
 
-    Py_DECREF(args);
-    Py_DECREF(func);
+    Py_XDECREF(args);
+    Py_XDECREF(func);
 
     if (eval){
         return eval;
@@ -211,7 +212,7 @@ PyObject* InteractiveInterpreter::compile(const char* source) const
     }
 
     // can never happen
-    return 0;
+    return nullptr;
 }
 
 /**
@@ -241,10 +242,12 @@ int InteractiveInterpreter::compileCommand(const char* source) const
 
     int ret = 0;
     if (eval){
-        if (PyObject_TypeCheck(Py_None, eval->ob_type))
+        if (PyObject_TypeCheck(Py_None, eval->ob_type)) {
             ret = 1; // incomplete
-        else
+        }
+        else {
             ret = 0; // complete
+        }
         Py_DECREF(eval);
     } else {
         ret = -1;    // invalid
@@ -283,7 +286,7 @@ bool InteractiveInterpreter::runSource(const char* source) const
         // message we don't need.
         PyObject *errobj, *errdata, *errtraceback;
         PyErr_Fetch(&errobj, &errdata, &errtraceback);
-        PyErr_Restore(errobj, errdata, 0);
+        PyErr_Restore(errobj, errdata, nullptr);
         // print error message
         if (PyErr_Occurred()) PyErr_Print();
             return false;
@@ -310,11 +313,13 @@ void InteractiveInterpreter::runCode(PyCodeObject* code) const
     Base::PyGILStateLocker lock;
     PyObject *module, *dict, *presult;           /* "exec code in d, d" */
     module = PyImport_AddModule("__main__");     /* get module, init python */
-    if (module == NULL)
+    if (!module) {
         throw Base::PyException();                 /* not incref'd */
+    }
     dict = PyModule_GetDict(module);             /* get dict namespace */
-    if (dict == NULL)
+    if (!dict) {
         throw Base::PyException();                 /* not incref'd */
+    }
 
     // It seems that the return value is always 'None' or Null
     presult = PyEval_EvalCode((PyObject*)code, dict, dict); /* run compiled bytecode */
@@ -343,8 +348,9 @@ void InteractiveInterpreter::runCode(PyCodeObject* code) const
                     if (!e.getFile().empty() && e.getLine() > 0) {
                         std::string file = e.getFile();
                         std::size_t pos = file.find("src");
-                        if (pos!=std::string::npos)
+                        if (pos!=std::string::npos) {
                             file = file.substr(pos);
+                        }
                         str << " in " << file << ":" << e.getLine();
                     }
 
@@ -380,8 +386,9 @@ bool InteractiveInterpreter::push(const QString &line)
     QString source = d->buffer.join(QStringLiteral("\n"));
     try {
         bool more = runSource(source.toUtf8());
-        if (!more)
+        if (!more) {
             d->buffer.clear();
+        }
         return more;
     } catch (const Base::SystemExitException&) {
         d->buffer.clear();
@@ -389,15 +396,16 @@ bool InteractiveInterpreter::push(const QString &line)
     } catch (...) {
         // indication of unhandled exception
         d->buffer.clear();
-        if (PyErr_Occurred())
+        if (PyErr_Occurred()) {
             PyErr_Print();
+        }
         throw;
     }
 
     return false;
 }
 
-bool InteractiveInterpreter::hasPendingInput( void ) const
+bool InteractiveInterpreter::hasPendingInput( ) const
 {
     return (!d->buffer.isEmpty());
 }
@@ -423,7 +431,7 @@ void InteractiveInterpreter::clearBuffer()
  *  Constructs a PythonConsole which is a child of 'parent'.
  */
 PythonConsole::PythonConsole(QWidget *parent)
-  : TextEdit(parent), WindowParameter( "Editor" ), _sourceDrain(NULL)
+  : TextEdit(parent), WindowParameter( "Editor" ), _sourceDrain(nullptr)
 {
     d = new PythonConsoleP();
     d->interactive = false;
@@ -444,7 +452,8 @@ PythonConsole::PythonConsole(QWidget *parent)
 
     // create the window for call tips
     d->callTipsList = new CallTipsList(this);
-    d->callTipsList->setFrameStyle(QFrame::Box|QFrame::Raised);
+    d->callTipsList->setFrameStyle(QFrame::Box);
+    d->callTipsList->setFrameShadow(QFrame::Raised);
     d->callTipsList->setLineWidth(2);
     installEventFilter(d->callTipsList);
     viewport()->installEventFilter(d->callTipsList);
@@ -456,8 +465,12 @@ PythonConsole::PythonConsole(QWidget *parent)
 
     // set colors and font from settings
     ParameterGrp::handle hPrefGrp = getWindowParameter();
-    hPrefGrp->Attach( this );
+    hPrefGrp->Attach(this);
     hPrefGrp->NotifyAll();
+
+    d->hGrpSettings = WindowParameter::getDefaultParameter()->GetGroup("PythonConsole");
+    d->hGrpSettings->Attach(this);
+    d->hGrpSettings->NotifyAll();
 
     // disable undo/redo stuff
     setUndoRedoEnabled( false );
@@ -486,7 +499,8 @@ PythonConsole::~PythonConsole()
 {
     saveHistory();
     Base::PyGILStateLocker lock;
-    getWindowParameter()->Detach( this );
+    d->hGrpSettings->Detach(this);
+    getWindowParameter()->Detach(this);
     delete pythonSyntax;
     Py_XDECREF(d->_stdoutPy);
     Py_XDECREF(d->_stderrPy);
@@ -496,23 +510,23 @@ PythonConsole::~PythonConsole()
 }
 
 /** Set new font and colors according to the parameters. */
-void PythonConsole::OnChange( Base::Subject<const char*> &rCaller,const char* sReason )
+void PythonConsole::OnChange(Base::Subject<const char*> &rCaller, const char* sReason )
 {
-    Q_UNUSED(rCaller);
-    ParameterGrp::handle hPrefGrp = getWindowParameter();
+    const auto & rGrp = static_cast<ParameterGrp &>(rCaller);
 
-    bool pythonWordWrap = App::GetApplication().GetUserParameter().
-        GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("General")->GetBool("PythonWordWrap", true);
-
-    if (pythonWordWrap) {
-      this->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    } else {
-      this->setWordWrapMode(QTextOption::NoWrap);
+    if (strcmp(sReason, "PythonWordWrap") == 0) {
+        bool pythonWordWrap = rGrp.GetBool("PythonWordWrap", true);
+        if (pythonWordWrap) {
+            setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+        }
+        else {
+            setWordWrapMode(QTextOption::NoWrap);
+        }
     }
 
     if (strcmp(sReason, "FontSize") == 0 || strcmp(sReason, "Font") == 0) {
-        int fontSize = hPrefGrp->GetInt("FontSize", 10);
-        QString fontFamily = QString::fromUtf8(hPrefGrp->GetASCII("Font", "Courier").c_str());
+        int fontSize = rGrp.GetInt("FontSize", 10);
+        QString fontFamily = QString::fromUtf8(rGrp.GetASCII("Font", "Courier").c_str());
 
         QFont font(fontFamily, fontSize);
         setFont(font);
@@ -524,12 +538,12 @@ void PythonConsole::OnChange( Base::Subject<const char*> &rCaller,const char* sR
         setTabStopDistance(width);
 #endif
     } else {
-        QMap<QString, QColor>::ConstIterator it = d->colormap.find(QString::fromUtf8(sReason));
-        if (it != d->colormap.end()) {
+        auto it = d->colormap.constFind(QString::fromUtf8(sReason));
+        if (it != d->colormap.constEnd()) {
             QColor color = it.value();
             unsigned int col = (color.red() << 24) | (color.green() << 16) | (color.blue() << 8);
-            unsigned long value = static_cast<unsigned long>(col);
-            value = hPrefGrp->GetUnsigned(sReason, value);
+            auto value = static_cast<unsigned long>(col);
+            value = rGrp.GetUnsigned(sReason, value);
             col = static_cast<unsigned int>(value);
             color.setRgb((col>>24)&0xff, (col>>16)&0xff, (col>>8)&0xff);
             if (it.key() != QStringLiteral("Background"))
@@ -539,6 +553,16 @@ void PythonConsole::OnChange( Base::Subject<const char*> &rCaller,const char* sR
                             color.name(QColor::HexRgb)));
             else
                 setStyleSheet(QString());
+        }
+    }
+
+    if (strcmp(sReason, "PythonBlockCursor") == 0) {
+        bool block = rGrp.GetBool("PythonBlockCursor", false);
+        if (block) {
+            setCursorWidth(QFontMetrics(font()).averageCharWidth());
+        }
+        else {
+            setCursorWidth(1);
         }
     }
 }
@@ -700,8 +724,9 @@ void PythonConsole::keyPressEvent(QKeyEvent * e)
         restartHistory &= (inputLine != inputBlock.text());
     }
     // any cursor move resets the history to its latest item.
-    if (restartHistory)
-        { d->history.restart(); }
+    if (restartHistory) {
+        d->history.restart();
+    }
 }
 
 void PythonConsole::inputMethodEvent(QInputMethodEvent *event)
@@ -818,11 +843,10 @@ void PythonConsole::runSource(const QString& line)
      * Check if there's a "source drain", which wants to consume the source in another way then just executing it.
      * If so, put the source to the drain and emit a signal to notify the consumer, whomever this may be.
      */
-    if (this->_sourceDrain)
-    {
-      *this->_sourceDrain = line;
-      Q_EMIT pendingSource();
-      return;
+    if (this->_sourceDrain) {
+        *this->_sourceDrain = line;
+        Q_EMIT pendingSource();
+        return;
     }
 
     bool incomplete = false;
@@ -863,8 +887,9 @@ void PythonConsole::runSource(const QString& line)
             d->history.markScratch();        //< mark current history position ...
             // launch the command now
             incomplete = d->interpreter->push(s);
-            if (!incomplete)
-            { d->history.doScratch(); }    //< ... and scratch history entries that might have been added by executing the line.
+            if (!incomplete) {
+                d->history.doScratch();
+            }    //< ... and scratch history entries that might have been added by executing the line.
         }
         setFocus(); // if focus was lost
     }
@@ -908,24 +933,29 @@ void PythonConsole::runSource(const QString& line)
     PySys_SetObject("stdout", default_stdout);
     PySys_SetObject("stderr", default_stderr);
     d->interactive = false;
-    for (QStringList::Iterator it = d->statements.begin(); it != d->statements.end(); ++it)
+    for (QStringList::Iterator it = d->statements.begin(); it != d->statements.end(); ++it) {
         printStatement(*it);
+    }
     d->statements.clear();
 }
 
 bool PythonConsole::isComment(const QString& source) const
 {
-    if (source.isEmpty())
+    if (source.isEmpty()) {
         return false;
+    }
     int i=0;
     while (i < source.length()) {
         QChar ch = source.at(i++);
-        if (ch.isSpace())
+        if (ch.isSpace()) {
             continue;
-        else if (ch == QLatin1Char('#'))
+        }
+        else if (ch == QLatin1Char('#')) {
             return true;
-        else
+        }
+        else {
             return false;
+        }
     }
 
     return false;
@@ -946,11 +976,11 @@ void PythonConsole::printStatement( const QString& cmd )
 
     QTextCursor cursor = textCursor();
     QStringList statements = cmd.split(QStringLiteral("\n"));
-    for (QStringList::Iterator it = statements.begin(); it != statements.end(); ++it) {
+    for (const auto & statement : statements) {
         // go to the end before inserting new text
         cursor.movePosition(QTextCursor::End);
-        cursor.insertText( *it );
-        d->history.append( *it );
+        cursor.insertText( statement );
+        d->history.append( statement );
         printPrompt(PythonConsole::Complete);
     }
 }
@@ -967,24 +997,25 @@ void PythonConsole::showEvent (QShowEvent * e)
 
 void PythonConsole::visibilityChanged (bool visible)
 {
-    if (visible)
+    if (visible) {
         setFocus();
+    }
 }
 
 void PythonConsole::changeEvent(QEvent *e)
 {
     if (e->type() == QEvent::ParentChange) {
-        QDockWidget* dw = qobject_cast<QDockWidget*>(this->parentWidget());
+        auto dw = qobject_cast<QDockWidget*>(this->parentWidget());
         if (dw) {
             connect(dw, SIGNAL(visibilityChanged(bool)),
                     this, SLOT(visibilityChanged(bool)));
         }
     }
     else if (e->type() == QEvent::StyleChange) {
-        QPalette pal = palette();
+        QPalette pal = qApp->palette();
         QColor color = pal.windowText().color();
         unsigned int text = (color.red() << 24) | (color.green() << 16) | (color.blue() << 8);
-        unsigned long value = static_cast<unsigned long>(text);
+        auto value = static_cast<unsigned long>(text);
         // if this parameter is not already set use the style's window text color
         value = getWindowParameter()->GetUnsigned("Text", value);
         getWindowParameter()->SetUnsigned("Text", value);
@@ -994,38 +1025,26 @@ void PythonConsole::changeEvent(QEvent *e)
 
 void PythonConsole::mouseReleaseEvent( QMouseEvent *e )
 {
-  if (e->button() == Qt::MiddleButton && e->spontaneous())
-  {
-    // on Linux-like systems the middle mouse button is typically connected to a paste operation
-    // which will insert some text at the mouse position
-    QTextCursor cursor = this->textCursor();
-    if (cursor < this->inputBegin())
-    {
-      cursor.movePosition( QTextCursor::End );
-      this->setTextCursor( cursor );
-    }
-    // the text will be pasted at the cursor position (as for Ctrl-V operation)
-    QRect newPos = this->cursorRect();
+    if (e->button() == Qt::MiddleButton && e->spontaneous()) {
+        // on Linux-like systems the middle mouse button is typically connected to a paste operation
+        // which will insert some text at the mouse position
+        QTextCursor cursor = this->textCursor();
+        if (cursor < this->inputBegin()) {
+            cursor.movePosition( QTextCursor::End );
+            this->setTextCursor( cursor );
+        }
+        // the text will be pasted at the cursor position (as for Ctrl-V operation)
+        QRect newPos = this->cursorRect();
 
-    // Now we must amend the received event and pass forward. As e->setLocalPos() is only
-    // available in Qt>=5.8, let's stop the original event propagation and generate a fake event
-    // with corrected pointer position (inside the prompt line of the widget)
-    QMouseEvent newEv(e->type(), QPoint(newPos.x(),newPos.y()), e->button(), e->buttons(), e->modifiers());
-    e->accept();
-    QCoreApplication::sendEvent(this->viewport(), &newEv);
-    return;
-  }
-  TextEdit::mouseReleaseEvent( e );
-  if (e->button() == Qt::LeftButton)
-  {
-    QTextCursor cursor   = this->textCursor();
-    if (cursor.hasSelection() == false
-     && cursor < this->inputBegin())
-    {
-      cursor.movePosition( QTextCursor::End );
-      this->setTextCursor( cursor );
+        // Now we must amend the received event and pass forward. As e->setLocalPos() is only
+        // available in Qt>=5.8, let's stop the original event propagation and generate a fake event
+        // with corrected pointer position (inside the prompt line of the widget)
+        QMouseEvent newEv(e->type(), QPoint(newPos.x(),newPos.y()), e->button(), e->buttons(), e->modifiers());
+        e->accept();
+        QCoreApplication::sendEvent(this->viewport(), &newEv);
+        return;
     }
-  }
+    TextEdit::mouseReleaseEvent( e );
 }
 
 /**
@@ -1048,42 +1067,73 @@ void PythonConsole::dropEvent (QDropEvent * e)
         e->setDropAction(Qt::CopyAction);
         e->accept();
     }
-    else // this will call insertFromMimeData
-        QPlainTextEdit::dropEvent(e);
+    else {
+        // always copy text when doing drag and drop
+        if (mimeData->hasText()) {
+            QTextCursor cursor = this->cursorForPosition(e->pos());
+            QTextCursor inputLineBegin = this->inputBegin();
+
+            if (!cursorBeyond( cursor, inputLineBegin )) {
+                this->moveCursor(QTextCursor::End);
+
+                QRect newPos = this->cursorRect();
+
+                QDropEvent newEv(QPoint(newPos.x(), newPos.y()), Qt::CopyAction, mimeData, e->mouseButtons(), e->keyboardModifiers());
+                e->accept();
+                QPlainTextEdit::dropEvent(&newEv);
+            }
+            else {
+                e->setDropAction(Qt::CopyAction);
+                QPlainTextEdit::dropEvent(e);
+            }
+        }
+        else {
+            // this will call insertFromMimeData
+            QPlainTextEdit::dropEvent(e);
+        }
+    }
 }
 
 /** Dragging of action objects is allowed. */
 void PythonConsole::dragMoveEvent( QDragMoveEvent *e )
 {
     const QMimeData* mimeData = e->mimeData();
-    if (mimeData->hasFormat(QStringLiteral("text/x-action-items")))
+    if (mimeData->hasFormat(QStringLiteral("text/x-action-items"))) {
         e->accept();
-    else // this will call canInsertFromMimeData
+    }
+    else {
+        // this will call canInsertFromMimeData
         QPlainTextEdit::dragMoveEvent(e);
+    }
 }
 
 /** Dragging of action objects is allowed. */
 void PythonConsole::dragEnterEvent (QDragEnterEvent * e)
 {
     const QMimeData* mimeData = e->mimeData();
-    if (mimeData->hasFormat(QStringLiteral("text/x-action-items")))
+    if (mimeData->hasFormat(QStringLiteral("text/x-action-items"))) {
         e->accept();
-    else // this will call canInsertFromMimeData
+    }
+    else {
+        // this will call canInsertFromMimeData
         QPlainTextEdit::dragEnterEvent(e);
+    }
 }
 
 bool PythonConsole::canInsertFromMimeData (const QMimeData * source) const
 {
-    if (source->hasText())
+    if (source->hasText()) {
         return true;
+    }
     if (source->hasUrls()) {
         QList<QUrl> uri = source->urls();
-        for (QList<QUrl>::ConstIterator it = uri.begin(); it != uri.end(); ++it) {
-            QFileInfo info((*it).toLocalFile());
+        for (const auto & it : uri) {
+            QFileInfo info(it.toLocalFile());
             if (info.exists() && info.isFile()) {
                 QString ext = info.suffix().toLower();
-                if (ext == QStringLiteral("py") || ext == QStringLiteral("fcmacro"))
+                if (ext == QStringLiteral("py") || ext == QStringLiteral("fcmacro")) {
                     return true;
+                }
             }
         }
     }
@@ -1096,16 +1146,17 @@ bool PythonConsole::canInsertFromMimeData (const QMimeData * source) const
  */
 void PythonConsole::insertFromMimeData (const QMimeData * source)
 {
-    if (!source)
+    if (!source) {
         return;
+    }
     // First check on urls instead of text otherwise it may happen that a url
     // is handled as text
     bool existingFile = false;
     if (source->hasUrls()) {
         QList<QUrl> uri = source->urls();
-        for (QList<QUrl>::ConstIterator it = uri.begin(); it != uri.end(); ++it) {
+        for (const auto & it : uri) {
             // get the file name and check the extension
-            QFileInfo info((*it).toLocalFile());
+            QFileInfo info(it.toLocalFile());
             QString ext = info.suffix().toLower();
             if (info.exists()) {
                 existingFile = true;
@@ -1131,7 +1182,7 @@ void PythonConsole::insertFromMimeData (const QMimeData * source)
     }
 }
 
-QTextCursor PythonConsole::inputBegin(void) const
+QTextCursor PythonConsole::inputBegin() const
 {
     // construct cursor at begin of input line ...
     QTextCursor inputLineBegin(this->textCursor());
@@ -1139,15 +1190,16 @@ QTextCursor PythonConsole::inputBegin(void) const
     inputLineBegin.movePosition(QTextCursor::StartOfBlock);
     // ... and move cursor right beyond the prompt.
     int prompt = promptLength(inputLineBegin.block().text());
-    if (this->_sourceDrain && !this->_sourceDrain->isEmpty())
+    if (this->_sourceDrain && !this->_sourceDrain->isEmpty()) {
         prompt = this->_sourceDrain->length();
+    }
     inputLineBegin.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, prompt);
     return inputLineBegin;
 }
 
 QMimeData * PythonConsole::createMimeDataFromSelection () const
 {
-    QMimeData* mime = new QMimeData();
+    auto mime = new QMimeData();
 
     switch (d->type) {
         case PythonConsoleP::Normal:
@@ -1196,8 +1248,9 @@ void PythonConsole::runSourceFromMimeData(const QString& source)
     // definition contains several empty lines which leads to error messages (almost
     // indentation errors) later on.
     QString text = source;
-    if (text.isNull())
+    if (text.isNull()) {
         return;
+    }
 
 #if defined (Q_OS_LINUX)
     // Need to convert CRLF to LF
@@ -1288,7 +1341,7 @@ void PythonConsole::overrideCursor(const QString& txt)
 {
     // Go to the last line and the fourth position, right after the prompt
     QTextCursor cursor = this->inputBegin();
-    int    blockLength = this->textCursor().block().text().length();
+    int blockLength = this->textCursor().block().text().length();
 
     cursor.movePosition( QTextCursor::Right, QTextCursor::KeepAnchor, blockLength ); //<< select text to override
     cursor.removeSelectedText();
@@ -1304,10 +1357,7 @@ void PythonConsole::contextMenuEvent ( QContextMenuEvent * e )
     QAction *a;
     bool mayPasteHere = cursorBeyond( this->textCursor(), this->inputBegin() );
 
-    ParameterGrp::handle hGrp = App::GetApplication().GetUserParameter().
-        GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("General");
-
-    a = menu.addAction(tr("&Copy"), this, SLOT(copy()), Qt::CTRL+Qt::Key_C);
+    a = menu.addAction(tr("&Copy"), this, SLOT(copy()), QKeySequence(QStringLiteral("CTRL+C")));
     a->setEnabled(textCursor().hasSelection());
 
     a = menu.addAction(tr("&Copy command"), this, SLOT(onCopyCommand()));
@@ -1322,15 +1372,15 @@ void PythonConsole::contextMenuEvent ( QContextMenuEvent * e )
     QAction* saveh = menu.addAction(tr("Save history"));
     saveh->setToolTip(tr("Saves Python history across %1 sessions").arg(qApp->applicationName()));
     saveh->setCheckable(true);
-    saveh->setChecked(hGrp->GetBool("SavePythonHistory", false));
+    saveh->setChecked(d->hGrpSettings->GetBool("SavePythonHistory", false));
 
     menu.addSeparator();
 
-    a = menu.addAction(tr("&Paste"), this, SLOT(paste()), Qt::CTRL+Qt::Key_V);
+    a = menu.addAction(tr("&Paste"), this, SLOT(paste()), QKeySequence(QStringLiteral("CTRL+V")));
     const QMimeData *md = QApplication::clipboard()->mimeData();
     a->setEnabled( mayPasteHere && md && canInsertFromMimeData(md));
 
-    a = menu.addAction(tr("Select All"), this, SLOT(selectAll()), Qt::CTRL+Qt::Key_A);
+    a = menu.addAction(tr("Select All"), this, SLOT(selectAll()), QKeySequence(QStringLiteral("CTRL+A")));
     a->setEnabled(!document()->isEmpty());
 
     a = menu.addAction(tr("Clear console"), this, SLOT(onClearConsole()));
@@ -1343,25 +1393,13 @@ void PythonConsole::contextMenuEvent ( QContextMenuEvent * e )
     QAction* wrap = menu.addAction(tr("Word wrap"));
     wrap->setCheckable(true);
 
-    if (hGrp->GetBool("PythonWordWrap", true)) {
-        wrap->setChecked(true);
-        this->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    } else {
-        wrap->setChecked(false);
-        this->setWordWrapMode(QTextOption::NoWrap);
-    }
-
+    wrap->setChecked(d->hGrpSettings->GetBool("PythonWordWrap", true));
     QAction* exec = menu.exec(e->globalPos());
     if (exec == wrap) {
-        if (wrap->isChecked()) {
-            this->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-            hGrp->SetBool("PythonWordWrap", true);
-        } else {
-            this->setWordWrapMode(QTextOption::NoWrap);
-            hGrp->SetBool("PythonWordWrap", false);
-        }
-    } else if (exec == saveh) {
-        hGrp->SetBool("SavePythonHistory", saveh->isChecked());
+        d->hGrpSettings->SetBool("PythonWordWrap", wrap->isChecked());
+    }
+    else if (exec == saveh) {
+        d->hGrpSettings->SetBool("SavePythonHistory", saveh->isChecked());
     }
 }
 
@@ -1385,8 +1423,9 @@ void PythonConsole::onSaveHistoryAs()
             if (f.open(QIODevice::WriteOnly)) {
                 QTextStream t (&f);
                 const QStringList& hist = d->history.values();
-                for (QStringList::ConstIterator it = hist.begin(); it != hist.end(); ++it)
-                    t << *it << "\n";
+                for (const auto & it : hist) {
+                    t << it << "\n";
+                }
                 f.close();
             }
         }
@@ -1397,9 +1436,9 @@ void PythonConsole::onInsertFileName()
 {
     QString fn = Gui::FileDialog::getOpenFileName(Gui::getMainWindow(), tr("Insert file name"), QString(),
         QStringLiteral("%1 (*.*)").arg(tr("All Files")));
-    if ( fn.isEmpty() )
-        return;
-    insertPlainText(fn);
+    if ( !fn.isEmpty() ) {
+        insertPlainText(fn);
+    }
 }
 
 /**
@@ -1407,8 +1446,9 @@ void PythonConsole::onInsertFileName()
  */
 void PythonConsole::onCopyHistory()
 {
-    if (d->history.isEmpty())
+    if (d->history.isEmpty()) {
         return;
+    }
     d->type = PythonConsoleP::History;
     QMimeData *data = createMimeDataFromSelection();
     QApplication::clipboard()->setMimeData(data);
@@ -1425,7 +1465,7 @@ void PythonConsole::onCopyCommand()
     d->type = PythonConsoleP::Normal;
 }
 
-QString PythonConsole::readline( void )
+QString PythonConsole::readline( )
 {
     QEventLoop loop;
     // output is set to the current prompt which we need to extract
@@ -1437,9 +1477,10 @@ QString PythonConsole::readline( void )
     // ... and wait until we get notified about pendingSource
     QObject::connect( this, SIGNAL(pendingSource()), &loop, SLOT(quit()) );
     // application is about to quit
-    if (loop.exec() != 0)
-      { PyErr_SetInterrupt(); }            //< send SIGINT to python
-    this->_sourceDrain = NULL;             //< disable source drain
+    if (loop.exec() != 0) {
+        PyErr_SetInterrupt();
+    }            //< send SIGINT to python
+    this->_sourceDrain = nullptr;             //< disable source drain
     return inputBuffer.append(QChar::fromLatin1('\n')); //< pass a newline here, since the readline-caller may need it!
 }
 
@@ -1449,12 +1490,13 @@ QString PythonConsole::readline( void )
 void PythonConsole::loadHistory() const
 {
     // only load contents if history is empty, to not overwrite anything
-    if (!d->history.isEmpty())
+    if (!d->history.isEmpty()) {
         return;
-    ParameterGrp::handle hGrp = App::GetApplication().GetUserParameter().
-        GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("General");
-    if (!hGrp->GetBool("SavePythonHistory", false))
+    }
+
+    if (!d->hGrpSettings->GetBool("SavePythonHistory", false)) {
         return;
+    }
     QFile f(d->historyFile);
     if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QString l;
@@ -1474,21 +1516,23 @@ void PythonConsole::loadHistory() const
  */
 void PythonConsole::saveHistory() const
 {
-    if (d->history.isEmpty())
+    if (d->history.isEmpty()) {
         return;
-    ParameterGrp::handle hGrp = App::GetApplication().GetUserParameter().
-        GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("General");
-    if (!hGrp->GetBool("SavePythonHistory", false))
+    }
+    if (!d->hGrpSettings->GetBool("SavePythonHistory", false)) {
         return;
+    }
     QFile f(d->historyFile);
     if (f.open(QIODevice::WriteOnly)) {
         QTextStream t (&f);
         QStringList hist = d->history.values();
         // only save last 100 entries so we don't inflate forever...
-        if (hist.length() > 100)
+        if (hist.length() > 100) {
             hist = hist.mid(hist.length()-100);
-        for (QStringList::ConstIterator it = hist.begin(); it != hist.end(); ++it)
-            t << *it << "\n";
+        }
+        for (const auto & it : hist) {
+            t << it << "\n";
+        }
         f.close();
     }
 }
@@ -1547,7 +1591,7 @@ void PythonConsoleHighlighter::colorChanged(const QString& type, const QColor& c
 ConsoleHistory::ConsoleHistory()
 : _scratchBegin(0)
 {
-    _it = _history.end();
+    _it = _history.cend();
 }
 
 ConsoleHistory::~ConsoleHistory()
@@ -1556,12 +1600,12 @@ ConsoleHistory::~ConsoleHistory()
 
 void ConsoleHistory::first()
 {
-    _it = _history.begin();
+    _it = _history.cbegin();
 }
 
 bool ConsoleHistory::more()
 {
-    return (_it != _history.end());
+    return (_it != _history.cend());
 }
 
 /**
@@ -1574,16 +1618,16 @@ bool ConsoleHistory::next()
     bool wentNext = false;
 
     // if we didn't reach history's end ...
-    if (_it != _history.end())
+    if (_it != _history.cend())
     {
-      // we go forward until we find an item matching the prefix.
-      for (++_it; _it != _history.end(); ++_it)
-      {
-        if (!_it->isEmpty() && _it->startsWith( _prefix ))
-          { break; }
-      }
-      // we did a step - no matter of a matching prefix.
-      wentNext = true;
+        // we go forward until we find an item matching the prefix.
+        for (++_it; _it != _history.cend(); ++_it) {
+            if (!_it->isEmpty() && _it->startsWith( _prefix )) {
+                break;
+            }
+        }
+        // we did a step - no matter of a matching prefix.
+        wentNext = true;
     }
     return wentNext;
 }
@@ -1600,16 +1644,16 @@ bool ConsoleHistory::prev( const QString &prefix )
     bool wentPrev = false;
 
     // store prefix if it's the first history access
-    if (_it == _history.end())
-      { _prefix = prefix; }
+    if (_it == _history.cend()) {
+        _prefix = prefix;
+    }
 
     // while we didn't go back or reach history's begin ...
-    while (!wentPrev && _it != _history.begin())
-    {
-      // go back in history and check if item matches prefix
-      // Skip empty items
-      --_it;
-      wentPrev = (!_it->isEmpty() && _it->startsWith( _prefix ));
+    while (!wentPrev && _it != _history.cbegin()) {
+        // go back in history and check if item matches prefix
+        // Skip empty items
+        --_it;
+        wentPrev = (!_it->isEmpty() && _it->startsWith( _prefix ));
     }
     return wentPrev;
 }
@@ -1630,7 +1674,7 @@ void ConsoleHistory::append( const QString& item )
     _history.append( item );
     // reset iterator to make the next history
     //   access begin with the latest item.
-    _it = _history.end();
+    _it = _history.cend();
 }
 
 const QStringList& ConsoleHistory::values() const
@@ -1641,9 +1685,9 @@ const QStringList& ConsoleHistory::values() const
 /**
  * restart resets the history access to the latest item.
  */
-void ConsoleHistory::restart( void )
+void ConsoleHistory::restart( )
 {
-    _it = _history.end();
+    _it = _history.cend();
 }
 
 /**
@@ -1651,7 +1695,7 @@ void ConsoleHistory::restart( void )
  * Note: with simply remembering a start index, it does not work to nest scratch regions.
  * However, just replace the index keeping by a stack - in case this is be a concern.
  */
-void ConsoleHistory::markScratch( void )
+void ConsoleHistory::markScratch( )
 {
     _scratchBegin = _history.length();
 }
@@ -1659,12 +1703,11 @@ void ConsoleHistory::markScratch( void )
 /**
  * doScratch removes the tail of the history list, starting from the index marked lately.
  */
-void ConsoleHistory::doScratch( void )
+void ConsoleHistory::doScratch( )
 {
-    if (_scratchBegin < _history.length())
-    {
-      _history.erase( _history.begin() + _scratchBegin, _history.end() );
-      this->restart();
+    if (_scratchBegin < _history.length()) {
+        _history.erase( _history.begin() + _scratchBegin, _history.end() );
+        this->restart();
     }
 }
 

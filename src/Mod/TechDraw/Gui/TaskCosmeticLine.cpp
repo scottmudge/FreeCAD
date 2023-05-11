@@ -21,54 +21,24 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
-#include <cmath>
-#include <BRepBndLib.hxx>
-#include <Bnd_Box.hxx>
-
-#endif // #ifndef _PreComp_
-
-#include <BRepBuilderAPI_MakeEdge.hxx>
-
-#include <QButtonGroup>
-#include <QStatusBar>
-#include <QGraphicsScene>
+# include <cmath>
+# include <BRepBuilderAPI_MakeEdge.hxx>
+#endif
 
 #include <Base/Console.h>
-#include <Base/Tools.h>
-#include <Base/UnitsApi.h>
-
-#include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
 #include <Gui/Command.h>
-#include <Gui/Control.h>
 #include <Gui/Document.h>
-#include <Gui/MainWindow.h>
 #include <Gui/Selection.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-
-#include <Mod/TechDraw/App/DrawPage.h>
 #include <Mod/TechDraw/App/DrawUtil.h>
-#include <Mod/TechDraw/App/DrawView.h>
 #include <Mod/TechDraw/App/DrawViewPart.h>
-#include <Mod/TechDraw/App/Geometry.h>
 #include <Mod/TechDraw/App/Cosmetic.h>
+#include <Mod/TechDraw/App/Geometry.h>
 
-#include <Mod/TechDraw/Gui/ui_TaskCosmeticLine.h>
-
-#include "DrawGuiStd.h"
-#include "PreferencesGui.h"
-#include "QGVPage.h"
-#include "QGIView.h"
-#include "QGIPrimPath.h"
-#include "MDIViewPage.h"
-#include "ViewProviderPage.h"
-#include "ViewProviderViewPart.h"
-#include "Rez.h"
-
+#include "ui_TaskCosmeticLine.h"
 #include "TaskCosmeticLine.h"
+
 
 using namespace Gui;
 using namespace TechDraw;
@@ -84,14 +54,10 @@ TaskCosmeticLine::TaskCosmeticLine(TechDraw::DrawViewPart* partFeat,
     m_saveCE(nullptr),
     m_createMode(false)
 {
-    if (m_partFeat == nullptr)  {
-        //should be caught in CMD caller
-        Base::Console().Error("TaskCosmeticLine - bad parameters.  Can not proceed.\n");
-        return;
-    }
+    //existence of partFeat is checked in calling command
 
     m_ce = m_partFeat->getCosmeticEdgeBySelection(m_edgeName);
-    if (m_ce == nullptr) {
+    if (!m_ce) {
         Base::Console().Error("TaskCosmeticLine - bad parameters.  Can not proceed.\n");
         return;
     }
@@ -113,11 +79,7 @@ TaskCosmeticLine::TaskCosmeticLine(TechDraw::DrawViewPart* partFeat,
     m_is3d(is3d),
     m_createMode(true)
 {
-    if (m_partFeat == nullptr)  {
-        //should be caught in CMD caller
-        Base::Console().Error("TaskCosmeticLine - bad parameters.  Can not proceed.\n");
-        return;
-    }
+    //existence of partFeat is checked in calling command
 
     ui->setupUi(this);
 
@@ -126,7 +88,7 @@ TaskCosmeticLine::TaskCosmeticLine(TechDraw::DrawViewPart* partFeat,
 
 TaskCosmeticLine::~TaskCosmeticLine()
 {
-    if (m_saveCE != nullptr) {
+    if (m_saveCE) {
         delete m_saveCE;
     }
 }
@@ -253,9 +215,9 @@ void TaskCosmeticLine::updateCosmeticLine(void)
     gp_Pnt gp1(p0.x, p0.y, p0.z);
     gp_Pnt gp2(p1.x, p1.y, p1.z);
     TopoDS_Edge e = BRepBuilderAPI_MakeEdge(gp1, gp2);
-    auto oldGeom = m_ce->m_geometry;
+//    auto oldGeom = m_ce->m_geometry;
     m_ce->m_geometry = TechDraw::BaseGeom::baseFactory(e);
-    delete oldGeom;
+//    delete oldGeom;
 
 //    Gui::Command::updateActive();
 //    Gui::Command::commitCommand();
@@ -280,7 +242,7 @@ bool TaskCosmeticLine::accept()
         Gui::Command::commitCommand();
     }
 
-    Gui::Command::doCommand(Gui::Command::Gui,"Gui.ActiveDocument.resetEdit()");
+    Gui::Command::doCommand(Gui::Command::Gui, "Gui.ActiveDocument.resetEdit()");
 
     return true;
 }
@@ -288,7 +250,7 @@ bool TaskCosmeticLine::accept()
 bool TaskCosmeticLine::reject()
 {
     //there's nothing to do.
-    Gui::Command::doCommand(Gui::Command::Gui,"Gui.ActiveDocument.resetEdit()");
+    Gui::Command::doCommand(Gui::Command::Gui, "Gui.ActiveDocument.resetEdit()");
     return false;
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -298,8 +260,8 @@ TaskDlgCosmeticLine::TaskDlgCosmeticLine(TechDraw::DrawViewPart* partFeat,
     : TaskDialog()
 {
     widget  = new TaskCosmeticLine(partFeat, points, is3d);
-    taskbox = new Gui::TaskView::TaskBox(Gui::BitmapFactory().pixmap("actions/techdraw-line2points"),
-                                             widget->windowTitle(), true, 0);
+    taskbox = new Gui::TaskView::TaskBox(Gui::BitmapFactory().pixmap("actions/TechDraw_Line2Points"),
+                                             widget->windowTitle(), true, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }
@@ -309,8 +271,8 @@ TaskDlgCosmeticLine::TaskDlgCosmeticLine(TechDraw::DrawViewPart* partFeat,
     : TaskDialog()
 {
     widget  = new TaskCosmeticLine(partFeat, edgeName);
-    taskbox = new Gui::TaskView::TaskBox(Gui::BitmapFactory().pixmap("actions/techdraw-line2points"),
-                                             widget->windowTitle(), true, 0);
+    taskbox = new Gui::TaskView::TaskBox(Gui::BitmapFactory().pixmap("actions/TechDraw_Line2Points"),
+                                             widget->windowTitle(), true, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

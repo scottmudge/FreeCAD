@@ -24,34 +24,23 @@
 
 #ifndef _PreComp_
 # include <sstream>
-#endif
-
-#ifdef FC_OS_MACOSX
-# include <OpenGL/gl.h>
-#else
-# ifdef FC_OS_WIN32
-#  include <windows.h>
-# endif
-# include <GL/gl.h>
-#endif
-
-#include <Inventor/SbBox.h>
-#include <Inventor/SoPrimitiveVertex.h>
-#include <Inventor/bundles/SoMaterialBundle.h>
-#include <Inventor/elements/SoLightModelElement.h>
-#include <Inventor/elements/SoLazyElement.h>
-#include <Inventor/elements/SoMaterialBindingElement.h>
+# include <iostream>
+# include <string>
+# include <Inventor/SbBox.h>
+# include <Inventor/actions/SoGLRenderAction.h>
+# include <Inventor/elements/SoLazyElement.h>
 #include <Inventor/elements/SoModelMatrixElement.h>
-#include <Inventor/misc/SoState.h>
-#include <Inventor/actions/SoActions.h>
+# include <Inventor/misc/SoState.h>
+# include <Inventor/actions/SoActions.h>
+# include <Inventor/nodes/SoText2.h>
+# include <Inventor/nodes/SoTransform.h>
+#endif
 
-#include <string.h>
-#include <iostream>
-
-#include "ViewParams.h"
 #include "SoFCUnifiedSelection.h"
 #include "SoFCSelectionAction.h"
 #include "SoFCBoundingBox.h"
+#include "ViewParams.h"
+
 
 using namespace Gui;
 
@@ -111,10 +100,10 @@ SoFCBoundingBox::SoFCBoundingBox ()
     textSep = new SoSeparator();
     textSep->ref();
     for (int i = 0; i < 8; i++) {
-        SoSeparator *temp = new SoSeparator();
-        SoTransform *trans = new SoTransform();
+        auto temp = new SoSeparator();
+        auto trans = new SoTransform();
         temp->addChild(trans);
-        SoText2* text = new SoText2();
+        auto text = new SoText2();
         text->justification.setValue(SoText2::CENTER);
         temp->addChild(text);
         textSep->addChild(temp);
@@ -124,10 +113,10 @@ SoFCBoundingBox::SoFCBoundingBox ()
     dimSep = new SoSeparator();
     dimSep->ref();
     for (int i = 0; i < 3; i++) {
-        SoSeparator *temp = new SoSeparator();
-        SoTransform *trans = new SoTransform();
+        auto temp = new SoSeparator();
+        auto trans = new SoTransform();
         temp->addChild(trans);
-        SoText2* text = new SoText2();
+        auto text = new SoText2();
         text->justification.setValue(SoText2::CENTER);
         temp->addChild(text);
         dimSep->addChild(temp);
@@ -185,11 +174,11 @@ void SoFCBoundingBox::GLRender (SoGLRenderAction *action)
             str.setf(std::ios::fixed | std::ios::showpoint);
             str << "(" << vptr[i][0] << "," << vptr[i][1] << "," << vptr[i][2] << ")";
 
-            SoSeparator *sep   = (SoSeparator *)textSep->getChild(i);
-            SoTransform *trans = (SoTransform *)sep->getChild(0);
+            SoSeparator *sep   = static_cast<SoSeparator *>(textSep->getChild(i));
+            SoTransform *trans = static_cast<SoTransform *>(sep->getChild(0));
 
             trans->translation.setValue(vptr[i].getValue());
-            SoText2* t = (SoText2 *)sep->getChild(1);
+            SoText2* t = static_cast<SoText2 *>(sep->getChild(1));
             t->string.setValue(str.str().c_str());
         }
     }
@@ -204,13 +193,13 @@ void SoFCBoundingBox::GLRender (SoGLRenderAction *action)
             str.setf(std::ios::fixed | std::ios::showpoint);
             str << (2.0f * ctr[i]);
 
-            SoSeparator *sep   = (SoSeparator *)dimSep->getChild(i);
-            SoTransform *trans = (SoTransform *)sep->getChild(0);
+            SoSeparator *sep   = static_cast<SoSeparator *>(dimSep->getChild(i));
+            SoTransform *trans = static_cast<SoTransform *>(sep->getChild(0));
 
             SbVec3f point = corner[0];
             point[i] += ctr[i];
             trans->translation.setValue(point.getValue());
-            SoText2* t = (SoText2 *)sep->getChild(1);
+            SoText2* t = static_cast<SoText2 *>(sep->getChild(1));
             t->string.setValue(str.str().c_str());
         }
     }
@@ -302,7 +291,7 @@ SoSkipBoundingGroup::~SoSkipBoundingGroup()
 }
 
 void
-SoSkipBoundingGroup::initClass(void)
+SoSkipBoundingGroup::initClass()
 {
     SO_NODE_INIT_CLASS(SoSkipBoundingGroup,SoGroup,"Group");
 }

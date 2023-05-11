@@ -21,15 +21,11 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef PART_DATUMFEATURE_H
 #define PART_DATUMFEATURE_H
 
-#include <QString>
-#include <App/PropertyLinks.h>
-
-#include "PartFeature.h"
 #include "AttachExtension.h"
+
 
 namespace Part
 {
@@ -43,11 +39,11 @@ class PartExport Datum : public Part::Feature, public Part::AttachExtension
 
 public:
     Datum();
-    virtual ~Datum();
+    ~Datum() override;
     //short mustExecute();
 
     /// returns the type name of the view provider
-    virtual const char* getViewProviderName(void) const override = 0;
+    const char* getViewProviderName(void) const override = 0;
 
     /// Returns a point of the feature it counts as it's base
     virtual Base::Vector3d getBasePoint () const;

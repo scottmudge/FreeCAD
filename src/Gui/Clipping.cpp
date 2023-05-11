@@ -34,11 +34,11 @@
 # include <Inventor/nodes/SoIndexedLineSet.h>
 # include <Inventor/nodes/SoCoordinate3.h>
 # include <Inventor/nodes/SoPickStyle.h>
+# include <QAction>
 # include <QDockWidget>
+# include <QMessageBox>
 # include <QPointer>
 # include <QScrollArea>
-# include <QAction>
-# include <QMessageBox>
 # include <cmath>
 #endif
 
@@ -47,10 +47,11 @@
 #include <QStackedWidget>
 
 #include <Base/Tools.h>
+#include <App/Document.h>
 #include <App/SavedView.h>
+#include "Application.h"
 #include "Clipping.h"
 #include "ui_Clipping.h"
-#include "Application.h"
 #include "DockWindowManager.h"
 #include "View3DInventor.h"
 #include "View3DInventorViewer.h"
@@ -330,7 +331,7 @@ public:
     static void moveCallback(void * data, SoSensor * sensor)
     {
         Q_UNUSED(sensor);
-        Private* self = reinterpret_cast<Private*>(data);
+        auto self = static_cast<Private*>(data);
         if (self->view) {
             Gui::View3DInventorViewer* view = self->view->getViewer();
             SoClipPlane* clip = self->clipView;

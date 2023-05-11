@@ -23,26 +23,25 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <QAction>
-# include <QColorDialog>
 # include <QDesktopWidget>
+# include <QColorDialog>
+# include <QDebug>
 # include <QDesktopServices>
 # include <QDialogButtonBox>
 # include <QDrag>
 # include <QEventLoop>
+# include <QHBoxLayout>
 # include <QKeyEvent>
 # include <QMessageBox>
 # include <QMimeData>
 # include <QPainter>
 # include <QPlainTextEdit>
 # include <QStylePainter>
+# include <QTextEdit>
 # include <QTextBlock>
 # include <QTimer>
 # include <QToolTip>
-# include <QDebug>
-# include <QTextEdit>
 # include <QToolBar>
-# include <QHBoxLayout>
 # include <QUrl>
 #endif
 
@@ -56,17 +55,18 @@
 #include <App/ExpressionParser.h>
 #include <App/Material.h>
 
-#include "Command.h"
 #include "Widgets.h"
-#include "Application.h"
 #include "Action.h"
-#include "PrefWidgets.h"
+#include "Application.h"
 #include "BitmapFactory.h"
+#include "Command.h"
 #include "DlgExpressionInput.h"
+#include "PrefWidgets.h"
 #include "QuantitySpinBox_p.h"
 #include "Tools.h"
 #include "MainWindow.h"
 #include "ViewParams.h"
+#include "ui_DlgTreeWidget.h"
 
 FC_LOG_LEVEL_INIT("Gui", true, true, true);
 
@@ -103,16 +103,16 @@ void CommandIconView::startDrag (Qt::DropActions supportedActions)
 
     QPixmap pixmap;
     dataStream << items.count();
-    for (QList<QListWidgetItem*>::ConstIterator it = items.begin(); it != items.end(); ++it) {
+    for (QList<QListWidgetItem*>::Iterator it = items.begin(); it != items.end(); ++it) {
         if (it == items.begin())
             pixmap = ((*it)->data(Qt::UserRole)).value<QPixmap>();
         dataStream << (*it)->text();
     }
 
-    QMimeData *mimeData = new QMimeData;
+    auto mimeData = new QMimeData;
     mimeData->setData(QStringLiteral("text/x-action-items"), itemData);
 
-    QDrag *drag = new QDrag(this);
+    auto drag = new QDrag(this);
     drag->setMimeData(mimeData);
     drag->setHotSpot(QPoint(pixmap.width()/2, pixmap.height()/2));
     drag->setPixmap(pixmap);
@@ -127,7 +127,7 @@ void CommandIconView::startDrag (Qt::DropActions supportedActions)
 void CommandIconView::onSelectionChanged(QListWidgetItem * item, QListWidgetItem *)
 {
     if (item)
-        emitSelectionChanged(item->toolTip());
+        Q_EMIT emitSelectionChanged(item->toolTip());
 }
 
 // ------------------------------------------------------------------------------
@@ -206,22 +206,16 @@ ActionSelector::ActionSelector(QWidget* parent)
     upButton->setText(QString());
     downButton->setText(QString());
 
-    connect(addButton, SIGNAL(clicked()),
-            this, SLOT(on_addButton_clicked()) );
-    connect(removeButton, SIGNAL(clicked()),
-            this, SLOT(on_removeButton_clicked()) );
-    connect(upButton, SIGNAL(clicked()),
-            this, SLOT(on_upButton_clicked()) );
-    connect(downButton, SIGNAL(clicked()),
-            this, SLOT(on_downButton_clicked()) );
-    connect(availableWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),
-            this, SLOT(onItemDoubleClicked(QTreeWidgetItem*,int)) );
-    connect(selectedWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),
-            this, SLOT(onItemDoubleClicked(QTreeWidgetItem*,int)) );
-    connect(availableWidget, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem *)),
-            this, SLOT(onCurrentItemChanged(QTreeWidgetItem *,QTreeWidgetItem *)) );
-    connect(selectedWidget, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem *)),
-            this, SLOT(onCurrentItemChanged(QTreeWidgetItem *,QTreeWidgetItem *)) );
+    connect(addButton, &QPushButton::clicked, this, &ActionSelector::onAddButtonClicked);
+    connect(removeButton, &QPushButton::clicked, this, &ActionSelector::onRemoveButtonClicked);
+    connect(upButton, &QPushButton::clicked, this, &ActionSelector::onUpButtonClicked);
+    connect(downButton, &QPushButton::clicked, this, &ActionSelector::onDownButtonClicked);
+
+    connect(availableWidget, &QTreeWidget::itemDoubleClicked, this, &ActionSelector::onItemDoubleClicked);
+    connect(availableWidget, &QTreeWidget::currentItemChanged, this, &ActionSelector::onCurrentItemChanged);
+    connect(selectedWidget, &QTreeWidget::itemDoubleClicked, this, &ActionSelector::onItemDoubleClicked);
+    connect(selectedWidget, &QTreeWidget::currentItemChanged, this, &ActionSelector::onCurrentItemChanged);
+
     retranslateUi();
     setButtonsEnabled();
 }
@@ -250,7 +244,6 @@ QString ActionSelector::availableLabel() const
     return labelAvailable->text();
 }
 
-
 void ActionSelector::retranslateUi()
 {
     labelAvailable->setText(QApplication::translate("Gui::ActionSelector", "Available:"));
@@ -275,16 +268,16 @@ void ActionSelector::keyPressEvent(QKeyEvent* event)
         switch (event->key())
         {
         case Qt::Key_Right:
-            on_addButton_clicked();
+            onAddButtonClicked();
             break;
         case Qt::Key_Left:
-            on_removeButton_clicked();
+            onRemoveButtonClicked();
             break;
         case Qt::Key_Up:
-            on_upButton_clicked();
+            onUpButtonClicked();
             break;
         case Qt::Key_Down:
-            on_downButton_clicked();
+            onDownButtonClicked();
             break;
         default:
             event->ignore();
@@ -314,44 +307,44 @@ void ActionSelector::onItemDoubleClicked(QTreeWidgetItem * item, int column)
     if (treeWidget == availableWidget) {
         int index = availableWidget->indexOfTopLevelItem(item);
         item = availableWidget->takeTopLevelItem(index);
-        availableWidget->setCurrentItem(0);
+        availableWidget->setCurrentItem(nullptr);
         selectedWidget->addTopLevelItem(item);
         selectedWidget->setCurrentItem(item);
     }
     else if (treeWidget == selectedWidget) {
         int index = selectedWidget->indexOfTopLevelItem(item);
         item = selectedWidget->takeTopLevelItem(index);
-        selectedWidget->setCurrentItem(0);
+        selectedWidget->setCurrentItem(nullptr);
         availableWidget->addTopLevelItem(item);
         availableWidget->setCurrentItem(item);
     }
 }
 
-void ActionSelector::on_addButton_clicked()
+void ActionSelector::onAddButtonClicked()
 {
     QTreeWidgetItem* item = availableWidget->currentItem();
     if (item) {
         int index = availableWidget->indexOfTopLevelItem(item);
         item = availableWidget->takeTopLevelItem(index);
-        availableWidget->setCurrentItem(0);
+        availableWidget->setCurrentItem(nullptr);
         selectedWidget->addTopLevelItem(item);
         selectedWidget->setCurrentItem(item);
     }
 }
 
-void ActionSelector::on_removeButton_clicked()
+void ActionSelector::onRemoveButtonClicked()
 {
     QTreeWidgetItem* item = selectedWidget->currentItem();
     if (item) {
         int index = selectedWidget->indexOfTopLevelItem(item);
         item = selectedWidget->takeTopLevelItem(index);
-        selectedWidget->setCurrentItem(0);
+        selectedWidget->setCurrentItem(nullptr);
         availableWidget->addTopLevelItem(item);
         availableWidget->setCurrentItem(item);
     }
 }
 
-void ActionSelector::on_upButton_clicked()
+void ActionSelector::onUpButtonClicked()
 {
     QTreeWidgetItem* item = selectedWidget->currentItem();
     if (item && item->isSelected()) {
@@ -364,7 +357,7 @@ void ActionSelector::on_upButton_clicked()
     }
 }
 
-void ActionSelector::on_downButton_clicked()
+void ActionSelector::onDownButtonClicked()
 {
     QTreeWidgetItem* item = selectedWidget->currentItem();
     if (item && item->isSelected()) {
@@ -383,7 +376,7 @@ void ActionSelector::on_downButton_clicked()
 
 /**
  * Constructs a line edit with no text.
- * The \a parent and \a name arguments are sent to the QLineEdit constructor.
+ * The \a parent argument is sent to the QLineEdit constructor.
  */
 AccelLineEdit::AccelLineEdit ( QWidget * parent )
   : QLineEdit(parent)
@@ -426,7 +419,7 @@ void AccelLineEdit::setupPlaceHolderText()
 /**
  * Checks which keys are pressed and show it as text.
  */
-void AccelLineEdit::keyPressEvent ( QKeyEvent * e)
+void AccelLineEdit::keyPressEvent (QKeyEvent * e)
 {
     if (isReadOnly()) {
         QLineEdit::keyPressEvent(e);
@@ -438,9 +431,22 @@ void AccelLineEdit::keyPressEvent ( QKeyEvent * e)
     int key = e->key();
     Qt::KeyboardModifiers state = e->modifiers();
 
+    // Backspace clears the shortcut if text is present, else sets Backspace as shortcut.
     // If a modifier is pressed without any other key, return.
-    // AltGr is not a modifier but doesn't have a QtSring representation.
+    // AltGr is not a modifier but doesn't have a QString representation.
     switch(key) {
+    case Qt::Key_Backspace:
+    case Qt::Key_Delete:
+        if (state == Qt::NoModifier) {
+            keyPressedCount = 0;
+            if (isNone()) {
+                QKeySequence ks(key);
+                setText(ks.toString(QKeySequence::NativeText));
+            }
+            else {
+                clear();
+            }
+        }
     case Qt::Key_Control:
     case Qt::Key_Shift:
     case Qt::Key_Alt:
@@ -456,7 +462,7 @@ void AccelLineEdit::keyPressEvent ( QKeyEvent * e)
         keyPressedCount = 0;
     } else {
         // 4 keys are allowed for QShortcut
-        switch(keyPressedCount) {
+        switch (keyPressedCount) {
         case 4:
             keyPressedCount = 0;
             txtLine.clear();
@@ -498,7 +504,67 @@ void AccelLineEdit::keyPressEvent ( QKeyEvent * e)
 
 // ------------------------------------------------------------------------------
 
-#if QT_VERSION >= 0x050200
+/* TRANSLATOR Gui::ModifierLineEdit */
+
+/**
+ * Constructs a line edit with no text.
+ * The \a parent argument is sent to the QLineEdit constructor.
+ */
+ModifierLineEdit::ModifierLineEdit (QWidget * parent )
+  : QLineEdit(parent)
+{
+    setPlaceholderText(tr("Press modifier keys"));
+    LineEditStyle::setup(this);
+}
+
+/**
+ * Checks which modifiers are pressed and show it as text.
+ */
+void ModifierLineEdit::keyPressEvent (QKeyEvent * e)
+{
+    int key = e->key();
+    Qt::KeyboardModifiers state = e->modifiers();
+
+    switch (key) {
+    case Qt::Key_Backspace:
+    case Qt::Key_Delete:
+        clear();
+        return;
+    case Qt::Key_Control:
+    case Qt::Key_Shift:
+    case Qt::Key_Alt:
+    case Qt::Key_Meta:
+        break;
+    default:
+        return;
+    }
+
+    clear();
+    QString txtLine;
+
+    // Handles modifiers applying a mask.
+    if ((state & Qt::ControlModifier) == Qt::ControlModifier) {
+        QKeySequence ks(Qt::CTRL);
+        txtLine += ks.toString(QKeySequence::NativeText);
+    }
+    if ((state & Qt::AltModifier) == Qt::AltModifier) {
+        QKeySequence ks(Qt::ALT);
+        txtLine += ks.toString(QKeySequence::NativeText);
+    }
+    if ((state & Qt::ShiftModifier) == Qt::ShiftModifier) {
+        QKeySequence ks(Qt::SHIFT);
+        txtLine += ks.toString(QKeySequence::NativeText);
+    }
+    if ((state & Qt::MetaModifier) == Qt::MetaModifier) {
+        QKeySequence ks(Qt::META);
+        txtLine += ks.toString(QKeySequence::NativeText);
+    }
+
+    setText(txtLine);
+}
+
+// ------------------------------------------------------------------------------
+
 ClearLineEdit::ClearLineEdit (QWidget * parent)
   : QLineEdit(parent)
 {
@@ -520,42 +586,6 @@ void ClearLineEdit::updateClearButton(const QString& text)
 {
     clearAction->setVisible(!text.isEmpty());
 }
-#else
-ClearLineEdit::ClearLineEdit (QWidget * parent)
-  : QLineEdit(parent)
-{
-    clearButton = new QToolButton(this);
-    QPixmap pixmap(BitmapFactory().pixmapFromSvg(":/icons/edit-cleartext.svg", QSize(18, 18)));
-    clearButton->setIcon(QIcon(pixmap));
-    clearButton->setIconSize(pixmap.size());
-    clearButton->setCursor(Qt::ArrowCursor);
-    clearButton->setStyleSheet(QStringLiteral("QToolButton { border: none; padding: 0px; }"));
-    clearButton->hide();
-    connect(clearButton, SIGNAL(clicked()), this, SLOT(clear()));
-    connect(this, SIGNAL(textChanged(const QString&)),
-            this, SLOT(updateClearButton(const QString&)));
-    int frameWidth = style()->pixelMetric(QStyle::PM_DefaultFrameWidth);
-    setStyleSheet(QStringLiteral("QLineEdit { padding-right: %1px; } ")
-                  .arg(clearButton->sizeHint().width() + frameWidth + 1));
-    QSize msz = minimumSizeHint();
-    setMinimumSize(qMax(msz.width(), clearButton->sizeHint().height() + frameWidth * 2 + 2),
-                   msz.height());
-    LineEditStyle::setup(this);
-}
-
-void ClearLineEdit::resizeEvent(QResizeEvent *)
-{
-    QSize sz = clearButton->sizeHint();
-    int frameWidth = style()->pixelMetric(QStyle::PM_DefaultFrameWidth);
-    clearButton->move(rect().right() - frameWidth - sz.width(),
-                      (rect().bottom() + 1 - sz.height())/2);
-}
-
-void ClearLineEdit::updateClearButton(const QString& text)
-{
-    clearButton->setVisible(!text.isEmpty());
-}
-#endif
 
 // ------------------------------------------------------------------------------
 
@@ -570,8 +600,9 @@ void ClearLineEdit::updateClearButton(const QString& text)
  */
 CheckListDialog::CheckListDialog( QWidget* parent, Qt::WindowFlags fl )
     : QDialog( parent, fl )
+    , ui(new Ui_DlgTreeWidget)
 {
-    ui.setupUi(this);
+    ui->setupUi(this);
 }
 
 /**
@@ -587,9 +618,9 @@ CheckListDialog::~CheckListDialog()
  */
 void CheckListDialog::setCheckableItems( const QStringList& items )
 {
-    for ( QStringList::ConstIterator it = items.begin(); it != items.end(); ++it ) {
-        QTreeWidgetItem* item = new QTreeWidgetItem(ui.treeWidget);
-        item->setText(0, *it);
+    for (const auto & it : items) {
+        auto item = new QTreeWidgetItem(ui->treeWidget);
+        item->setText(0, it);
         item->setCheckState(0, Qt::Unchecked);
     }
 }
@@ -600,10 +631,10 @@ void CheckListDialog::setCheckableItems( const QStringList& items )
  */
 void CheckListDialog::setCheckableItems( const QList<CheckListItem>& items )
 {
-    for ( QList<CheckListItem>::ConstIterator it = items.begin(); it != items.end(); ++it ) {
-        QTreeWidgetItem* item = new QTreeWidgetItem(ui.treeWidget);
-        item->setText(0, (*it).first);
-        item->setCheckState(0, ( (*it).second ? Qt::Checked : Qt::Unchecked));
+    for (const auto & it : items) {
+        auto item = new QTreeWidgetItem(ui->treeWidget);
+        item->setText(0, it.first);
+        item->setCheckState(0, ( it.second ? Qt::Checked : Qt::Unchecked));
     }
 }
 
@@ -620,7 +651,7 @@ QStringList CheckListDialog::getCheckedItems() const
  */
 void CheckListDialog::accept ()
 {
-    QTreeWidgetItemIterator it(ui.treeWidget, QTreeWidgetItemIterator::Checked);
+    QTreeWidgetItemIterator it(ui->treeWidget, QTreeWidgetItemIterator::Checked);
     while (*it) {
         checked.push_back((*it)->text(0));
         ++it;
@@ -645,7 +676,7 @@ struct ColorButtonP
     bool allowAlpha;
 
     ColorButtonP()
-        : cd(0)
+        : cd(nullptr)
         , allowChange(true)
         , autoChange(false)
         , drawFrame(true)
@@ -668,10 +699,8 @@ ColorButton::ColorButton(QWidget* parent)
     d->col = palette().color(QPalette::Active,QPalette::Midlight);
     connect(this, SIGNAL(clicked()), SLOT(onChooseColor()));
 
-#if 1
     int e = style()->pixelMetric(QStyle::PM_ButtonIconSize);
     setIconSize(QSize(2*e, e));
-#endif
 }
 
 /**
@@ -784,36 +813,6 @@ bool ColorButton::autoChangeColor() const
  */
 void ColorButton::paintEvent (QPaintEvent * e)
 {
-#if 0
-    // first paint the complete button
-    QPushButton::paintEvent(e);
-
-    // repaint the rectangle area
-    QPalette::ColorGroup group = isEnabled() ? hasFocus() ? QPalette::Active : QPalette::Inactive : QPalette::Disabled;
-    QColor pen = palette().color(group,QPalette::ButtonText);
-    {
-        QPainter paint(this);
-        paint.setPen(pen);
-
-        if (d->drawFrame) {
-            paint.setBrush(QBrush(d->col));
-            paint.drawRect(5, 5, width()-10, height()-10);
-        }
-        else {
-            paint.fillRect(5, 5, width()-10, height()-10, QBrush(d->col));
-        }
-    }
-
-    // overpaint the rectangle to paint icon and text
-    QStyleOptionButton opt;
-    opt.init(this);
-    opt.text = text();
-    opt.icon = icon();
-    opt.iconSize = iconSize();
-
-    QStylePainter p(this);
-    p.drawControl(QStyle::CE_PushButtonLabel, opt);
-#else
     if (d->dirty) {
         QSize isize = iconSize();
         QPixmap pix(isize);
@@ -846,7 +845,56 @@ void ColorButton::paintEvent (QPaintEvent * e)
     }
 
     QPushButton::paintEvent(e);
-#endif
+}
+
+void ColorButton::showModeless()
+{
+    if (d->cd.isNull()) {
+        d->old = d->col;
+
+        QColorDialog* dlg = new QColorDialog(d->col, this);
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        if (DialogOptions::dontUseNativeColorDialog())
+            dlg->setOptions(QColorDialog::DontUseNativeDialog);
+        dlg->setOption(QColorDialog::ColorDialogOption::ShowAlphaChannel, d->allowTransparency);
+        connect(dlg, &QColorDialog::rejected, this, &ColorButton::onRejected);
+        connect(dlg, &QColorDialog::currentColorChanged, this, &ColorButton::onColorChosen);
+        d->cd = dlg;
+    }
+    d->cd->show();
+}
+
+void ColorButton::showModal()
+{
+    QColor currentColor = d->col;
+    QColorDialog* dlg = new QColorDialog(d->col, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    if (DialogOptions::dontUseNativeColorDialog())
+        dlg->setOptions(QColorDialog::DontUseNativeDialog);
+    dlg->setOption(QColorDialog::ColorDialogOption::ShowAlphaChannel, d->allowTransparency);
+
+    if (d->autoChange) {
+        connect(dlg, &QColorDialog::currentColorChanged, this, &ColorButton::onColorChosen);
+    }
+
+    dlg->setCurrentColor(currentColor);
+    dlg->adjustSize();
+
+    connect(dlg, &QColorDialog::finished, this, [&](int result) {
+        if (result == QDialog::Accepted) {
+            QColor c = dlg->selectedColor();
+            if (c.isValid()) {
+                setColor(c);
+                Q_EMIT changed();
+            }
+        }
+        else if (d->autoChange) {
+            setColor(currentColor);
+            Q_EMIT changed();
+        }
+    });
+
+    dlg->exec();
 }
 
 /**
@@ -857,56 +905,23 @@ void ColorButton::onChooseColor()
     if (!d->allowChange)
         return;
     if (d->modal) {
-        QColor currentColor = d->col;
-        QColorDialog cd(d->col, this);
-        cd.setOptions(QColorDialog::DontUseNativeDialog);
-        cd.setOption(QColorDialog::ColorDialogOption::ShowAlphaChannel, d->allowTransparency);
-
-        if (d->autoChange) {
-            connect(&cd, SIGNAL(currentColorChanged(const QColor &)),
-                    this, SLOT(onColorChosen(const QColor&)));
-        }
-
-        cd.setCurrentColor(currentColor);
-        cd.adjustSize();
-        if (cd.exec() == QDialog::Accepted) {
-            QColor c = cd.selectedColor();
-            if (c.isValid()) {
-                setColor(c);
-                changed();
-            }
-        }
-        else if (d->autoChange) {
-            setColor(currentColor);
-            changed();
-        }
+        showModal();
     }
     else {
-        if (d->cd.isNull()) {
-            d->old = d->col;
-            d->cd = new QColorDialog(d->col, this);
-            d->cd->setOptions(QColorDialog::DontUseNativeDialog);
-            d->cd->setOption(QColorDialog::ColorDialogOption::ShowAlphaChannel, d->allowTransparency);
-            d->cd->setAttribute(Qt::WA_DeleteOnClose);
-            connect(d->cd, SIGNAL(rejected()),
-                    this, SLOT(onRejected()));
-            connect(d->cd, SIGNAL(currentColorChanged(const QColor &)),
-                    this, SLOT(onColorChosen(const QColor&)));
-        }
-        d->cd->show();
+        showModeless();
     }
 }
 
 void ColorButton::onColorChosen(const QColor& c)
 {
     setColor(c);
-    changed();
+    Q_EMIT changed();
 }
 
 void ColorButton::onRejected()
 {
     setColor(d->old);
-    changed();
+    Q_EMIT changed();
 }
 
 // ------------------------------------------------------------------------------
@@ -1125,8 +1140,8 @@ void StatefulLabel::setState(QString state)
 LabelButton::LabelButton (QWidget * parent)
   : QWidget(parent)
 {
-    QHBoxLayout *layout = new QHBoxLayout(this);
-    layout->setMargin(0);
+    auto layout = new QHBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(1);
 
     label = new QLabel(this);
@@ -1172,7 +1187,7 @@ void LabelButton::setValue(const QVariant& val)
 {
     _val = val;
     showValue(_val);
-    valueChanged(_val);
+    Q_EMIT valueChanged(_val);
 }
 
 void LabelButton::showValue(const QVariant& data)
@@ -1439,7 +1454,7 @@ void TipLabel::resizeEvent(QResizeEvent *e)
 
 // ----------------------------------------------------------------------
 
-ToolTip* ToolTip::inst = 0;
+ToolTip* ToolTip::inst = nullptr;
 
 ToolTip* ToolTip::instance()
 {
@@ -1737,13 +1752,12 @@ bool ToolTip::eventFilter(QObject* o, QEvent*e)
 StatusWidget::StatusWidget(QWidget* parent)
   : QDialog(parent, Qt::Dialog | Qt::FramelessWindowHint)
 {
-    //setWindowModality(Qt::ApplicationModal);
     label = new QLabel(this);
     label->setAlignment(Qt::AlignCenter);
 
-    QGridLayout* gridLayout = new QGridLayout(this);
+    auto gridLayout = new QGridLayout(this);
     gridLayout->setSpacing(6);
-    gridLayout->setMargin(9);
+    gridLayout->setContentsMargins(9, 9, 9, 9);
     gridLayout->addWidget(label, 0, 0, 1, 1);
 }
 
@@ -1786,16 +1800,16 @@ void StatusWidget::hideEvent(QHideEvent*)
 class LineNumberArea : public QWidget
 {
 public:
-    LineNumberArea(PropertyListEditor *editor) : QWidget(editor) {
+    explicit LineNumberArea(PropertyListEditor *editor) : QWidget(editor) {
         codeEditor = editor;
     }
 
-    QSize sizeHint() const {
+    QSize sizeHint() const override {
         return QSize(codeEditor->lineNumberAreaWidth(), 0);
     }
 
 protected:
-    void paintEvent(QPaintEvent *event) {
+    void paintEvent(QPaintEvent *event) override {
         codeEditor->lineNumberAreaPaintEvent(event);
     }
 
@@ -1909,9 +1923,9 @@ public:
     {
     }
 
-    void accept()
+    void accept() override
     {
-        PropertyListEditor* edit = this->findChild<PropertyListEditor*>();
+        auto edit = this->findChild<PropertyListEditor*>();
         QStringList lines;
         if (edit) {
             QString inputText = edit->toPlainText();
@@ -1952,8 +1966,8 @@ LabelEditor::LabelEditor (QWidget * parent)
   : QWidget(parent)
 {
     type = String;
-    QHBoxLayout *layout = new QHBoxLayout(this);
-    layout->setMargin(0);
+    auto layout = new QHBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(2);
 
     lineEdit = new QLineEdit(this);
@@ -1999,24 +2013,28 @@ void LabelEditor::setText(const QString& s)
 
 void LabelEditor::changeText()
 {
-    PropertyListDialog dlg(static_cast<int>(type), this);
-    dlg.setWindowTitle(tr("List"));
-    QVBoxLayout* hboxLayout = new QVBoxLayout(&dlg);
-    QDialogButtonBox* buttonBox = new QDialogButtonBox(&dlg);
+    PropertyListDialog* dlg = new PropertyListDialog(static_cast<int>(type), this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->setWindowTitle(tr("List"));
+
+    auto hboxLayout = new QVBoxLayout(dlg);
+    auto buttonBox = new QDialogButtonBox(dlg);
     buttonBox->setStandardButtons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 
-    PropertyListEditor *edit = new PropertyListEditor(&dlg);
+    auto edit = new PropertyListEditor(dlg);
     edit->setPlainText(this->plainText);
 
     hboxLayout->addWidget(edit);
     hboxLayout->addWidget(buttonBox);
-    connect(buttonBox, SIGNAL(accepted()), &dlg, SLOT(accept()));
-    connect(buttonBox, SIGNAL(rejected()), &dlg, SLOT(reject()));
-    if (dlg.exec() == QDialog::Accepted) {
+    connect(buttonBox, &QDialogButtonBox::accepted, dlg, &PropertyListDialog::accept);
+    connect(buttonBox, &QDialogButtonBox::rejected, dlg, &PropertyListDialog::reject);
+    connect(dlg, &PropertyListDialog::accepted, this, [&] {
         QString inputText = edit->toPlainText();
         QString text = QStringLiteral("[%1]").arg(inputText);
         lineEdit->setText(text);
-    }
+    });
+
+    dlg->exec();
 }
 
 /**
@@ -2155,7 +2173,7 @@ void ExpLineEdit::openFormulaDialog()
 {
     Q_ASSERT(isBound());
 
-    Gui::Dialog::DlgExpressionInput* box = new Gui::Dialog::DlgExpressionInput(
+    auto box = new Gui::Dialog::DlgExpressionInput(
             getPath(), getExpression(),Unit(), this);
     connect(box, SIGNAL(finished(int)), this, SLOT(finishFormulaDialog()));
     box->show();
@@ -2165,7 +2183,7 @@ void ExpLineEdit::openFormulaDialog()
 
 void ExpLineEdit::finishFormulaDialog()
 {
-    Gui::Dialog::DlgExpressionInput* box = qobject_cast<Gui::Dialog::DlgExpressionInput*>(sender());
+    auto box = qobject_cast<Gui::Dialog::DlgExpressionInput*>(sender());
     if (!box) {
         qWarning() << "Sender is not a Gui::Dialog::DlgExpressionInput";
         return;
@@ -2187,7 +2205,6 @@ void ExpLineEdit::keyPressEvent(QKeyEvent *event)
     if (!hasExpression())
         QLineEdit::keyPressEvent(event);
 }
-
 
 // --------------------------------------------------------------------
 LineEditStyle::LineEditStyle(QStyle *style)
@@ -2243,6 +2260,36 @@ void LineEditStyle::setupObject(QObject *o)
 {
     if (o && o->isWidgetType())
         setupWidget(static_cast<QWidget*>(o));
+}
+
+// --------------------------------------------------------------------
+
+ButtonGroup::ButtonGroup(QObject *parent)
+  : QButtonGroup(parent)
+  , _exclusive(true)
+{
+    QButtonGroup::setExclusive(false);
+
+    connect(this, qOverload<QAbstractButton *>(&QButtonGroup::buttonClicked),
+            [=](QAbstractButton *button) {
+        if (exclusive()) {
+            const auto btns = buttons();
+            for (auto btn : btns) {
+                if (btn && btn != button && btn->isCheckable())
+                    btn->setChecked(false);
+            }
+        }
+    });
+}
+
+void ButtonGroup::setExclusive(bool on)
+{
+    _exclusive = on;
+}
+
+bool ButtonGroup::exclusive() const
+{
+    return _exclusive;
 }
 
 #include "moc_Widgets.cpp"

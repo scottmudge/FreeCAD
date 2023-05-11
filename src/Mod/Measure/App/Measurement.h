@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2013      Luke Parry <l.parry@warwick.ac.uk>            *
+ *   Copyright (c) 2013 Luke Parry <l.parry@warwick.ac.uk>                 *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -23,16 +23,19 @@
 #ifndef MEASURE_MEASUREMENT_H
 #define MEASURE_MEASUREMENT_H
 
-#include <unordered_set>
-#include <vector>
 
-#include <Base/BaseClass.h>
-#include <Base/Vector3D.h>
+#include <gp_Pnt.hxx>
 
 #include <App/DocumentObject.h>
 #include <App/PropertyLinks.h>
 #include <Mod/Part/App/TopoShape.h>
 
+#include <Base/BaseClass.h>
+#include <Base/Vector3D.h>
+#include <Mod/Measure/MeasureGlobal.h>
+
+
+class TopoDS_Shape;
 namespace Measure
 {
  enum MeasureType {
@@ -48,14 +51,14 @@ namespace Measure
     };
 
 class MeasureExport Measurement : public Base::BaseClass {
-      TYPESYSTEM_HEADER();
+      TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
 
     App::PropertyLinkSubList References3D;
 
 public:
     Measurement();
-    ~Measurement();
+    ~Measurement() override;
 
     void setSilent(bool enable) {silent = enable;}
     bool isSilent() const {return silent;}
@@ -70,10 +73,9 @@ public:
     MeasureType getType();
 
      // from base class
-    virtual PyObject *getPyObject(void);
-    virtual unsigned int getMemSize(void) const;
+    PyObject *getPyObject() override;
+    virtual unsigned int getMemSize() const;
 
-public:
   // Methods for distances (edge length, two points, edge and a point
   double length() const;
   double length(const TopoDS_Shape &s) const;
@@ -91,10 +93,14 @@ public:
   // Calculate volumetric/mass properties
   Base::Vector3d massCenter() const;
 
+  static Base::Vector3d toVector3d(const gp_Pnt gp) { return Base::Vector3d(gp.X(), gp.Y(), gp.Z()); }
+
 protected:
   TopoDS_Shape getShape(App::DocumentObject *obj , const char *subName) const;
+
+private:
   MeasureType measureType;
-  Py::Object PythonObject;
+  Py::SmartPtr PythonObject;
   bool silent = true;
 };
 

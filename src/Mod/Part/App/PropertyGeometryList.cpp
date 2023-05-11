@@ -20,25 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#   include <assert.h>
-#endif
-
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-
-#include <Base/Exception.h>
+#include <Base/Console.h>
 #include <Base/Reader.h>
 #include <Base/Writer.h>
-#include <Base/Console.h>
-
-#include "Geometry.h"
-#include "GeometryPy.h"
-#include "GeometryMigrationExtension.h"
 
 #include "PropertyGeometryList.h"
+#include "GeometryMigrationExtension.h"
+#include "GeometryPy.h"
 #include "Part2DObject.h"
 
 
@@ -76,7 +66,7 @@ void PropertyGeometryList::setSize(int newSize)
     _lValueList.resize(newSize);
 }
 
-int PropertyGeometryList::getSize(void) const
+int PropertyGeometryList::getSize() const
 {
     return static_cast<int>(_lValueList.size());
 }
@@ -156,7 +146,7 @@ void PropertyGeometryList::set1Value(int idx, std::unique_ptr<Geometry> &&lValue
     if(idx>=(int)_lValueList.size())
         throw Base::IndexError("Index out of bound");
     aboutToSetValue();
-    if(idx < 0) 
+    if(idx < 0)
         _lValueList.push_back(lValue.release());
     else {
         delete _lValueList[idx];
@@ -165,7 +155,7 @@ void PropertyGeometryList::set1Value(int idx, std::unique_ptr<Geometry> &&lValue
     hasSetValue();
 }
 
-PyObject *PropertyGeometryList::getPyObject(void)
+PyObject *PropertyGeometryList::getPyObject()
 {
     PyObject* list = PyList_New(getSize());
     for (int i = 0; i < getSize(); i++)
@@ -253,7 +243,7 @@ void PropertyGeometryList::Restore(Base::XMLReader &reader)
     for (int i = 0; i < count; i++) {
         reader.readElement("Geometry");
         const char* TypeName = reader.getAttribute("type");
-        Geometry *newG = (Geometry *)Base::Type::fromName(TypeName).createInstance();
+        auto newG = static_cast<Geometry *>(Base::Type::fromName(TypeName).createInstance());
         
         if (!reader.getAttributeAsInteger("migrated","0") && reader.hasAttribute("id")) {
             auto ext = std::make_unique<GeometryMigrationExtension>();
@@ -292,7 +282,7 @@ void PropertyGeometryList::Restore(Base::XMLReader &reader)
     setValues(std::move(values));
 }
 
-App::Property *PropertyGeometryList::Copy(void) const
+App::Property *PropertyGeometryList::Copy() const
 {
     PropertyGeometryList *p = new PropertyGeometryList();
     p->setValues(_lValueList);
@@ -305,7 +295,7 @@ void PropertyGeometryList::Paste(const Property &from)
     setValues(FromList._lValueList);
 }
 
-unsigned int PropertyGeometryList::getMemSize(void) const
+unsigned int PropertyGeometryList::getMemSize() const
 {
     int size = sizeof(PropertyGeometryList);
     for (int i = 0; i < getSize(); i++)

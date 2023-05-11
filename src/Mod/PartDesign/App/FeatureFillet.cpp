@@ -25,18 +25,13 @@
 #ifndef _PreComp_
 # include <BRepAlgo.hxx>
 # include <BRepFilletAPI_MakeFillet.hxx>
-# include <TopExp_Explorer.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Edge.hxx>
 # include <TopTools_ListOfShape.hxx>
-# include <TopTools_IndexedMapOfShape.hxx>
-# include <TopExp.hxx>
-# include <BRep_Tool.hxx>
 # include <ShapeFix_Shape.hxx>
 # include <ShapeFix_ShapeTolerance.hxx>
 #endif
 
-#include <Base/Console.h>
 #include <Base/Exception.h>
 #include <Base/Reader.h>
 #include <App/Document.h>
@@ -54,12 +49,16 @@ const App::PropertyQuantityConstraint::Constraints floatRadius = {0.0,FLT_MAX,0.
 
 Fillet::Fillet()
 {
-    ADD_PROPERTY(Radius,(1.0));
+    ADD_PROPERTY_TYPE(Radius, (1.0), "Fillet", App::Prop_None, "Fillet radius.");
     ADD_PROPERTY(Segments,());
     Radius.setUnit(Base::Unit::Length);
     Radius.setConstraints(&floatRadius);
 
     Segments.connectLinkProperty(Base);
+
+    ADD_PROPERTY_TYPE(UseAllEdges, (false), "Fillet", App::Prop_None,
+      "Fillet all edges if true, else use only those edges in Base property.\n"
+      "If true, then this overrides any edge changes made to the Base property or in the dialog.\n");
 }
 
 short Fillet::mustExecute() const
@@ -71,7 +70,7 @@ short Fillet::mustExecute() const
     return DressUp::mustExecute();
 }
 
-App::DocumentObjectExecReturn *Fillet::execute(void)
+App::DocumentObjectExecReturn *Fillet::execute()
 {
     Part::TopoShape baseShape;
     try {
@@ -81,8 +80,9 @@ App::DocumentObjectExecReturn *Fillet::execute(void)
     }
     baseShape.setTransform(Base::Matrix4D());
 
-    auto edges = getContinuousEdges(baseShape);
-    if (edges.size() == 0)
+    auto edges = UseAllEdges.getValue() ? baseShape.getSubTopoShapes(TopAbs_EDGE)
+                                        : getContinuousEdges(baseShape);
+    if (edges.empty())
         return new App::DocumentObjectExecReturn("Fillet not possible on selected shapes");
 
     double radius = Radius.getValue();

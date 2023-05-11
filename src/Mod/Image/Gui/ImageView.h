@@ -18,14 +18,12 @@
 #ifndef ImageView_H
 #define ImageView_H
 
+#include <QMouseEvent>
 #include <Gui/MDIView.h>
-#include <QtOpenGL.h>
-#if defined(HAVE_QT5_OPENGL)
-#include "OpenGLImageBox.h"
-#else
-#include "GLImageBox.h"
-#endif
 #include <Mod/Image/ImageGlobal.h>
+
+#include "OpenGLImageBox.h"
+
 
 class QSlider;
 class QAction;
@@ -36,9 +34,13 @@ class QToolBar;
 namespace ImageGui
 {
 
+class GLImageBox;
+
 class ImageGuiExport ImageView : public Gui::MDIView
 {
     Q_OBJECT
+
+    TYPESYSTEM_HEADER();
 
 public:
     ImageView(QWidget* parent);

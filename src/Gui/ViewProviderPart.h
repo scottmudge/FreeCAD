@@ -20,13 +20,11 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_VIEWPROVIDER_ViewProviderPart_H
 #define GUI_VIEWPROVIDER_ViewProviderPart_H
 
-
-#include "ViewProviderOriginGroup.h"
 #include "ViewProviderDragger.h"
+#include "ViewProviderOriginGroup.h"
 #include "ViewProviderPythonFeature.h"
 
 
@@ -45,34 +43,34 @@ public:
     /// constructor.
     ViewProviderPart();
     /// destructor.
-    virtual ~ViewProviderPart();
+    ~ViewProviderPart() override;
 
-    virtual bool doubleClicked(void) override;
-    virtual void setupContextMenu(QMenu* menu, QObject* receiver, const char* member) override;
-    
-    virtual std::map<std::string, App::Color> getElementColors(const char *subname=0) const override;
-    virtual void setElementColors(const std::map<std::string, App::Color> &colors) override;
+    bool doubleClicked() override;
+    void setupContextMenu(QMenu* menu, QObject* receiver, const char* member) override;
 
-    virtual void finishRestoring() override;
+    std::map<std::string, App::Color> getElementColors(const char *subname=nullptr) const override;
+    void setElementColors(const std::map<std::string, App::Color> &colors) override;
+
+    void finishRestoring() override;
 
 protected:
     App::PropertyLinkSub *getColoredElementsProperty() const;
     void applyColors();
-    virtual void buildChildren3D() override;
+    void buildChildren3D() override;
 
 protected:
     /// get called by the container whenever a property has been changed
-    virtual void onChanged(const App::Property* prop) override;
-    virtual void updateData(const App::Property*) override;
+    void onChanged(const App::Property* prop) override;
+    void updateData(const App::Property*) override;
 
-    virtual bool setEdit(int ModNum) override;
-    virtual void setEditViewer(View3DInventorViewer*, int ModNum) override;
+    bool setEdit(int ModNum) override;
+    void setEditViewer(View3DInventorViewer*, int ModNum) override;
 
 private:
     bool prevColorOverride = false;
 };
 
-typedef ViewProviderPythonFeatureT<ViewProviderPart> ViewProviderPartPython;
+using ViewProviderPartPython = ViewProviderPythonFeatureT<ViewProviderPart>;
 
 } // namespace Gui
 

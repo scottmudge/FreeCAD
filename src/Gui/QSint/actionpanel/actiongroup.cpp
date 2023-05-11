@@ -8,10 +8,8 @@
 #include "actiongroup.h"
 #include "taskheader_p.h"
 #include "taskgroup_p.h"
-#include "actionlabel.h"
-#include "actionpanelscheme.h"
 
-#include <QtGui/QPainter>
+#include <QPainter>
 
 
 namespace QSint
@@ -47,7 +45,7 @@ void ActionGroup::init(bool header)
   myScheme = ActionPanelScheme::defaultScheme();
 
   QVBoxLayout *vbl = new QVBoxLayout();
-  vbl->setMargin(0);
+  vbl->setContentsMargins(0, 0, 0, 0);
   vbl->setSpacing(0);
   setLayout(vbl);
 
@@ -79,7 +77,7 @@ QBoxLayout* ActionGroup::groupLayout()
 ActionLabel* ActionGroup::addAction(QAction *action, bool addToLayout, bool addStretch)
 {
     if (!action)
-        return 0;
+        return nullptr;
 
     ActionLabel* label = new ActionLabel(action, this);
     myGroup->addActionLabel(label, addToLayout, addStretch);
@@ -90,7 +88,7 @@ ActionLabel* ActionGroup::addAction(QAction *action, bool addToLayout, bool addS
 ActionLabel* ActionGroup::addActionLabel(ActionLabel *label, bool addToLayout, bool addStretch)
 {
     if (!label)
-        return 0;
+        return nullptr;
 
     myGroup->addActionLabel(label, addToLayout, addStretch);
 

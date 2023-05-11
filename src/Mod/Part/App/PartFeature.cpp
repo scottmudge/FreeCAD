@@ -20,71 +20,67 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <sstream>
-# include <gp_Trsf.hxx>
-# include <gp_Ax1.hxx>
-# include <BRepBuilderAPI_MakeShape.hxx>
+# include <Bnd_Box.hxx>
+# include <BRepAdaptor_Curve.hxx>
 # include <BRepAlgoAPI_Fuse.hxx>
 # include <BRepAlgoAPI_Common.hxx>
-# include <TopTools_ListIteratorOfListOfShape.hxx>
-# include <TopExp.hxx>
-# include <TopExp_Explorer.hxx>
-# include <TopTools_IndexedMapOfShape.hxx>
-# include <Standard_Failure.hxx>
-# include <Standard_Version.hxx>
-# include <TopoDS_Face.hxx>
-# include <gp_Dir.hxx>
-# include <gp_Pln.hxx> // for Precision::Confusion()
-# include <Bnd_Box.hxx>
 # include <BRepBndLib.hxx>
+# include <BRepBuilderAPI_MakeShape.hxx>
 # include <BRepExtrema_DistShapeShape.hxx>
-# include <BRepAdaptor_Curve.hxx>
-# include <TopoDS.hxx>
-# include <GProp_GProps.hxx>
 # include <BRepGProp.hxx>
-# include <gce_MakeLin.hxx>
 # include <BRepIntCurveSurface_Inter.hxx>
-# include <IntCurveSurface_IntersectionPoint.hxx>
 # include <gce_MakeDir.hxx>
 # include <BRepBuilderAPI_MakeEdge.hxx>
 # include <BRepBuilderAPI_MakeFace.hxx>
 # include <BRepBuilderAPI_MakeVertex.hxx>
 # include <BRepBuilderAPI_Copy.hxx>
+# include <gce_MakeLin.hxx>
+# include <gp_Ax1.hxx>
+# include <gp_Dir.hxx>
+# include <gp_Trsf.hxx>
+# include <GProp_GProps.hxx>
+# include <IntCurveSurface_IntersectionPoint.hxx>
+# include <Precision.hxx>
+# include <Standard_Failure.hxx>
+# include <Standard_Version.hxx>
+# include <TopExp.hxx>
+# include <TopExp_Explorer.hxx>
+# include <TopoDS.hxx>
+# include <TopTools_IndexedMapOfShape.hxx>
+# include <TopTools_ListIteratorOfListOfShape.hxx>
 #endif
 
 #include <boost/range.hpp>
 typedef boost::iterator_range<const char*> CharRange;
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost_bind_bind.hpp>
-#include <Base/Console.h>
-#include <Base/Writer.h>
-#include <Base/Reader.h>
-#include <Base/Exception.h>
-#include <Base/FileInfo.h>
-#include <Base/Stream.h>
-#include <Base/Placement.h>
-#include <Base/Rotation.h>
-#include <Base/Tools.h>
+
 #include <App/Application.h>
-#include <App/FeaturePythonPyImp.h>
 #include <App/Document.h>
-#include <App/Link.h>
+#include <App/FeaturePythonPyImp.h>
 #include <App/GeoFeatureGroupExtension.h>
+#include <App/Link.h>
 #include <App/MappedElement.h>
 #include <App/OriginFeature.h>
 #include <App/Placement.h>
+#include <Base/Console.h>
+#include <Base/Exception.h>
+#include <Base/Placement.h>
+#include <Base/Rotation.h>
+#include <Base/Stream.h>
+#include <Base/Tools.h>
 
-#include "PartPyCXX.h"
 #include "PartFeature.h"
 #include "PartFeaturePy.h"
-#include "TopoShapePy.h"
 #include "PartParams.h"
+#include "PartPyCXX.h"
+#include "TopoShapePy.h"
 #include "TopoShapeOpCode.h"
+
 
 using namespace Part;
 namespace bp = boost::placeholders;
@@ -94,7 +90,7 @@ FC_LOG_LEVEL_INIT("Part",true,true)
 PROPERTY_SOURCE(Part::Feature, App::GeoFeature)
 
 
-Feature::Feature(void)
+Feature::Feature()
 {
     ADD_PROPERTY(Shape, (TopoDS_Shape()));
     ADD_PROPERTY_TYPE(ValidateShape, (false), "", App::Prop_None,
@@ -124,12 +120,12 @@ void Feature::fixShape(TopoShape &s) const
     }
 }
 
-short Feature::mustExecute(void) const
+short Feature::mustExecute() const
 {
     return GeoFeature::mustExecute();
 }
 
-App::DocumentObjectExecReturn *Feature::recompute(void)
+App::DocumentObjectExecReturn *Feature::recompute()
 {
     try {
         return App::GeoFeature::recompute();
@@ -142,13 +138,13 @@ App::DocumentObjectExecReturn *Feature::recompute(void)
     }
 }
 
-App::DocumentObjectExecReturn *Feature::execute(void)
+App::DocumentObjectExecReturn *Feature::execute()
 {
     mergeShapeContents();
     return GeoFeature::execute();
 }
 
-PyObject *Feature::getPyObject(void)
+PyObject *Feature::getPyObject()
 {
     if (PythonObject.is(Py::_None())){
         // ref counter is set to 1
@@ -360,14 +356,14 @@ Feature::getExportElementName(TopoShape shape, const char *name) const
     return App::GeoFeature::_getElementName(name, mapped);
 }
 
-App::DocumentObject *Feature::getSubObject(const char *subname, 
+App::DocumentObject *Feature::getSubObject(const char *subname,
         PyObject **pyObj, Base::Matrix4D *pmat, bool transform, int depth) const
 {
     while(subname && *subname=='.') ++subname; // skip leading .
 
     // having '.' inside subname means it is referencing some children object,
     // instead of any sub-element from ourself
-    if(subname && !Data::ComplexGeoData::isMappedElement(subname) && strchr(subname,'.')) 
+    if(subname && !Data::ComplexGeoData::isMappedElement(subname) && strchr(subname,'.'))
         return App::DocumentObject::getSubObject(subname,pyObj,pmat,transform,depth);
 
     Base::Matrix4D _mat;
@@ -422,19 +418,17 @@ App::DocumentObject *Feature::getSubObject(const char *subname,
         // instance or do simply nothing. For now the error message is degraded to a log message.
         std::ostringstream str;
         Standard_CString msg = e.GetMessageString();
-#if OCC_VERSION_HEX >= 0x070000
+
         // Avoid name mangling
         str << e.DynamicType()->get_type_name() << " ";
-#else
-        str << typeid(e).name() << " ";
-#endif
+
         if (msg) {str << msg;}
         else     {str << "No OCCT Exception Message";}
         str << ": " << getFullName();
-        if (subname) 
+        if (subname)
             str << '.' << subname;
         FC_LOG(str.str());
-        return 0;
+        return nullptr;
     }
 }
 
@@ -843,15 +837,15 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
         bool needSubElement, Base::Matrix4D *pmat, App::DocumentObject **powner, 
         bool resolveLink, bool noElementMap, const std::set<std::string> hiddens,
         const App::DocumentObject *lastLink)
-
 {
     TopoShape shape;
 
-    if(!obj) return shape;
+    if(!obj)
+        return shape;
 
-    PyObject *pyobj = 0;
+    PyObject *pyobj = nullptr;
     Base::Matrix4D mat;
-    if(powner) *powner = 0;
+    if(powner) *powner = nullptr;
 
     std::string _subname;
     auto subelement = Data::ComplexGeoData::findElementName(subname);
@@ -876,14 +870,14 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
         }
     }
 
-    App::DocumentObject *linked = 0;
-    App::DocumentObject *owner = 0;
+    App::DocumentObject *linked = nullptr;
+    App::DocumentObject *owner = nullptr;
     Base::Matrix4D linkMat;
     App::StringHasherRef hasher;
     long tag;
     {
         Base::PyGILStateLocker lock;
-        owner = obj->getSubObject(subname,shape.isNull()?&pyobj:0,&mat,false);
+        owner = obj->getSubObject(subname,shape.isNull()?&pyobj:nullptr,&mat,false);
         if(!owner)
             return shape;
         tag = owner->getID();
@@ -897,7 +891,7 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
         }
         if(!linked)
             linked = owner;
-        if(powner) 
+        if(powner)
             *powner = resolveLink?linked:owner;
 
         if(!shape.isNull())
@@ -908,8 +902,8 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
             if(!shape.isNull()) {
                 if(canCache(obj)) {
                     if(obj->getDocument() != linked->getDocument()
-                            || mat.hasScale()
-                            || (linked != owner && linkMat.hasScale()))
+                            || mat.hasScale() != Base::ScaleType::Other
+                            || (linked != owner && linkMat.hasScale() != Base::ScaleType::NoScaling))
                         PropertyShapeCache::setShape(obj,shape,subname);
                 }
                 if(noElementMap) {
@@ -990,7 +984,7 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
             if(owner->getDocument()!=obj->getDocument()) {
                 shape.reTagElementMap(obj->getID(),obj->getDocument()->getStringHasher());
                 PropertyShapeCache::setShape(obj,shape,subname);
-            } else if(scaled || (linked != owner && linkMat.hasScale()))
+            } else if(scaled || (linked != owner && linkMat.hasScale() != Base::ScaleType::NoScaling))
                 PropertyShapeCache::setShape(obj,shape,subname);
         }
         if(!shape.isNull()) {
@@ -1006,13 +1000,13 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
     bool cacheable = true;
 
     auto link = owner->getExtensionByType<App::LinkBaseExtension>(true);
-    if(owner!=linked 
-            && (!link || (!link->_ChildCache.getSize() 
-                            && link->getSubElements().size()<=1))) 
+    if(owner!=linked
+            && (!link || (!link->_ChildCache.getSize()
+                            && link->getSubElements().size()<=1)))
     {
         // if there is a linked object, and there is no child cache (which is used
         // for special handling of plain group), obtain shape from the linked object
-        shape = Feature::getTopoShape(linked,0,false,0,0,false,false);
+        shape = Feature::getTopoShape(linked,nullptr,false,nullptr,nullptr,false,false);
         if(shape.isNull())
             return shape;
         if(owner==obj)
@@ -1034,7 +1028,7 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
         if(link && link->getElementCountValue()) {
             linked = link->getTrueLinkedObject(false,&baseMat);
             if(linked && linked!=owner) {
-                baseShape = Feature::getTopoShape(linked,0,false,0,0,false,false);
+                baseShape = Feature::getTopoShape(linked,nullptr,false,nullptr,nullptr,false,false);
                 if(!link->getShowElementValue())
                     baseShape.reTagElementMap(owner->getID(),owner->getDocument()->getStringHasher());
             }
@@ -1043,13 +1037,13 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
             if(sub.empty()) continue;
             int visible;
             std::string childName;
-            App::DocumentObject *parent=0;
+            App::DocumentObject *parent=nullptr;
             Base::Matrix4D mat = baseMat;
-            App::DocumentObject *subObj=0;
+            App::DocumentObject *subObj=nullptr;
             if(sub.find('.')==std::string::npos)
                 visible = 1;
             else {
-                subObj = owner->resolve(sub.c_str(), &parent, &childName,0,0,&mat,false);
+                subObj = owner->resolve(sub.c_str(), &parent, &childName,nullptr,nullptr,&mat,false);
                 if(!parent || !subObj)
                     continue;
                 if(lastLink && App::GeoFeatureGroupExtension::isNonGeoGroup(parent))
@@ -1069,8 +1063,8 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
 
             TopoShape shape;
 
-            if(!subObj || baseShape.isNull() || mat.hasScale() < 0) {
-                shape = _getTopoShape(owner,sub.c_str(),true,0,&subObj,false,false,nextHiddens,nextLink);
+            if(!subObj || baseShape.isNull() || mat.hasScale() == Base::ScaleType::Other) {
+                shape = _getTopoShape(owner,sub.c_str(),true,nullptr,&subObj,false,false,nextHiddens,nextLink);
                 if(shape.isNull())
                     continue;
                 if(visible<0 && subObj && !subObj->Visibility.getValue())
@@ -1113,11 +1107,11 @@ static TopoShape _getTopoShape(const App::DocumentObject *obj, const char *subna
     return shape;
 }
 
-TopoShape Feature::getTopoShape(const App::DocumentObject *obj, const char *subname, 
-        bool needSubElement, Base::Matrix4D *pmat, App::DocumentObject **powner, 
+TopoShape Feature::getTopoShape(const App::DocumentObject *obj, const char *subname,
+        bool needSubElement, Base::Matrix4D *pmat, App::DocumentObject **powner,
         bool resolveLink, bool transform, bool noElementMap)
 {
-    if(!obj || !obj->getNameInDocument()) 
+    if(!obj || !obj->getNameInDocument())
         return TopoShape();
 
     const App::DocumentObject *lastLink=0;
@@ -1182,7 +1176,7 @@ TopoShape Feature::getTopoShape(const App::DocumentObject *obj, const char *subn
         if(pmat)
             topMat = *pmat;
         if(transform)
-            obj->getSubObject(0,0,&topMat);
+            obj->getSubObject(nullptr,nullptr,&topMat);
 
         // Apply the top level transformation
         if(!shape.isNull())
@@ -1198,7 +1192,8 @@ TopoShape Feature::getTopoShape(const App::DocumentObject *obj, const char *subn
 
 App::DocumentObject *Feature::getShapeOwner(const App::DocumentObject *obj, const char *subname)
 {
-    if(!obj) return 0;
+    if(!obj)
+        return nullptr;
     auto owner = obj->getSubObject(subname);
     if(owner) {
         auto linked = owner->getLinkedObject(true);
@@ -1869,7 +1864,7 @@ PROPERTY_SOURCE(Part::FilletBase, Part::Feature)
 
 FilletBase::FilletBase()
 {
-    ADD_PROPERTY(Base,(0));
+    ADD_PROPERTY(Base,(nullptr));
     ADD_PROPERTY(Edges,(0,0,0));
     ADD_PROPERTY_TYPE(EdgeLinks,(0), 0, 
             (App::PropertyType)(App::Prop_ReadOnly|App::Prop_Hidden),0);
@@ -1943,10 +1938,10 @@ PROPERTY_SOURCE(Part::FeatureExt, Part::Feature)
 namespace App {
 /// @cond DOXERR
 PROPERTY_SOURCE_TEMPLATE(Part::FeaturePython, Part::Feature)
-template<> const char* Part::FeaturePython::getViewProviderName(void) const {
+template<> const char* Part::FeaturePython::getViewProviderName() const {
     return "PartGui::ViewProviderPython";
 }
-template<> PyObject* Part::FeaturePython::getPyObject(void) {
+template<> PyObject* Part::FeaturePython::getPyObject() {
     if (PythonObject.is(Py::_None())) {
         // ref counter is set to 1
         PythonObject = Py::Object(new FeaturePythonPyT<Part::PartFeaturePy>(this),true);

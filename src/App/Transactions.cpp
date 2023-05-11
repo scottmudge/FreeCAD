@@ -29,19 +29,19 @@
 #endif
 
 #include <atomic>
-
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-#include <Base/Writer.h>
-using Base::Writer;
-#include <Base/Reader.h>
-using Base::XMLReader;
 #include <Base/Console.h>
+#include <Base/ExceptionSafeCall.h>
 #include <Base/Tools.h>
+#include <Base/Reader.h>
+#include <Base/Writer.h>
+
 #include "Transactions.h"
-#include "Property.h"
+
 #include "Application.h"
 #include "Document.h"
 #include "DocumentObject.h"
+#include "Property.h"
+
 
 FC_LOG_LEVEL_INIT("App",true,true)
 
@@ -103,7 +103,8 @@ static std::atomic<int> _TransactionID;
 
 int Transaction::getNewID() {
     int id = ++_TransactionID;
-    if(id) return id;
+    if(id)
+        return id;
     // wrap around? really?
     return ++_TransactionID;
 }
@@ -112,7 +113,7 @@ int Transaction::getLastID() {
     return _TransactionID;
 }
 
-unsigned int Transaction::getMemSize (void) const
+unsigned int Transaction::getMemSize () const
 {
     return 0;
 }
@@ -127,7 +128,7 @@ void Transaction::Restore(Base::XMLReader &/*reader*/)
     assert(0);
 }
 
-int Transaction::getID(void) const
+int Transaction::getID() const
 {
     return transID;
 }
@@ -216,7 +217,7 @@ TransactionGuard::~TransactionGuard()
         // while we are looping.
         if(_PendingProps.count(prop)) {
             FC_LOG("transaction touch " << prop->getFullName());
-            exceptionSafeCall(errMsg, [](Property *prop){prop->touch();}, prop);
+            Base::exceptionSafeCall(errMsg, [](Property *prop){prop->touch();}, prop);
             if(errMsg.size()) {
                 FC_ERR("Exception on finishing transaction "
                         << prop->getFullName() << ": " << errMsg);
@@ -233,7 +234,7 @@ TransactionGuard::~TransactionGuard()
             continue;
         for(auto obj : doc->getObjects()) {
             if(obj->testStatus(ObjectStatus::PendingTransactionUpdate)) {
-                exceptionSafeCall(errMsg,
+                Base::exceptionSafeCall(errMsg,
                         [](DocumentObject *obj){obj->onUndoRedoFinished();}, obj);
                 if(errMsg.size()) {
                     FC_ERR("Exception on finishing transaction "
@@ -251,13 +252,13 @@ TransactionGuard::~TransactionGuard()
             auto doc = GetApplication().getDocument(docName.c_str());
             if (!doc)
                 continue;
-            exceptionSafeCall(errMsg, doc->signalUndo, *doc);
+            Base::exceptionSafeCall(errMsg, doc->signalUndo, *doc);
             if (errMsg.size()) {
                 FC_ERR("Exception on signal undo " << doc->getName() << ": " << errMsg);
                 errMsg.clear();
             }
         }
-        exceptionSafeCall(errMsg, GetApplication().signalUndo);
+        Base::exceptionSafeCall(errMsg, GetApplication().signalUndo);
         if (errMsg.size()) {
             FC_ERR("Exception on signal undo: " << errMsg);
             errMsg.clear();
@@ -268,13 +269,13 @@ TransactionGuard::~TransactionGuard()
             auto doc = GetApplication().getDocument(docName.c_str());
             if (!doc)
                 continue;
-            exceptionSafeCall(errMsg, doc->signalRedo, *doc);
+            Base::exceptionSafeCall(errMsg, doc->signalRedo, *doc);
             if (errMsg.size()) {
                 FC_ERR("Exception on signal redo " << doc->getName() << ": " << errMsg);
                 errMsg.clear();
             }
         }
-        exceptionSafeCall(errMsg, GetApplication().signalRedo);
+        Base::exceptionSafeCall(errMsg, GetApplication().signalRedo);
         if (errMsg.size()) {
             FC_ERR("Exception on signal redo: " << errMsg);
             errMsg.clear();
@@ -352,7 +353,7 @@ void Transaction::apply(Document &Doc, bool forward)
     }catch(...) {
         errMsg = "Unknown exception";
     }
-    if(errMsg.size()) {
+    if(!errMsg.empty()) {
         FC_ERR("Exception on " << (forward?"redo":"undo") << " '" 
                 << Name << "':" << errMsg);
     }
@@ -364,10 +365,13 @@ void Transaction::addObjectNew(TransactionalObject *Obj)
     auto pos = index.find(Obj);
     if (pos != index.end()) {
         if (pos->second->status == TransactionObject::Del) {
-            delete pos->second;
-            Obj->detachFromDocument();
-            delete Obj;
+            // first remove the item from the container before deleting it
+            auto second = pos->second;
+            auto first = pos->first;
             index.erase(pos);
+            Obj->detachFromDocument();
+            delete second;
+            delete first;
         }
         else {
             pos->second->status = TransactionObject::New;
@@ -490,7 +494,7 @@ void TransactionObject::applyChn(Document &Doc, TransactionalObject *pcObj, bool
             // been destroies. We must prepare for the case where user removed
             // a dynamic property but does not recordered as transaction.
             auto name = container->getPropertyName(prop);
-            if(!name || (data.name.size() && data.name != name) || data.propertyType != prop->getTypeId()) {
+            if(!name || (!data.name.empty() && data.name != name) || data.propertyType != prop->getTypeId()) {
                 // Here means the original property is not found, probably removed
                 if(data.name.empty()) {
                     // not a dynamic property, nothing to do
@@ -560,7 +564,7 @@ void TransactionObject::addOrRemoveProperty(const Property* pcProp, bool add)
         return;
 
     auto &data = _PropChangeMap[pcProp->getID()];
-    if(data.name.size()) {
+    if(!data.name.empty()) {
         if(!add && !data.property) {
             // this means add and remove the same property inside a single
             // transaction, so they cancel each other out.
@@ -570,13 +574,13 @@ void TransactionObject::addOrRemoveProperty(const Property* pcProp, bool add)
     }
     if(data.property) {
         delete data.property;
-        data.property = 0;
+        data.property = nullptr;
     }
     data.propertyOrig = pcProp;
     static_cast<DynamicProperty::PropData&>(data) = 
         pcProp->getContainer()->getDynamicPropertyData(pcProp);
     if(add) 
-        data.property = 0;
+        data.property = nullptr;
     else {
         data.property = pcProp->Copy();
         data.propertyType = pcProp->getTypeId();
@@ -584,7 +588,7 @@ void TransactionObject::addOrRemoveProperty(const Property* pcProp, bool add)
     }
 }
 
-unsigned int TransactionObject::getMemSize (void) const
+unsigned int TransactionObject::getMemSize () const
 {
     return 0;
 }
@@ -613,17 +617,13 @@ TYPESYSTEM_SOURCE_ABSTRACT(App::TransactionDocumentObject, App::TransactionObjec
  * A constructor.
  * A more elaborate description of the constructor.
  */
-TransactionDocumentObject::TransactionDocumentObject()
-{
-}
+TransactionDocumentObject::TransactionDocumentObject() = default;
 
 /**
  * A destructor.
  * A more elaborate description of the destructor.
  */
-TransactionDocumentObject::~TransactionDocumentObject()
-{
-}
+TransactionDocumentObject::~TransactionDocumentObject() = default;
 
 void TransactionDocumentObject::applyDel(Document &Doc, TransactionalObject *pcObj)
 {
@@ -668,7 +668,7 @@ App::TransactionFactory* App::TransactionFactory::self = nullptr;
 
 TransactionFactory& TransactionFactory::instance()
 {
-    if (self == nullptr)
+    if (!self)
         self = new TransactionFactory;
     return *self;
 }

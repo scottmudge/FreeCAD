@@ -20,26 +20,24 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
+# include <QMessageBox>
 # include <QPainter>
 # include <QPixmap>
-# include <QMessageBox>
 #endif
+
+#include <App/Application.h>
+#include <Base/Console.h>
+#include <Base/Interpreter.h>
+#include <Gui/Command.h>
 
 #include "SketcherSettings.h"
 #include "ui_SketcherSettings.h"
-#include "ui_SketcherSettingsDisplay.h"
 #include "ui_SketcherSettingsColors.h"
+#include "ui_SketcherSettingsDisplay.h"
 #include "TaskSketcherGeneral.h"
-#include <Base/Console.h>
-#include <Base/Interpreter.h>
-#include <App/Application.h>
-#include <Gui/PrefWidgets.h>
-#include <Gui/Inventor/MarkerBitmaps.h>
-#include <Gui/Command.h>
+
 
 using namespace SketcherGui;
 
@@ -51,7 +49,7 @@ SketcherSettings::SketcherSettings(QWidget* parent)
     ui->setupUi(this);
     QGridLayout* gridLayout = new QGridLayout(ui->placeholder);
     gridLayout->setSpacing(0);
-    gridLayout->setMargin(0);
+    gridLayout->setContentsMargins(0, 0, 0, 0);
     form = new SketcherGeneralWidget(ui->placeholder);
     gridLayout->addWidget(form, 0, 0, 1, 1);
 }
@@ -68,6 +66,7 @@ void SketcherSettings::saveSettings()
 {
     // Sketch editing
     ui->checkBoxAdvancedSolverTaskBox->onSave();
+    ui->checkBoxSettingsTaskBox->onSave();
     ui->checkBoxRecalculateInitialSolutionWhileDragging->onSave();
     ui->checkBoxEnableEscape->onSave();
     ui->checkBoxNotifyConstraintSubstitutions->onSave();
@@ -80,6 +79,7 @@ void SketcherSettings::loadSettings()
 {
     // Sketch editing
     ui->checkBoxAdvancedSolverTaskBox->onRestore();
+    ui->checkBoxSettingsTaskBox->onRestore();
     ui->checkBoxRecalculateInitialSolutionWhileDragging->onRestore();
     ui->checkBoxEnableEscape->onRestore();
     ui->checkBoxNotifyConstraintSubstitutions->onRestore();
@@ -153,6 +153,8 @@ void SketcherSettingsDisplay::saveSettings()
     ui->continueMode->onSave();
     ui->constraintMode->onSave();
     ui->checkBoxHideUnits->onSave();
+    ui->checkBoxShowCursorCoords->onSave();
+    ui->checkBoxUseSystemDecimals->onSave();
     ui->checkBoxShowDimensionalName->onSave();
     ui->prefDimensionalStringFormat->onSave();
     ui->checkBoxTVHideDependent->onSave();
@@ -178,6 +180,8 @@ void SketcherSettingsDisplay::loadSettings()
     ui->continueMode->onRestore();
     ui->constraintMode->onRestore();
     ui->checkBoxHideUnits->onRestore();
+    ui->checkBoxShowCursorCoords->onRestore();
+    ui->checkBoxUseSystemDecimals->onRestore();
     ui->checkBoxShowDimensionalName->onRestore();
     ui->prefDimensionalStringFormat->onRestore();
     ui->checkBoxTVHideDependent->onRestore();

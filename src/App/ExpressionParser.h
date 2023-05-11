@@ -26,8 +26,10 @@
 #define EXPRESSION_PARSER_H
 
 #include <tuple>
-#include <Base/Interpreter.h>
+
 #include "Expression.h"
+#include <Base/Interpreter.h>
+#include <Base/Quantity.h>
 
 namespace App {
 
@@ -74,9 +76,9 @@ struct AppExport Expression::Component {
     ExpressionPtr e2;
     ExpressionPtr e3;
 
-    Component(const std::string &n);
+    explicit Component(const std::string &n);
     Component(ExpressionPtr &&e1, ExpressionPtr &&e2, ExpressionPtr &&e3, bool isRange=false);
-    Component(const ObjectIdentifier::Component &comp);
+    explicit Component(const ObjectIdentifier::Component &comp);
     Component(const Component &other);
     ~Component();
     Component &operator=(const Component &)=delete;
@@ -173,7 +175,7 @@ private:
 /////////////////////////////////////////////////////////////////////////////////////
 
 #define EXPR_TYPESYSTEM_HEADER() \
-    TYPESYSTEM_HEADER();\
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();\
 public:\
     void operator delete(void *p)
         
@@ -185,12 +187,13 @@ public:\
 class  AppExport UnitExpression : public Expression {
     EXPR_TYPESYSTEM_HEADER();
 public:
-    ~UnitExpression();
 
     static ExpressionPtr create(const App::DocumentObject *owner, const char *unitStr);
     static ExpressionPtr create(const App::DocumentObject *owner, const Base::Quantity &q);
 
-    virtual ExpressionPtr simplify() const;
+    ~UnitExpression() override;
+
+    ExpressionPtr simplify() const override;
 
     void setQuantity(const Base::Quantity &_quantity);
 
@@ -207,12 +210,12 @@ public:
 protected:
     UnitExpression(const App::DocumentObject *_owner, const Base::Quantity & _quantity, const char *unit=nullptr);
 
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
-    mutable PyObject *cache = 0;
+    mutable PyObject *cache = nullptr;
 
 private:
     Base::Quantity quantity;
@@ -231,21 +234,21 @@ public:
 
     void negate();
 
-    bool isInteger(long *v=0) const;
+    bool isInteger(long *v=nullptr) const;
 
 protected:
     NumberExpression(const App::DocumentObject *_owner, const Base::Quantity &q)
         :UnitExpression(_owner,q) 
     {}
 
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
 };
 
 class AppExport ConstantExpression : public NumberExpression {
     EXPR_TYPESYSTEM_HEADER();
 public:
-    static ExpressionPtr create(const App::DocumentObject *owner, 
+    static ExpressionPtr create(const App::DocumentObject *owner,
             const char *name, const Base::Quantity &_quantity);
 
     const char *getName() const { return name; }
@@ -253,16 +256,16 @@ public:
     bool isNumber() const;
     bool isBoolean(bool *value = nullptr) const;
 
-    virtual ExpressionPtr simplify() const;
+    ExpressionPtr simplify() const override;
 
 protected:
     ConstantExpression(const App::DocumentObject *_owner, const Base::Quantity &q)
         :NumberExpression(_owner,q)
     {}
 
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
 
     const char *name; /**< Constant's name */
 };
@@ -279,13 +282,13 @@ class AppExport VariableExpression : public Expression {
 public:
     static ExpressionPtr create(const App::DocumentObject *owner, ObjectIdentifier &&var);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
     std::string name() const;
 
     const ObjectIdentifier &getPath() const;
 
-    virtual void addComponent(ComponentPtr &&component);
+    void addComponent(ComponentPtr &&component) override;
 
     std::vector<std::string> getStringList() const;
 
@@ -294,7 +297,7 @@ public:
 
     VarInfo push(const Expression *owner, bool mustExist, std::string *name=0) const;
 
-    virtual ExpressionPtr simplify() const;
+    ExpressionPtr simplify() const override;
 
     void assign(const ObjectIdentifier &path) const;
     void assign(Py::Object value) const;
@@ -306,23 +309,23 @@ protected:
 
     void setVarInfo(VarInfo &info, bool mustExist, bool noassign=false) const;
 
-    virtual bool _isIndexable() const;
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual void _getIdentifiers(std::map<App::ObjectIdentifier,bool> &) const;
-    virtual bool _adjustLinks(const std::set<App::DocumentObject*> &, ExpressionVisitor &);
-    virtual void _importSubNames(const ObjectIdentifier::SubNameMap &);
-    virtual void _updateLabelReference(App::DocumentObject *, const std::string &, const char *);
-    virtual bool _updateElementReference(App::DocumentObject *,bool,ExpressionVisitor &);
-    virtual bool _relabeledDocument(const std::string &, const std::string &, ExpressionVisitor &);
-    virtual bool _renameObjectIdentifier(const std::map<ObjectIdentifier,ObjectIdentifier> &, 
-                                         const ObjectIdentifier &, ExpressionVisitor &);
-    virtual void _collectReplacement(std::map<ObjectIdentifier,ObjectIdentifier> &, 
+    bool _isIndexable() const override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    void _getIdentifiers(std::map<App::ObjectIdentifier,bool> &) const override;
+    bool _adjustLinks(const std::set<App::DocumentObject*> &, ExpressionVisitor &) override;
+    void _importSubNames(const ObjectIdentifier::SubNameMap &) override;
+    void _updateLabelReference(App::DocumentObject *, const std::string &, const char *) override;
+    bool _updateElementReference(App::DocumentObject *,bool,ExpressionVisitor &) override;
+    bool _relabeledDocument(const std::string &, const std::string &, ExpressionVisitor &) override;
+    bool _renameObjectIdentifier(const std::map<ObjectIdentifier,ObjectIdentifier> &, 
+                                         const ObjectIdentifier &, ExpressionVisitor &) override;
+    void _collectReplacement(std::map<ObjectIdentifier,ObjectIdentifier> &, 
                     const App::DocumentObject *parent, App::DocumentObject *oldObj, 
-                    App::DocumentObject *newObj) const;
-    virtual void _moveCells(const CellAddress &, int, int, ExpressionVisitor &);
-    virtual void _offsetCells(int, int, ExpressionVisitor &);
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+                    App::DocumentObject *newObj) const override;
+    void _moveCells(const CellAddress &, int, int, ExpressionVisitor &) override;
+    void _offsetCells(int, int, ExpressionVisitor &) override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     ObjectIdentifier var; /**< Variable name  */
@@ -399,17 +402,17 @@ public:
         return create(owner,ExpressionString(std::string(txt?txt:"")));
     }
 
-    virtual const std::string &getText() const { return str.text; }
+    const std::string &getText() const { return str.text; }
 
     void append(const ExpressionString &);
 
 protected:
-    StringExpression(const App::DocumentObject *_owner):Expression(_owner) {}
+    explicit StringExpression(const App::DocumentObject *_owner):Expression(_owner) {}
 
-    virtual bool _isIndexable() const { return true; }
-    virtual ExpressionPtr _copy() const;
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    bool _isIndexable() const override { return true; }
+    ExpressionPtr _copy() const override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 private:
     ExpressionString str;
@@ -423,20 +426,20 @@ class AppExport PyObjectExpression : public Expression {
 
 public:
     static ExpressionPtr create(const App::DocumentObject *owner, PyObject *pyobj=0);
-    virtual ~PyObjectExpression();
+    ~PyObjectExpression() override;
 
     void setPyObject(Py::Object pyobj);
     void setPyObject(PyObject *pyobj, bool owned=false);
 
 protected:
-    PyObjectExpression(const App::DocumentObject *_owner):Expression(_owner) {}
+    explicit PyObjectExpression(const App::DocumentObject *_owner):Expression(_owner) {}
 
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
-    virtual void _toString(std::ostream &,bool, int) const;
-    virtual ExpressionPtr _copy() const;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
+    void _toString(std::ostream &,bool, int) const override;
+    ExpressionPtr _copy() const override;
 
 protected:
-    PyObject *pyObj = 0;
+    PyObject *pyObj = nullptr;
 };
 
 /**
@@ -450,11 +453,11 @@ public:
     static ExpressionPtr create(const App::DocumentObject *owner, 
             ExpressionPtr &&left, int op, ExpressionPtr &&right);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
-    virtual ExpressionPtr simplify() const;
+    ExpressionPtr simplify() const override;
 
-    virtual int priority() const;
+    int priority() const override;
 
     int getOperator() const { return op; }
 
@@ -463,18 +466,16 @@ public:
     const Expression * getRight() const { return right.get(); }
 
 protected:
-    OperatorExpression(const App::DocumentObject *_owner):Expression(_owner){}
+    explicit OperatorExpression(const App::DocumentObject *_owner):Expression(_owner){}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
-    virtual bool isCommutative() const;
-
-    virtual bool isLeftAssociative() const;
-
-    virtual bool isRightAssociative() const;
+    bool isCommutative() const;
+    bool isLeftAssociative() const;
+    bool isRightAssociative() const;
 
     int op=0;        /**< Operator working on left and right */
     ExpressionPtr left;  /**< Left operand */
@@ -491,18 +492,18 @@ public:
     static ExpressionPtr create(const App::DocumentObject *_owner, 
             ExpressionPtr &&left, ExpressionPtr &&right, int op=0);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
     static Py::Object apply(const Expression *owner, int catchAll, 
             const ExpressionList &left, const Expression *right, int op=0);
 
 protected:
-    AssignmentExpression(const App::DocumentObject *_owner) :Expression(_owner) {}
+    explicit AssignmentExpression(const App::DocumentObject *_owner) :Expression(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
     static void assign(const Expression *owner, const Expression *left, PyObject *right);
 
@@ -520,21 +521,21 @@ public:
     static ExpressionPtr create(const App::DocumentObject *owner, ExpressionPtr &&condition, 
             ExpressionPtr &&trueExpr,  ExpressionPtr &&falseExpr, bool python_form=false);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
-    virtual ExpressionPtr simplify() const;
+    ExpressionPtr simplify() const override;
 
-    virtual int priority() const;
+    int priority() const override;
 
 protected:
-    ConditionalExpression(const App::DocumentObject *_owner)
+    explicit ConditionalExpression(const App::DocumentObject *_owner)
         :Expression(_owner)
     {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
     ExpressionPtr condition;  /**< Condition */
     ExpressionPtr trueExpr;  /**< Expression if abs(condition) is > 0.5 */
@@ -552,9 +553,9 @@ class AppExport FunctionExpression : public Expression {
 public:
     static ExpressionPtr create(const App::DocumentObject *owner, int f, ExpressionList &&args);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
-    virtual ExpressionPtr simplify() const;
+    ExpressionPtr simplify() const override;
 
     enum FunctionType {
         FUNC_NONE,
@@ -594,8 +595,8 @@ public:
         MINVERT, // invert matrix/placement/rotation
         CREATE, // create new object of a given type
         STR, // stringify
-        HREF,
-        HIDDEN_REF,
+        HREF, // deprecated alias of HIDDENREF
+        HIDDEN_REF, // hidden reference that has no dependency check
 
         // double binding, used by PropertyExpressionEngine to make a property both driving and driven
         DBIND, 
@@ -636,12 +637,12 @@ public:
     static const std::vector<FunctionInfo> &getFunctions();
 
 protected:
-    FunctionExpression(const App::DocumentObject *_owner):Expression(_owner){}
+    explicit FunctionExpression(const App::DocumentObject *_owner):Expression(_owner){}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
     static Py::Object evalAggregate(const Expression *owner, int type, const ExpressionList &args);
 
     int ftype;        /**< Function to execute */
@@ -669,7 +670,7 @@ public:
 
     VarInfo getVarInfo(bool mustExist) const;
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
     std::string getDocString() const;
     const std::string &getName() const {return name;}
@@ -677,13 +678,13 @@ public:
     static void securityCheck(PyObject *pyobj, PyObject *attr);
 
 protected:
-    CallableExpression(const App::DocumentObject *_owner):FunctionExpression(_owner) {}
+    explicit CallableExpression(const App::DocumentObject *_owner):FunctionExpression(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual bool _isIndexable() const { return true; }
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
+    void _visit(ExpressionVisitor & v) override;
+    bool _isIndexable() const override { return true; }
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
 
     static void securityCheck(PyObject *pyobj=nullptr, const Expression *expr=nullptr);
 
@@ -699,21 +700,21 @@ public:
     static ExpressionPtr create(const App::DocumentObject * owner,
             std::string &&begin, std::string &&end);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
     Range getRange() const;
 
 protected:
-    RangeExpression(const App::DocumentObject *_owner):Expression(_owner){}
+    explicit RangeExpression(const App::DocumentObject *_owner):Expression(_owner){}
 
-    virtual void _toString(std::ostream &, bool, int) const;
-    virtual ExpressionPtr _copy() const;
-    virtual void _getIdentifiers(std::map<App::ObjectIdentifier,bool> &) const;
-    virtual bool _renameObjectIdentifier(const std::map<ObjectIdentifier,ObjectIdentifier> &, 
+    void _toString(std::ostream &, bool, int) const override;
+    ExpressionPtr _copy() const override;
+    void _getIdentifiers(std::map<App::ObjectIdentifier,bool> &) const override;
+    bool _renameObjectIdentifier(const std::map<ObjectIdentifier,ObjectIdentifier> &, 
                                          const ObjectIdentifier &, ExpressionVisitor &);
-    virtual void _moveCells(const CellAddress &, int, int, ExpressionVisitor &);
-    virtual void _offsetCells(int, int, ExpressionVisitor &);
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _moveCells(const CellAddress &, int, int, ExpressionVisitor &) override;
+    void _offsetCells(int, int, ExpressionVisitor &) override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     std::string begin;
@@ -729,7 +730,7 @@ public:
     static ExpressionPtr create(const App::DocumentObject * owner, 
             int catchAll, ExpressionList &&targets, ExpressionPtr &&expr);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
     void setExpr(ExpressionPtr &&key, ExpressionPtr &&value);
     void setExpr(ExpressionPtr &&key, bool isList=true);
@@ -738,13 +739,13 @@ public:
     void addCond(ExpressionPtr &&cond);
 
 protected:
-    ComprehensionExpression(const App::DocumentObject *_owner):Expression(_owner) {}
+    explicit ComprehensionExpression(const App::DocumentObject *_owner):Expression(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual bool _isIndexable() const {return true;}
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
-    virtual void _toString(std::ostream &, bool, int) const;
-    virtual ExpressionPtr _copy() const;
+    void _visit(ExpressionVisitor & v) override;
+    bool _isIndexable() const override {return true;}
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
+    void _toString(std::ostream &, bool, int) const override;
+    ExpressionPtr _copy() const override;
 
     struct CompFor {
         ExpressionList targets;
@@ -788,7 +789,7 @@ public:
     static ExpressionPtr create(const App::DocumentObject *owner, 
             ExpressionList &&items, FlagList &&flags = FlagList());
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
     void printItems(std::ostream &ss, bool persistent) const;
 
@@ -802,13 +803,13 @@ public:
     const ExpressionList &getItems() const {return items;}
 
 protected:
-    ListExpression(const App::DocumentObject *_owner):Expression(_owner) {}
+    explicit ListExpression(const App::DocumentObject *_owner):Expression(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual bool _isIndexable() const {return true;}
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
-    virtual void _toString(std::ostream &, bool, int) const;
-    virtual ExpressionPtr _copy() const;
+    void _visit(ExpressionVisitor & v) override;
+    bool _isIndexable() const override {return true;}
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
+    void _toString(std::ostream &, bool, int) const override;
+    ExpressionPtr _copy() const override;
 
     friend class AssignmentExpression;
 
@@ -831,11 +832,11 @@ public:
             ExpressionList &&items, FlagList &&flags = FlagList());
 
 protected:
-    TupleExpression(const App::DocumentObject *_owner):ListExpression(_owner) {}
+    explicit TupleExpression(const App::DocumentObject *_owner):ListExpression(_owner) {}
 
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
-    virtual ExpressionPtr _copy() const;
-    virtual void _toString(std::ostream &, bool, int) const;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
+    ExpressionPtr _copy() const override;
+    void _toString(std::ostream &, bool, int) const override;
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -851,19 +852,19 @@ public:
 
     static ExpressionPtr create(const App::DocumentObject *owner, ExpressionPtr &&value);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
     void addItem(ExpressionPtr &&key, ExpressionPtr &&value);
     void addItem(ExpressionPtr &&value);
 
 protected:
-    DictExpression(const App::DocumentObject *_owner):Expression(_owner) {}
+    explicit DictExpression(const App::DocumentObject *_owner):Expression(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual bool _isIndexable() const {return true;}
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
-    virtual void _toString(std::ostream &, bool, int) const;
-    virtual ExpressionPtr _copy() const;
+    void _visit(ExpressionVisitor & v) override;
+    bool _isIndexable() const override {return true;}
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
+    void _toString(std::ostream &, bool, int) const override;
+    ExpressionPtr _copy() const override;
 
 protected:
     ExpressionList keys;
@@ -884,7 +885,7 @@ public:
     static ExpressionPtr create(const App::DocumentObject * owner, 
             const char *key, ExpressionPtr &&value);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
     void addItem(std::string &&key, ExpressionPtr &&value);
     void addItem(const char *key, ExpressionPtr &&value);
@@ -892,13 +893,13 @@ public:
     std::map<std::string, ExpressionPtr> getItems() const;
     
 protected:
-    IDictExpression(const App::DocumentObject *_owner):Expression(_owner) {}
+    explicit IDictExpression(const App::DocumentObject *_owner):Expression(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual bool _isIndexable() const {return true;}
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
-    virtual void _toString(std::ostream &, bool, int) const;
-    virtual ExpressionPtr _copy() const;
+    void _visit(ExpressionVisitor & v) override;
+    bool _isIndexable() const override {return true;}
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
+    void _toString(std::ostream &, bool, int) const override;
+    ExpressionPtr _copy() const override;
 
 protected:
     StringList keys;
@@ -911,7 +912,7 @@ class AppExport BaseStatement : public Expression {
     EXPR_TYPESYSTEM_HEADER();
 public:
 protected:
-    BaseStatement(const App::DocumentObject *owner):Expression(owner){}
+    explicit BaseStatement(const App::DocumentObject *owner):Expression(owner){}
 };
 
 /////////////////////////////////////////////////////////////////
@@ -927,9 +928,9 @@ protected:
         :BaseStatement(_owner),type(_t)
     {}
 
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     int type;
@@ -944,15 +945,15 @@ public:
     static ExpressionPtr create(const App::DocumentObject *owner, 
                     int type, ExpressionPtr &&expr = ExpressionPtr());
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
 protected:
-    JumpStatement(const App::DocumentObject *_owner) :BaseStatement(_owner) {}
+    explicit JumpStatement(const App::DocumentObject *_owner) :BaseStatement(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     ExpressionPtr expr;
@@ -971,16 +972,16 @@ public:
     void add(ExpressionPtr &&condition, ExpressionPtr &&statement);
     void addElse(ExpressionPtr &&statement);
 
-    virtual bool isTouched() const;
-    virtual bool needLineEnd() const;
+    bool isTouched() const override;
+    bool needLineEnd() const override;
 
 protected:
-    IfStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
+    explicit IfStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     ExpressionList conditions;
@@ -998,16 +999,16 @@ public:
 
     void addElse(ExpressionPtr &&expr);
 
-    virtual bool isTouched() const;
-    virtual bool needLineEnd() const;
+    bool isTouched() const override;
+    bool needLineEnd() const override;
 
 protected:
-    WhileStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
+    explicit WhileStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     ExpressionPtr condition;
@@ -1026,16 +1027,16 @@ public:
 
     void addElse(ExpressionPtr &&expr);
 
-    virtual bool isTouched() const;
-    virtual bool needLineEnd() const;
+    bool isTouched() const override;
+    bool needLineEnd() const override;
 
 protected:
-    ForStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
+    explicit ForStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     ExpressionList targets;
@@ -1054,7 +1055,7 @@ class AppExport SimpleStatement : public BaseStatement {
 public:
     static ExpressionPtr create(const App::DocumentObject *owner, ExpressionPtr &&expr);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
     void add(ExpressionPtr &&expr);
 
     std::size_t getSize() const {return exprs.size();}
@@ -1074,12 +1075,12 @@ public:
     ExpressionPtr reduce() const;
 
 protected:
-    SimpleStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
+    explicit SimpleStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     ExpressionList exprs;
@@ -1094,10 +1095,10 @@ public:
     static ExpressionPtr create(const App::DocumentObject *owner, ExpressionPtr &&expr);
 
 protected:
-    Statement(const App::DocumentObject *_owner):SimpleStatement(_owner) {}
+    explicit Statement(const App::DocumentObject *_owner):SimpleStatement(_owner) {}
 
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
 };
 
 /////////////////////////////////////////////////////////////
@@ -1109,15 +1110,15 @@ public:
     static ExpressionPtr create(const App::DocumentObject *owner, ExpressionPtr &&body, 
             StringList &&names=StringList(), ExpressionList &&args=ExpressionList());
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
 protected:
-    LambdaExpression(const App::DocumentObject *_owner):Expression(_owner) {}
+    explicit LambdaExpression(const App::DocumentObject *_owner):Expression(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     StringList names;
@@ -1134,16 +1135,16 @@ public:
     static ExpressionPtr create(const App::DocumentObject *owner, std::string &&name, 
             ExpressionPtr &&body, StringList &&names=StringList(), ExpressionList &&args=ExpressionList());
 
-    virtual bool needLineEnd() const;
+    bool needLineEnd() const override;
 
     const std::string &getName() const {return name;}
 
 protected:
-    FunctionStatement(const App::DocumentObject *_owner):LambdaExpression(_owner) {}
+    explicit FunctionStatement(const App::DocumentObject *_owner):LambdaExpression(_owner) {}
 
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     std::string name;
@@ -1158,15 +1159,15 @@ class AppExport DelStatement : public BaseStatement {
 public:
     static ExpressionPtr create(const App::DocumentObject *owner, ExpressionList &&targets);
 
-    virtual bool isTouched() const;
+    bool isTouched() const override;
 
 protected:
-    DelStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
+    explicit DelStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
 
-    virtual void _visit(ExpressionVisitor & v);
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _visit(ExpressionVisitor & v) override;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     ExpressionList targets;
@@ -1181,11 +1182,11 @@ public:
     static ExpressionPtr create(const App::DocumentObject *owner, StringList &&names, bool global=true); 
 
 protected:
-    ScopeStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
+    explicit ScopeStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
 
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     StringList names;
@@ -1204,14 +1205,14 @@ public:
     void addElse(ExpressionPtr &&body);
     void addFinal(ExpressionPtr &&body);
     void check();
-    virtual bool needLineEnd() const;
+    bool needLineEnd() const override;
 
 protected:
-    TryStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
+    explicit TryStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
 
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
     bool findException(Py::Object &res, int *jumpCode, Base::Exception &e, PyObject *pyobj) const;
 
@@ -1236,11 +1237,11 @@ public:
     void add(std::string &&module, std::string &&name = std::string());
 
 protected:
-    ImportStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
+    explicit ImportStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
 
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     StringList modules;
@@ -1259,11 +1260,11 @@ public:
     void add(std::string &&tail, std::string &&name = std::string());
 
 protected:
-    FromStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
+    explicit FromStatement(const App::DocumentObject *_owner):BaseStatement(_owner) {}
 
-    virtual void _toString(std::ostream &ss, bool persistent, int indent) const;
-    virtual ExpressionPtr _copy() const;
-    virtual Py::Object _getPyValue(int *jumpCode=0) const;
+    void _toString(std::ostream &ss, bool persistent, int indent) const override;
+    ExpressionPtr _copy() const override;
+    Py::Object _getPyValue(int *jumpCode=nullptr) const override;
 
 protected:
     std::string module;
@@ -1307,7 +1308,7 @@ AppExport int translateToken(int t);
 /// Convenient class to mark begin of importing
 class AppExport ExpressionImporter {
 public:
-    ExpressionImporter(Base::XMLReader &reader);
+    explicit ExpressionImporter(Base::XMLReader &reader);
     ~ExpressionImporter();
     static Base::XMLReader *reader();
 };

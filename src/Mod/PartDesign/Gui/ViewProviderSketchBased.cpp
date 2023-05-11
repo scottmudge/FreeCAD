@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Copyright (C) 2015 Alexander Golubev (Fat-Zer) <fatzer2@gmail.com>     *
+ *   Copyright (C) 2015 Alexander Golubev (Fat-Zer) <fatzer2@gmail.com>    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -23,9 +23,6 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
-
 #include <Gui/Application.h>
 #include <Mod/Sketcher/App/SketchObject.h>
 #include <Mod/PartDesign/App/FeatureSketchBased.h>
@@ -48,11 +45,11 @@ ViewProviderSketchBased::~ViewProviderSketchBased()
 }
 
 
-std::vector<App::DocumentObject*> ViewProviderSketchBased::_claimChildren(void) const {
+std::vector<App::DocumentObject*> ViewProviderSketchBased::_claimChildren() const {
     std::vector<App::DocumentObject*> temp;
     PartDesign::ProfileBased* feature = static_cast<PartDesign::ProfileBased*>(getObject());
     App::DocumentObject* sketch = static_cast<PartDesign::ProfileBased*>(getObject())->Profile.getValue();
-    if (sketch != NULL) {
+    if (sketch) {
         if(feature->ClaimChildren.getValue()
                 || !sketch->isDerivedFrom(PartDesign::Feature::getClassTypeId()))
             temp.push_back(sketch);
@@ -65,7 +62,7 @@ bool ViewProviderSketchBased::onDelete(const std::vector<std::string> &s) {
     PartDesign::ProfileBased* feature = static_cast<PartDesign::ProfileBased*>(getObject());
 
     // get the Sketch
-    Sketcher::SketchObject *pcSketch = 0;
+    Sketcher::SketchObject *pcSketch = nullptr;
     if (feature->Profile.getValue())
         pcSketch = static_cast<Sketcher::SketchObject*>(feature->Profile.getValue());
 

@@ -20,20 +20,19 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef INSPECTION_FEATURE_H
 #define INSPECTION_FEATURE_H
 
 #include <App/DocumentObject.h>
-#include <App/PropertyLinks.h>
-#include <App/PropertyStandard.h>
 #include <App/DocumentObjectGroup.h>
 
-#include <Mod/Mesh/App/Core/Iterator.h>
 #include <Mod/Points/App/Points.h>
+#include <Mod/Inspection/InspectionGlobal.h>
+
 
 class TopoDS_Shape;
 class BRepExtrema_DistShapeShape;
+class gp_Pnt;
 
 namespace MeshCore {
 class MeshKernel;
@@ -61,10 +60,10 @@ public:
 class InspectionExport InspectActualMesh : public InspectActualGeometry
 {
 public:
-    InspectActualMesh(const Mesh::MeshObject& rMesh);
-    ~InspectActualMesh();
-    virtual unsigned long countPoints() const;
-    virtual Base::Vector3f getPoint(unsigned long) const;
+    explicit InspectActualMesh(const Mesh::MeshObject& rMesh);
+    ~InspectActualMesh() override;
+    unsigned long countPoints() const override;
+    Base::Vector3f getPoint(unsigned long) const override;
 
 private:
     const MeshCore::MeshKernel& _mesh;
@@ -75,9 +74,9 @@ private:
 class InspectionExport InspectActualPoints : public InspectActualGeometry
 {
 public:
-    InspectActualPoints(const Points::PointKernel&);
-    virtual unsigned long countPoints() const;
-    virtual Base::Vector3f getPoint(unsigned long) const;
+    explicit InspectActualPoints(const Points::PointKernel&);
+    unsigned long countPoints() const override;
+    Base::Vector3f getPoint(unsigned long) const override;
 
 private:
     const Points::PointKernel& _rKernel;
@@ -86,9 +85,12 @@ private:
 class InspectionExport InspectActualShape : public InspectActualGeometry
 {
 public:
-    InspectActualShape(const Part::TopoShape&);
-    virtual unsigned long countPoints() const;
-    virtual Base::Vector3f getPoint(unsigned long) const;
+    explicit InspectActualShape(const Part::TopoShape&);
+    unsigned long countPoints() const override;
+    Base::Vector3f getPoint(unsigned long) const override;
+
+private:
+    void fetchPoints(double deflection);
 
 private:
     const Part::TopoShape& _rShape;
@@ -108,8 +110,8 @@ class InspectionExport InspectNominalMesh : public InspectNominalGeometry
 {
 public:
     InspectNominalMesh(const Mesh::MeshObject& rMesh, float offset);
-    ~InspectNominalMesh();
-    virtual float getDistance(const Base::Vector3f&) const;
+    ~InspectNominalMesh() override;
+    float getDistance(const Base::Vector3f&) const override;
 
 private:
     const MeshCore::MeshKernel& _mesh;
@@ -123,8 +125,8 @@ class InspectionExport InspectNominalFastMesh : public InspectNominalGeometry
 {
 public:
     InspectNominalFastMesh(const Mesh::MeshObject& rMesh, float offset);
-    ~InspectNominalFastMesh();
-    virtual float getDistance(const Base::Vector3f&) const;
+    ~InspectNominalFastMesh() override;
+    float getDistance(const Base::Vector3f&) const override;
 
 protected:
     const MeshCore::MeshKernel& _mesh;
@@ -139,8 +141,8 @@ class InspectionExport InspectNominalPoints : public InspectNominalGeometry
 {
 public:
     InspectNominalPoints(const Points::PointKernel&, float offset);
-    ~InspectNominalPoints();
-    virtual float getDistance(const Base::Vector3f&) const;
+    ~InspectNominalPoints() override;
+    float getDistance(const Base::Vector3f&) const override;
 
 private:
     const Points::PointKernel& _rKernel;
@@ -151,8 +153,12 @@ class InspectionExport InspectNominalShape : public InspectNominalGeometry
 {
 public:
     InspectNominalShape(const TopoDS_Shape&, float offset);
-    ~InspectNominalShape();
-    virtual float getDistance(const Base::Vector3f&) const;
+    ~InspectNominalShape() override;
+    float getDistance(const Base::Vector3f&) const override;
+
+private:
+    bool isInsideSolid(const gp_Pnt&) const;
+    bool isBelowFace(const gp_Pnt&) const;
 
 private:
     BRepExtrema_DistShapeShape* distss;
@@ -162,7 +168,8 @@ private:
 
 class InspectionExport PropertyDistanceList: public App::_PropertyFloatList
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
+
 };
 
 // ----------------------------------------------------------------
@@ -172,12 +179,12 @@ class InspectionExport PropertyDistanceList: public App::_PropertyFloatList
  */
 class InspectionExport Feature : public App::DocumentObject
 {
-    PROPERTY_HEADER(Inspection::Feature);
+    PROPERTY_HEADER_WITH_OVERRIDE(Inspection::Feature);
 
 public:
     /// Constructor
-    Feature(void);
-    virtual ~Feature();
+    Feature();
+    ~Feature() override;
 
     /** @name Properties */
     //@{
@@ -190,27 +197,27 @@ public:
 
     /** @name Actions */
     //@{
-    short mustExecute() const;
+    short mustExecute() const override;
     /// recalculate the Feature
-    App::DocumentObjectExecReturn* execute(void);
+    App::DocumentObjectExecReturn* execute() override;
     //@}
 
     /// returns the type name of the ViewProvider
-    const char* getViewProviderName(void) const 
+    const char* getViewProviderName() const override
     { return "InspectionGui::ViewProviderInspection"; }
 };
 
 class InspectionExport Group : public App::DocumentObjectGroup
 {
-    PROPERTY_HEADER(Inspection::Group);
+    PROPERTY_HEADER_WITH_OVERRIDE(Inspection::Group);
 
 public:
     /// Constructor
-    Group(void);
-    virtual ~Group();
+    Group();
+    ~Group() override;
 
     /// returns the type name of the ViewProvider
-    const char* getViewProviderName(void) const 
+    const char* getViewProviderName() const override
     { return "InspectionGui::ViewProviderInspectionGroup"; }
 };
 

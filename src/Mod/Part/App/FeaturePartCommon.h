@@ -20,19 +20,18 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef PART_FEATUREPARTCOMMON_H
 #define PART_FEATUREPARTCOMMON_H
 
-#include <App/PropertyLinks.h>
 #include "FeaturePartBoolean.h"
+
 
 namespace Part
 {
 
 class Common : public Boolean
 {
-    PROPERTY_HEADER(Part::Common);
+    PROPERTY_HEADER_WITH_OVERRIDE(Part::Common);
 
 public:
     Common();
@@ -41,8 +40,8 @@ public:
     //@{
     /// recalculate the Feature
 protected:
-    BRepAlgoAPI_BooleanOperation* makeOperation(const TopoDS_Shape&, const TopoDS_Shape&) const;
-    virtual const char *opCode() const;
+    BRepAlgoAPI_BooleanOperation* makeOperation(const TopoDS_Shape&, const TopoDS_Shape&) const override;
+    const char *opCode() const override;
     //@}
 };
 
@@ -60,15 +59,15 @@ public:
     /** @name methods override feature */
     //@{
     /// recalculate the Feature
-    virtual App::DocumentObjectExecReturn *execute(void) override;
-    virtual short mustExecute() const override;
+    App::DocumentObjectExecReturn *execute(void) override;
+    short mustExecute() const override;
     //@}
     /// returns the type name of the ViewProvider
-    virtual const char* getViewProviderName(void) const override {
+    const char* getViewProviderName(void) const override {
         return "PartGui::ViewProviderMultiCommon";
     }
 
-    virtual App::PropertyLinkList *getShapeLinksProperty() override {return &Shapes;}
+    App::PropertyLinkList *getShapeLinksProperty() override {return &Shapes;}
 
 };
 

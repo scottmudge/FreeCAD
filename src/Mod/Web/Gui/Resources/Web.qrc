@@ -50,5 +50,7 @@
         <file>translations/Web_vi.qm</file>
         <file>translations/Web_es-AR.qm</file>
         <file>translations/Web_bg.qm</file>
+        <file>translations/Web_ka.qm</file>
+        <file>translations/Web_sr-CS.qm</file>
     </qresource>
 </RCC>

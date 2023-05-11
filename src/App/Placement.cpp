@@ -23,10 +23,8 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
-
 #include <boost/algorithm/string/predicate.hpp>
+
 #include <Base/Placement.h>
 
 #include "Placement.h"
@@ -41,14 +39,9 @@ PROPERTY_SOURCE(App::Placement, App::GeoFeature)
 // Feature
 //===========================================================================
 
-Placement::Placement(void)
-{
+Placement::Placement() = default;
 
-}
-
-Placement::~Placement(void)
-{
-}
+Placement::~Placement() = default;
 
 
 DocumentObject *Placement::getSubObject(const char *subname, PyObject **,
@@ -76,7 +69,7 @@ DocumentObject *Placement::getSubObject(const char *subname, PyObject **,
 // Python feature ---------------------------------------------------------
 namespace App {
 PROPERTY_SOURCE_TEMPLATE(App::PlacementPython, App::Placement)
-template<> const char* App::PlacementPython::getViewProviderName(void) const {
+template<> const char* App::PlacementPython::getViewProviderName() const {
    return "Gui::ViewProviderPlacementPython";
 }
 template class AppExport FeaturePythonT<App::Placement>;

@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
 # relates to FindOpenGL module
 # and cache variables OPENGL_gl_LIBRARY, OPENGL_glu_LIBRARY
 if (POLICY CMP0072)
-    cmake_policy(SET CMP0072 OLD)
+    set(OpenGL_GL_PREFERENCE LEGACY)
 endif(POLICY CMP0072)
 
 find_program(CCACHE_PROGRAM ccache)  #This check should occur before project()
@@ -17,12 +17,11 @@ project(FreeCAD)
 
 set(PACKAGE_VERSION_NAME "Vulcan")
 set(PACKAGE_VERSION_MAJOR "0")
-set(PACKAGE_VERSION_MINOR "20")
-set(PACKAGE_VERSION_PATCH "0")
+set(PACKAGE_VERSION_MINOR "21")
+set(PACKAGE_VERSION_PATCH "0") # number of patch release (e.g. "4" for the 0.18.4 release)
 set(PACKAGE_VERSION_SUFFIX "dev") # either "dev" for development snapshot or "" (empty string)
-set(FREECAD_VERSION_PATCH "0") # number of patch release (e.g. "4" for the 0.18.4 release)
+set(PACKAGE_BUILD_VERSION "0") # used when the same FreeCAD version will be re-released (for example using an updated LibPack)
 
-set(FREECAD_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}")
 set(PACKAGE_VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}")
 set(PACKAGE_STRING "${PROJECT_NAME} ${PACKAGE_VERSION}")
 
@@ -90,6 +89,12 @@ SetGlobalCompilerAndLinkerSettings()
 add_subdirectory(src)
 add_subdirectory(data)
 
+BuildAndInstallDesignerPlugin()
+
 CreatePackagingTargets()
 
 PrintFinalReport()
+
+if (BUILD_TEST)
+    add_subdirectory(tests)
+endif()

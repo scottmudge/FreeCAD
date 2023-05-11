@@ -23,7 +23,6 @@
 
 #include "PreCompiled.h"
 
-#include "Feature.h"
 #include "Body.h"
 
 // inclusion of the generated files (generated out of FeaturePy.xml)
@@ -43,7 +42,7 @@ std::string FeaturePy::representation(void) const
 
 PyObject *FeaturePy::getCustomAttributes(const char* ) const
 {
-    return 0;
+    return nullptr;
 }
 
 int FeaturePy::setCustomAttributes(const char* , PyObject *)
@@ -76,4 +75,3 @@ Py::List FeaturePy::getSiblings() const {
     }
     return res;
 }
-

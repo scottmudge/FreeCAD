@@ -23,22 +23,23 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
+#include <iostream>
+#include <boost/regex.hpp>
 
 #include <boost/iostreams/copy.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+
 #include "PropertyPythonObject.h"
+
+#include <Base/Base64.h>
+#include <Base/Console.h>
+#include <Base/Interpreter.h>
+#include <Base/Reader.h>
+#include <Base/Writer.h>
+
 #include "DocumentObjectPy.h"
 #include "Application.h"
 #include "DocumentObject.h"
-#include <Base/Base64.h>
-#include <Base/Writer.h>
-#include <Base/Reader.h>
-#include <Base/Console.h>
-#include <Base/Interpreter.h>
-#include <iostream>
-#include <boost/regex.hpp>
 
 using namespace App;
 using namespace Base;
@@ -46,9 +47,7 @@ using namespace Base;
 
 TYPESYSTEM_SOURCE(App::PropertyPythonObject , App::Property)
 
-PropertyPythonObject::PropertyPythonObject()
-{
-}
+PropertyPythonObject::PropertyPythonObject() = default;
 
 PropertyPythonObject::~PropertyPythonObject()
 {
@@ -71,7 +70,7 @@ Py::Object PropertyPythonObject::getValue() const
     return object;
 }
 
-PyObject *PropertyPythonObject::getPyObject(void)
+PyObject *PropertyPythonObject::getPyObject()
 {
     return Py::new_reference_to(this->object);
 }
@@ -428,12 +427,12 @@ void PropertyPythonObject::RestoreDocFile(Base::Reader &reader)
     hasSetValue();
 }
 
-unsigned int PropertyPythonObject::getMemSize (void) const
+unsigned int PropertyPythonObject::getMemSize () const
 {
     return sizeof(Py::Object);
 }
 
-Property *PropertyPythonObject::Copy(void) const
+Property *PropertyPythonObject::Copy() const
 {
     PropertyPythonObject *p = new PropertyPythonObject();
     Base::PyGILStateLocker lock;

@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -30,18 +29,19 @@
 # include <QPixmap>
 #endif
 
+#include <App/Document.h>
 #include <Base/Console.h>
 #include <Base/Exception.h>
-#include <App/Document.h>
 #include <App/AutoTransaction.h>
-#include <Gui/Command.h>
+#include <Gui/Action.h>
+#include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
 #include <Gui/Selection.h>
-#include <Gui/Action.h>
 #include <Gui/Command.h>
 
 #include <Mod/Part/App/AttachExtension.h>
 #include <Mod/Part/App/PartFeature.h>
+
 
 #include "ViewProvider.h"
 
@@ -59,7 +59,7 @@ ViewProviderPart::~ViewProviderPart()
 {
 }
 
-bool ViewProviderPart::doubleClicked(void)
+bool ViewProviderPart::doubleClicked()
 {
     try {
         QString text = QObject::tr("Edit %1").arg(QString::fromUtf8(getObject()->Label.getValue()));

@@ -23,56 +23,40 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <QMessageBox>
-# include <iostream>
-# include <string>
 # include <sstream>
-# include <cstdlib>
-# include <exception>
-#endif  //#ifndef _PreComp_
+#endif
 
-#include <QGraphicsView>
-
-# include <Base/Tools.h>
-# include <App/DocumentObject.h>
-# include <Gui/Action.h>
-# include <Gui/Application.h>
-# include <Gui/BitmapFactory.h>
-# include <Gui/CommandT.h>
-# include <Gui/Control.h>
-# include <Gui/Document.h>
-# include <Gui/Selection.h>
-# include <Gui/MainWindow.h>
-# include <Gui/FileDialog.h>
-# include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-
-# include <Mod/Part/App/PartFeature.h>
-
-#include <Mod/TechDraw/App/DrawView.h>
-#include <Mod/TechDraw/App/DrawViewPart.h>
+#include <App/Document.h>
+#include <App/DocumentObject.h>
+#include <Base/Tools.h>
+#include <Gui/Action.h>
+#include <Gui/Application.h>
+#include <Gui/CommandT.h>
+#include <Gui/Control.h>
+#include <Gui/Document.h>
+#include <Gui/FileDialog.h>
+#include <Gui/MainWindow.h>
+#include <Gui/Selection.h>
+#include <Gui/SelectionObject.h>
+#include <Gui/ViewProvider.h>
 #include <Mod/TechDraw/App/DrawHatch.h>
 #include <Mod/TechDraw/App/DrawGeomHatch.h>
 #include <Mod/TechDraw/App/DrawPage.h>
 #include <Mod/TechDraw/App/DrawUtil.h>
-#include <Mod/TechDraw/Gui/QGVPage.h>
+#include <Mod/TechDraw/App/DrawView.h>
+#include <Mod/TechDraw/App/DrawViewPart.h>
 
 #include "DrawGuiUtil.h"
-#include "MDIViewPage.h"
 #include "TaskGeomHatch.h"
 #include "TaskHatch.h"
-//#include "TaskLeaderLine.h"
-//#include "TaskRichAnno.h"
 #include "ViewProviderGeomHatch.h"
-#include "ViewProviderHatch.h"
 #include "ViewProviderPage.h"
 
-using namespace TechDrawGui;
-using namespace std;
 
+using namespace TechDrawGui;
 
 //internal functions
 bool _checkSelectionHatch(Gui::Command* cmd);
-
 
 //===========================================================================
 // TechDraw_Hatch
@@ -101,11 +85,10 @@ void CmdTechDrawHatch::activated(int iMsg)
 
     std::vector<Gui::SelectionObject> selection = getSelection().getSelectionEx();
     auto partFeat( dynamic_cast<TechDraw::DrawViewPart *>(selection[0].getObject()) );
-    if( partFeat == nullptr ) {
+    if (!partFeat) {
         return;
     }
     const std::vector<std::string> &subNames = selection[0].getSubNames();
-    TechDraw::DrawPage* page = partFeat->findParentPage();
     std::vector<int> selFaces;
     for (auto& s: subNames) {
         int f = TechDraw::DrawUtil::getIndexFromName(s);
@@ -122,15 +105,15 @@ void CmdTechDrawHatch::activated(int iMsg)
                             QObject::tr("Some Faces in selection are already hatched.  Replace?"));
             if (rc == QMessageBox::StandardButton::NoButton) {
                 return;
-            } else {
-                removeOld = true;
-                break;
             }
+
+            removeOld = true;
+            break;
         }
     }
 
-    openCommand(QT_TRANSLATE_NOOP("Command", "Create Hatch"));
     if (removeOld) {
+        openCommand(QT_TRANSLATE_NOOP("Command", "Remove old Hatch"));
         std::vector<std::pair< int, TechDraw::DrawHatch*> > toRemove;
         for (auto& h: hatchObjs) {             //all the hatch objects for selected DVP
             std::vector<std::string> hatchSubs = h->Source.getSubValues();
@@ -151,41 +134,18 @@ void CmdTechDrawHatch::activated(int iMsg)
                 Gui::cmdAppDocument(r.second, std::ostringstream() << "removeObject('" << r.second->getNameInDocument() << "')");
             }
         }
+        commitCommand();
     }
 
-    std::string FeatName = getUniqueObjectName("Hatch",page);
-    std::stringstream featLabel;
-    featLabel << FeatName << "F" << 
-                    TechDraw::DrawUtil::getIndexFromName(subNames.at(0)); //use 1st face# for label
-
-    Gui::cmdAppDocument(page, std::ostringstream() << "addObject('TechDraw::DrawHatch','" << FeatName << "')");
-    auto hatch( static_cast<TechDraw::DrawHatch *>(getDocument()->getObject(FeatName.c_str())) );
-    Gui::cmdAppObjectArgs(hatch, "Label = '%s'", featLabel.str().c_str());
-
-    hatch->Source.setValue(partFeat, subNames);
-
-    // Signal tree view update
-    partFeat->touch(true);
-
-    Gui::ViewProvider* vp = Gui::Application::Instance->getDocument(getDocument())->getViewProvider(hatch);
-    TechDrawGui::ViewProviderHatch* hvp = dynamic_cast<TechDrawGui::ViewProviderHatch*>(vp);
-    if (!hvp) {
-        Base::Console().Log("ERROR - CommandDecorate - Hatch has no ViewProvider\n");
-        return;
-    }
-
-    //should this be: doCommand(Doc,"App..Feat..Source = [(App...%s,%s),(App..%s,%s),...]",objs[0]->getNameInDocument(),subs[0],...);
-    //seems very unwieldy
 
     // dialog to fill in hatch values
-    Gui::Control().showDialog(new TaskDlgHatch(hatch, hvp, true));
+    Gui::Control().showDialog(new TaskDlgHatch(partFeat, subNames));
 
     updateActive();
     commitCommand();
 }
 
-
-bool CmdTechDrawHatch::isActive(void)
+bool CmdTechDrawHatch::isActive()
 {
     bool havePage = DrawGuiUtil::needPage(this);
     bool haveView = DrawGuiUtil::needView(this);
@@ -219,7 +179,7 @@ void CmdTechDrawGeometricHatch::activated(int iMsg)
 
     std::vector<Gui::SelectionObject> selection = getSelection().getSelectionEx();
     auto objFeat( dynamic_cast<TechDraw::DrawViewPart *>(selection[0].getObject()) );
-    if( objFeat == nullptr ) {
+    if (!objFeat) {
         return;
     }
     const std::vector<std::string> &subNames = selection[0].getSubNames();
@@ -251,7 +211,7 @@ void CmdTechDrawGeometricHatch::activated(int iMsg)
     commitCommand();
 }
 
-bool CmdTechDrawGeometricHatch::isActive(void)
+bool CmdTechDrawGeometricHatch::isActive()
 {
     bool havePage = DrawGuiUtil::needPage(this);
     bool haveView = DrawGuiUtil::needView(this);
@@ -273,7 +233,7 @@ CmdTechDrawImage::CmdTechDrawImage()
     sToolTipText  = QT_TR_NOOP("Insert Bitmap from a file into a page");
     sWhatsThis    = "TechDraw_Image";
     sStatusTip    = QT_TR_NOOP("Insert Bitmap from a file into a page");
-    sPixmap       = "actions/techdraw-image";
+    sPixmap       = "actions/TechDraw_Image";
 }
 
 void CmdTechDrawImage::activated(int iMsg)
@@ -290,21 +250,21 @@ void CmdTechDrawImage::activated(int iMsg)
         QString(),
         QString::fromUtf8(QT_TR_NOOP("Image (*.png *.jpg *.jpeg)")));
 
-    if (!fileName.isEmpty())
-    {
-        std::string FeatName = getUniqueObjectName("Image",page);
-        fileName = Base::Tools::escapeEncodeFilename(fileName);
-        openCommand(QT_TRANSLATE_NOOP("Command", "Create Image"));
-        Gui::cmdAppDocument(page, std::ostringstream() << "addObject('TechDraw::DrawViewImage','" << FeatName << "')");
-        auto feat = page->getDocument()->getObject(FeatName.c_str());
-        Gui::cmdAppObjectArgs(feat, "ImageFile = '%s'", fileName.toUtf8().constData());
-        Gui::cmdAppObject(page, std::ostringstream() << "addView(" << getObjectCmd(feat) << ")");
-        updateActive();
-        commitCommand();
+    if (fileName.isEmpty()) {
+        return;
     }
+    std::string FeatName = getUniqueObjectName("Image",page);
+    fileName = Base::Tools::escapeEncodeFilename(fileName);
+    openCommand(QT_TRANSLATE_NOOP("Command", "Create Image"));
+    Gui::cmdAppDocument(page, std::ostringstream() << "addObject('TechDraw::DrawViewImage','" << FeatName << "')");
+    auto feat = page->getDocument()->getObject(FeatName.c_str());
+    Gui::cmdAppObjectArgs(feat, "ImageFile = '%s'", fileName.toUtf8().constData());
+    Gui::cmdAppObject(page, std::ostringstream() << "addView(" << getObjectCmd(feat) << ")");
+    updateActive();
+    commitCommand();
 }
 
-bool CmdTechDrawImage::isActive(void)
+bool CmdTechDrawImage::isActive()
 {
     return DrawGuiUtil::needPage(this);
 }
@@ -324,7 +284,7 @@ CmdTechDrawToggleFrame::CmdTechDrawToggleFrame()
     sToolTipText    = QT_TR_NOOP("Turn View Frames On/Off");
     sWhatsThis      = "TechDraw_Toggle";
     sStatusTip      = sToolTipText;
-    sPixmap         = "actions/techdraw-toggleframe";
+    sPixmap         = "actions/TechDraw_ToggleFrame";
 }
 
 void CmdTechDrawToggleFrame::activated(int iMsg)
@@ -339,24 +299,23 @@ void CmdTechDrawToggleFrame::activated(int iMsg)
     Gui::ViewProvider* vp = activeGui->getViewProvider(page);
     ViewProviderPage* vpp = dynamic_cast<ViewProviderPage*>(vp);
 
-    if (vpp != nullptr) {
-        vpp->toggleFrameState();
-    } else {
+    if (!vpp) {
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("No TechDraw Page"),
             QObject::tr("Need a TechDraw Page for this command"));
         return;
     }
+    vpp->toggleFrameState();
 }
 
-bool CmdTechDrawToggleFrame::isActive(void)
+bool CmdTechDrawToggleFrame::isActive()
 {
     bool havePage = DrawGuiUtil::needPage(this);
-    bool haveView = DrawGuiUtil::needView(this,false);
+    bool haveView = DrawGuiUtil::needView(this, false);
     return (havePage && haveView);
 }
 
 
-void CreateTechDrawCommandsDecorate(void)
+void CreateTechDrawCommandsDecorate()
 {
     Gui::CommandManager &rcCmdMgr = Gui::Application::Instance->commandManager();
 
@@ -374,7 +333,7 @@ void CreateTechDrawCommandsDecorate(void)
 
 bool _checkSelectionHatch(Gui::Command* cmd) {
     std::vector<Gui::SelectionObject> selection = cmd->getSelection().getSelectionEx();
-    if (selection.size() == 0) {
+    if (selection.empty()) {
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Incorrect selection"),
                              QObject::tr("Select a Face first"));
         return false;

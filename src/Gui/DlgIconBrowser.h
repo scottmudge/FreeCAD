@@ -28,6 +28,8 @@
 #include <Base/Parameter.h>
 #include "PropertyPage.h"
 
+class QTreeWidgetItem;
+
 namespace Gui {
 
 class PrefWidgetStates;

@@ -22,23 +22,23 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+#include <Inventor/nodes/SoSeparator.h>
 #endif
 
-#include <Base/Console.h>
-#include "ViewProviderGeoFeatureGroupExtension.h"
-#include "ViewProviderLink.h"
-#include "ViewParams.h"
-#include "View3DInventor.h"
-#include "Command.h"
-#include "Application.h"
-#include "Document.h"
 #include <App/Application.h>
 #include <App/DocumentObserver.h>
+#include <App/DocumentObject.h>
 #include <App/GeoFeatureGroupExtension.h>
+#include <Base/Console.h>
+
+#include "Application.h"
+#include "ViewParams.h"
+#include "ViewProviderGeoFeatureGroupExtension.h"
+#include "ViewProviderDocumentObject.h"
+#include "ViewProviderLink.h"
 #include "SoFCUnifiedSelection.h"
 
 FC_LOG_LEVEL_INIT("Gui", true, true)
@@ -63,6 +63,10 @@ ViewProviderGeoFeatureGroupExtension::ViewProviderGeoFeatureGroupExtension()
         pcGroupChildren = new SoFCSelectionRoot;
 
     pcGroupChildren->ref();
+    pcGroupFront = new SoSeparator();
+    pcGroupFront->ref();
+    pcGroupBack = new SoSeparator();
+    pcGroupBack->ref();
 }
 
 ViewProviderGeoFeatureGroupExtension::~ViewProviderGeoFeatureGroupExtension()
@@ -73,13 +77,16 @@ ViewProviderGeoFeatureGroupExtension::~ViewProviderGeoFeatureGroupExtension()
     impl.reset();
 
     pcGroupChildren->unref();
-    pcGroupChildren = 0;
+    pcGroupChildren = nullptr;
+    pcGroupFront->unref();
+    pcGroupFront = nullptr;
+    pcGroupBack->unref();
+    pcGroupBack = nullptr;
 }
 
 void ViewProviderGeoFeatureGroupExtension::extensionClaimChildren3D(
         std::vector<App::DocumentObject*> &children) const 
 {
-
     //all object in the group must be claimed in 3D, as we are a coordinate system for all of them
     auto* ext = getExtendedViewProvider()->getObject()->getExtensionByType<App::GeoFeatureGroupExtension>();
     if (ext) {
@@ -150,7 +157,7 @@ void ViewProviderGeoFeatureGroupExtension::extensionGetDisplayModes(std::vector<
     ViewProviderGroupExtension::extensionGetDisplayModes(StrList);
 
     // add your own modes
-    StrList.push_back("Group");
+    StrList.emplace_back("Group");
 }
 
 void ViewProviderGeoFeatureGroupExtension::extensionUpdateData(const App::Property* prop)

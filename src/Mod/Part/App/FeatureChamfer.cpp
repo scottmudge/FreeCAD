@@ -20,28 +20,23 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <BRepFilletAPI_MakeChamfer.hxx>
 # include <Precision.hxx>
 # include <TopExp.hxx>
-# include <TopExp_Explorer.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Edge.hxx>
-# include <TopTools_ListOfShape.hxx>
-# include <TopTools_IndexedMapOfShape.hxx>
 # include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
+# include <TopTools_IndexedMapOfShape.hxx>
 #endif
 
-
 #include <App/Document.h>
-#include "TopoShapeOpCode.h"
 #include "FeatureChamfer.h"
+#include "TopoShapeOpCode.h"
 
 
 using namespace Part;
-
 
 PROPERTY_SOURCE(Part::Chamfer, Part::FilletBase)
 

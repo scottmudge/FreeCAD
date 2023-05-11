@@ -20,24 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
+# include <QString>
 #endif
 
-#include <QString>
-#include <QSlider>
-#include "ui_TaskTrajectoryDressUpParameter.h"
-#include "TaskTrajectoryDressUpParameter.h"
-#include <Gui/Application.h>
-#include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Base/Console.h>
-#include <Gui/Selection.h>
 #include <Gui/Placement.h>
+#include <Gui/Selection.h>
+
+#include "TaskTrajectoryDressUpParameter.h"
+#include "ui_TaskTrajectoryDressUpParameter.h"
 
 
 using namespace RobotGui;
@@ -80,7 +73,7 @@ TaskTrajectoryDressUpParameter::~TaskTrajectoryDressUpParameter()
     delete ui;
 }
 
-void TaskTrajectoryDressUpParameter::writeValues(void)
+void TaskTrajectoryDressUpParameter::writeValues()
 {
     pcObject->Speed.setValue          ( ui->doubleSpinBoxSpeed->value()*1000.0);
     pcObject->Acceleration.setValue   ( ui->doubleSpinBoxAccel->value()*1000.0);
@@ -91,9 +84,10 @@ void TaskTrajectoryDressUpParameter::writeValues(void)
     pcObject->PosAdd.setValue(PosAdd);
 }
 
-void TaskTrajectoryDressUpParameter::createPlacementDlg(void)
+void TaskTrajectoryDressUpParameter::createPlacementDlg()
 {
     Gui::Dialog::Placement plc;
+    plc.setSelection(Gui::Selection().getSelectionEx());
     plc.setPlacement(PosAdd);
     if (plc.exec() == QDialog::Accepted) {
         PosAdd = plc.getPlacement();
@@ -103,7 +97,7 @@ void TaskTrajectoryDressUpParameter::createPlacementDlg(void)
 }
 
 
-void TaskTrajectoryDressUpParameter::viewPlacement(void)
+void TaskTrajectoryDressUpParameter::viewPlacement()
 {
     double A,B,C;
     Base::Vector3d pos = PosAdd.getPosition();

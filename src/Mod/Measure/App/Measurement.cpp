@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2013      Luke Parry <l.parry@warwick.ac.uk>            *
+ *   Copyright (c) 2013 Luke Parry <l.parry@warwick.ac.uk>                 *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -22,31 +22,22 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-  # include <BRep_Builder.hxx>
-  # include <TopoDS_Compound.hxx>
-  # include <TopoDS_Shape.hxx>
-  # include <TopoDS_Face.hxx>
-  # include <TopoDS.hxx>
-  # include <TopExp_Explorer.hxx>
-  # include <gp_Pln.hxx>
-  # include <gp_Ax3.hxx>
-  # include <gp_Circ.hxx>
-  # include <gp_Elips.hxx>
-  # include <GCPnts_AbscissaPoint.hxx>
-  # include <BRepAdaptor_Surface.hxx>
-  # include <BRepAdaptor_Curve.hxx>
-  # include <BRepExtrema_DistShapeShape.hxx>
-  # include <GProp_GProps.hxx>
-  # include <GeomAPI_ExtremaCurveCurve.hxx>
-  # include <BRepGProp.hxx>
-  # include <ShapeAnalysis_Surface.hxx>
-  # include <Geom_Surface.hxx>
+# include <BRep_Tool.hxx>
+# include <BRepAdaptor_Curve.hxx>
+# include <BRepExtrema_DistShapeShape.hxx>
+# include <BRepGProp.hxx>
+# include <GCPnts_AbscissaPoint.hxx>
+# include <gp_Circ.hxx>
+# include <gp_Lin.hxx>
+# include <Geom_Surface.hxx>
+# include <GProp_GProps.hxx>
+# include <ShapeAnalysis_Surface.hxx>
+# include <TopoDS.hxx>
+# include <TopoDS_Shape.hxx>
 #endif
 
-
-#include <Base/Exception.h>
 #include <Base/Console.h>
-#include <Base/VectorPy.h>
+#include <Base/Exception.h>
 
 #include <App/DocumentObserver.h>
 #include <Mod/Part/App/Geometry.h>
@@ -56,9 +47,11 @@
 #include "Measurement.h"
 #include "MeasurementPy.h"
 
+
 #ifndef M_PI
-    #define M_PI    3.14159265358979323846 /* pi */
+# define M_PI 3.14159265358979323846
 #endif
+
 using namespace Measure;
 using namespace Base;
 using namespace Part;
@@ -116,7 +109,7 @@ int Measurement::addReference3D(App::DocumentObject *obj, const char* subName)
   std::vector<std::string> subElements = References3D.getSubValues();
 
   objects.push_back(obj);
-  subElements.push_back(subName);
+  subElements.emplace_back(subName);
 
   References3D.setValues(objects, subElements);
 
@@ -132,11 +125,8 @@ MeasureType Measurement::getType()
     std::vector<App::DocumentObject*>::const_iterator obj = objects.begin();
     std::vector<std::string>::const_iterator subEl = subElements.begin();
 
-    //
-    //int dims = -1;
     MeasureType mode;
 
-    // Type of References3D
     int verts = 0;
     int edges = 0;
     int faces = 0;
@@ -208,11 +198,7 @@ MeasureType Measurement::getType()
                 mode = PointToEdge;
             }
         } else {
-//             if(edges == 2) {
-//                 mode = EdgeToEdge;
-//             } else {
-                mode = Edges;
-//             }
+            mode = Edges;
         }
     } else if (verts > 0) {
         mode = Points;
@@ -232,10 +218,14 @@ TopoDS_Shape Measurement::getShape(App::DocumentObject *obj , const char *subNam
                     "Measurement::getShape - null shape");
         return shape;
     } catch (Standard_Failure& e) {
-        _MEASURE_ERROR(Part::NullShapeException,
+        _MEASURE_ERROR(Base::CADKernelError,
                 "Measurement::getShape - " << e.GetMessageString());
         return TopoDS_Shape();
     }
+    catch (...) {
+        throw Base::RuntimeError("Measurement: Unknown error retrieving shape");
+    }
+
 }
 
 double Measurement::length(const TopoDS_Shape &shape) const
@@ -744,12 +734,12 @@ Base::Vector3d Measurement::massCenter() const
     return result;
 }
 
-unsigned int Measurement::getMemSize(void) const
+unsigned int Measurement::getMemSize() const
 {
     return 0;
 }
 
-PyObject *Measurement::getPyObject(void)
+PyObject *Measurement::getPyObject()
 {
     if (PythonObject.is(Py::_None())) {
         // ref counter is set to 1

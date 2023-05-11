@@ -23,14 +23,15 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-#include <QApplication>
-#include <QMessageBox>
+# include <QApplication>
+# include <QMessageBox>
 #endif
 
 #include <Base/Console.h>
-#include "App/Part.h"
-#include "App/Document.h"
-#include "App/GroupParams.h"
+#include <App/Document.h>
+#include <App/Part.h>
+#include <App/GroupExtension.h>
+#include <App/GroupParams.h>
 #include "CommandT.h"
 #include "Application.h"
 #include "Document.h"
@@ -67,7 +68,7 @@ static App::SubObjectT addGroup(const char *type, const char *name, const QStrin
 
     try {
         App::Document *doc = nullptr;
-        auto sels = Gui::Selection().getSelectionT(nullptr, 0);
+        auto sels = Gui::Selection().getSelectionT(nullptr, ResolveMode::NoResolve);
         App::DocumentObject *group = nullptr;
         App::DocumentObject *geogroup = nullptr;
         std::vector<App::DocumentObject *> children;
@@ -225,7 +226,7 @@ void StdCmdPart::activated(int iMsg)
                 << res.getObjectPython() << ", '" << res.getSubName() << "')");
 }
 
-bool StdCmdPart::isActive(void)
+bool StdCmdPart::isActive()
 {
     return hasActiveDocument();
 }
@@ -339,7 +340,7 @@ void StdCmdGroup::activated(int iMsg)
     addGroup("App::DocumentObjectGroup","Group", QApplication::translate("Std_Group", "Group"));
 }
 
-bool StdCmdGroup::isActive(void)
+bool StdCmdGroup::isActive()
 {
     return hasActiveDocument();
 }
@@ -407,7 +408,7 @@ public:
 
 namespace Gui {
 
-void CreateStructureCommands(void)
+void CreateStructureCommands()
 {
     CommandManager &rcCmdMgr = Application::Instance->commandManager();
 

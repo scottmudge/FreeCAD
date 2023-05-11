@@ -20,18 +20,12 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskPocketParameters_H
 #define GUI_TASKVIEW_TaskPocketParameters_H
 
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-#include <Gui/TaskView/TaskDialog.h>
-
-#include "TaskSketchBasedParameters.h"
+#include "TaskExtrudeParameters.h"
 #include "ViewProviderPocket.h"
 
-class Ui_TaskPocketParameters;
 
 namespace App {
 class Property;
@@ -44,54 +38,25 @@ class ViewProvider;
 namespace PartDesignGui {
 
 
-class TaskPocketParameters : public TaskSketchBasedParameters
+class TaskPocketParameters : public TaskExtrudeParameters
 {
     Q_OBJECT
 
 public:
-    TaskPocketParameters(ViewProviderPocket *PocketView, QWidget *parent = 0, bool newObj=false);
-    ~TaskPocketParameters();
+    explicit TaskPocketParameters(ViewProviderPocket *PocketView, QWidget *parent = nullptr, bool newObj=false);
+    ~TaskPocketParameters() override;
 
-    virtual void saveHistory() override;
-    virtual void apply() override;
-    virtual void refresh() override;
-
-private Q_SLOTS:
-    void onLengthChanged(double);
-    void onLength2Changed(double);
-    void onOffsetChanged(double);
-    void onMidplaneChanged(bool);
-    void onReversedChanged(bool);
-    void onButtonFace(const bool pressed = true);
-    void onFaceName(const QString& text);
-    void onModeChanged(int);
-    void onAngleChanged(double);
-    void onAngle2Changed(double);
-    void onInnerAngleChanged(double);
-    void onInnerAngle2Changed(double);
-    void onUsePipeChanged(bool);
-    void onCheckFaceLimitsChanged(bool);
-
-protected:
-    void changeEvent(QEvent *e) override;
-    bool eventFilter(QObject*, QEvent*) override;
-    void onSelectionModeChanged(SelectionMode) override;
+    void apply() override;
 
 private:
-    double getLength(void) const;
-    double getLength2(void) const;
-    double getOffset(void) const;
-    int    getMode(void) const;
-    bool   getMidplane(void) const;
-    bool   getReversed(void) const;
-    QString getFaceName(void) const;
-
-    void _onSelectionChanged(const Gui::SelectionChanges& msg) override;
-    void updateUI(int index);
+    void onModeChanged(int index) override;
+    void translateTooltips() override;
+    void translateModeList(int index) override;
+    bool isPocket() override {
+        return true;
+    }
 
 private:
-    QWidget* proxy;
-    std::unique_ptr<Ui_TaskPocketParameters> ui;
     double oldLength;
 };
 
@@ -101,7 +66,7 @@ class TaskDlgPocketParameters : public TaskDlgSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskDlgPocketParameters(ViewProviderPocket *PocketView);
+    explicit TaskDlgPocketParameters(ViewProviderPocket *PocketView);
 
     ViewProviderPocket* getPocketView() const
     { return static_cast<ViewProviderPocket*>(vp); }

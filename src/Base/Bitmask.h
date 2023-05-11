@@ -127,10 +127,12 @@ public:
         return i;
     }
     constexpr Flags<Enum> &operator|=(const Flags<Enum> &other) {
-        return i |= other.i;
+        i |= other.i;
+        return *this;
     }
     constexpr Flags<Enum> &operator|=(const Enum &f) {
-        return i |= f;
+        i |= f;
+        return *this;
     }
     constexpr Flags<Enum> operator|(const Flags<Enum> &other) const {
         return i | other.i;
@@ -139,10 +141,12 @@ public:
         return i | f;
     }
     constexpr Flags<Enum> &operator&=(const Flags<Enum> &other) {
-        return i &= other.i;
+        i &= other.i;
+        return *this;
     }
     constexpr Flags<Enum> &operator&=(const Enum &f) {
-        return i &= f;
+        i &= f;
+        return *this;
     }
     constexpr Flags<Enum> operator&(const Flags<Enum> &other) const {
         return i & other.i;
@@ -152,6 +156,10 @@ public:
     }
     constexpr Flags<Enum> operator~() const {
         return ~i;
+    }
+
+    constexpr bool operator!() const {
+        return !i;
     }
 };
 }

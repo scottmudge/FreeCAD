@@ -24,13 +24,11 @@
 #define MESHGUI_VIEWPROVIDERMESH_H
 
 #include <vector>
-#include <Inventor/fields/SoSFVec2f.h>
 
-#include <Mod/Mesh/App/Core/Elements.h>
-#include <Mod/Mesh/App/Types.h>
-#include <Gui/ViewProviderGeometryObject.h>
 #include <Gui/ViewProviderBuilder.h>
-#include <App/PropertyStandard.h>
+#include <Gui/ViewProviderGeometryObject.h>
+#include <Mod/Mesh/App/Types.h>
+#include <Mod/Mesh/App/Core/Elements.h>
 
 
 class SoGroup;
@@ -43,6 +41,7 @@ class SoCoordinate3;
 class SoIndexedFaceSet;
 class SoShapeHints;
 class SoMaterialBinding;
+class SoMFColor;
 class SoCamera;
 class SoAction;
 class SbViewportRegion;
@@ -70,6 +69,9 @@ namespace MeshCore {
   struct Material;
 }
 
+namespace Mesh {
+class PropertyMaterial;
+}
 
 namespace MeshGui {
 class SoFCMeshObjectNode;
@@ -79,9 +81,10 @@ class MeshGuiExport ViewProviderMeshBuilder : public Gui::ViewProviderBuilder
 {
 public:
     ViewProviderMeshBuilder(){}
-    ~ViewProviderMeshBuilder(){}
-    virtual void buildNodes(const App::Property*, std::vector<SoNode*>&) const;
+    ~ViewProviderMeshBuilder() override{}
+    void buildNodes(const App::Property*, std::vector<SoNode*>&) const override;
     void createMesh(const App::Property*, SoCoordinate3*, SoIndexedFaceSet*) const;
+    void createMesh(const MeshCore::MeshKernel&, SoCoordinate3*, SoIndexedFaceSet*) const;
 };
 
 /**
@@ -90,16 +93,16 @@ public:
  */
 class MeshGuiExport ViewProviderExport : public Gui::ViewProviderDocumentObject
 {
-    PROPERTY_HEADER(MeshGui::ViewProviderExport);
+    PROPERTY_HEADER_WITH_OVERRIDE(MeshGui::ViewProviderExport);
 
 public:
     ViewProviderExport();
-    virtual ~ViewProviderExport();
+    ~ViewProviderExport() override;
 
-    virtual QIcon getIcon() const;
-    SoSeparator* getRoot(void) const {return nullptr;}
-    std::vector<std::string> getDisplayModes(void) const;
-    const char* getDefaultDisplayMode() const;
+    QIcon getIcon() const override;
+    SoSeparator* getRoot() const override {return nullptr;}
+    std::vector<std::string> getDisplayModes() const override;
+    const char* getDefaultDisplayMode() const override;
 };
 
 /**
@@ -109,11 +112,11 @@ public:
  */
 class MeshGuiExport ViewProviderMesh : public Gui::ViewProviderGeometryObject
 {
-    PROPERTY_HEADER(MeshGui::ViewProviderMesh);
+    PROPERTY_HEADER_WITH_OVERRIDE(MeshGui::ViewProviderMesh);
 
 public:
     ViewProviderMesh();
-    virtual ~ViewProviderMesh();
+    ~ViewProviderMesh() override;
 
     // Display properties
     App::PropertyPercent LineTransparency;
@@ -126,24 +129,24 @@ public:
     App::PropertyColor LineColor;
     App::PropertyEnumeration ShapeTypeHint;
 
-    virtual void attach(App::DocumentObject *);
-    virtual void updateData(const App::Property*);
-    virtual bool useNewSelectionModel(void) const;
+    void attach(App::DocumentObject *) override;
+    void updateData(const App::Property*) override;
+    bool useNewSelectionModel() const override;
     Gui::SoFCSelection* getHighlightNode() const { return pcHighlight; }
-    virtual QIcon getIcon() const;
+    QIcon getIcon() const override;
     /// Sets the correct display mode
-    virtual void setDisplayMode(const char* ModeName);
+    void setDisplayMode(const char* ModeName) override;
     /// returns a list of all possible modes
-    virtual std::vector<std::string> getDisplayModes(void) const;
+    std::vector<std::string> getDisplayModes() const override;
     bool exportToVrml(const char* filename, const MeshCore::Material&, bool binary=false) const;
-    void exportMesh(const char* filename, const char* fmt=0) const;
-    void setupContextMenu(QMenu*, QObject*, const char*);
+    void exportMesh(const char* filename, const char* fmt=nullptr) const;
+    void setupContextMenu(QMenu*, QObject*, const char*) override;
     /// Get the python wrapper for that ViewProvider
-    PyObject* getPyObject();
+    PyObject* getPyObject() override;
 
     /** @name Editing */
     //@{
-    bool doubleClicked(void){ return false; }
+    bool doubleClicked() override{ return false; }
     bool isFacetSelected(Mesh::FacetIndex facet);
     void selectComponent(Mesh::FacetIndex facet);
     void deselectComponent(Mesh::FacetIndex facet);
@@ -175,11 +178,11 @@ public:
 
 protected:
     /// Sets the edit mode
-    bool setEdit(int ModNum);
+    bool setEdit(int ModNum) override;
     /// Unsets the edit mode
-    void unsetEdit(int ModNum);
+    void unsetEdit(int ModNum) override;
     /// get called by the container whenever a property has been changed
-    void onChanged(const App::Property* prop);
+    void onChanged(const App::Property* prop) override;
     virtual void showOpenEdges(bool);
     void setOpenEdgeColorFrom(const App::Color& col);
     virtual void splitMesh(const MeshCore::MeshKernel& toolMesh, const Base::Vector3f& normal, SbBool inner);
@@ -192,10 +195,20 @@ protected:
     void highlightComponents();
     void setHighlightedComponents(bool);
     void highlightSegments();
+    void setHighlightedColors(bool);
+    void highlightColors();
+    bool canHighlightColors() const;
     App::PropertyColorList* getColorProperty() const;
+    Mesh::PropertyMaterial* getMaterialProperty() const;
     void tryColorPerVertexOrFace(bool);
     void setColorPerVertex(const App::PropertyColorList*);
     void setColorPerFace(const App::PropertyColorList*);
+
+    void setColorField(const std::vector<App::Color>&, SoMFColor&);
+    void setAmbientColor(const std::vector<App::Color>&);
+    void setDiffuseColor(const std::vector<App::Color>&);
+    void setSpecularColor(const std::vector<App::Color>&);
+    void setEmissiveColor(const std::vector<App::Color>&);
 
     virtual SoShape* getShapeNode() const;
     virtual SoNode* getCoordNode() const;
@@ -219,7 +232,13 @@ private:
     static void panCamera(SoCamera*, float, const SbPlane&, const SbVec2f&, const SbVec2f&);
 
 protected:
-    std::string highlightMode;
+    enum class HighlighMode {
+        None,
+        Component,
+        Segment,
+        Color
+    };
+    HighlighMode highlightMode;
     Gui::SoFCSelection  * pcHighlight;
     SoGroup             * pcShapeGroup;
     SoDrawStyle         * pcLineStyle;
@@ -245,20 +264,20 @@ private:
  */
 class MeshGuiExport ViewProviderIndexedFaceSet : public ViewProviderMesh
 {
-    PROPERTY_HEADER(MeshGui::ViewProviderIndexedFaceSet);
+    PROPERTY_HEADER_WITH_OVERRIDE(MeshGui::ViewProviderIndexedFaceSet);
 
 public:
     ViewProviderIndexedFaceSet();
-    virtual ~ViewProviderIndexedFaceSet();
+    ~ViewProviderIndexedFaceSet() override;
 
-    virtual void attach(App::DocumentObject *);
+    void attach(App::DocumentObject *) override;
     /// Update the Mesh representation
-    virtual void updateData(const App::Property*);
+    void updateData(const App::Property*) override;
 
 protected:
-    void showOpenEdges(bool);
-    SoShape* getShapeNode() const;
-    SoNode* getCoordNode() const;
+    void showOpenEdges(bool) override;
+    SoShape* getShapeNode() const override;
+    SoNode* getCoordNode() const override;
 
 private:
     SoCoordinate3       * pcMeshCoord;
@@ -272,19 +291,19 @@ private:
  */
 class MeshGuiExport ViewProviderMeshObject : public ViewProviderMesh
 {
-    PROPERTY_HEADER(MeshGui::ViewProviderMeshObject);
+    PROPERTY_HEADER_WITH_OVERRIDE(MeshGui::ViewProviderMeshObject);
 
 public:
     ViewProviderMeshObject();
-    virtual ~ViewProviderMeshObject();
+    ~ViewProviderMeshObject() override;
 
-    void attach(App::DocumentObject *pcFeat);
-    virtual void updateData(const App::Property*);
+    void attach(App::DocumentObject *pcFeat) override;
+    void updateData(const App::Property*) override;
 
 protected:
-    SoShape* getShapeNode() const;
-    SoNode* getCoordNode() const;
-    void showOpenEdges(bool);
+    SoShape* getShapeNode() const override;
+    SoNode* getCoordNode() const override;
+    void showOpenEdges(bool) override;
 
 private:
     SoFCMeshObjectNode  * pcMeshNode;

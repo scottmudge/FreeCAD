@@ -21,38 +21,29 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
-#include <cmath>
+# include <cmath>
 #endif // #ifndef _PreComp_
 
+#include <App/Document.h>
 #include <Base/Console.h>
 #include <Base/Vector3D.h>
-
-#include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/Command.h>
-#include <Gui/Document.h>
-#include <Gui/Selection.h>
+#include <Gui/CommandT.h>
 #include <Gui/ViewProvider.h>
-
-#include <App/Application.h>
-#include <App/Document.h>
-#include <App/DocumentObject.h>
-
-#include <Mod/TechDraw/App/HatchLine.h>
+#include <Mod/TechDraw/App/DrawGeomHatch.h>
 #include <Mod/TechDraw/App/DrawView.h>
-#include <Mod/TechDraw/App/DrawUtil.h>
 
-#include "ViewProviderGeomHatch.h"
 #include "TaskGeomHatch.h"
-#include <Mod/TechDraw/Gui/ui_TaskGeomHatch.h>
+#include "ui_TaskGeomHatch.h"
+#include "ViewProviderGeomHatch.h"
+
 
 using namespace Gui;
 using namespace TechDraw;
 using namespace TechDrawGui;
 
-TaskGeomHatch::TaskGeomHatch(TechDraw::DrawGeomHatch* inHatch,TechDrawGui::ViewProviderGeomHatch* inVp,bool mode) :
+TaskGeomHatch::TaskGeomHatch(TechDraw::DrawGeomHatch* inHatch, TechDrawGui::ViewProviderGeomHatch* inVp, bool mode) :
     ui(new Ui_TaskGeomHatch),
     m_hatch(inHatch),
     m_Vp(inVp),
@@ -66,11 +57,6 @@ TaskGeomHatch::TaskGeomHatch(TechDraw::DrawGeomHatch* inHatch,TechDrawGui::ViewP
     initUi();
 }
 
-TaskGeomHatch::~TaskGeomHatch()
-{
-}
-
-
 void TaskGeomHatch::initUi()
 {
     ui->fcFile->setFileName(QString::fromUtf8(m_file.data(), m_file.size()));
@@ -78,7 +64,7 @@ void TaskGeomHatch::initUi()
     QStringList qsNames = listToQ(names);
 
     ui->cbName->addItems(qsNames);
-    int nameIndex = ui->cbName->findText(QString::fromUtf8(m_name.data(),m_name.size()));
+    int nameIndex = ui->cbName->findText(QString::fromUtf8(m_name.data(), m_name.size()));
     if (nameIndex > -1) {
         ui->cbName->setCurrentIndex(nameIndex);
     } else {
@@ -94,50 +80,25 @@ void TaskGeomHatch::initUi()
     connect(ui->sbWeight, SIGNAL(valueChanged(double)), this, SLOT(onLineWeightChanged()));
     ui->ccColor->setColor(m_color.asValue<QColor>());
     connect(ui->ccColor, SIGNAL(changed()), this, SLOT(onColorChanged()));
+
+    ui->dsbRotation->setValue(m_rotation);
+    connect(ui->dsbRotation, SIGNAL(valueChanged(double)), this, SLOT(onRotationChanged()));
+    ui->dsbOffsetX->setValue(m_offset.x);
+    connect(ui->dsbOffsetX, SIGNAL(valueChanged(double)), this, SLOT(onOffsetChanged()));
+    ui->dsbOffsetY->setValue(m_offset.y);
+    connect(ui->dsbOffsetY, SIGNAL(valueChanged(double)), this, SLOT(onOffsetChanged()));
 }
 
-//move values from screen to DocObjs
-void TaskGeomHatch::updateValues()
-{
-    m_file = (ui->fcFile->fileName()).toUtf8().constData();
-    m_hatch->FilePattern.setValue(m_file);
-    QString cText = ui->cbName->currentText();
-    m_name = cText.toUtf8().constData();
-    m_hatch->NamePattern.setValue(m_name);
-    m_scale = ui->sbScale->value().getValue();
-    m_hatch->ScalePattern.setValue(m_scale);
-    m_color.setValue<QColor>(ui->ccColor->color());
-    m_Vp->ColorPattern.setValue(m_color);
-    m_weight = ui->sbWeight->value().getValue();
-    m_Vp->WeightPattern.setValue(m_weight);
-}
-
-QStringList TaskGeomHatch::listToQ(std::vector<std::string> in)
-{
-    QStringList result;
-    for (auto& s: in) {
-        QString qs = QString::fromUtf8(s.data(), s.size());
-        result.append(qs);
-    }
-    return result;
-}
-
-void TaskGeomHatch::onFileChanged(void)
+void TaskGeomHatch::onFileChanged()
 {
     m_file = ui->fcFile->fileName().toUtf8().constData();
     std::vector<std::string> names = PATLineSpec::getPatternList(m_file);
     QStringList qsNames = listToQ(names);
     ui->cbName->clear();
     ui->cbName->addItems(qsNames);
-}
-
-bool TaskGeomHatch::accept()
-{
-    updateValues();
-    m_source->touch();
-    m_source->getDocument()->recompute();          //TODO: this is only here to get graphics to update.
-                                                   //      sb "redraw graphics" since m_source geom has not changed.
-    return true;
+    m_hatch->FilePattern.setValue(m_file);
+    onNameChanged();                      //pattern name from old file is not
+                                          //necessarily present in new file!
 }
 
 void TaskGeomHatch::onNameChanged()
@@ -145,35 +106,72 @@ void TaskGeomHatch::onNameChanged()
     QString cText = ui->cbName->currentText();
     m_name = cText.toUtf8().constData();
     m_hatch->NamePattern.setValue(m_name);
-    m_source->getDocument()->recompute();
 }
 
 void TaskGeomHatch::onScaleChanged()
 {
+    m_scale = ui->sbScale->value().getValue();
     m_hatch->ScalePattern.setValue(ui->sbScale->value().getValue());
-    m_source->getDocument()->recompute();
+    TechDraw::DrawView* dv = static_cast<TechDraw::DrawView*>(m_source);
+    dv->requestPaint();
+}
+
+void TaskGeomHatch::onRotationChanged()
+{
+    m_rotation = ui->dsbRotation->value();
+    m_hatch->PatternRotation.setValue(m_rotation);
+    TechDraw::DrawView* dv = static_cast<TechDraw::DrawView*>(m_source);
+    dv->requestPaint();
+}
+
+void TaskGeomHatch::onOffsetChanged()
+{
+    Base::Vector3d offset(ui->dsbOffsetX->value(), ui->dsbOffsetY->value(), 0.0);
+    m_offset = offset;
+    m_hatch->PatternOffset.setValue(m_offset);
+    TechDraw::DrawView* dv = static_cast<TechDraw::DrawView*>(m_source);
+    dv->requestPaint();
 }
 
 void TaskGeomHatch::onLineWeightChanged()
 {
+    m_weight =ui->sbWeight->value().getValue();
     m_Vp->WeightPattern.setValue(ui->sbWeight->value().getValue());
-    m_source->getDocument()->recompute();
+    TechDraw::DrawView* dv = static_cast<TechDraw::DrawView*>(m_source);
+    dv->requestPaint();
 }
 
 void TaskGeomHatch::onColorChanged()
 {
-    App::Color ac;
-    ac.setValue<QColor>(ui->ccColor->color());
-    m_Vp->ColorPattern.setValue(ac);
-    m_source->getDocument()->recompute();
+    m_color.setValue<QColor>(ui->ccColor->color());
+    m_Vp->ColorPattern.setValue(m_color);
+}
+
+bool TaskGeomHatch::accept()
+{
+//    Base::Console().Message("TGH::accept()\n");
+    updateValues();
+    Gui::cmdGuiDocument(m_hatch, "resetEdit()");
+    m_hatch->recomputeFeature();                     //create the hatch lines
+    TechDraw::DrawView* dv = static_cast<TechDraw::DrawView*>(m_source);
+    dv->requestPaint();
+    return true;
 }
 
 bool TaskGeomHatch::reject()
 {
-    if (!getCreateMode()) {
+    if (getCreateMode()) {
+        std::string HatchName = m_hatch->getNameInDocument();
+        Gui::cmdAppDocumentArgs(m_hatch->getDocument(), "removeObject('%s')", HatchName);
+        Gui::cmdGuiDocument(m_hatch, "resetEdit()");
+        m_source->touch();
+        m_source->getDocument()->recompute();
+    } else {
         m_hatch->FilePattern.setValue(m_origFile);
         m_hatch->NamePattern.setValue(m_origName);
         m_hatch->ScalePattern.setValue(m_origScale);
+        m_hatch->PatternRotation.setValue(m_origRotation);
+        m_hatch->PatternOffset.setValue(m_origOffset);
         m_Vp->ColorPattern.setValue(m_origColor);
         m_Vp->WeightPattern.setValue(m_origWeight);
     }
@@ -185,6 +183,8 @@ void TaskGeomHatch::getParameters()
     m_file   = m_hatch->FilePattern.getValue();
     m_name   = m_hatch->NamePattern.getValue();
     m_scale  = m_hatch->ScalePattern.getValue();
+    m_rotation = m_hatch->PatternRotation.getValue();
+    m_offset   = m_hatch->PatternOffset.getValue();
     m_color  = m_Vp->ColorPattern.getValue();
     m_weight = m_Vp->WeightPattern.getValue();
     if (!getCreateMode()) {
@@ -193,13 +193,42 @@ void TaskGeomHatch::getParameters()
         m_origScale  = m_hatch->ScalePattern.getValue();
         m_origColor  = m_Vp->ColorPattern.getValue();
         m_origWeight = m_Vp->WeightPattern.getValue();
+        m_origRotation = m_hatch->PatternRotation.getValue();
+        m_origOffset   = m_hatch->PatternOffset.getValue();
     }
-    
 }
 
-void TaskGeomHatch::changeEvent(QEvent *e)
+//move values from screen to DocObjs
+void TaskGeomHatch::updateValues()
 {
-    if (e->type() == QEvent::LanguageChange) {
+//    Base::Console().Message("TGH::updateValues()\n");
+    m_file = (ui->fcFile->fileName()).toUtf8().constData();
+    m_hatch->FilePattern.setValue(m_file);
+    QString cText = ui->cbName->currentText();
+    m_name = cText.toUtf8().constData();
+    m_hatch->NamePattern.setValue(m_name);
+    m_scale = ui->sbScale->value().getValue();
+    m_hatch->ScalePattern.setValue(m_scale);
+    m_color.setValue<QColor>(ui->ccColor->color());
+    m_Vp->ColorPattern.setValue(m_color);
+    m_weight = ui->sbWeight->value().getValue();
+    m_Vp->WeightPattern.setValue(m_weight);
+    m_hatch->PatternRotation.setValue(ui->dsbRotation->value());
+}
+
+QStringList TaskGeomHatch::listToQ(std::vector<std::string> inList)
+{
+    QStringList result;
+    for (auto& s: inList) {
+        QString qs = QString::fromUtf8(s.data(), s.size());
+        result.append(qs);
+    }
+    return result;
+}
+
+void TaskGeomHatch::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::LanguageChange) {
         ui->retranslateUi(this);
     }
 }
@@ -209,9 +238,9 @@ TaskDlgGeomHatch::TaskDlgGeomHatch(TechDraw::DrawGeomHatch* inHatch, TechDrawGui
     TaskDialog(),
     viewProvider(nullptr)
 {
-    widget  = new TaskGeomHatch(inHatch,inVp, mode);
+    widget  = new TaskGeomHatch(inHatch, inVp, mode);
     taskbox = new Gui::TaskView::TaskBox(Gui::BitmapFactory().pixmap("TechDraw_TreeView"),
-                                         widget->windowTitle(), true, 0);
+                                         widget->windowTitle(), true, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }
@@ -220,9 +249,9 @@ TaskDlgGeomHatch::~TaskDlgGeomHatch()
 {
 }
 
-void TaskDlgGeomHatch::setCreateMode(bool b)
+void TaskDlgGeomHatch::setCreateMode(bool mode)
 {
-    widget->setCreateMode(b);
+    widget->setCreateMode(mode);
 }
 
 void TaskDlgGeomHatch::update()

@@ -20,15 +20,12 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-#ifndef _PreComp_
-#endif
 
 #include "VectorListEditor.h"
 #include "ui_VectorListEditor.h"
-#include <Gui/QuantitySpinBox.h>
-#include <Base/Tools.h>
+#include "QuantitySpinBox.h"
+
 
 using namespace Gui;
 
@@ -79,7 +76,7 @@ bool VectorTableModel::setData(const QModelIndex &index, const QVariant &value, 
     if (role == Qt::EditRole && r < vectors.size()) {
         if (value.canConvert<Base::Vector3d>()) {
             vectors[r] = value.value<Base::Vector3d>();
-            dataChanged(index, index.sibling(index.row(), 2));
+            Q_EMIT dataChanged(index, index.sibling(index.row(), 2));
             return true;
         }
         else if (c < 3) {
@@ -90,7 +87,7 @@ bool VectorTableModel::setData(const QModelIndex &index, const QVariant &value, 
                 vectors[r].y = d;
             else if (c == 2)
                 vectors[r].z = d;
-            dataChanged(index, index);
+            Q_EMIT dataChanged(index, index);
             return true;
         }
     }
@@ -192,14 +189,14 @@ void VectorTableDelegate::setEditorData(QWidget *editor, const QModelIndex &inde
 {
     double value = index.model()->data(index, Qt::EditRole).toDouble();
 
-    QDoubleSpinBox *spinBox = static_cast<QDoubleSpinBox*>(editor);
+    auto spinBox = static_cast<QDoubleSpinBox*>(editor);
     spinBox->setValue(value);
 }
 
 void VectorTableDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
                                        const QModelIndex &index) const
 {
-    QDoubleSpinBox *spinBox = static_cast<QDoubleSpinBox*>(editor);
+    auto spinBox = static_cast<QDoubleSpinBox*>(editor);
     spinBox->interpretText();
     double value = spinBox->value();
     model->setData(index, value, Qt::EditRole);

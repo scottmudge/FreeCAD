@@ -20,18 +20,18 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <QPushButton>
 #endif
 
 #include <App/Material.h>
 #include "DlgSettingsViewColor.h"
 #include "ui_DlgSettingsViewColor.h"
-#include "ViewParams.h"
-#include "TreeParams.h"
 #include "PrefWidgets.h"
+#include "TreeParams.h"
+#include "ViewParams.h"
 
 using namespace Gui::Dialog;
 
@@ -59,6 +59,8 @@ DlgSettingsViewColor::DlgSettingsViewColor(QWidget* parent)
                 (uint32_t)TreeParams::getTreeEditColor()).asValue<QColor>());
     ui->TreeActiveColor->setColor(App::Color(
                 (uint32_t)TreeParams::getTreeActiveColor()).asValue<QColor>());
+
+    connect(ui->SwitchGradientColors, &QPushButton::pressed, this, &DlgSettingsViewColor::onSwitchGradientColorsPressed);
 }
 
 /**
@@ -116,6 +118,13 @@ void DlgSettingsViewColor::changeEvent(QEvent *e)
     else {
         QWidget::changeEvent(e);
     }
+}
+
+void DlgSettingsViewColor::onSwitchGradientColorsPressed()
+{
+    QColor tempColor = ui->backgroundColorFrom->color();
+    ui->backgroundColorFrom->setColor(ui->backgroundColorTo->color());
+    ui->backgroundColorTo->setColor(tempColor);
 }
 
 #include "moc_DlgSettingsViewColor.cpp"

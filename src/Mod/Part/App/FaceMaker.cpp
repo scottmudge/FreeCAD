@@ -22,23 +22,21 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <TopoDS.hxx>
-# include <TopoDS_Iterator.hxx>
-# include <BRep_Builder.hxx>
-# include <BRepBuilderAPI_MakeWire.hxx>
 # include <BRepBuilderAPI_MakeFace.hxx>
-# include <BRep_Tool.hxx>
-# include <ShapeAnalysis.hxx>
+# include <BRepBuilderAPI_MakeWire.hxx>
+# include <TopoDS.hxx>
+# include <TopoDS_Builder.hxx>
+# include <TopoDS_Iterator.hxx>
+# include <QtGlobal>
 #endif
 
-#include <App/MappedElement.h>
-#include "TopoShapeOpCode.h"
-#include "FaceMaker.h"
-
-#include "TopoShape.h"
 #include <memory>
 
-#include <QtGlobal>
+#include "FaceMaker.h"
+
+#include <App/MappedElement.h>
+#include "TopoShape.h"
+#include "TopoShapeOpCode.h"
 
 TYPESYSTEM_SOURCE_ABSTRACT(Part::FaceMaker, Base::BaseClass)
 TYPESYSTEM_SOURCE_ABSTRACT(Part::FaceMakerPublic, Part::FaceMaker)
@@ -113,7 +111,11 @@ const Part::TopoShape &Part::FaceMaker::getTopoShape() const{
     return this->myTopoShape;
 }
 
+#if OCC_VERSION_HEX >= 0x070600
+void Part::FaceMaker::Build(const Message_ProgressRange&)
+#else
 void Part::FaceMaker::Build()
+#endif
 {
     this->NotDone();
     this->myShapesToReturn = this->myInputFaces;

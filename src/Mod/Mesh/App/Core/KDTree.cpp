@@ -20,28 +20,30 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifdef _MSC_VER
 # pragma warning(disable : 4396)
 #endif
-#ifndef _PreComp_
-#endif
 
-#include "KDTree.h"
 #include <kdtree++/kdtree.hpp>
+#include "KDTree.h"
+
 
 using namespace MeshCore;
 
-struct Point3d 
+struct Point3d
 {
-   typedef float value_type;
+   using value_type = float;
 
    Point3d(const Base::Vector3f& f, PointIndex i) : p(f), i(i)
    {
    }
 
    Point3d(const Point3d& pnt) : p(pnt.p), i(pnt.i)
+   {
+   }
+
+   Point3d(Point3d&& pnt) : p(pnt.p), i(pnt.i)
    {
    }
 
@@ -70,11 +72,17 @@ struct Point3d
        this->i = other.i;
    }
 
+   inline void operator=(Point3d&& other)
+   {
+       this->p = other.p;
+       this->i = other.i;
+   }
+
    Base::Vector3f p;
    PointIndex i;
 };
 
-typedef KDTree::KDTree<3, Point3d> MyKDTree;
+using MyKDTree = KDTree::KDTree<3, Point3d>;
 
 class MeshKDTree::Private
 {
@@ -171,7 +179,7 @@ PointIndex MeshKDTree::FindNearest(const Base::Vector3f& p, float max_dist,
 
 PointIndex MeshKDTree::FindExact(const Base::Vector3f& p) const
 {
-    MyKDTree::const_iterator it = 
+    MyKDTree::const_iterator it =
         d->kd_tree.find_exact(Point3d(p,0));
     if (it == d->kd_tree.end())
         return POINT_INDEX_MAX;

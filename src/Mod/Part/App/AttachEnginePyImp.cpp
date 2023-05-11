@@ -25,22 +25,20 @@
 # include <Standard_Failure.hxx>
 #endif
 
-#include "Mod/Part/App/Attacher.h"
-#include <Base/PlacementPy.h>
 #include <App/DocumentObjectPy.h>
-#include "AttachExtensionPy.h"
-#include "TopoShapePy.h"
+#include <Base/PlacementPy.h>
 
-#include "OCCError.h"
-
-// inclusion of the generated files (generated out of AttachableObjectPy.xml)
 #include "AttachEnginePy.h"
 #include "AttachEnginePy.cpp"
+#include "AttachExtensionPy.h"
+#include "OCCError.h"
+#include "TopoShapePy.h"
+
 
 using namespace Attacher;
 
 // returns a string which represents the object e.g. when printed in python
-std::string AttachEnginePy::representation(void) const
+std::string AttachEnginePy::representation() const
 {
     return std::string("<Attacher::AttachEngine>");
 }
@@ -79,7 +77,7 @@ int AttachEnginePy::PyInit(PyObject* args, PyObject* /*kwd*/)
         if (!pNewAttacher) {
             std::stringstream errMsg;
             errMsg << "Object if this type is not derived from AttachEngine: " << typeName;
-            PyErr_SetString(Base::BaseExceptionFreeCADError, errMsg.str().c_str());
+            PyErr_SetString(Base::PyExc_FC_GeneralError, errMsg.str().c_str());
             return -1;
         }
         AttachEngine* oldAttacher = this->getAttachEnginePtr();
@@ -88,13 +86,13 @@ int AttachEnginePy::PyInit(PyObject* args, PyObject* /*kwd*/)
         return 0;
     }
 
-    PyErr_SetString(Base::BaseExceptionFreeCADError, "Wrong set of constructor arguments. Can be: (), ('Attacher::AttachEngine3D'), ('Attacher::AttachEnginePlane'), ('Attacher::AttachEngineLine'), ('Attacher::AttachEnginePoint'), (other_attacher_instance).");
+    PyErr_SetString(PyExc_TypeError, "Wrong set of constructor arguments. Can be: (), ('Attacher::AttachEngine3D'), ('Attacher::AttachEnginePlane'), ('Attacher::AttachEngineLine'), ('Attacher::AttachEnginePoint'), (other_attacher_instance).");
     return -1;
 
 }
 
 
-Py::String AttachEnginePy::getAttacherType(void) const
+Py::String AttachEnginePy::getAttacherType() const
 {
     return  Py::String(std::string(this->getAttachEnginePtr()->getTypeId().getName()));
 }
@@ -108,10 +106,11 @@ Py::String AttachEnginePy::getAttacherType(void) const
     catch (Standard_Failure& e) {\
         throw Py::Exception(Part::PartExceptionOCCError, e.GetMessageString());\
     } catch (Base::Exception &e) {\
-        throw Py::Exception(Base::BaseExceptionFreeCADError, e.what());\
+        e.setPyException();\
+        throw Py::Exception();\
     }
 
-Py::String AttachEnginePy::getMode(void) const
+Py::String AttachEnginePy::getMode() const
 {
     try {
         AttachEngine &attacher = *(this->getAttachEnginePtr());
@@ -123,12 +122,12 @@ void AttachEnginePy::setMode(Py::String arg)
 {
     try {
         AttachEngine &attacher = *(this->getAttachEnginePtr());
-        std::string modeName = (std::string)arg;
+        std::string modeName = static_cast<std::string>(arg);
         attacher.mapMode = attacher.getModeByName(modeName);
     } ATTACHERPY_STDCATCH_ATTR;
 }
 
-Py::Object AttachEnginePy::getReferences(void) const
+Py::Object AttachEnginePy::getReferences() const
 {
     try {
         AttachEngine &attacher = *(this->getAttachEnginePtr());
@@ -151,7 +150,7 @@ void AttachEnginePy::setReferences(Py::Object arg)
     } ATTACHERPY_STDCATCH_ATTR;
 }
 
-Py::Object AttachEnginePy::getAttachmentOffset(void) const
+Py::Object AttachEnginePy::getAttachmentOffset() const
 {
     try {
         AttachEngine &attacher = *(this->getAttachEnginePtr());
@@ -174,7 +173,7 @@ void AttachEnginePy::setAttachmentOffset(Py::Object arg)
     } ATTACHERPY_STDCATCH_ATTR;
 }
 
-Py::Boolean AttachEnginePy::getReverse(void) const
+Py::Boolean AttachEnginePy::getReverse() const
 {
     try {
         AttachEngine &attacher = *(this->getAttachEnginePtr());
@@ -190,7 +189,7 @@ void AttachEnginePy::setReverse(Py::Boolean arg)
     } ATTACHERPY_STDCATCH_ATTR;
 }
 
-Py::Float AttachEnginePy::getParameter(void) const
+Py::Float AttachEnginePy::getParameter() const
 {
     try {
         AttachEngine &attacher = *(this->getAttachEnginePtr());
@@ -207,7 +206,7 @@ void AttachEnginePy::setParameter(Py::Float arg)
 }
 
 
-Py::List AttachEnginePy::getCompleteModeList(void) const
+Py::List AttachEnginePy::getCompleteModeList() const
 {
     try {
         Py::List ret;
@@ -219,7 +218,7 @@ Py::List AttachEnginePy::getCompleteModeList(void) const
     } ATTACHERPY_STDCATCH_ATTR;
 }
 
-Py::List AttachEnginePy::getCompleteRefTypeList(void) const
+Py::List AttachEnginePy::getCompleteRefTypeList() const
 {
     try {
         Py::List ret;
@@ -231,13 +230,13 @@ Py::List AttachEnginePy::getCompleteRefTypeList(void) const
     } ATTACHERPY_STDCATCH_ATTR;
 }
 
-Py::List AttachEnginePy::getImplementedModes(void) const
+Py::List AttachEnginePy::getImplementedModes() const
 {
     try {
         Py::List ret;
         AttachEngine &attacher = *(this->getAttachEnginePtr());
         for(int imode = 0   ;   imode < mmDummy_NumberOfModes   ;   imode++){
-            if(attacher.modeRefTypes[imode].size() > 0){
+            if(!attacher.modeRefTypes[imode].empty()){
                 ret.append(Py::String(attacher.getModeName(eMapMode(imode))));
             }
         }
@@ -255,7 +254,7 @@ Py::List AttachEnginePy::getImplementedModes(void) const
         PyErr_SetString(Part::PartExceptionOCCError, e.GetMessageString());\
         return NULL;\
     } catch (Base::Exception &e) {\
-        PyErr_SetString(Base::BaseExceptionFreeCADError, e.what());\
+        PyErr_SetString(Base::PyExc_FC_GeneralError, e.what());\
         return NULL;\
     } catch (const Py::Exception &){\
         return NULL;\
@@ -266,7 +265,7 @@ PyObject* AttachEnginePy::getModeInfo(PyObject* args)
 {
     char* modeName;
     if (!PyArg_ParseTuple(args, "s", &modeName))
-        return 0;
+        return nullptr;
 
     try {
         AttachEngine &attacher = *(this->getAttachEnginePtr());
@@ -322,7 +321,7 @@ PyObject* AttachEnginePy::getRefTypeOfShape(PyObject* args)
 {
     PyObject *pcObj;
     if (!PyArg_ParseTuple(args, "O!", &(Part::TopoShapePy::Type), &pcObj))
-        return NULL;
+        return nullptr;
 
     try{
         TopoDS_Shape shape = static_cast<Part::TopoShapePy*>(pcObj)->getTopoShapePtr()->getShape();
@@ -336,7 +335,7 @@ PyObject* AttachEnginePy::isFittingRefType(PyObject* args)
     char* type_shape_str;
     char* type_need_str;
     if (!PyArg_ParseTuple(args, "ss", &type_shape_str, &type_need_str))
-        return 0;
+        return nullptr;
     try {
         eRefType type_shape = AttachEngine::getRefTypeByName(std::string(type_shape_str));
         eRefType type_need = AttachEngine::getRefTypeByName(std::string(type_need_str));
@@ -349,7 +348,7 @@ PyObject* AttachEnginePy::downgradeRefType(PyObject* args)
 {
     char* type_shape_str;
     if (!PyArg_ParseTuple(args, "s", &type_shape_str))
-        return 0;
+        return nullptr;
     try {
         eRefType type_shape = AttachEngine::getRefTypeByName(std::string(type_shape_str));
         eRefType result = AttachEngine::downgradeType(type_shape);
@@ -361,7 +360,7 @@ PyObject* AttachEnginePy::getRefTypeInfo(PyObject* args)
 {
     char* typeName;
     if (!PyArg_ParseTuple(args, "s", &typeName))
-        return 0;
+        return nullptr;
 
     try {
         AttachEngine &attacher = *(this->getAttachEnginePtr());
@@ -404,7 +403,7 @@ PyObject* AttachEnginePy::getRefTypeInfo(PyObject* args)
 PyObject* AttachEnginePy::copy(PyObject* args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     return new AttachEnginePy(this->getAttachEnginePtr()->copy());
 }
@@ -413,7 +412,7 @@ PyObject* AttachEnginePy::calculateAttachedPlacement(PyObject* args)
 {
     PyObject *pcObj;
     if (!PyArg_ParseTuple(args, "O!", &(Base::PlacementPy::Type), &pcObj))
-        return NULL;
+        return nullptr;
     try{
         const Base::Placement& plm = *(static_cast<const Base::PlacementPy*>(pcObj)->getPlacementPtr());
         Base::Placement result;
@@ -426,13 +425,13 @@ PyObject* AttachEnginePy::calculateAttachedPlacement(PyObject* args)
         return new Base::PlacementPy(new Base::Placement(result));
     } ATTACHERPY_STDCATCH_METH;
 
-    return NULL;
+    return nullptr;
 }
 
 PyObject* AttachEnginePy::suggestModes(PyObject* args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return 0;
+        return nullptr;
 
     try {
         AttachEngine &attacher = *(this->getAttachEnginePtr());
@@ -515,7 +514,7 @@ PyObject* AttachEnginePy::readParametersFromFeature(PyObject* args)
 {
     PyObject* obj;
     if (!PyArg_ParseTuple(args, "O!",&(App::DocumentObjectPy::Type),&obj))
-        return NULL;    // NULL triggers exception
+        return nullptr;
 
     try{
         App::DocumentObjectPy* dobjpy = static_cast<App::DocumentObjectPy*>(obj);
@@ -539,7 +538,7 @@ PyObject* AttachEnginePy::writeParametersToFeature(PyObject* args)
 {
     PyObject* obj;
     if (!PyArg_ParseTuple(args, "O!",&(App::DocumentObjectPy::Type),&obj))
-        return NULL;    // NULL triggers exception
+        return nullptr;
 
     try{
         App::DocumentObjectPy* dobjpy = static_cast<App::DocumentObjectPy*>(obj);
@@ -560,7 +559,7 @@ PyObject* AttachEnginePy::writeParametersToFeature(PyObject* args)
 
 PyObject* AttachEnginePy::getCustomAttributes(const char*) const
 {
-    return 0;
+    return nullptr;
 }
 
 int AttachEnginePy::setCustomAttributes(const char*,PyObject*)

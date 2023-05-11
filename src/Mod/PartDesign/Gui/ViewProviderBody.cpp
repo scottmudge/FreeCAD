@@ -24,8 +24,6 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <boost_bind_bind.hpp>
-# include <Inventor/nodes/SoSeparator.h>
 # include <Inventor/actions/SoGetBoundingBoxAction.h>
 # include <Inventor/SbColor.h>
 # include <Precision.hxx>
@@ -33,16 +31,16 @@
 # include <QMessageBox>
 #endif
 
-#include <Base/Console.h>
-#include <Base/Tools.h>
 #include <App/Part.h>
 #include <App/Origin.h>
-#include <App/Link.h>
 #include <App/DocumentObserver.h>
+#include <Base/Console.h>
+#include <Base/Tools.h>
 #include <Gui/ActionFunction.h>
+#include <Gui/Application.h>
 #include <Gui/Command.h>
 #include <Gui/Document.h>
-#include <Gui/Application.h>
+#include <Gui/MDIView.h>
 #include <Gui/View3DInventor.h>
 #include <Gui/View3DInventorViewer.h>
 #include <Gui/ViewProviderOrigin.h>
@@ -59,23 +57,22 @@
 #include <Mod/PartDesign/App/DatumLine.h>
 #include <Mod/PartDesign/App/DatumPlane.h>
 #include <Mod/PartDesign/App/DatumCS.h>
+#include <Mod/PartDesign/App/FeatureSketchBased.h>
 #include <Mod/PartDesign/App/FeatureBase.h>
 #include <Mod/PartDesign/App/FeatureWrap.h>
 #include <Mod/PartDesign/App/ShapeBinder.h>
 #include <Mod/PartDesign/App/AuxGroup.h>
 
-#include "ViewProviderDatum.h"
-#include "Utils.h"
-
 #include "ViewProviderBody.h"
+#include "Utils.h"
 #include "ViewProvider.h"
-#include <Gui/Application.h>
-#include <Gui/MDIView.h>
+#include "ViewProviderDatum.h"
+
 
 using namespace PartDesignGui;
 namespace bp = boost::placeholders;
 
-const char* PartDesignGui::ViewProviderBody::BodyModeEnum[] = {"Through","Tip",NULL};
+const char* PartDesignGui::ViewProviderBody::BodyModeEnum[] = {"Through","Tip",nullptr};
 
 PROPERTY_SOURCE_WITH_EXTENSIONS(PartDesignGui::ViewProviderBody,PartGui::ViewProviderPart)
 
@@ -148,7 +145,7 @@ void ViewProviderBody::setupContextMenu(QMenu* menu, QObject* receiver, const ch
 
     Gui::ActionFunction* func = new Gui::ActionFunction(menu);
     QAction* act = menu->addAction(tr("Toggle active body"));
-    func->trigger(act, boost::bind(&ViewProviderBody::doubleClicked, this));
+    func->trigger(act, std::bind(&ViewProviderBody::doubleClicked, this));
 
     act = menu->addAction(body->AutoGroupSolids.getValue() ? 
                           tr("Disable auto solid group") : tr("Enable auto solid group"));
@@ -208,14 +205,14 @@ void ViewProviderBody::setupContextMenu(QMenu* menu, QObject* receiver, const ch
     Gui::ViewProviderGeometryObject::setupContextMenu(menu, receiver, member);
 }
 
-bool ViewProviderBody::doubleClicked(void)
+bool ViewProviderBody::doubleClicked()
 {
     //first, check if the body is already active.
     auto activeDoc = Gui::Application::Instance->activeDocument();
     if(!activeDoc)
         activeDoc = getDocument();
     auto activeView = activeDoc->setActiveView(this);
-    if(!activeView) 
+    if(!activeView)
         return false;
 
     App::DocumentObject *topParent = nullptr;
@@ -224,7 +221,7 @@ bool ViewProviderBody::doubleClicked(void)
         bool selected;
         {
             Gui::SelectionNoTopParentCheck guard;
-            selected = Gui::Selection().isSelected(topParent ? topParent : getObject(), subname.c_str(), 0);
+            selected = Gui::Selection().isSelected(topParent ? topParent : getObject(), subname.c_str(), Gui::ResolveMode::NoResolve);
         }
         if (selected) {
             //active body double-clicked. Deactivate.
@@ -486,10 +483,25 @@ void ViewProviderBody::updateData(const App::Property* prop)
                 static_cast<PartDesignGui::ViewProvider*>(vp)->setTipIcon(feature == tip);
             }
         }
-    } else if (prop == &body->AutoGroupSolids)
+
+        if (tip)
+            copyColorsfromTip(tip);
+
+    } else if (prop == &body->AutoGroupSolids) {
         checkSiblings();
+    }
 
     PartGui::ViewProviderPart::updateData(prop);
+}
+
+void ViewProviderBody::copyColorsfromTip(App::DocumentObject* tip)
+{
+    // update DiffuseColor
+    Gui::ViewProvider* vptip = Gui::Application::Instance->getViewProvider(tip);
+    if (vptip && vptip->isDerivedFrom(PartGui::ViewProviderPartExt::getClassTypeId())) {
+        auto colors = static_cast<PartGui::ViewProviderPartExt*>(vptip)->DiffuseColor.getValues();
+        this->DiffuseColor.setValues(colors);
+    }
 }
 
 void ViewProviderBody::onChanged(const App::Property* prop) {
@@ -610,7 +622,7 @@ void ViewProviderBody::setVisualBodyMode(bool bodymode) {
     }
 }
 
-std::vector< std::string > ViewProviderBody::getDisplayModes(void) const {
+std::vector< std::string > ViewProviderBody::getDisplayModes() const {
 
     //we get all display modes and remove the "Group" mode, as this is what we use for "Through"
     //body display mode

@@ -261,9 +261,9 @@
        </layout>
       </item>
      </layout>
-     <zorder></zorder>
-     <zorder></zorder>
-     <zorder></zorder>
+     <zorder/>
+     <zorder/>
+     <zorder/>
     </widget>
    </item>
    <item>
@@ -445,7 +445,7 @@
          </spacer>
         </item>
         <item>
-         <widget class="Gui::PrefDoubleSpinBox" name="gui::prefdoublespinbox_3">
+         <widget class="Gui::PrefQuantitySpinBox" name="gui::prefdoublespinbox_3">
           <property name="enabled">
            <bool>true</bool>
           </property>
@@ -455,17 +455,17 @@
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
-          <property name="suffix">
-           <string>mm</string>
-          </property>
           <property name="decimals">
            <number>4</number>
           </property>
           <property name="maximum">
            <double>9999.989999999999782</double>
           </property>
-          <property name="value">
+          <property name="rawValue">
            <double>1.000000000000000</double>
+          </property>
+          <property name="unit">
+           <string notr="true">mm</string>
           </property>
           <property name="prefEntry" stdset="0">
            <cstring>gridSpacing</cstring>
@@ -779,7 +779,7 @@
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
   <customwidget>
-   <class>Gui::PrefDoubleSpinBox</class>
+   <class>Gui::PrefQuantitySpinBox</class>
    <extends>QDoubleSpinBox</extends>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>

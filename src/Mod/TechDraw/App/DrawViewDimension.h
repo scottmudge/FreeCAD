@@ -20,16 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef _TechDraw_DrawViewDimension_h_
-#define _TechDraw_DrawViewDimension_h_
+#ifndef TechDraw_DrawViewDimension_h_
+#define TechDraw_DrawViewDimension_h_
+
 #include <tuple>
 
-# include <App/DocumentObject.h>
-# include <App/FeaturePython.h>
-# include <App/PropertyLinks.h>
-# include <Base/UnitsApi.h>
+#include <App/DocumentObject.h>
+#include <Base/UnitsApi.h>
+#include <Mod/TechDraw/TechDrawGlobal.h>
 
 #include "DrawView.h"
+
 
 class TopoDS_Shape;
 
@@ -45,7 +46,7 @@ struct DimRef {
     std::string   sub;
 };
 
-typedef std::pair<Base::Vector3d,Base::Vector3d> pointPair;
+using pointPair = std::pair<Base::Vector3d,Base::Vector3d>;
 
 struct anglePoints
 {
@@ -54,9 +55,23 @@ struct anglePoints
 
     anglePoints()
     {
-        ends.first  = Base::Vector3d(0.0,0.0,0.0);
-        ends.second = Base::Vector3d(0.0,0.0,0.0);
-        vertex      = Base::Vector3d(0.0,0.0,0.0);
+        ends.first  = Base::Vector3d(0.0, 0.0, 0.0);
+        ends.second = Base::Vector3d(0.0, 0.0, 0.0);
+        vertex      = Base::Vector3d(0.0, 0.0, 0.0);
+    }
+
+    anglePoints(const anglePoints& ap)
+        : ends(ap.ends)
+        , vertex(ap.vertex)
+    {
+
+    }
+
+    anglePoints& operator= (const anglePoints& ap)
+    {
+        ends = ap.ends;
+        vertex = ap.vertex;
+        return *this;
     }
 };
 
@@ -70,19 +85,42 @@ struct arcPoints
     Base::Vector3d midArc;
     bool arcCW;
 
-    arcPoints() 
+    arcPoints()
     {
          isArc = false;
          radius = 0.0;
-         center         = Base::Vector3d(0.0,0.0,0.0);
-         onCurve.first  = Base::Vector3d(0.0,0.0,0.0);
-         onCurve.second = Base::Vector3d(0.0,0.0,0.0);
-         arcEnds.first  = Base::Vector3d(0.0,0.0,0.0);
-         arcEnds.second = Base::Vector3d(0.0,0.0,0.0);
-         midArc         = Base::Vector3d(0.0,0.0,0.0);
+         center         = Base::Vector3d(0.0, 0.0, 0.0);
+         onCurve.first  = Base::Vector3d(0.0, 0.0, 0.0);
+         onCurve.second = Base::Vector3d(0.0, 0.0, 0.0);
+         arcEnds.first  = Base::Vector3d(0.0, 0.0, 0.0);
+         arcEnds.second = Base::Vector3d(0.0, 0.0, 0.0);
+         midArc         = Base::Vector3d(0.0, 0.0, 0.0);
          arcCW = false;
     }
 
+    arcPoints(const arcPoints& ap)
+        : isArc(ap.isArc)
+        , radius(ap.radius)
+        , center(ap.center)
+        , onCurve(ap.onCurve)
+        , arcEnds(ap.arcEnds)
+        , midArc(ap.midArc)
+        , arcCW(ap.arcCW)
+    {
+
+    }
+
+    arcPoints& operator= (const arcPoints& ap)
+    {
+        isArc = ap.isArc;
+        radius = ap.radius;
+        center = ap.center;
+        onCurve = ap.onCurve;
+        arcEnds = ap.arcEnds;
+        midArc = ap.midArc;
+        arcCW = ap.arcCW;
+        return *this;
+    }
 };
 
 class TechDrawExport DrawViewDimension : public TechDraw::DrawView
@@ -92,7 +130,7 @@ class TechDrawExport DrawViewDimension : public TechDraw::DrawView
 public:
     /// Constructor
     DrawViewDimension();
-    virtual ~DrawViewDimension();
+    ~DrawViewDimension() override;
 
     App::PropertyEnumeration        MeasureType;           //True/Projected
     App::PropertyLinkSubList        References2D;          //Points to Projection SubFeatures
@@ -110,6 +148,10 @@ public:
     App::PropertyQuantityConstraint OverTolerance;
     App::PropertyQuantityConstraint UnderTolerance;
 
+    App::PropertyBool               AngleOverride;
+    App::PropertyAngle              LineAngle;
+    App::PropertyAngle              ExtensionAngle;
+
     enum RefType{
             invalidRef,
             oneEdge,
@@ -121,58 +163,60 @@ public:
 
 
     short mustExecute() const override;
-    virtual bool has2DReferences(void) const;
-    virtual bool has3DReferences(void) const;
-    bool hasOverUnderTolerance(void) const;
+    virtual bool has2DReferences() const;
+    virtual bool has3DReferences() const;
+    bool hasOverUnderTolerance() const;
 
     /** @name methods override Feature */
     //@{
     /// recalculate the Feature
-    virtual App::DocumentObjectExecReturn *execute(void) override;
+    App::DocumentObjectExecReturn *execute() override;
     //@}
 
     /// returns the type name of the ViewProvider
-    virtual const char* getViewProviderName(void) const override {
+    const char* getViewProviderName() const override {
         return "TechDrawGui::ViewProviderDimension";
     }
     //return PyObject as DrawViewDimensionPy
-    virtual PyObject *getPyObject(void) override;
+    PyObject *getPyObject() override;
 
     virtual std::string getFormattedToleranceValue(int partial);
     virtual std::pair<std::string, std::string> getFormattedToleranceValues(int partial = 0);
     virtual std::string getFormattedDimensionValue(int partial = 0);
-    virtual std::string formatValue(qreal value, QString qFormatSpec, int partial = 0);
+    virtual std::string formatValue(qreal value, QString qFormatSpec, int partial = 0, bool isDim = true);
+
+    virtual bool haveTolerance();
 
     virtual double getDimValue();
     QStringList getPrefixSuffixSpec(QString fSpec);
 
     virtual DrawViewPart* getViewPart() const;
-    virtual QRectF getRect() const override { return QRectF(0,0,1,1);}          //pretend dimensions always fit!
+    QRectF getRect() const override { return {0, 0, 1, 1}; }          //pretend dimensions always fit!
     virtual int getRefType() const;             //Vertex-Vertex, Edge, Edge-Edge
     static int getRefTypeSubElements(const std::vector<std::string> &);             //Vertex-Vertex, Edge, Edge-Edge
     void setAll3DMeasurement();
-    void clear3DMeasurements(void);
-    virtual bool checkReferences2D(void) const;
-    pointPair getLinearPoints(void) {return m_linearPoints; }
-    arcPoints getArcPoints(void) {return m_arcPoints; }
-    anglePoints getAnglePoints(void) {return m_anglePoints; }
+    void clear3DMeasurements();
+    virtual bool checkReferences2D() const;
+    virtual pointPair getLinearPoints() {return m_linearPoints; }
+    arcPoints getArcPoints() {return m_arcPoints; }
+    anglePoints getAnglePoints() {return m_anglePoints; }
     bool leaderIntersectsArc(Base::Vector3d s, Base::Vector3d pointOnCircle);
 
-    bool isMultiValueSchema(void) const;
+    bool isMultiValueSchema() const;
 
     std::string getBaseLengthUnit(Base::UnitSystem system);
 
-    pointPair getArrowPositions(void);
+    pointPair getArrowPositions();
     void saveArrowPositions(const Base::Vector2d positions[]);
 
     bool showUnits() const;
     bool useDecimals() const;
 
 protected:
-    virtual void handleChangedPropertyType(Base::XMLReader &, const char * , App::Property * ) override;
-    virtual void Restore(Base::XMLReader& reader) override;
-    virtual void onChanged(const App::Property* prop) override;
-    virtual void onDocumentRestored() override;
+    void handleChangedPropertyType(Base::XMLReader &, const char * , App::Property * ) override;
+    void Restore(Base::XMLReader& reader) override;
+    void onChanged(const App::Property* prop) override;
+    void onDocumentRestored() override;
     std::string getPrefix() const;
     std::string getDefaultFormatSpec(bool isToleranceFormat = false) const;
     virtual pointPair getPointsOneEdge();
@@ -190,6 +234,10 @@ protected:
                             TopoDS_Shape s2) const;
     pointPair   m_linearPoints;
     pointPair   m_arrowPositions;
+
+    void resetLinear();
+    void resetAngular();
+    void resetArc();
 
 private:
     static const char* TypeEnums[];

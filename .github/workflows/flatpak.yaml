@@ -1,0 +1,14 @@
+name: Publish flatpak
+
+on:
+  push:
+    tags:
+      - "*"
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: realthunder/org.freecadweb.FreeCAD.Link/.github/workflows/worker.yaml@master
+    with:
+      ref: ${{ github.ref_name }}

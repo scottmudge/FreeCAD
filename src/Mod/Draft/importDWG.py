@@ -44,14 +44,12 @@ https://knowledge.autodesk.com/support/autocad/downloads/
 # *                                                                         *
 # ***************************************************************************
 
-# TODO: use subprocess.popen() instead of subprocess.call()
-
 import six
 import FreeCAD
 from FreeCAD import Console as FCC
 
 if FreeCAD.GuiUp:
-    from DraftTools import translate
+    from draftutils.translate import translate
 else:
     def translate(context, txt):
         return txt
@@ -151,34 +149,25 @@ def getTeighaConverter():
     -------
     str
         The full path of the converter executable
-        '/usr/bin/TeighaFileConverter'
+        '/usr/bin/ODAFileConverter'
     """
     import FreeCAD, os, platform
     p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Draft")
-    p = p.GetString("TeighaFileConverter")
-    if p:
+    path = p.GetString("TeighaFileConverter")
+    if path:
         # path set manually
-        teigha = p
-    else:
-        # try to find teigha
-        teigha = None
-        if platform.system() == "Linux":
-            teigha = "/usr/bin/TeighaFileConverter"
-            if not os.path.exists(teigha):
-                teigha = "/usr/bin/ODAFileConverter"
-        elif platform.system() == "Windows":
-            odadir = os.path.expandvars("%ProgramFiles%\ODA")
-            if os.path.exists(odadir):
-                subdirs = os.walk(odadir).next()[1]
-                for sub in subdirs:
-                    t = (odadir + os.sep + sub + os.sep
-                         + "TeighaFileConverter.exe")
-                    t = os.path.join(odadir, sub, "TeighaFileConverter.exe")
-                    if os.path.exists(t):
-                        teigha = t
-    if teigha:
-        if os.path.exists(teigha):
-            return teigha
+        return path
+    elif platform.system() == "Linux":
+        path = "/usr/bin/ODAFileConverter"
+        if os.path.exists(path):
+            return path
+    elif platform.system() == "Windows":
+        odadir = os.path.expandvars("%ProgramFiles%\ODA")
+        if os.path.exists(odadir):
+            for sub in os.listdir(odadir):
+                path = os.path.join(odadir, sub, "ODAFileConverter.exe")
+                if os.path.exists(path):
+                    return path
     return None
 
 
@@ -225,13 +214,10 @@ def convertToDxf(dwgfilename):
             indir = os.path.dirname(dwgfilename)
             outdir = tempfile.mkdtemp()
             basename = os.path.basename(dwgfilename)
-            cmdline = ('"%s" "%s" "%s" "ACAD2000" "DXF" "0" "1" "%s"' % (teigha, indir, outdir, basename))
-            FCC.PrintMessage(translate("draft", "Converting:") + " " + cmdline + "\n")
-            if six.PY2:
-                if isinstance(cmdline, six.text_type):
-                    encoding = sys.getfilesystemencoding()
-                    cmdline = cmdline.encode(encoding)
-            subprocess.call(cmdline, shell=True)  # os.system(cmdline)
+            cmdline = [teigha, indir, outdir, "ACAD2000", "DXF", "0", "1", basename]
+            FCC.PrintMessage(translate("draft", "Converting:") + " " + str(cmdline) + "\n")
+            proc = subprocess.Popen(cmdline)
+            proc.communicate()
             result = outdir + os.sep + os.path.splitext(basename)[0] + ".dxf"
             if os.path.exists(result):
                 FCC.PrintMessage(translate("draft", "Conversion successful") + "\n")
@@ -249,7 +235,7 @@ def convertToDxf(dwgfilename):
             outdir = tempfile.mkdtemp()
             basename = os.path.basename(dwgfilename)
             result = outdir + os.sep + os.path.splitext(basename)[0] + ".dxf"
-            proc = subprocess.Popen((path, "-o", result, dwgfilename))
+            proc = subprocess.Popen((path, "-f", "-o", result, dwgfilename))
             proc.communicate()
             return result
         except Exception:
@@ -300,9 +286,10 @@ def convertToDwg(dxffilename, dwgfilename):
             indir = os.path.dirname(dxffilename)
             outdir = os.path.dirname(dwgfilename)
             basename = os.path.basename(dxffilename)
-            cmdline = ('"%s" "%s" "%s" "ACAD2000" "DWG" "0" "1" "%s"' % (teigha, indir, outdir, basename))
-            FCC.PrintMessage(translate("draft", "Converting:") + " " + cmdline + "\n")
-            subprocess.call(cmdline, shell=True)  # os.system(cmdline)
+            cmdline = [teigha, indir, outdir, "ACAD2000", "DWG", "0", "1", basename]
+            FCC.PrintMessage(translate("draft", "Converting:") + " " + str(cmdline) + "\n")
+            proc = subprocess.Popen(cmdline)
+            proc.communicate()
             return dwgfilename
         else:
             if conv != 0:

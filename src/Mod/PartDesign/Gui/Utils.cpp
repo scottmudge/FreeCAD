@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Copyright (C) 2015 Alexander Golubev (Fat-Zer) <fatzer2@gmail.com>     *
+ *   Copyright (C) 2015 Alexander Golubev (Fat-Zer) <fatzer2@gmail.com>    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -24,6 +24,7 @@
 #include <boost/signals2/connection.hpp>
 
 #ifndef _PreComp_
+# include <QApplication>
 # include <QPointer>
 # include <QMessageBox>
 # include <QCheckBox>
@@ -63,22 +64,24 @@
 #include <Mod/Part/Gui/PartParams.h>
 #include <Mod/PartDesign/App/Feature.h>
 #include <Mod/PartDesign/App/Body.h>
-#include <Mod/PartDesign/App/FeaturePrimitive.h>
+#include <Mod/PartDesign/App/DatumCS.h>
+#include <Mod/PartDesign/App/Feature.h>
 #include <Mod/PartDesign/App/FeatureSketchBased.h>
 #include <Mod/PartDesign/App/FeatureBoolean.h>
-#include <Mod/PartDesign/App/DatumCS.h>
+#include <Mod/PartDesign/App/FeaturePrimitive.h>
 #include <Mod/PartDesign/App/FeatureWrap.h>
 #include <Mod/PartDesign/App/ShapeBinder.h>
 
-#include "ReferenceSelection.h"
 #include "Utils.h"
 #include "WorkflowManager.h"
 #include "ViewProviderBody.h"
 #include "TaskWrapParameters.h"
 #include "ViewProviderAddSub.h"
+#include "DlgActiveBody.h"
+#include "ReferenceSelection.h"
+#include "WorkflowManager.h"
 
 namespace sp = std::placeholders;
-#include "DlgActiveBody.h"
 
 FC_LOG_LEVEL_INIT("PartDesignGui",true,true)
 
@@ -115,7 +118,7 @@ bool setEdit(App::DocumentObject *obj, App::DocumentObject *container, const cha
     if(container && active!=container) {
         parent = obj;
         subname.clear();
-    }else{
+    } else {
         subname += obj->getNameInDocument();
         subname += '.';
     }
@@ -134,7 +137,7 @@ bool setEdit(App::DocumentObject *obj, App::DocumentObject *container, const cha
  * \param autoActivate
  * \return Body
  */
-PartDesign::Body *getBody(bool messageIfNot, bool autoActivate, bool assertModern, 
+PartDesign::Body *getBody(bool messageIfNot, bool autoActivate, bool assertModern,
         App::DocumentObject **topParent, std::string *subname)
 {
     PartDesign::Body * activeBody = nullptr;
@@ -147,7 +150,7 @@ PartDesign::Body *getBody(bool messageIfNot, bool autoActivate, bool assertModer
 
             if (!activeBody && autoActivate) {
                 App::SubObjectT ref;
-                for (auto & sel : Gui::Selection().getSelectionT(doc->getName(), 0)) {
+                for (auto & sel : Gui::Selection().getSelectionT(doc->getName(), Gui::ResolveMode::NoResolve)) {
                     auto objs = sel.getSubObjectList();
                     for (auto it = objs.begin(); it != objs.end(); ++it) {
                         auto linked = (*it)->getLinkedObject(true);
@@ -210,14 +213,14 @@ PartDesign::Body * makeBodyActive(App::DocumentObject *body, App::Document *doc,
                                   App::DocumentObject **topParent,
                                   std::string *subname)
 {
-    App::DocumentObject *parent = 0;
+    App::DocumentObject *parent = nullptr;
     std::string sub;
 
     for(auto &v : body->getParents()) {
         if(v.first->getDocument()!=doc)
             continue;
         if(parent) {
-            body = 0;
+            body = nullptr;
             break;
         }
         parent = v.first;
@@ -298,7 +301,7 @@ App::Part* getActivePart(App::DocumentObject **topParent, std::string *subname) 
     if ( activeView ) {
         return activeView->getActiveObject<App::Part*> (PARTKEY,topParent,subname);
     } else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -364,7 +367,7 @@ void fixSketchSupport (Sketcher::SketchObject* sketch)
     bool reverseSketch = (sketchVector.x + sketchVector.y + sketchVector.z) < 0.0 ;
     if (reverseSketch) sketchVector *= -1.0;
 
-    App::Plane *plane =0;
+    App::Plane *plane =nullptr;
 
     if (sketchVector == Base::Vector3d(0,0,1))
         plane = origin->getXY ();
@@ -536,7 +539,9 @@ bool isFeatureMovable(App::DocumentObject* const feat)
             return false;
 
         if (auto prop = static_cast<App::PropertyLinkList*>(prim->getPropertyByName("Sections"))) {
-            if (std::any_of(prop->getValues().begin(), prop->getValues().end(), [](App::DocumentObject* obj){return !isFeatureMovable(obj); }))
+            if (std::any_of(prop->getValues().begin(), prop->getValues().end(), [](App::DocumentObject* obj){
+                return !isFeatureMovable(obj);
+            }))
                 return false;
         }
 
@@ -1232,7 +1237,8 @@ public:
                     objT.getDocumentName().c_str(),
                     objT.getObjectName().c_str(),
                     objT.getSubName().c_str(),
-                    0,0,0,2,true);
+                    0,0,0,
+                    Gui::SelectionChanges::MsgSource::TreeView,true);
             return;
         default:
             break;

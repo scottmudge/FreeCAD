@@ -20,16 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef PART_FEATUREEXTRUSION_H
 #define PART_FEATUREEXTRUSION_H
 
 #include <App/PropertyStandard.h>
 #include <App/PropertyUnits.h>
-#include <App/StringHasher.h>
-#include "PartFeature.h"
+#include "ExtrusionHelper.h"
 #include "FaceMakerCheese.h"
-#include <TopoDS_Face.hxx>
+#include "PartFeature.h"
+
 
 namespace Part
 {
@@ -59,27 +58,6 @@ public:
     App::PropertyBool UsePipeForDraft;
     App::PropertyBool Linearize;
 
-    /**
-     * @brief The ExtrusionParameters struct is supposed to be filled with final
-     * extrusion parameters, after resolving links, applying mode logic,
-     * reversing, etc., and be passed to extrudeShape.
-     */
-    struct PartExport ExtrusionParameters {
-        gp_Dir dir;
-        double lengthFwd;
-        double lengthRev;
-        bool solid;
-        bool innertaper;
-        bool usepipe;
-        bool linearize;
-        double taperAngleFwd; //in radians
-        double taperAngleRev;
-        double innerTaperAngleFwd; //in radians
-        double innerTaperAngleRev;
-        std::string faceMakerClass;
-        ExtrusionParameters();
-    };
-
     /** @name methods override feature */
     //@{
     /// recalculate the feature
@@ -99,7 +77,7 @@ public:
      * @param params: extrusion parameters
      * @return result of extrusion
      */
-    static void extrudeShape(TopoShape &result, const TopoShape &source, const ExtrusionParameters& params);
+    static void extrudeShape(TopoShape &result, const TopoShape &source, const ExtrusionHelper::Parameters& params);
 
     /**
      * @brief fetchAxisLink: read AxisLink to obtain the direction and
@@ -112,17 +90,17 @@ public:
      * link is wrong.
      */
     static bool fetchAxisLink(const App::PropertyLinkSub& axisLink,
-                              Base::Vector3d &basepoint,
-                              Base::Vector3d &dir);
+                              Base::Vector3d& basepoint,
+                              Base::Vector3d& dir);
 
     /**
      * @brief computeFinalParameters: applies mode logic and fetches links, to
      * compute the actual parameters of extrusion. Dir property is updated in
      * the process, hence the function is non-const.
      */
-    ExtrusionParameters computeFinalParameters();
+    ExtrusionHelper::Parameters computeFinalParameters();
 
-    static Base::Vector3d calculateShapeNormal(const App::PropertyLink &shapeLink);
+    static Base::Vector3d calculateShapeNormal(const App::PropertyLink& shapeLink);
 
 public: //mode enumerations
     enum eDirMode{
@@ -131,11 +109,8 @@ public: //mode enumerations
         dmNormal
     };
     static const char* eDirModeStrings[];
-    static void makeDraft(const ExtrusionParameters& params, const TopoShape&, 
-            std::vector<TopoShape>&, App::StringHasherRef hasher);
-
 protected:
-    virtual void setupObject() override;
+    void setupObject() override;
 };
 
 /**
@@ -147,12 +122,17 @@ class FaceMakerExtrusion: public FaceMakerCheese
 {
     TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
-    virtual std::string getUserFriendlyName() const override;
-    virtual std::string getBriefExplanation() const override;
+    std::string getUserFriendlyName() const override;
+    std::string getBriefExplanation() const override;
 
-    virtual void Build() override;
+#if OCC_VERSION_HEX >= 0x070600
+    void Build(const Message_ProgressRange& theRange = Message_ProgressRange()) override;
+#else
+    void Build() override;
+#endif
+
 protected:
-    virtual void Build_Essence() override {}
+    void Build_Essence() override {}
 };
 
 } //namespace Part

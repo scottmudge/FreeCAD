@@ -20,25 +20,24 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <QMenu>
 # include <QPlainTextEdit>
-# include <boost_bind_bind.hpp>
 #endif
 
+#include <App/Application.h>
 #include <Base/Type.h>
-#include <Gui/ViewProviderDocumentObject.h>
-#include <Gui/TextDocumentEditorView.h>
-#include <Gui/MainWindow.h>
-#include <Gui/Document.h>
-#include <Gui/ActionFunction.h>
-#include <Gui/PythonEditor.h>
-#include <Gui/Widgets.h>
 
 #include "ViewProviderTextDocument.h"
+#include "ActionFunction.h"
+#include "Document.h"
+#include "MainWindow.h"
+#include "PythonEditor.h"
+#include "TextDocumentEditorView.h"
+#include "ViewProviderDocumentObject.h"
+#include "Widgets.h"
 
 
 using namespace Gui;
@@ -74,9 +73,9 @@ ViewProviderTextDocument::ViewProviderTextDocument()
 
 void ViewProviderTextDocument::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
 {
-    Gui::ActionFunction* func = new Gui::ActionFunction(menu);
+    auto func = new Gui::ActionFunction(menu);
     QAction* act = menu->addAction(QObject::tr("Edit text"));
-    func->trigger(act, boost::bind(&ViewProviderTextDocument::doubleClicked, this));
+    func->trigger(act, std::bind(&ViewProviderTextDocument::doubleClicked, this));
 
     ViewProviderDocumentObject::setupContextMenu(menu, receiver, member);
 }
@@ -111,11 +110,11 @@ void ViewProviderTextDocument::onChanged(const App::Property* prop)
         else if (prop == &SyntaxHighlighter) {
             long value = SyntaxHighlighter.getValue();
             if (value == 1) {
-                PythonSyntaxHighlighter* pythonSyntax = new PythonSyntaxHighlighter(editorWidget);
+                auto pythonSyntax = new PythonSyntaxHighlighter(editorWidget);
                 pythonSyntax->setDocument(editorWidget->document());
             }
             else {
-                QSyntaxHighlighter* shl = editorWidget->findChild<QSyntaxHighlighter*>();
+                auto shl = editorWidget->findChild<QSyntaxHighlighter*>();
                 if (shl)
                     shl->deleteLater();
             }

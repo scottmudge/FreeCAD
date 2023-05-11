@@ -20,27 +20,20 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
-#ifndef _PreComp_
-#include <boost_bind_bind.hpp>
-#endif
-
-#include "ui_TaskSketcherGeneral.h"
-#include "TaskSketcherGeneral.h"
-#include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Base/Tools.h>
-#include <Base/UnitsApi.h>
 
 #include <QEvent>
 
+#include <Base/Tools.h>
+#include <Gui/Application.h>
+#include <Gui/BitmapFactory.h>
+#include <Gui/ViewProvider.h>
+
 #include <Mod/Part/Gui/PartParams.h>
+#include "ui_TaskSketcherGeneral.h"
+#include "TaskSketcherGeneral.h"
 #include "ViewProviderSketch.h"
+
 
 using namespace SketcherGui;
 using namespace Gui::TaskView;
@@ -81,7 +74,7 @@ void SketcherGeneralWidget::onToggleGridAutoScale(bool checked)
 bool SketcherGeneralWidget::eventFilter(QObject *object, QEvent *event)
 {
     if (object == ui->renderingOrder && event->type() == QEvent::ChildRemoved) {
-        emitRenderOrderChanged();
+        Q_EMIT emitRenderOrderChanged();
     }
     return false;
 }
@@ -187,6 +180,12 @@ void SketcherGeneralWidget::checkAvoidRedundant(bool on)
     ui->checkBoxRedundantAutoconstraints->setChecked(on);
 }
 
+void SketcherGeneralWidget::enableGridSettings(bool on)
+{
+    ui->gridSize->setEnabled(on);
+    ui->checkBoxGridSnap->setEnabled(on);
+}
+
 void SketcherGeneralWidget::enableAvoidRedundant(bool on)
 {
     ui->checkBoxRedundantAutoconstraints->setEnabled(on);
@@ -203,7 +202,7 @@ void SketcherGeneralWidget::changeEvent(QEvent *e)
 // ----------------------------------------------------------------------------
 
 TaskSketcherGeneral::TaskSketcherGeneral(ViewProviderSketch *sketchView)
-    : TaskBox(Gui::BitmapFactory().pixmap("document-new"),tr("Edit controls"),true, 0)
+    : TaskBox(Gui::BitmapFactory().pixmap("document-new"),tr("Edit controls"),true, nullptr)
     , sketchView(sketchView)
 {
     // we need a separate container widget to add all controls to
@@ -220,6 +219,7 @@ TaskSketcherGeneral::TaskSketcherGeneral(ViewProviderSketch *sketchView)
             widget->setGridSize(sketchView->GridSize.getValue());
         }
         widget->checkGridSnap(sketchView->GridSnap.getValue());
+        widget->enableGridSettings(sketchView->ShowGrid.getValue());
         widget->checkAutoconstraints(sketchView->Autoconstraints.getValue());
         widget->checkAvoidRedundant(sketchView->AvoidRedundant.getValue());
         widget->enableAvoidRedundant(sketchView->Autoconstraints.getValue());
@@ -275,9 +275,7 @@ void TaskSketcherGeneral::onChangedSketchView(const Gui::ViewProvider& vp,
         if (&sketchView->ShowGrid == &prop) {
             QSignalBlocker block(widget);
             widget->checkGridView(sketchView->ShowGrid.getValue());
-            if (sketchView->ShowGrid.getValue()) {
-                sketchView->createGrid();
-            }
+            widget->enableGridSettings(sketchView->ShowGrid.getValue());
         }
         else if (&sketchView->GridSize == &prop) {
             QSignalBlocker block(widget);
@@ -303,7 +301,7 @@ void TaskSketcherGeneral::onToggleGridView(bool on)
 {
     Base::ConnectionBlocker block(changedSketchView);
     sketchView->ShowGrid.setValue(on);
-    if (on) sketchView->createGrid();
+    widget->enableGridSettings(on);
 }
 
 void TaskSketcherGeneral::onSetGridSize(double val)

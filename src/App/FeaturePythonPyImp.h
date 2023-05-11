@@ -25,12 +25,13 @@
 
 #include <Base/BaseClass.h>
 #include <Base/Interpreter.h>
-#include <App/PropertyContainerPy.h>
+#include <Base/PyObjectBase.h>
 
 #if defined(__clang__)
 # pragma clang diagnostic push
 # pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #elif defined(__GNUC__) || defined(__GNUG__)
+# pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
@@ -75,6 +76,8 @@
 namespace App
 {
 
+class Property;
+
 /**
  * @author Werner Mayer
  */
@@ -85,7 +88,7 @@ public:
     static PyTypeObject   Type;
 
 public:
-    FeaturePythonPyT(Base::BaseClass *pcObject, PyTypeObject *T = &Type);
+    explicit FeaturePythonPyT(Base::BaseClass *pcObject, PyTypeObject *T = &Type);
     virtual ~FeaturePythonPyT();
 
     /** @name callbacks and implementers for the python object methods */

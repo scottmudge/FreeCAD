@@ -20,13 +20,11 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-#ifndef _PreComp_
-#endif
 
 #include "DlgPartCylinderImp.h"
 #include "ui_DlgPartCylinder.h"
+
 
 using namespace PartGui;
 
@@ -45,7 +43,7 @@ DlgPartCylinderImp::~DlgPartCylinderImp()
 
 Ui_DlgPartCylinderPtr DlgPartCylinderImp::getUi() const
 {
-    return boost::any_cast< Ui_DlgPartCylinderPtr >(ui->get());
+    return App::any_cast< Ui_DlgPartCylinderPtr >(ui->get());
 }
 
 double DlgPartCylinderImp::getRadius() const

@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <queue>
@@ -28,12 +27,11 @@
 
 #include <Base/Console.h>
 #include <Base/Exception.h>
+#include <Mod/Mesh/App/WildMagic4/Wm4Delaunay2.h>
+
 #include "Triangulation.h"
 #include "Approximation.h"
-#include "Algorithm.h"
 #include "MeshKernel.h"
-
-#include <Mod/Mesh/App/WildMagic4/Wm4Delaunay2.h>
 
 
 using namespace MeshCore;
@@ -102,7 +100,7 @@ void AbstractPolygonTriangulator::SetVerifier(TriangulationVerifier* v)
 void AbstractPolygonTriangulator::SetPolygon(const std::vector<Base::Vector3f>& raclPoints)
 {
     this->_points = raclPoints;
-    if (this->_points.size() > 0) {
+    if (!this->_points.empty()) {
         if (this->_points.front() == this->_points.back())
             this->_points.pop_back();
     }
@@ -383,13 +381,15 @@ bool EarClippingTriangulator::Triangulate::Snip(const std::vector<Base::Vector3f
     Cx = contour[V[w]].x;
     Cy = contour[V[w]].y;
 
-    if (FLOAT_EPS > (((Bx-Ax)*(Cy-Ay)) - ((By-Ay)*(Cx-Ax)))) return false;
+    if (FLOAT_EPS > (((Bx-Ax)*(Cy-Ay)) - ((By-Ay)*(Cx-Ax))))
+        return false;
 
     for (p=0;p<n;p++) {
         if( (p == u) || (p == v) || (p == w) ) continue;
         Px = contour[V[p]].x;
         Py = contour[V[p]].y;
-        if (InsideTriangle(Ax,Ay,Bx,By,Cx,Cy,Px,Py)) return false;
+        if (InsideTriangle(Ax,Ay,Bx,By,Cx,Cy,Px,Py))
+            return false;
     }
 
     return true;
@@ -403,7 +403,8 @@ bool EarClippingTriangulator::Triangulate::Process(const std::vector<Base::Vecto
     /* allocate and initialize list of Vertices in polygon */
 
     int n = contour.size();
-    if ( n < 3 ) return false;
+    if ( n < 3 )
+        return false;
 
     int *V = new int[n];
 
@@ -478,7 +479,7 @@ QuasiDelaunayTriangulator::~QuasiDelaunayTriangulator()
 
 bool QuasiDelaunayTriangulator::Triangulate()
 {
-    if (EarClippingTriangulator::Triangulate() == false)
+    if (!EarClippingTriangulator::Triangulate())
         return false; // no valid triangulation
 
     // For each internal edge get the adjacent facets. When doing an edge swap we must update
@@ -536,7 +537,7 @@ bool QuasiDelaunayTriangulator::Triangulate()
         float fMax12 = std::max<float>(fMax1, fMax2);
         float fMax34 = std::max<float>(fMax3, fMax4);
 
-        // We must make sure that the two adjacent triangles builds a convex polygon, otherwise 
+        // We must make sure that the two adjacent triangles builds a convex polygon, otherwise
         // the swap edge operation is illegal
         Base::Vector3f cU = cP2-cP1;
         Base::Vector3f cV = cP4-cP3;
@@ -603,9 +604,16 @@ struct Vertex2d_Less
     bool operator()(const Base::Vector3f& p, const Base::Vector3f& q) const
     {
         if (fabs(p.x - q.x) < MeshDefinitions::_fMinPointDistanceD1) {
-        if (fabs(p.y - q.y) < MeshDefinitions::_fMinPointDistanceD1) {
-        return false; } else return p.y < q.y;
-        } else return p.x < q.x;
+            if (fabs(p.y - q.y) < MeshDefinitions::_fMinPointDistanceD1) {
+                return false;
+            }
+            else {
+                return p.y < q.y;
+            }
+        }
+        else {
+            return p.x < q.x;
+        }
     }
 };
 struct Vertex2d_EqualTo
@@ -632,7 +640,7 @@ DelaunayTriangulator::~DelaunayTriangulator()
 
 bool DelaunayTriangulator::Triangulate()
 {
-    // before starting the triangulation we must make sure that all polygon 
+    // before starting the triangulation we must make sure that all polygon
     // points are different
     std::vector<Base::Vector3f> aPoints = _points;
     // sort the points ascending x,y coordinates
@@ -705,7 +713,7 @@ FlatTriangulator::~FlatTriangulator()
 bool FlatTriangulator::Triangulate()
 {
     _newpoints.clear();
-    // before starting the triangulation we must make sure that all polygon 
+    // before starting the triangulation we must make sure that all polygon
     // points are different
     std::vector<Base::Vector3f> aPoints = ProjectToFitPlane();
     std::vector<Base::Vector3f> tmp = aPoints;
@@ -749,7 +757,7 @@ ConstraintDelaunayTriangulator::~ConstraintDelaunayTriangulator()
 bool ConstraintDelaunayTriangulator::Triangulate()
 {
     _newpoints.clear();
-    // before starting the triangulation we must make sure that all polygon 
+    // before starting the triangulation we must make sure that all polygon
     // points are different
     std::vector<Base::Vector3f> aPoints = ProjectToFitPlane();
     std::vector<Base::Vector3f> tmp = aPoints;

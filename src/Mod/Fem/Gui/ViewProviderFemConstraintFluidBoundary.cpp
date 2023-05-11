@@ -21,31 +21,27 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <Standard_math.hxx>
-# include <Precision.hxx>
-
-# include <Inventor/nodes/SoSeparator.h>
-# include <Inventor/nodes/SoTranslation.h>
-# include <Inventor/nodes/SoRotation.h>
-# include <Inventor/nodes/SoMultipleCopy.h>
-
 # include <QMessageBox>
+# include <Precision.hxx>
+# include <Inventor/SbRotation.h>
+# include <Inventor/SbVec3f.h>
+# include <Inventor/nodes/SoMultipleCopy.h>
+# include <Inventor/nodes/SoSeparator.h>
 #endif
 
-#include "ViewProviderFemConstraintFluidBoundary.h"
 #include <Mod/Fem/App/FemConstraintFluidBoundary.h>
-#include "TaskFemConstraintFluidBoundary.h"
 #include "Gui/Control.h"
 
-#include <Base/Console.h>
+#include "ViewProviderFemConstraintFluidBoundary.h"
+#include "TaskFemConstraintFluidBoundary.h"
+
 
 using namespace FemGui;
 
-PROPERTY_SOURCE(FemGui::ViewProviderFemConstraintFluidBoundary, FemGui::ViewProviderFemConstraint)
+PROPERTY_SOURCE(FemGui::ViewProviderFemConstraintFluidBoundary, FemGui::ViewProviderFemConstraintOnBoundary)
 
 
 ViewProviderFemConstraintFluidBoundary::ViewProviderFemConstraintFluidBoundary()
@@ -63,17 +59,18 @@ bool ViewProviderFemConstraintFluidBoundary::setEdit(int ModNum)
         // When double-clicking on the item for this constraint,
         // object unsets and sets its edit mode without closing the task panel
         Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
-        TaskDlgFemConstraintFluidBoundary *constrDlg = qobject_cast<TaskDlgFemConstraintFluidBoundary *>(dlg);
+        TaskDlgFemConstraintFluidBoundary *constrDlg =
+            qobject_cast<TaskDlgFemConstraintFluidBoundary *>(dlg);
         if (constrDlg && constrDlg->getConstraintView() != this)
-            constrDlg = 0; // another constraint left open its task panel
+            constrDlg = nullptr; // another constraint left open its task panel
         if (dlg && !constrDlg) {
             // This case will occur in the ShaftWizard application
             checkForWizard();
-            if ((wizardWidget == NULL) || (wizardSubLayout == NULL)) {
+            if (!wizardWidget || !wizardSubLayout) {
                 // No shaft wizard is running
                 if (!dlg->tryClose())
                     return false;
-            } else if (constraintDialog != NULL) {
+            } else if (constraintDialog) {
                 // Another FemConstraint* dialog is already open inside the Shaft Wizard
                 // Ignore the request to open another dialog
                 return false;
@@ -95,13 +92,13 @@ bool ViewProviderFemConstraintFluidBoundary::setEdit(int ModNum)
         return true;
     }
     else {
-        return ViewProviderDocumentObject::setEdit(ModNum);
+        return ViewProviderDocumentObject::setEdit(ModNum); // clazy:exclude=skipped-base-method
     }
 }
 
 //Rendering: Combination of ConstraintFixed and ConstraintForce
 #define ARROWLENGTH (4)
-#define ARROWHEADRADIUS (ARROWLENGTH/3.0f)
+#define ARROWHEADRADIUS (ARROWLENGTH / 3.0f)
 #define WIDTH (2)
 #define HEIGHT (1)
 //#define USE_MULTIPLE_COPY  //OvG: MULTICOPY fails to update scaled display on initial drawing - so disable
@@ -117,28 +114,17 @@ void ViewProviderFemConstraintFluidBoundary::updateData(const App::Property* pro
     float scaledlength = ARROWLENGTH * pcConstraint->Scale.getValue();
 
     std::string boundaryType = pcConstraint->BoundaryType.getValueAsString();
-    if (strcmp(prop->getName(),"BoundaryType") == 0)
-    {
+    if (strcmp(prop->getName(), "BoundaryType") == 0) {
         if (boundaryType == "wall")
-        {
-            FaceColor.setValue(0.0,1.0,1.0);
-        }
+            FaceColor.setValue(0.0, 1.0, 1.0);
         else if (boundaryType == "interface")
-        {
-            FaceColor.setValue(0.0,1.0,0.0);
-        }
+            FaceColor.setValue(0.0, 1.0, 0.0);
         else if (boundaryType == "freestream")
-        {
-            FaceColor.setValue(1.0,1.0,0.0);
-        }
-        else if(boundaryType == "inlet")
-        {
-            FaceColor.setValue(1.0,0.0,0.0);
-        }
+            FaceColor.setValue(1.0, 1.0, 0.0);
+        else if (boundaryType == "inlet")
+            FaceColor.setValue(1.0, 0.0, 0.0);
         else //(boundaryType == "outlet")
-        {
-            FaceColor.setValue(0.0,0.0,1.0);
-        }
+            FaceColor.setValue(0.0, 0.0, 1.0);
     }
 
     if (boundaryType == "inlet" || boundaryType == "outlet"){
@@ -174,9 +160,10 @@ void ViewProviderFemConstraintFluidBoundary::updateData(const App::Property* pro
                 forceDirection = normal;
 
             SbVec3f dir(forceDirection.x, forceDirection.y, forceDirection.z);
-            SbRotation rot(SbVec3f(0,1,0), dir);
+            SbRotation rot(SbVec3f(0, 1, 0), dir);
 
-            for (std::vector<Base::Vector3d>::const_iterator p = points.begin(); p != points.end(); p++) {
+            for (std::vector<Base::Vector3d>::const_iterator p = points.begin(); p != points.end();
+                 p++) {
                 SbVec3f base(p->x, p->y, p->z);
                 if (forceDirection.GetAngle(normal) < M_PI_2) // Move arrow so it doesn't disappear inside the solid
                     base = base + dir * scaledlength; //OvG: Scaling
@@ -207,7 +194,7 @@ void ViewProviderFemConstraintFluidBoundary::updateData(const App::Property* pro
             }
 
             SbVec3f dir(forceDirection.x, forceDirection.y, forceDirection.z);
-            SbRotation rot(SbVec3f(0,1,0), dir);
+            SbRotation rot(SbVec3f(0, 1, 0), dir);
 
             const std::vector<Base::Vector3d>& points = pcConstraint->Points.getValues();
 
@@ -218,13 +205,14 @@ void ViewProviderFemConstraintFluidBoundary::updateData(const App::Property* pro
 #endif
             int idx = 0;
 
-            for (std::vector<Base::Vector3d>::const_iterator p = points.begin(); p != points.end(); p++) {
+            for (std::vector<Base::Vector3d>::const_iterator p = points.begin(); p != points.end();
+                 p++) {
                 SbVec3f base(p->x, p->y, p->z);
                 if (forceDirection.GetAngle(normal) < M_PI_2)
                     base = base + dir * scaledlength; //OvG: Scaling
 #ifdef USE_MULTIPLE_COPY
                 SbMatrix m;
-                m.setTransform(base, rot, SbVec3f(1,1,1));
+                m.setTransform(base, rot, SbVec3f(1, 1, 1));
                 matrices[idx] = m;
 #else
                 SoSeparator* sep = static_cast<SoSeparator*>(pShapeSep->getChild(idx));
@@ -271,7 +259,7 @@ void ViewProviderFemConstraintFluidBoundary::updateData(const App::Property* pro
             for (std::vector<Base::Vector3d>::const_iterator p = points.begin(); p != points.end(); p++) {
                 SbVec3f base(p->x, p->y, p->z);
                 SbVec3f dir(n->x, n->y, n->z);
-                SbRotation rot(SbVec3f(0,-1,0), dir);
+                SbRotation rot(SbVec3f(0, -1, 0), dir);
 #ifdef USE_MULTIPLE_COPY
                 SbMatrix m;
                 m.setTransform(base, rot, SbVec3f(1,1,1));

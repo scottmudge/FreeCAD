@@ -23,9 +23,9 @@
 #ifndef LINEEDIT_H
 #define LINEEDIT_H
 
-#include <Gui/ExpressionCompleter.h>
 #include <QWidget>
-#include <QModelIndex>
+#include <Gui/ExpressionCompleter.h>
+
 
 namespace SpreadsheetGui {
 
@@ -33,9 +33,9 @@ class LineEdit : public Gui::ExpressionLineEdit
 {
     Q_OBJECT
 public:
-    explicit LineEdit(QWidget *parent = 0);
+    explicit LineEdit(QWidget *parent = nullptr);
 
-    bool event(QEvent *event);
+    bool event(QEvent *event) override;
 
 Q_SIGNALS:
     void finishedWithKey(int key, Qt::KeyboardModifiers modifiers);
@@ -49,11 +49,11 @@ class TextEdit : public Gui::ExpressionTextEdit
 {
     Q_OBJECT
 public:
-    explicit TextEdit(QWidget *parent = 0);
+    explicit TextEdit(QWidget *parent = nullptr);
 
-    bool event(QEvent *event);
-    void keyPressEvent(QKeyEvent *);
-    bool eventFilter(QObject *, QEvent *);
+    bool event(QEvent *event) override;
+    void keyPressEvent(QKeyEvent *) override;
+    bool eventFilter(QObject *, QEvent *) override;
     void finishEditing();
 
 Q_SIGNALS:

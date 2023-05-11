@@ -20,18 +20,20 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #include <boost/algorithm/string/replace.hpp>
 
-#include "PropertiesDialog.h"
 #include <Base/Tools.h>
 #include <App/Range.h>
 #include <App/Document.h>
 #include <App/ExpressionParser.h>
+#include <Base/Tools.h>
 #include <Gui/CommandT.h>
+
+#include "PropertiesDialog.h"
 #include "ui_PropertiesDialog.h"
+
 
 using namespace App;
 using namespace Spreadsheet;
@@ -58,7 +60,7 @@ PropertiesDialog::PropertiesDialog(Sheet *_sheet, const std::vector<Range> &_ran
 
     Cell * cell = sheet->getNewCell(*range);
 
-    assert(cell != 0);
+    assert(cell);
 
     (void)cell->getForeground(foregroundColor);
     (void)cell->getBackground(backgroundColor);
@@ -234,7 +236,7 @@ PropertiesDialog::~PropertiesDialog()
 
 void PropertiesDialog::apply()
 {
-    if (ranges.size() > 0) {
+    if (!ranges.empty()) {
         Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Set cell properties"));
         std::vector<Range>::const_iterator i = ranges.begin();
         bool changes = false;

@@ -91,8 +91,8 @@ public:
 
   void render(SoState * state,
               const cc_glglue * glue,
-              const SbBool renderasvbo,
-              const uint32_t vbocontextid,
+              bool renderasvbo,
+              uint32_t vbocontextid,
               const intptr_t * offsets = NULL,
               const int32_t * counts = NULL,
               int32_t draw_count = 0);

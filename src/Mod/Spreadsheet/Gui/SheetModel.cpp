@@ -23,24 +23,23 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QtCore>
-# include <QApplication>
+# include <QFont>
 # include <QLocale>
-# include <QMessageBox>
-# include <QTextDocument>
 #endif
 
-#include <App/Document.h>
 #include <App/AutoTransaction.h>
-#include <Gui/Application.h>
-#include "SheetModel.h"
-#include <Mod/Spreadsheet/App/Utils.h>
-#include "../App/Sheet.h"
-#include "../App/Cell.h"
-#include <Gui/Command.h>
+#include <App/Document.h>
+#include <Base/Interpreter.h>
 #include <Base/Tools.h>
 #include <Base/UnitsApi.h>
-#include <boost_bind_bind.hpp>
+#include <Gui/Application.h>
+#include <Gui/Command.h>
+#include <Mod/Spreadsheet/App/Sheet.h>
+#include <Mod/Spreadsheet/App/Cell.h>
+#include <Mod/Spreadsheet/App/Utils.h>
+
+#include "SheetModel.h"
+
 
 using namespace SpreadsheetGui;
 using namespace Spreadsheet;
@@ -54,8 +53,8 @@ SheetModel::SheetModel(Sheet *_sheet, QObject *parent)
     cellUpdatedConnection = sheet->cellUpdated.connect(bind(&SheetModel::cellUpdated, this, bp::_1));
     rangeUpdatedConnection = sheet->rangeUpdated.connect(bind(&SheetModel::rangeUpdated, this, bp::_1));
     tableRefreshConnection = sheet->tableRefresh.connect([this]() {
-            beginResetModel();
-            endResetModel();
+        beginResetModel();
+        endResetModel();
     });
 
     ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Spreadsheet");
@@ -122,86 +121,15 @@ int SheetModel::columnCount(const QModelIndex &parent) const
     return 26 * 26 + 26;
 }
 
-#if 0 // obsolete function
-static void appendUnit(int l, bool isNumerator, std::string unit, std::vector<std::string> & v)
-{
-    if (l == 0)
-        return;
-    if ((l < 0) ^ isNumerator ) {
-        std::ostringstream s;
-
-        s << unit;
-        if (abs(l) > 1)
-            s << "^" << abs(l);
-
-        v.push_back(s.str());
-    }
-}
-
-static std::string getUnitString(const Base::Unit & unit)
-{
-    std::vector<std::string> numerator;
-    std::vector<std::string> denominator;
-    const Base::UnitSignature & sig = unit.getSignature();
-
-    // Nominator
-    appendUnit(sig.Length, true, "mm", numerator);
-    appendUnit(sig.Mass, true, "kg", numerator);
-    appendUnit(sig.Time, true, "s", numerator);
-    appendUnit(sig.ElectricCurrent, true, "A", numerator);
-    appendUnit(sig.ThermodynamicTemperature, true, "K", numerator);
-    appendUnit(sig.AmountOfSubstance, true, "mol", numerator);
-    appendUnit(sig.LuminousIntensity, true, "cd", numerator);
-    appendUnit(sig.Angle, true, "deg", numerator);
-
-    // Denominator
-    appendUnit(sig.Length, false, "mm", denominator);
-    appendUnit(sig.Mass, false, "kg", denominator);
-    appendUnit(sig.Time, false, "s", denominator);
-    appendUnit(sig.ElectricCurrent, false, "A", denominator);
-    appendUnit(sig.ThermodynamicTemperature, false, "K", denominator);
-    appendUnit(sig.AmountOfSubstance, false, "mol", denominator);
-    appendUnit(sig.LuminousIntensity, false, "cd", denominator);
-    appendUnit(sig.Angle, false, "deg", denominator);
-
-    std::string unitStr;
-
-    if (numerator.size() > 0) {
-        for (std::size_t i = 0; i < numerator.size(); ++i) {
-            if (i > 0)
-                unitStr += "*";
-            unitStr += numerator[i];
-        }
-    }
-
-    if (denominator.size() > 0) {
-        if (numerator.size() == 0)
-            unitStr = "1";
-        unitStr += "/";
-
-        if (denominator.size() > 1)
-            unitStr += "(";
-        for (std::size_t i = 0; i < denominator.size(); ++i) {
-            if (i > 0)
-                unitStr += "*";
-            unitStr += denominator[i];
-        }
-        if (denominator.size() > 1)
-            unitStr += ")";
-    }
-
-    return unitStr;
-}
-#endif
 
 QVariant SheetModel::data(const QModelIndex &index, int role) const
 {
-    static const Cell * emptyCell = new Cell(CellAddress(0, 0), 0);
+    static const Cell * emptyCell = new Cell(CellAddress(0, 0), nullptr);
     int row = index.row();
     int col = index.column();
     const Cell * cell = sheet->getCell(CellAddress(row, col));
 
-    if (cell == 0)
+    if (!cell)
         cell = emptyCell;
 
 //#define DEBUG_DEPS
@@ -323,18 +251,34 @@ QVariant SheetModel::data(const QModelIndex &index, int role) const
         return QVariant::fromValue(f);
     }
 
-    if (!prop) {
+    auto dirtyCells = sheet->getCells()->getDirty();
+    auto dirty = (dirtyCells.find(CellAddress(row,col)) != dirtyCells.end());
+
+    if (!prop || dirty) {
         switch (role) {
         case  Qt::ForegroundRole: {
-            return QColor(0, 0, 255.0);
+            return QColor(0, 0, 255.0); // TODO: Remove this hardcoded color, replace with preference
         }
         case Qt::TextAlignmentRole: {
             qtAlignment = Qt::AlignHCenter | Qt::AlignVCenter;
             return QVariant::fromValue(qtAlignment);
         }
         case Qt::DisplayRole:
-            if(cell->getExpression())
-                return QVariant(QStringLiteral("#PENDING"));
+            if(cell->getExpression()) {
+                std::string str;
+                if (cell->getStringContent(str))
+                    if (!str.empty() && str[0] == '=')
+                        // If this is a real computed value, indicate that a recompute is
+                        // needed before we can display it
+                        return QVariant(QStringLiteral("#PENDING"));
+                    else
+                        // If it's just a simple value, display the new value, but still
+                        // format it as a pending value to indicate to the user that
+                        // a recompute is needed
+                        return QVariant(QString::fromUtf8(str.c_str()));
+                else
+                    return QVariant();
+            } 
             else
                 return QVariant();
         default:
@@ -406,11 +350,6 @@ QVariant SheetModel::data(const QModelIndex &index, int role) const
                 }
             }
             else {
-                //QString number = QLocale().toString(floatProp->getValue(),'f',Base::UnitsApi::getDecimals());
-                //if (!computedUnit.isEmpty())
-                //    v = number + Base::Tools::fromStdString(" " + getUnitString(computedUnit));
-                //else
-                //    v = number;
 
                 // When displaying a quantity then use the globally set scheme
                 // See: https://forum.freecadweb.org/viewtopic.php?f=3&t=50078
@@ -584,7 +523,7 @@ void SheetModel::cellUpdated(CellAddress address)
 {
     QModelIndex i = index(address.row(), address.col());
 
-    dataChanged(i, i);
+    Q_EMIT dataChanged(i, i);
 }
 
 void SheetModel::rangeUpdated(const Range &range)
@@ -592,7 +531,7 @@ void SheetModel::rangeUpdated(const Range &range)
     QModelIndex i = index(range.from().row(), range.from().col());
     QModelIndex j = index(range.to().row(), range.to().col());
 
-    dataChanged(i, j);
+    Q_EMIT dataChanged(i, j);
 }
 
 #include "moc_SheetModel.cpp"

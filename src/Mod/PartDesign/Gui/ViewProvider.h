@@ -42,7 +42,7 @@ class TaskDlgFeatureParameters;
  */
 class PartDesignGuiExport ViewProvider : public PartGui::ViewProviderPart, PartGui::ViewProviderAttachExtension
 {
-    typedef PartGui::ViewProviderPart inherited;
+    using inherited = PartGui::ViewProviderPart;
     PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProvider);
 
 public:
@@ -51,9 +51,9 @@ public:
     /// constructor
     ViewProvider();
     /// destructor
-    virtual ~ViewProvider();
+    ~ViewProvider() override;
 
-    virtual bool doubleClicked(void) override;
+    bool doubleClicked(void) override;
     void updateData(const App::Property*) override;
     void onChanged(const App::Property* prop) override;
 
@@ -73,42 +73,42 @@ public:
     //Returns the ViewProvider of the body the feature belongs to, or NULL, if not in a body
     ViewProviderBody* getBodyViewProvider();
 
-    virtual PyObject* getPyObject(void) override;
+    PyObject* getPyObject(void) override;
 
-    virtual void getExtraIcons(std::vector<std::pair<QByteArray, QPixmap> > &) const override;
-    virtual bool iconMouseEvent(QMouseEvent *, const QByteArray &tag) override;
-    virtual QString getToolTip(const QByteArray &tag) const override;
+    void getExtraIcons(std::vector<std::pair<QByteArray, QPixmap> > &) const override;
+    bool iconMouseEvent(QMouseEvent *, const QByteArray &tag) override;
+    QString getToolTip(const QByteArray &tag) const override;
 
-    virtual QPixmap getTagIcon() const override;
+    QPixmap getTagIcon() const override;
 
-    virtual bool canDragObjects() const override {return false;}
-    virtual bool canDragObject(App::DocumentObject*) const override {return false;}
-    virtual bool canDropObjects() const override {return false;}
-    virtual bool canDropObject(App::DocumentObject*) const override {return false;}
-    virtual bool canReplaceObject(App::DocumentObject *, App::DocumentObject *) override;
-    virtual int replaceObject(App::DocumentObject *, App::DocumentObject *) override;
-    virtual bool canReorderObject(App::DocumentObject *, App::DocumentObject *) override;
-    virtual bool reorderObjects(const std::vector<App::DocumentObject *> &, App::DocumentObject *) override;
-    virtual void reattach(App::DocumentObject *) override;
-    virtual void beforeDelete() override;
+    bool canDragObjects() const override {return false;}
+    bool canDragObject(App::DocumentObject*) const override {return false;}
+    bool canDropObjects() const override {return false;}
+    bool canDropObject(App::DocumentObject*) const override {return false;}
+    bool canReplaceObject(App::DocumentObject *, App::DocumentObject *) override;
+    int replaceObject(App::DocumentObject *, App::DocumentObject *) override;
+    bool canReorderObject(App::DocumentObject *, App::DocumentObject *) override;
+    bool reorderObjects(const std::vector<App::DocumentObject *> &, App::DocumentObject *) override;
+    void reattach(App::DocumentObject *) override;
+    void beforeDelete() override;
 
-    virtual std::vector<App::DocumentObject*> claimChildren(void) const override;
+    std::vector<App::DocumentObject*> claimChildren(void) const override;
     virtual std::vector<App::DocumentObject*> _claimChildren(void) const {return {};}
 
-    virtual bool getDetailPath(const char *subname, SoFullPath *path, bool append, SoDetail *&det) const override;
+    bool getDetailPath(const char *subname, SoFullPath *path, bool append, SoDetail *&det) const override;
 
 protected:
-    virtual void setupContextMenu(QMenu* menu, QObject* receiver, const char* member) override;
-    virtual bool setEdit(int ModNum) override;
-    virtual void unsetEdit(int ModNum) override;
+    void setupContextMenu(QMenu* menu, QObject* receiver, const char* member) override;
+    bool setEdit(int ModNum) override;
+    void unsetEdit(int ModNum) override;
     void startDefaultEditMode();
     void addDefaultAction(QMenu*, const QString&);
 
-    virtual bool onDelete(const std::vector<std::string> &) override;
+    bool onDelete(const std::vector<std::string> &) override;
 
-    virtual bool hasBaseFeature() const override;
+    bool hasBaseFeature() const override;
     
-    virtual void updateVisual() override;
+    void updateVisual() override;
 
     /**
      * Returns a newly create dialog for the part to be placed in the task view
@@ -125,7 +125,7 @@ protected:
     bool autoCorrectingLink = false;
 };
 
-typedef Gui::ViewProviderPythonFeatureT<ViewProvider> ViewProviderPython;
+using ViewProviderPython = Gui::ViewProviderPythonFeatureT<ViewProvider>;
 
 } // namespace PartDesignGui
 

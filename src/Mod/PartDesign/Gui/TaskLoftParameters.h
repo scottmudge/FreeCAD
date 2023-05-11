@@ -20,18 +20,14 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskLoftParameters_H
 #define GUI_TASKVIEW_TaskLoftParameters_H
 
 #include <boost_signals2.hpp>
 
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-#include <Gui/TaskView/TaskDialog.h>
-
 #include "TaskSketchBasedParameters.h"
 #include "ViewProviderLoft.h"
+
 
 class Ui_TaskLoftParameters;
 class QListWidget;
@@ -53,8 +49,8 @@ class TaskLoftParameters : public TaskSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskLoftParameters(ViewProviderLoft *LoftView,bool newObj=false,QWidget *parent = 0);
-    ~TaskLoftParameters();
+    explicit TaskLoftParameters(ViewProviderLoft *LoftView, bool newObj=false, QWidget *parent = nullptr);
+    ~TaskLoftParameters() override;
 
 private Q_SLOTS:
     void onClosed(bool);
@@ -63,7 +59,7 @@ private Q_SLOTS:
     void updateUI();
 
 protected:
-    void refresh();
+    void refresh() override;
 
 private:
     QWidget* proxy;
@@ -78,14 +74,14 @@ class TaskDlgLoftParameters : public TaskDlgSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskDlgLoftParameters(ViewProviderLoft *LoftView,bool newObj=false);
-    ~TaskDlgLoftParameters();
+    explicit TaskDlgLoftParameters(ViewProviderLoft *LoftView,bool newObj=false);
+    ~TaskDlgLoftParameters() override;
 
     ViewProviderLoft* getLoftView() const
     { return static_cast<ViewProviderLoft*>(vp); }
 
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
+    bool accept() override;
 
 protected:
     TaskLoftParameters  *parameter;

@@ -20,16 +20,12 @@
  *                                                                            *
  ******************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskMirroredParameters_H
 #define GUI_TASKVIEW_TaskMirroredParameters_H
 
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-#include <Gui/TaskView/TaskDialog.h>
-
 #include "TaskTransformedParameters.h"
 #include "ViewProviderMirrored.h"
+
 
 class Ui_TaskMirroredParameters;
 
@@ -51,23 +47,23 @@ class TaskMirroredParameters : public TaskTransformedParameters
 
 public:
     /// Constructor for task with ViewProvider
-    TaskMirroredParameters(ViewProviderTransformed *TransformedView, QWidget *parent = 0);
+    explicit TaskMirroredParameters(ViewProviderTransformed *TransformedView, QWidget *parent = nullptr);
     /// Constructor for task with parent task (MultiTransform mode)
     TaskMirroredParameters(TaskMultiTransformParameters *parentTask, QLayout *layout);
 
-    virtual ~TaskMirroredParameters();
+    ~TaskMirroredParameters() override;
 
     void getMirrorPlane(App::DocumentObject*& obj, std::vector<std::string>& sub) const;
 
-    virtual void apply();
+    void apply() override;
 
 private Q_SLOTS:
     void onPlaneChanged(int num);
     virtual void onUpdateView(bool);
 
 protected:
-    virtual void changeEvent(QEvent *e);
-    virtual void onSelectionChanged(const Gui::SelectionChanges& msg);
+    void changeEvent(QEvent *e) override;
+    void onSelectionChanged(const Gui::SelectionChanges& msg) override;
 
 private:
     void setupUI();
@@ -85,12 +81,12 @@ class TaskDlgMirroredParameters : public TaskDlgTransformedParameters
     Q_OBJECT
 
 public:
-    TaskDlgMirroredParameters(ViewProviderMirrored *MirroredView);
-    virtual ~TaskDlgMirroredParameters() {}
+    explicit TaskDlgMirroredParameters(ViewProviderMirrored *MirroredView);
+    ~TaskDlgMirroredParameters() override {}
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
+    bool accept() override;
 };
 
 } //namespace PartDesignGui

@@ -46,6 +46,7 @@
 # include <Inventor/details/SoPointDetail.h>
 #endif
 
+#include <App/Document.h>
 #include <App/DocumentObjectGroup.h>
 #include <App/GeoFeatureGroupExtension.h>
 #include <Gui/Control.h>

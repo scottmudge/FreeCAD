@@ -32,6 +32,8 @@
 # include <Inventor/nodes/SoPerspectiveCamera.h>
 # include <QApplication>
 # include <QDialog>
+# include <QDomDocument>
+# include <QDomElement>
 # include <QFile>
 # include <QFileInfo>
 # include <QFont>
@@ -40,73 +42,67 @@
 # include <QPainter>
 # include <QPointer>
 # include <QTextStream>
-# include <boost_bind_bind.hpp>
 #endif
 
 #include <boost/algorithm/string.hpp>
 
+#include <App/Application.h>
 #include <App/AutoTransaction.h>
 #include <App/Document.h>
-#include "CommandT.h"
-#include "Action.h"
-#include "Application.h"
-#include "BitmapFactory.h"
-#include "Control.h"
-#include "Clipping.h"
-#include "FileDialog.h"
-#include "MainWindow.h"
-#include "Tree.h"
-#include "View.h"
-#include "Document.h"
-#include "Macro.h"
-#include "DlgDisplayPropertiesImp.h"
-#include "DlgSettingsImageImp.h"
-#include "Selection.h"
-#include "SoFCOffscreenRenderer.h"
-#include "SoFCBoundingBox.h"
-#include "SoFCUnifiedSelection.h"
-#include "SoAxisCrossKit.h"
-#include "SoQTQuarterAdaptor.h"
-#include "View3DInventor.h"
-#include "View3DInventorViewer.h"
-#include "ViewParams.h"
-#include "WaitCursor.h"
-#include "ViewProviderMeasureDistance.h"
-#include "ViewProviderGeometryObject.h"
-#include "SceneInspector.h"
-#include "DemoMode.h"
-#include "TextureMapping.h"
-#include "Tools.h"
-#include "Utilities.h"
-#include "NavigationStyle.h"
-#include "OverlayParams.h"
-#include "OverlayWidgets.h"
-#include "SelectionView.h"
-#include "MouseSelection.h"
-#include "PieMenu.h"
-#include "DlgIconBrowser.h"
-
-#include <Base/Console.h>
-#include <Base/Tools2D.h>
-#include <Base/Tools.h>
-#include <Base/Exception.h>
-#include <Base/FileInfo.h>
-#include <Base/Reader.h>
-#include <Base/Parameter.h>
-#include <App/Application.h>
-#include <App/Document.h>
-#include <App/GeoFeature.h>
-#include <App/DocumentObjectGroup.h>
-#include <App/MeasureDistance.h>
 #include <App/DocumentObject.h>
+#include <App/DocumentObjectGroup.h>
 #include <App/ComplexGeoDataPy.h>
+#include <App/GeoFeature.h>
+#include <App/MeasureDistance.h>
 #include <App/GeoFeatureGroupExtension.h>
 #include <App/DocumentObserver.h>
 #include <App/AutoTransaction.h>
-#include "TreeParams.h"
+#include <App/MeasureDistance.h>
+#include <Base/Console.h>
+#include <Base/Exception.h>
+#include <Base/Parameter.h>
+#include <Base/Tools.h>
+#include <Base/Tools2D.h>
 
-#include <QDomDocument>
-#include <QDomElement>
+#include "Action.h"
+#include "Application.h"
+#include "BitmapFactory.h"
+#include "CommandT.h"
+#include "Control.h"
+#include "Clipping.h"
+#include "DemoMode.h"
+#include "DlgIconBrowser.h"
+#include "DlgDisplayPropertiesImp.h"
+#include "DlgSettingsImageImp.h"
+#include "Document.h"
+#include "FileDialog.h"
+#include "Macro.h"
+#include "MainWindow.h"
+#include "MouseSelection.h"
+#include "NavigationStyle.h"
+#include "OverlayParams.h"
+#include "OverlayWidgets.h"
+#include "PieMenu.h"
+#include "SceneInspector.h"
+#include "Selection.h"
+#include "SelectionObject.h"
+#include "SelectionView.h"
+#include "SoAxisCrossKit.h"
+#include "SoFCOffscreenRenderer.h"
+#include "SoFCUnifiedSelection.h"
+#include "TextureMapping.h"
+#include "Tools.h"
+#include "Tree.h"
+#include "TreeParams.h"
+#include "Utilities.h"
+#include "View.h"
+#include "View3DInventor.h"
+#include "View3DInventorViewer.h"
+#include "ViewParams.h"
+#include "ViewProviderMeasureDistance.h"
+#include "ViewProviderGeometryObject.h"
+#include "WaitCursor.h"
+
 
 using namespace Gui;
 using Gui::Dialog::DlgSettingsImageImp;
@@ -860,7 +856,7 @@ void StdCmdToggleGroupVisibility::activated(int iMsg)
 {
     Q_UNUSED(iMsg); 
 
-    auto sels = Gui::Selection().getSelectionT(0,0);
+    auto sels = Gui::Selection().getSelectionT(nullptr, ResolveMode::NoResolve);
     std::set<App::DocumentObject*> groups;
     for(auto &sel : sels) {
         auto sobj = sel.getSubObject();
@@ -923,13 +919,13 @@ void StdCmdToggleShowOnTop::activated(int iMsg)
     std::set<App::SubObjectT> objs;
 
     std::vector<App::SubObjectT> sels;
-    for(auto sel : Selection().getSelectionT(gdoc->getDocument()->getName(),0)) {
-        objs.insert(sel.normalized(App::SubObjectT::NoElement)).second;
+    for(auto sel : Selection().getSelectionT(gdoc->getDocument()->getName(),ResolveMode::NoResolve)) {
+        objs.insert(sel.normalized(App::SubObjectT::NormalizeOption::NoElement)).second;
     }
 
     if (Selection().hasPreselection()) {
         auto presel = Selection().getPreselection().Object.normalized(
-                App::SubObjectT::NoElement);
+                App::SubObjectT::NormalizeOption::NoElement);
         if (!objs.count(presel)) {
             objs.clear();
             objs.insert(presel);
@@ -3310,10 +3306,10 @@ StdCmdTreeSelectAllInstances::StdCmdTreeSelectAllInstances()
 
 bool StdCmdTreeSelectAllInstances::isActive(void)
 {
-    const auto &sels = Selection().getSelectionEx("*",App::DocumentObject::getClassTypeId(),true,true);
-    if(sels.empty())
+    SelectionObject sel;
+    if (!Selection().getSingleSelection(sel))
         return false;
-    auto obj = sels[0].getObject();
+    auto obj = sel.getObject();
     if(!obj || !obj->getNameInDocument())
         return false;
     return dynamic_cast<ViewProviderDocumentObject*>(
@@ -3323,10 +3319,10 @@ bool StdCmdTreeSelectAllInstances::isActive(void)
 void StdCmdTreeSelectAllInstances::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
-    const auto &sels = Selection().getSelectionEx("*",App::DocumentObject::getClassTypeId(),true,true);
-    if(sels.empty())
+    SelectionObject sel;
+    if (!Selection().getSingleSelection(sel))
         return;
-    auto obj = sels[0].getObject();
+    auto obj = sel.getObject();
     if(!obj || !obj->getNameInDocument())
         return;
     auto vpd = dynamic_cast<ViewProviderDocumentObject*>(
@@ -4748,6 +4744,68 @@ VIEW_CMD_DEF(ToolTipDisable, ToolTipDisable)
 }
 
 //===========================================================================
+// Std_StoreWorkingView
+//===========================================================================
+DEF_STD_CMD_A(StdStoreWorkingView)
+
+StdStoreWorkingView::StdStoreWorkingView()
+  : Command("Std_StoreWorkingView")
+{
+    sGroup        = "Standard-View";
+    sMenuText     = QT_TR_NOOP("Store working view");
+    sToolTipText  = QT_TR_NOOP("Store a document-specific temporary working view");
+    sStatusTip    = QT_TR_NOOP("Store a document-specific temporary working view");
+    sWhatsThis    = "Std_StoreWorkingView";
+    sAccel        = "Shift+End";
+    eType         = NoTransaction;
+}
+
+void StdStoreWorkingView::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+    if (auto view = dynamic_cast<Gui::View3DInventor*>(Gui::getMainWindow()->activeWindow())) {
+        view->getViewer()->saveHomePosition();
+    }
+}
+
+bool StdStoreWorkingView::isActive()
+{
+    return dynamic_cast<Gui::View3DInventor*>(Gui::getMainWindow()->activeWindow());
+}
+
+//===========================================================================
+// Std_RecallWorkingView
+//===========================================================================
+DEF_STD_CMD_A(StdRecallWorkingView)
+
+StdRecallWorkingView::StdRecallWorkingView()
+  : Command("Std_RecallWorkingView")
+{
+    sGroup        = "Standard-View";
+    sMenuText     = QT_TR_NOOP("Recall working view");
+    sToolTipText  = QT_TR_NOOP("Recall previously stored temporary working view");
+    sStatusTip    = QT_TR_NOOP("Recall previously stored temporary working view");
+    sWhatsThis    = "Std_RecallWorkingView";
+    sAccel        = "End";
+    eType         = NoTransaction;
+}
+
+void StdRecallWorkingView::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+    if (auto view = dynamic_cast<Gui::View3DInventor*>(Gui::getMainWindow()->activeWindow())) {
+        if (view->getViewer()->hasHomePosition())
+            view->getViewer()->resetToHomePosition();
+    }
+}
+
+bool StdRecallWorkingView::isActive()
+{
+    auto view = dynamic_cast<Gui::View3DInventor*>(Gui::getMainWindow()->activeWindow());
+    return view && view->getViewer()->hasHomePosition();
+}
+
+//===========================================================================
 // Instantiation
 //===========================================================================
 
@@ -4764,6 +4822,8 @@ void CreateViewStdCommands(void)
     rcCmdMgr.addCommand(new StdCmdViewSelection());
     rcCmdMgr.addCommand(new StdCmdViewRotateLeft());
     rcCmdMgr.addCommand(new StdCmdViewRotateRight());
+    rcCmdMgr.addCommand(new StdStoreWorkingView());
+    rcCmdMgr.addCommand(new StdRecallWorkingView());
 
     rcCmdMgr.addCommand(new StdCmdViewExample1());
     rcCmdMgr.addCommand(new StdCmdViewExample2());

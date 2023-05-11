@@ -23,32 +23,32 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <TopoDS.hxx>
 # include <Precision.hxx>
+# include <TopoDS.hxx>
 #endif
 
-#include "FeatureThickness.h"
 #include <Base/Exception.h>
 #include <Base/Parameter.h>
 #include <Base/Console.h>
 #include <App/Application.h>
 #include <App/Document.h>
+#include "FeatureThickness.h"
 
 FC_LOG_LEVEL_INIT("PartDesign",true,true)
 
 using namespace PartDesign;
 
-const char* PartDesign::Thickness::ModeEnums[] = {"Skin","Pipe", "RectoVerso",NULL};
-const char* PartDesign::Thickness::JoinEnums[] = {"Arc", "Intersection",NULL};
+const char *PartDesign::Thickness::ModeEnums[] = {"Skin", "Pipe", "RectoVerso", nullptr};
+const char *PartDesign::Thickness::JoinEnums[] = {"Arc", "Intersection", nullptr};
 
 PROPERTY_SOURCE(PartDesign::Thickness, PartDesign::DressUp)
 
 Thickness::Thickness()
 {
-    ADD_PROPERTY_TYPE(Value,(1.0),"Thickness",App::Prop_None,"Thickness value");
-    ADD_PROPERTY_TYPE(Mode,(long(0)),"Thickness",App::Prop_None,"Mode");
+    ADD_PROPERTY_TYPE(Value, (1.0), "Thickness", App::Prop_None, "Thickness value");
+    ADD_PROPERTY_TYPE(Mode, (long(0)), "Thickness", App::Prop_None, "Mode");
     Mode.setEnums(ModeEnums);
-    ADD_PROPERTY_TYPE(Join,(long(0)),"Thickness",App::Prop_None,"Join type");
+    ADD_PROPERTY_TYPE(Join, (long(0)), "Thickness", App::Prop_None, "Join type");
     Join.setEnums(JoinEnums);
     ADD_PROPERTY_TYPE(Reversed,(false),"Thickness",App::Prop_None,"Apply the thickness towards the solids interior");
     ADD_PROPERTY_TYPE(Intersection,(false),"Thickness",App::Prop_None,"Enable intersection-handling");
@@ -67,13 +67,13 @@ short Thickness::mustExecute() const
     return DressUp::mustExecute();
 }
 
-App::DocumentObjectExecReturn *Thickness::execute(void)
+App::DocumentObjectExecReturn *Thickness::execute()
 {
     // Base shape
     Part::TopoShape baseShape;
     try {
         baseShape = getBaseShape();
-    } catch (Base::Exception& e) {
+    } catch (Base::Exception &e) {
         return new App::DocumentObjectExecReturn(e.what());
     }
 

@@ -19,24 +19,20 @@
  *   Suite 330, Boston, MA  02111-1307, USA                                *
  *                                                                         *
  ***************************************************************************/
+
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-
-#endif
-
 #include <App/Application.h>
-#include <Base/Console.h>
 #include <Base/Parameter.h>
 
 #include "Rez.h"
+
 
 using namespace TechDrawGui;
 
 //*** initial static var outside methods!
 double Rez::m_rezFactor = Rez::getParameter();
 //***
-
 
 double Rez::getRezFactor()
 {
@@ -48,7 +44,6 @@ void Rez::setRezFactor(double f)
     Rez::m_rezFactor = f;
 }
 
-
 //turn App side value to Gui side value
 double Rez::guiX(double x)
 {
@@ -57,7 +52,7 @@ double Rez::guiX(double x)
 
 Base::Vector3d Rez::guiX(Base::Vector3d v)
 {
-    Base::Vector3d result(guiX(v.x),guiX(v.y),guiX(v.z));
+    Base::Vector3d result(guiX(v.x), guiX(v.y), guiX(v.z));
     return result;
 }
 
@@ -80,7 +75,7 @@ double Rez::appX(double x)
 
 Base::Vector3d Rez::appX(Base::Vector3d v)
 {
-    Base::Vector3d result(appX(v.x),appX(v.y),appX(v.z));
+    Base::Vector3d result(appX(v.x), appX(v.y), appX(v.z));
     return result;
 }
 
@@ -101,7 +96,7 @@ QPointF Rez::guiPt(QPointF p)
 
 QPointF Rez::appPt(QPointF p)
 {
-    QPointF result(appX(p.x()),appX(p.y()));
+    QPointF result(appX(p.x()), appX(p.y()));
     return result;
 }
 
@@ -116,13 +111,13 @@ QRectF Rez::guiRect(QRectF r)
 
 QSize Rez::guiSize(QSize s)
 {
-    QSize result((int)guiX(s.width()),(int)guiX(s.height()));
+    QSize result((int)guiX(s.width()), (int)guiX(s.height()));
     return result;
 }
 
 QSize Rez::appSize(QSize s)
 {
-    QSize result((int)appX(s.width()),(int)appX(s.height()));
+    QSize result((int)appX(s.width()), (int)appX(s.height()));
     return result;
 }
 

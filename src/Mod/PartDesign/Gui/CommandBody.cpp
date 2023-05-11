@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Copyright (C) 2015 Alexander Golubev (Fat-Zer) <fatzer2@gmail.com>     *
+ *   Copyright (C) 2015 Alexander Golubev (Fat-Zer) <fatzer2@gmail.com>    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -24,40 +24,37 @@
 
 #ifndef _PreComp_
 # include <QApplication>
-# include <QMessageBox>
 # include <QInputDialog>
+# include <QMessageBox>
 # include <QCheckBox>
-# include <Inventor/C/basic.h>
 # include <TopExp_Explorer.hxx>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
 
-#include <Base/Console.h>
+#include <App/Document.h>
 #include <App/Origin.h>
 #include <App/Part.h>
+#include <Base/Console.h>
 #include <Gui/CommandT.h>
 #include <Gui/Control.h>
 #include <Gui/Document.h>
 #include <Gui/Application.h>
-#include <Gui/ActiveObjectList.h>
 #include <Gui/MainWindow.h>
 #include <Gui/View3DInventor.h>
 #include <Gui/View3DInventorViewer.h>
-
 #include <Mod/Sketcher/App/SketchObject.h>
 #include <Mod/PartDesign/App/Body.h>
-#include <Mod/PartDesign/App/Feature.h>
 #include <Mod/PartDesign/App/FeatureBase.h>
 #include <Mod/PartDesign/App/FeatureSketchBased.h>
 #include <Mod/Part/Gui/PartParams.h>
 #include <Mod/Part/App/PartParams.h>
 
-#include "Utils.h"
 #include "TaskFeaturePick.h"
+#include "Utils.h"
 #include "WorkflowManager.h"
 
-FC_LOG_LEVEL_INIT("PartDesign", true, true);
+FC_LOG_LEVEL_INIT("PartDesign", true, true)
 
 //===========================================================================
 // Shared functions
@@ -74,7 +71,7 @@ App::Part* assertActivePart () {
         rcCmdMgr.runCommandByName("Std_Part");
         rv = Gui::Application::Instance->activeView()->getActiveObject<App::Part *> ( PARTKEY );
         if ( !rv ) {
-            QMessageBox::critical ( 0, QObject::tr( "Part creation failed" ),
+            QMessageBox::critical ( nullptr, QObject::tr( "Part creation failed" ),
                     QObject::tr( "Failed to create a part object." ) );
         }
     }
@@ -125,7 +122,7 @@ void CmdPartDesignBody::activated(int iMsg)
 
     std::string support;
     std::string supportNames;
-    auto sels = Gui::Selection().getSelectionT("*",0);
+    auto sels = Gui::Selection().getSelectionT("*",Gui::ResolveMode::NoResolve);
     int count = 0;
     for(auto it=sels.begin(); it!=sels.end();) {
         auto & sel = *it;
@@ -388,7 +385,7 @@ void CmdPartDesignBody::activated(int iMsg)
         Gui::setTreeViewFocus();
 }
 
-bool CmdPartDesignBody::isActive(void)
+bool CmdPartDesignBody::isActive()
 {
     return hasActiveDocument() && !PartDesignGui::isLegacyWorkflow ( getDocument () );
 }
@@ -436,7 +433,7 @@ void CmdPartDesignMigrate::activated(int iMsg)
                     doc, PartDesignGui::Workflow::Modern );
         } else {
             // Huh? nothing to migrate?
-            QMessageBox::warning ( 0, QObject::tr ( "Nothing to migrate" ),
+            QMessageBox::warning ( nullptr, QObject::tr ( "Nothing to migrate" ),
                     QObject::tr ( "No PartDesign features found that don't belong to a body."
                         " Nothing to migrate." ) );
         }
@@ -606,7 +603,7 @@ void CmdPartDesignMigrate::activated(int iMsg)
     updateActive();
 }
 
-bool CmdPartDesignMigrate::isActive(void)
+bool CmdPartDesignMigrate::isActive()
 {
     return hasActiveDocument();
 }
@@ -648,16 +645,16 @@ void CmdPartDesignMoveTip::activated(int iMsg)
     }
 
     if (!selFeature) {
-        QMessageBox::warning (0, QObject::tr( "Selection error" ),
+        QMessageBox::warning (nullptr, QObject::tr( "Selection error" ),
                 QObject::tr( "Select exactly one PartDesign feature or a body." ) );
         return;
     } else if (!body) {
-        QMessageBox::warning (0, QObject::tr( "Selection error" ),
+        QMessageBox::warning (nullptr, QObject::tr( "Selection error" ),
                 QObject::tr( "Couldn't determine a body for the selected feature '%s'.", selFeature->Label.getValue() ) );
         return;
     } else if ( !selFeature->isDerivedFrom(PartDesign::Feature::getClassTypeId () ) &&
             selFeature != body && body->BaseFeature.getValue() != selFeature ) {
-        QMessageBox::warning (0, QObject::tr( "Selection error" ),
+        QMessageBox::warning (nullptr, QObject::tr( "Selection error" ),
                 QObject::tr( "Only a solid feature can be the tip of a body." ) );
         return;
     }
@@ -684,7 +681,7 @@ void CmdPartDesignMoveTip::activated(int iMsg)
     updateActive();
 }
 
-bool CmdPartDesignMoveTip::isActive(void)
+bool CmdPartDesignMoveTip::isActive()
 {
     return hasActiveDocument();
 }
@@ -752,7 +749,7 @@ void CmdPartDesignDuplicateSelection::activated(int iMsg)
     updateActive();
 }
 
-bool CmdPartDesignDuplicateSelection::isActive(void)
+bool CmdPartDesignDuplicateSelection::isActive()
 {
     return hasActiveDocument();
 }
@@ -779,10 +776,13 @@ void CmdPartDesignMoveFeature::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
     std::vector<App::DocumentObject*> features = getSelection().getObjectsOfType(Part::Feature::getClassTypeId());
-    if (features.empty()) return;
+    if (features.empty())
+        return;
 
     // Check if all features are valid to move
-    if (std::any_of(std::begin(features), std::end(features), [](App::DocumentObject* obj){return !PartDesignGui::isFeatureMovable(obj); }))
+    if (std::any_of(std::begin(features), std::end(features), [](App::DocumentObject* obj){
+        return !PartDesignGui::isFeatureMovable(obj);
+    }))
     {
         //show messagebox and cancel
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Features cannot be moved"),
@@ -837,9 +837,11 @@ void CmdPartDesignMoveFeature::activated(int iMsg)
         qApp->translate("PartDesign_MoveFeature", "Select body"),
         qApp->translate("PartDesign_MoveFeature", "Select a body from the list"),
         items, 0, false, &ok, Qt::MSWindowsFixedSizeDialogHint);
-    if (!ok) return;
+    if (!ok)
+        return;
     int index = items.indexOf(text);
-    if (index < 0) return;
+    if (index < 0)
+        return;
 
     PartDesign::Body* target = static_cast<PartDesign::Body*>(target_bodies[index]);
 
@@ -918,7 +920,7 @@ void CmdPartDesignMoveFeature::activated(int iMsg)
     updateActive();
 }
 
-bool CmdPartDesignMoveFeature::isActive(void)
+bool CmdPartDesignMoveFeature::isActive()
 {
     return hasActiveDocument () && !PartDesignGui::isLegacyWorkflow ( getDocument () );
 }
@@ -941,7 +943,8 @@ void CmdPartDesignMoveFeatureInTree::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
     std::vector<App::DocumentObject*> features = getSelection().getObjectsOfType(Part::Feature::getClassTypeId());
-    if (features.empty()) return;
+    if (features.empty())
+        return;
 
     PartDesign::Body *body = PartDesignGui::getBodyFor ( features.front(), false );
     App::DocumentObject * bodyBase = nullptr;
@@ -956,14 +959,14 @@ void CmdPartDesignMoveFeatureInTree::activated(int iMsg)
                 break;
             }
             if ( bodyBase == feat) {
-                QMessageBox::warning (0, QObject::tr( "Selection error" ),
+                QMessageBox::warning (nullptr, QObject::tr( "Selection error" ),
                         QObject::tr( "Impossible to move the base feature of a body." ) );
                 return;
             }
         }
     }
     if (!body || ! allFeaturesFromSameBody) {
-        QMessageBox::warning (0, QObject::tr( "Selection error" ),
+        QMessageBox::warning (nullptr, QObject::tr( "Selection error" ),
                 QObject::tr( "Select one or more features from the same body." ) );
         return;
     }
@@ -987,7 +990,8 @@ void CmdPartDesignMoveFeatureInTree::activated(int iMsg)
         qApp->translate("PartDesign_MoveFeatureInTree", "Select feature"),
         qApp->translate("PartDesign_MoveFeatureInTree", "Select a feature from the list"),
         items, 0, false, &ok, Qt::MSWindowsFixedSizeDialogHint);
-    if (!ok) return;
+    if (!ok)
+        return;
     int index = items.indexOf(text);
     // first object is the beginning of the body
     App::DocumentObject* target = index != 0 ? model[index-1] : nullptr;
@@ -1041,7 +1045,7 @@ void CmdPartDesignMoveFeatureInTree::activated(int iMsg)
         }
     }
     if(failed) {
-        QMessageBox::critical (0, QObject::tr( "Dependency violation" ),
+        QMessageBox::critical (nullptr, QObject::tr( "Dependency violation" ),
                 QObject::tr( "Early feature must not depend on later feature.\n\n")
                     + QString::fromUtf8(ss.str().c_str()));
         abortCommand();
@@ -1049,7 +1053,7 @@ void CmdPartDesignMoveFeatureInTree::activated(int iMsg)
     }
 
     // If the selected objects have been moved after the current tip then ask the
-    // user if he wants the last object to be the new tip.
+    // user if they want the last object to be the new tip.
     // Only do this for features that can hold a tip (not for e.g. datums)
     if ( lastObject && body->Tip.getValue() == target
         && lastObject->isDerivedFrom(PartDesign::Feature::getClassTypeId()) ) {
@@ -1068,7 +1072,7 @@ void CmdPartDesignMoveFeatureInTree::activated(int iMsg)
     updateActive();
 }
 
-bool CmdPartDesignMoveFeatureInTree::isActive(void)
+bool CmdPartDesignMoveFeatureInTree::isActive()
 {
     return hasActiveDocument () && !PartDesignGui::isLegacyWorkflow ( getDocument () );
 }
@@ -1078,7 +1082,7 @@ bool CmdPartDesignMoveFeatureInTree::isActive(void)
 // Initialization
 //===========================================================================
 
-void CreatePartDesignBodyCommands(void)
+void CreatePartDesignBodyCommands()
 {
     Gui::CommandManager &rcCmdMgr = Gui::Application::Instance->commandManager();
 

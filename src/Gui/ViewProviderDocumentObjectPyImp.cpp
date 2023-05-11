@@ -20,26 +20,25 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <sstream>
 #endif
 
-#include <Gui/ViewProviderDocumentObject.h>
-#include <Gui/Document.h>
-#include <Gui/Application.h>
 #include <App/DocumentObjectPy.h>
+#include "Application.h"
+#include "Document.h"
 
 // inclusion of the generated files (generated out of ViewProviderDocumentObjectPy.xml)
 #include "ViewProviderDocumentObjectPy.h"
 #include "ViewProviderDocumentObjectPy.cpp"
 
+
 using namespace Gui;
 
 // returns a string which represents the object e.g. when printed in python
-std::string ViewProviderDocumentObjectPy::representation(void) const
+std::string ViewProviderDocumentObjectPy::representation() const
 {
     std::stringstream str;
     str << "<View provider object at " << getViewProviderDocumentObjectPtr() << ">";
@@ -49,8 +48,8 @@ std::string ViewProviderDocumentObjectPy::representation(void) const
 
 PyObject* ViewProviderDocumentObjectPy::update(PyObject *args)
 {
-    if (!PyArg_ParseTuple(args, ""))     // convert args: Python->C
-        return NULL;                       // NULL triggers exception
+    if (!PyArg_ParseTuple(args, ""))
+        return nullptr;
     PY_TRY {
         getViewProviderDocumentObjectPtr()->updateView();
         Py_Return;
@@ -61,14 +60,14 @@ PyObject* ViewProviderDocumentObjectPy::isShowable(PyObject *args)
 {
     PyObject *refresh = Py_False;
     if (!PyArg_ParseTuple(args, "|O", &refresh))     // convert args: Python->C
-        return NULL;                       // NULL triggers exception
+        return nullptr;
     PY_TRY {
         return Py::new_reference_to(Py::Boolean(
                     getViewProviderDocumentObjectPtr()->isShowable(PyObject_IsTrue(refresh))));
     } PY_CATCH;
 }
 
-Py::Object ViewProviderDocumentObjectPy::getObject(void) const
+Py::Object ViewProviderDocumentObjectPy::getObject() const
 {
     App::DocumentObject* obj = getViewProviderDocumentObjectPtr()->getObject();
     return Py::Object(obj->getPyObject(), true); // do not inc'ref twice
@@ -115,7 +114,7 @@ Py::List ViewProviderDocumentObjectPy::getClaimedBy() const {
     return res;
 }
 
-Py::Object ViewProviderDocumentObjectPy::getDocument(void) const
+Py::Object ViewProviderDocumentObjectPy::getDocument() const
 {
     Document* doc = getViewProviderDocumentObjectPtr()->getDocument();
     return Py::asObject(doc->getPyObject()); // do not inc'ref twice
@@ -123,7 +122,7 @@ Py::Object ViewProviderDocumentObjectPy::getDocument(void) const
 
 PyObject *ViewProviderDocumentObjectPy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int ViewProviderDocumentObjectPy::setCustomAttributes(const char* /*attr*/, PyObject* /*obj*/)

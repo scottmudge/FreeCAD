@@ -24,7 +24,6 @@
 #ifndef GUI_COMMAND_H
 #define GUI_COMMAND_H
 
-
 #include <list>
 #include <map>
 #include <string>
@@ -201,7 +200,7 @@ class QAction;
 class QWidget;
 class QByteArray;
 
-typedef struct _object PyObject;
+using PyObject = struct _object;
 
 namespace App
 {
@@ -221,15 +220,15 @@ class SelectionSingleton;
 class MDIView;
 
 
-void CreateStdCommands(void);
-void CreateDocCommands(void);
-void CreateFeatCommands(void);
-void CreateMacroCommands(void);
-void CreateViewStdCommands(void);
-void CreateWindowStdCommands(void);
-void CreateStructureCommands(void);
-void CreateTestCommands(void);
-void CreateLinkCommands(void);
+void CreateStdCommands();
+void CreateDocCommands();
+void CreateFeatCommands();
+void CreateMacroCommands();
+void CreateViewStdCommands();
+void CreateWindowStdCommands();
+void CreateStructureCommands();
+void CreateTestCommands();
+void CreateLinkCommands();
 
 
 /** The CommandBase class
@@ -240,8 +239,8 @@ void CreateLinkCommands(void);
 class GuiExport CommandBase
 {
 protected:
-    CommandBase(const char* sMenu, const char* sToolTip=0, const char* sWhat=0,
-                const char* sStatus=0, const char* sPixmap=0, const char* sAccel=0);
+    explicit CommandBase(const char* sMenu, const char* sToolTip=nullptr, const char* sWhat=nullptr,
+                const char* sStatus=nullptr, const char* sPixmap=nullptr, const char* sAccel=nullptr);
     virtual ~CommandBase();
 
 public:
@@ -254,7 +253,7 @@ public:
     //@{
 protected:
     /// Creates the used Action when adding to a widget. The default implementation does nothing.
-    virtual Action * createAction(void);
+    virtual Action * createAction();
 
 public:
     /// Reassigns QAction stuff after the language has changed.
@@ -321,8 +320,8 @@ protected:
 class GuiExport Command : public CommandBase
 {
 protected:
-    Command(const char* name);
-    virtual ~Command();
+    explicit Command(const char* name);
+    ~Command() override;
 
 protected:
     /** @name Methods to override when creating a new command
@@ -331,7 +330,7 @@ protected:
     /// Methods which gets called when activated, needs to be reimplemented!
     virtual void activated(int iMsg);
     /// Creates the used Action
-    virtual Action * createAction(void);
+    Action * createAction() override;
     /// Called before invoking
     virtual void onInvoke(int iMsg);
     /// Applies the menu text, tool and status tip to the passed action object
@@ -346,9 +345,9 @@ public:
     /// CommandManager is a friend
     friend class CommandManager;
     /// Override this method if your Cmd is not always active
-    virtual bool isActive(void);
+    virtual bool isActive();
     /// Get somtile called to check the state of the command
-    void testActive(void);
+    void testActive();
     /// Enables or disables the command
     void setEnabled(bool);
     /// Command trigger source
@@ -382,56 +381,56 @@ public:
     /** @name Helper methods to get important classes */
     //@{
     /// Get pointer to the Application Window
-    static Application*  getGuiApplication(void);
+    static Application*  getGuiApplication();
     /// Get a reference to the selection
-    static Gui::SelectionSingleton&  getSelection(void);
+    static Gui::SelectionSingleton&  getSelection();
     /// Get pointer to the active gui document
-    Gui::Document*  getActiveGuiDocument(void) const;
+    Gui::Document*  getActiveGuiDocument() const;
     /** Get pointer to the named or active App document
      *  Returns a pointer to the named document or the active
      *  document when no name is given. NULL is returned
      *  when the name does not exist or no document is active!
      */
-    App::Document*  getDocument(const char* Name=0) const;
+    App::Document*  getDocument(const char* Name=nullptr) const;
     /// checks if the active view is of a special type or derived
     bool isViewOfType(Base::Type t) const;
     /// returns the named feature or the active one from the active document or NULL
     App::DocumentObject*  getObject(const char* Name) const;
     /// returns a python command string to retrieve an object from a document
-    static std::string getObjectCmd(const char *Name, const App::Document *doc=0,
-            const char *prefix=0, const char *postfix=0, bool gui=false);
+    static std::string getObjectCmd(const char *Name, const App::Document *doc=nullptr,
+            const char *prefix=nullptr, const char *postfix=nullptr, bool gui=false);
     /// returns a python command string to retrieve the given object
     static std::string getObjectCmd(const App::DocumentObject *obj,
-            const char *prefix=0, const char *postfix=0, bool gui=false);
+            const char *prefix=nullptr, const char *postfix=nullptr, bool gui=false);
     /** Get unique Feature name from the active document
      *
      *  @param BaseName: the base name
      *  @param obj: if not zero, then request the unique name in the document of
      *  the given object.
      */
-    static std::string getUniqueObjectName(const char *BaseName, const App::DocumentObject *obj=0);
+    static std::string getUniqueObjectName(const char *BaseName, const App::DocumentObject *obj=nullptr);
     //@}
 
     /** @name Helper methods for the Undo/Redo and Update handling */
     //@{
     /// Open a new Undo transaction on the active document
-    static void openCommand(const char* sName=0);
+    static void openCommand(const char* sName=nullptr);
     /// Commit the Undo transaction on the active document
-    static void commitCommand(void);
+    static void commitCommand();
     /// Abort the Undo transaction on the active document
-    static void abortCommand(void);
+    static void abortCommand();
     /// Check if an Undo transaction is open on the active document
-    static bool hasPendingCommand(void);
+    static bool hasPendingCommand();
     /// Updates the (active) document (propagate changes)
-    static void updateActive(void);
+    static void updateActive();
     /// Updates the (all or listed) documents (propagate changes)
     static void updateAll(std::list<Gui::Document*> cList);
     /// Checks if the active object of the active document is valid
-    static bool isActiveObjectValid(void);
+    static bool isActiveObjectValid();
     /// Translate command
-    void languageChange();
+    void languageChange() override;
     /// Updates the QAction with respect to the passed mode.
-    void updateAction(int mode);
+    void updateAction(int mode) override;
     /// Setup checkable actions based on current TriggerSource
     void setupCheckable(int iMsg);
     //@}
@@ -549,17 +548,17 @@ public:
     /** @name Helper methods to generate help pages */
     //@{
     /// returns the begin of a online help page
-    const char * beginCmdHelp(void);
+    const char * beginCmdHelp();
     /// returns the end of a online help page
-    const char * endCmdHelp(void);
+    const char * endCmdHelp();
     /// Get the help URL
-    virtual const char* getHelpUrl(void) const { return sHelpUrl; }
+    virtual const char* getHelpUrl() const { return sHelpUrl; }
     //@}
 
     /** @name Helper methods for the Active tests */
     //@{
     /// true when there is a document
-    bool hasActiveDocument(void) const;
+    bool hasActiveDocument() const;
     /// true when there is a document and a Feature with Name
     bool hasObject(const char* Name);
     //@}
@@ -567,7 +566,7 @@ public:
     /** @name checking of internal state */
     //@{
     /// returns the name to which the command belongs
-    const char* getAppModuleName(void) const {return sAppModule;}
+    const char* getAppModuleName() const {return sAppModule;}
     void setAppModuleName(const char*);
     /// Get the command name
     const char* getName() const { return sName; }
@@ -664,11 +663,11 @@ class GuiExport GroupCommand : public Command,
 {
 public:
     /// Constructor
-    GroupCommand(const char *name,
+    explicit GroupCommand(const char *name,
                  int defaultAction=-1,
                  const char *paramPath=nullptr,
                  const char *paramEntry=nullptr);
-    ~GroupCommand();
+    ~GroupCommand() override;
 
     void OnChange(Base::Subject<const char*> &, const char* sReason);
 
@@ -677,7 +676,7 @@ public:
      * @param reg: whether to register the command with CommandManager
      * @return Return the command index.
      */
-    int addCommand(Command *cmd = 0, bool reg=true);
+    int addCommand(Command *cmd = nullptr, bool reg=true);
     /** Add child command
      * @param cmd: child command name.
      * @return Return the found command, or NULL if not found.
@@ -688,8 +687,8 @@ public:
     std::vector<Command*> getCommands() const;
 
 protected:
-    virtual Gui::Action * createAction(void);
-    virtual void activated(int iMsg);
+    Gui::Action * createAction() override;
+    void activated(int iMsg) override;
 
 protected:
     std::vector<std::pair<Command*,size_t> > cmds;
@@ -706,16 +705,16 @@ public:
     CheckableCommand(const char *name);
 
 protected: 
-    virtual void activated(int iMsg);
-    virtual bool isActive(void);
-    virtual Gui::Action * createAction(void);
+    void activated(int iMsg) override;
+    bool isActive() override;
+    Gui::Action * createAction() override;
 
     /// Called to determine if this command/option is checked
     virtual bool getOption() const = 0;
     /// Called to set checked state of this command/option
     virtual void setOption(bool checked) = 0;
 
-    virtual void setActionIcon(Action *action, const QIcon &);
+    void setActionIcon(Action *action, const QIcon &) override;
 };
 
 
@@ -732,34 +731,34 @@ class PythonCommand: public Command
 {
 public:
     PythonCommand(const char* name, PyObject * pcPyCommand, const char* pActivationString);
-    virtual ~PythonCommand();
+    ~PythonCommand() override;
 
 protected:
     /** @name Methods reimplemented for Command Framework */
     //@{
     /// Method which gets called when activated
-    virtual void activated(int iMsg);
+    void activated(int iMsg) override;
     /// if the command is not always active
-    virtual bool isActive(void);
+    bool isActive() override;
     /// Get the help URL
-    const char* getHelpUrl(void) const;
+    const char* getHelpUrl() const override;
     /// Creates the used Action
-    virtual Action * createAction(void);
+    Action * createAction() override;
     //@}
 
 public:
     /** @name Methods to get the properties of the command */
     //@{
     /// Reassigns QAction stuff after the language has changed.
-    void languageChange();
-    const char* className() const
+    void languageChange() override;
+    const char* className() const override
     { return "PythonCommand"; }
-    const char* getWhatsThis  () const;
-    const char* getMenuText   () const;
-    const char* getToolTipText() const;
-    const char* getStatusTip  () const;
-    const char* getPixmap     () const;
-    const char* getAccel      () const;
+    const char* getWhatsThis  () const override;
+    const char* getMenuText   () const override;
+    const char* getToolTipText() const override;
+    const char* getStatusTip  () const override;
+    const char* getPixmap     () const override;
+    const char* getAccel      () const override;
     bool isCheckable          () const;
     bool isChecked            () const;
     //@}
@@ -783,29 +782,29 @@ class PythonGroupCommand: public Command
 {
 public:
     PythonGroupCommand(const char* name, PyObject * pcPyCommand);
-    virtual ~PythonGroupCommand();
+    ~PythonGroupCommand() override;
 
 protected:
     /** @name Methods reimplemented for Command Framework */
     //@{
     /// Get the help URL
-    const char* getHelpUrl(void) const;
+    const char* getHelpUrl() const override;
     /// Creates the used Action
-    virtual Action * createAction(void);
+    Action * createAction() override;
     //@}
 
 public:
     /** @name Methods to get the properties of the command */
     //@{
     /// Reassigns QAction stuff after the language has changed.
-    const char* className() const
+    const char* className() const override
     { return "PythonGroupCommand"; }
-    const char* getWhatsThis  () const;
-    const char* getMenuText   () const;
-    const char* getToolTipText() const;
-    const char* getStatusTip  () const;
-    const char* getPixmap     () const;
-    const char* getAccel      () const;
+    const char* getWhatsThis  () const override;
+    const char* getMenuText   () const override;
+    const char* getToolTipText() const override;
+    const char* getStatusTip  () const override;
+    const char* getPixmap     () const override;
+    const char* getAccel      () const override;
     bool isExclusive          () const;
     bool hasDropDownMenu      () const;
     //@}
@@ -832,27 +831,27 @@ protected:
 class GuiExport MacroCommand: public Command
 {
 public:
-    MacroCommand(const char* name, bool system = false, bool preselect = false);
-    virtual ~MacroCommand();
+    explicit MacroCommand(const char* name, bool system = false, bool preselect = false);
+    ~MacroCommand() override;
 
 protected:
     /** @name methods reimplemented for Command Framework */
     //@{
     /// Method which get called when activated
-    void activated(int iMsg);
+    void activated(int iMsg) override;
     /// Creates the used Action
-    Action * createAction(void);
+    Action * createAction() override;
     //@}
 
 public:
     /// Returns the script name
     const char* getScriptName () const { return sScriptName; }
     /// Ignore when language has changed.
-    void languageChange() {}
-    const char* className() const
+    void languageChange() override {}
+    const char* className() const override
     { return "Gui::MacroCommand"; }
 
-    virtual bool isActive(void);
+    bool isActive(void) override;
 
     /** @name Methods to set the properties of the Script Command */
     //@{
@@ -918,7 +917,7 @@ public:
      *  of a special app module use GetModuleCommands()
      *  @see Command
      */
-    std::vector <Command*> getAllCommands(void) const;
+    std::vector <Command*> getAllCommands() const;
 
     /** Returns all commands of a group
      *  delivers a vector of all commands in the given group.
@@ -939,7 +938,7 @@ public:
     /// method is OBSOLETE use GetModuleCommands() or GetAllCommands()
     const std::map<std::string, Command*>& getCommands() const { return _sCommands; }
     /// get frequently called by the AppWnd to check the commands are active.
-    void testActive(void);
+    void testActive();
 
     void addCommandMode(const char* sContext, const char* sName);
     void updateCommands(const char* sContext, int mode);
@@ -980,6 +979,13 @@ public:
      */
     const Command* checkAcceleratorForConflicts(const char* accel, const Command *ignore = nullptr) const;
 
+    /**
+     * Returns the first available command name for a new macro (e.g. starting from 1,
+     * examines the existing user preferences for Std_Macro_%1 and returns the lowest
+     * available numbered string).
+     */
+    std::string newMacroName() const;
+
 private:
     /// Destroys all commands in the manager and empties the list.
     void clearCommands();
@@ -1008,10 +1014,16 @@ private:
 {\
 public:\
     X();\
+    virtual ~X(){}\
     virtual const char* className() const\
     { return #X; }\
 protected: \
     virtual void activated(int iMsg);\
+private:\
+    X(const X&) = delete;\
+    X(X&&) = delete;\
+    X& operator= (const X&) = delete;\
+    X& operator= (X&&) = delete;\
 };
 
 /** The Group Command Macro
@@ -1071,6 +1083,11 @@ public:\
 protected: \
     virtual void activated(int iMsg);\
     virtual bool isActive(void);\
+private:\
+    X(const X&) = delete;\
+    X(X&&) = delete;\
+    X& operator= (const X&) = delete;\
+    X& operator= (X&&) = delete;\
 };
 
 /** The Command Macro Standard + createAction()
@@ -1088,6 +1105,11 @@ public:\
 protected: \
     virtual void activated(int iMsg);\
     virtual Gui::Action * createAction(void);\
+private:\
+    X(const X&) = delete;\
+    X(X&&) = delete;\
+    X& operator= (const X&) = delete;\
+    X& operator= (X&&) = delete;\
 };
 
 /** The Command Macro Standard + isActive() + createAction()
@@ -1106,6 +1128,11 @@ protected: \
     virtual void activated(int iMsg);\
     virtual bool isActive(void);\
     virtual Gui::Action * createAction(void);\
+private:\
+    X(const X&) = delete;\
+    X(X&&) = delete;\
+    X& operator= (const X&) = delete;\
+    X& operator= (X&&) = delete;\
 };
 
 /** The Command Macro Standard + isActive() + updateAction()
@@ -1124,6 +1151,11 @@ public:\
 protected: \
     virtual void activated(int iMsg);\
     virtual bool isActive(void);\
+private:\
+    X(const X&) = delete;\
+    X(X&&) = delete;\
+    X& operator= (const X&) = delete;\
+    X& operator= (X&&) = delete;\
 };
 
 /** The Command Macro Standard + isActive() + createAction()
@@ -1144,6 +1176,11 @@ protected: \
     virtual void activated(int iMsg);\
     virtual bool isActive(void);\
     virtual Gui::Action * createAction(void);\
+private:\
+    X(const X&) = delete;\
+    X(X&&) = delete;\
+    X& operator= (const X&) = delete;\
+    X& operator= (X&&) = delete;\
 };
 
  /** The Command Macro Standard + isActive() + createAction()
@@ -1193,6 +1230,11 @@ protected: \
     virtual void activated(int iMsg);\
     virtual bool isActive(void);\
     virtual Gui::Action * createAction(void);\
+private:\
+    X(const X&) = delete;\
+    X(X&&) = delete;\
+    X& operator= (const X&) = delete;\
+    X& operator= (X&&) = delete;\
 };
 
 /** The Command Macro view
@@ -1215,6 +1257,11 @@ protected: \
         Gui::MDIView* view = Gui::getMainWindow()->activeWindow();\
         return view && view->isDerivedFrom(Gui::View3DInventor::getClassTypeId());\
     }\
+private:\
+    X(const X&) = delete;\
+    X(X&&) = delete;\
+    X& operator= (const X&) = delete;\
+    X& operator= (X&&) = delete;\
 };
 
 #endif // GUI_COMMAND_H

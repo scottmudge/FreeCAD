@@ -20,25 +20,24 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
+# include <cmath>
+# include <limits>
 # include <QApplication>
-# include <QRegExp>
 #endif
 
-#include <limits>
+
+#include <App/Application.h>
+#include <Base/Parameter.h>
+#include <Base/UnitsApi.h>
 
 #include "ui_DlgSettingsUnits.h"
 #include "DlgSettingsUnitsImp.h"
+
 #include "NavigationStyle.h"
 #include "PrefWidgets.h"
 #include "Selection.h"
-#include <App/Application.h>
-#include <Base/Console.h>
-#include <Base/Parameter.h>
-#include <Base/UnitsApi.h>
 
 using namespace Gui::Dialog;
 using namespace Base;
@@ -54,7 +53,7 @@ using namespace Base;
     qApp->translate("Gui::Dialog::DlgSettingsUnits", "Building US (ft-in/sqft/cft)");
     qApp->translate("Gui::Dialog::DlgSettingsUnits", "Metric small parts & CNC(mm, mm/min)");
     qApp->translate("Gui::Dialog::DlgSettingsUnits", "Imperial for Civil Eng (ft, ft/sec)");
-    qApp->translate("Gui::Dialog::DlgSettingsUnits", "FEM (mm, N, sec)");
+    qApp->translate("Gui::Dialog::DlgSettingsUnits", "FEM (mm, N, s)");
 #endif
 
 /**
@@ -74,7 +73,6 @@ DlgSettingsUnitsImp::DlgSettingsUnitsImp(QWidget* parent)
         ui->comboBox_ViewSystem->addItem(item, i);
     }
 
-    //fillUpListBox();
     ui->tableWidget->setVisible(false);
     //
     // Enable/disable the fractional inch option depending on system
@@ -108,7 +106,7 @@ void DlgSettingsUnitsImp::on_comboBox_ViewSystem_currentIndexChanged(int index)
         return; // happens when clearing the combo box in retranslateUi()
 
     // Enable/disable the fractional inch option depending on system
-    if( (UnitSystem)index == UnitSystem::ImperialBuilding )
+    if( static_cast<UnitSystem>(index) == UnitSystem::ImperialBuilding )
     {
         ui->comboBox_FracInch->setEnabled(true);
     }
@@ -149,7 +147,7 @@ void DlgSettingsUnitsImp::saveSettings()
 
     // Set and save the Unit System
     viewSystemIndex = ui->comboBox_ViewSystem->currentIndex();
-    UnitsApi::setSchema((UnitSystem)viewSystemIndex);
+    UnitsApi::setSchema(static_cast<UnitSystem>(viewSystemIndex));
 }
 
 void DlgSettingsUnitsImp::loadSettings()

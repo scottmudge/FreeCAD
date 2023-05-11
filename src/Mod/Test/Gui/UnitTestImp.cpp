@@ -20,27 +20,23 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <QMessageBox>
-# include <QStyleFactory>
 #endif
 
-#include <Base/PyObjectBase.h>
 #include <Base/Interpreter.h>
 #include <Gui/MainWindow.h>
+
 #include "UnitTestImp.h"
 #include "ui_UnitTest.h"
-#include "UnitTestPy.h"
 
 
 using namespace TestGui;
 
-
 /* TRANSLATOR TestGui::UnitTestDialog */
 
-UnitTestDialog* UnitTestDialog::_instance=0;
+UnitTestDialog* UnitTestDialog::_instance=nullptr;
 
 /**
  * Creates and returns the one and only instance of this dialog.
@@ -58,9 +54,9 @@ UnitTestDialog* UnitTestDialog::instance()
  */
 void UnitTestDialog::destruct ()
 {
-    if (_instance != 0) {
+    if (_instance) {
         UnitTestDialog *pTmp = _instance;
-        _instance = 0;
+        _instance = nullptr;
         delete pTmp;
     }
 }
@@ -70,7 +66,7 @@ void UnitTestDialog::destruct ()
  */
 bool UnitTestDialog::hasInstance()
 {
-    return _instance != 0;
+    return _instance != nullptr;
 }
 
 /**
@@ -138,6 +134,9 @@ void UnitTestDialog::on_treeViewFailure_itemDoubleClicked(QTreeWidgetItem * item
         QStringList lines = text.split(QLatin1Char('\n'));
         lines.erase(lines.begin()+20, lines.end());
         text = lines.join(QStringLiteral("\n"));
+    }
+    if (text.size() > 1000) {
+        text = text.left(1000);
     }
 
     msgBox.setText(text);
@@ -273,6 +272,19 @@ void UnitTestDialog::clearUnitTests()
 QString UnitTestDialog::getUnitTest() const
 {
     return ui->comboTests->currentText();
+}
+
+/**
+ * Runs the currently selected test and closes the dialog afterwards.
+ * It returns true if all tests have passed and false otherwise.
+ */
+bool UnitTestDialog::runCurrentTest()
+{
+    clearErrorList();
+    on_startButton_clicked();
+    int count = ui->treeViewFailure->topLevelItemCount();
+    reject();
+    return (count == 0);
 }
 
 /**

@@ -21,38 +21,44 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
+
 #ifndef _PreComp_
-# include <QKeyEvent>
 # include <QAction>
-# include <QPushButton>
-# include <QMenu>
 # include <QApplication>
 # include <QClipboard>
-# include <QMenu>
+# include <QKeyEvent>
 # include <QMessageBox>
+# include <QMenu>
 # include <QMimeData>
+# include <QPushButton>
 # include <QToolTip>
 #endif
+# include <QTextTableCell>
 
 #include <Base/Tools.h>
 #include <App/Application.h>
 #include <App/AutoTransaction.h>
 #include <App/Document.h>
-#include <Gui/CommandT.h>
+#include <App/Range.h>
+#include <Base/Reader.h>
+#include <Base/Stream.h>
+#include <Base/Writer.h>
 #include <Gui/Application.h>
+#include <Gui/CommandT.h>
 #include <Gui/MainWindow.h>
 #include <Gui/Widgets.h>
-#include <boost_bind_bind.hpp>
-#include "../App/Utils.h"
-#include "../App/Cell.h"
 #include <App/Range.h>
 #include "SpreadsheetDelegate.h"
 #include "SheetTableView.h"
 #include "SheetModel.h"
+#include <Mod/Spreadsheet/App/Cell.h>
+
+#include "SheetTableView.h"
 #include "LineEdit.h"
 #include "PropertiesDialog.h"
 #include "DlgBindSheet.h"
 #include "DlgSheetConf.h"
+
 
 using namespace SpreadsheetGui;
 using namespace Spreadsheet;
@@ -62,7 +68,7 @@ namespace bp = boost::placeholders;
 void SheetViewHeader::mouseReleaseEvent(QMouseEvent *event)
 {
     QHeaderView::mouseReleaseEvent(event);
-    resizeFinished();
+    Q_EMIT resizeFinished();
 }
 
 bool SheetViewHeader::viewportEvent(QEvent *e) {
@@ -110,7 +116,7 @@ static std::pair<int, int> selectedMinMaxColumns(QModelIndexList list)
 
 SheetTableView::SheetTableView(QWidget *parent)
     : QTableView(parent)
-    , sheet(0)
+    , sheet(nullptr)
     , tabCounter(0)
 {
 
@@ -201,6 +207,16 @@ SheetTableView::SheetTableView(QWidget *parent)
             menu.exec(horizontalHeader()->mapToGlobal(point));
        });
        
+    buildContextMenu();
+
+    setTabKeyNavigation(false);
+
+    timer.setSingleShot(true);
+    QObject::connect(&timer, &QTimer::timeout, [this](){updateCellSpan();});
+}
+
+void SheetTableView::buildContextMenu()
+{
     contextMenu = new QMenu(this);
 
     QAction * cellProperties = new QAction(tr("Properties..."), this);
@@ -338,8 +354,6 @@ SheetTableView::SheetTableView(QWidget *parent)
     connect(actionPasteValueFormat,SIGNAL(triggered()), this, SLOT(pasteValueFormat()));
     actionPasteFormula = pasteMenu->addAction(tr("Paste formula"));
     connect(actionPasteFormula,SIGNAL(triggered()), this, SLOT(pasteFormula()));
-
-    setTabKeyNavigation(false);
 }
 
 void SheetTableView::updateHiddenRows() {
@@ -462,8 +476,8 @@ void SheetTableView::onRecomputeNoTouch() {
 
 void SheetTableView::onBind() {
     auto ranges = selectedRanges();
-    if(ranges.size()>=1 && ranges.size()<=2) {
-        DlgBindSheet dlg(sheet,ranges,Gui::getMainWindow());
+    if(!ranges.empty() && ranges.size()<=2) {
+        DlgBindSheet dlg(sheet,ranges,this);
         dlg.exec();
     }
 }
@@ -472,7 +486,7 @@ void SheetTableView::onConfSetup() {
     auto ranges = selectedRanges();
     if(ranges.empty())
         return;
-    DlgSheetConf dlg(sheet,ranges.back(),Gui::getMainWindow());
+    DlgSheetConf dlg(sheet,ranges.back(),this);
     dlg.exec();
 }
 
@@ -554,9 +568,14 @@ std::vector<Range> SheetTableView::selectedRanges() const
     return result;
 }
 
+QModelIndexList SheetTableView::selectedIndexesRaw() const
+{
+    return selectedIndexes();
+}
+
 void SheetTableView::insertRows()
 {
-    assert(sheet != 0);
+    assert(sheet);
 
     QModelIndexList rows = selectionModel()->selectedRows();
     std::vector<int> sortedRows;
@@ -570,7 +589,7 @@ void SheetTableView::insertRows()
     }
 
     /* Make sure rows are sorted in ascending order */
-    for (QModelIndexList::const_iterator it = rows.begin(); it != rows.end(); ++it)
+    for (QModelIndexList::const_iterator it = rows.cbegin(); it != rows.cend(); ++it)
         sortedRows.push_back(it->row());
     std::sort(sortedRows.begin(), sortedRows.end());
 
@@ -609,7 +628,7 @@ void SheetTableView::insertRows()
 
 void SheetTableView::insertRowsAfter()
 {
-    assert(sheet != 0);
+    assert(sheet);
     const auto rows = selectionModel()->selectedRows();
     const auto & [min, max] = selectedMinMaxRows(rows);
     assert(max - min == rows.size() - 1);
@@ -623,7 +642,7 @@ void SheetTableView::insertRowsAfter()
 
 void SheetTableView::removeRows()
 {
-    assert(sheet != 0);
+    assert(sheet);
 
     bool updateHidden = false;
     if(hiddenRows.size() && !actionShowRows->isChecked()) {
@@ -637,7 +656,7 @@ void SheetTableView::removeRows()
     std::vector<int> sortedRows;
 
     /* Make sure rows are sorted in descending order */
-    for (QModelIndexList::const_iterator it = rows.begin(); it != rows.end(); ++it)
+    for (QModelIndexList::const_iterator it = rows.cbegin(); it != rows.cend(); ++it)
         sortedRows.push_back(it->row());
     std::sort(sortedRows.begin(), sortedRows.end(), std::greater<int>());
 
@@ -660,7 +679,7 @@ void SheetTableView::removeRows()
 
 void SheetTableView::insertColumns()
 {
-    assert(sheet != 0);
+    assert(sheet);
 
     QModelIndexList cols = selectionModel()->selectedColumns();
     std::vector<int> sortedColumns;
@@ -673,7 +692,7 @@ void SheetTableView::insertColumns()
     }
 
     /* Make sure rows are sorted in ascending order */
-    for (QModelIndexList::const_iterator it = cols.begin(); it != cols.end(); ++it)
+    for (QModelIndexList::const_iterator it = cols.cbegin(); it != cols.cend(); ++it)
         sortedColumns.push_back(it->column());
     std::sort(sortedColumns.begin(), sortedColumns.end());
 
@@ -713,7 +732,7 @@ void SheetTableView::insertColumns()
 
 void SheetTableView::insertColumnsAfter()
 {
-    assert(sheet != 0);
+    assert(sheet);
     const auto columns = selectionModel()->selectedColumns();
     const auto& [min, max] = selectedMinMaxColumns(columns);
     assert(max - min == columns.size() - 1);
@@ -727,7 +746,7 @@ void SheetTableView::insertColumnsAfter()
 
 void SheetTableView::removeColumns()
 {
-    assert(sheet != 0);
+    assert(sheet);
 
     QModelIndexList cols = selectionModel()->selectedColumns();
     std::vector<int> sortedColumns;
@@ -740,7 +759,7 @@ void SheetTableView::removeColumns()
     }
 
     /* Make sure rows are sorted in descending order */
-    for (QModelIndexList::const_iterator it = cols.begin(); it != cols.end(); ++it)
+    for (QModelIndexList::const_iterator it = cols.cbegin(); it != cols.cend(); ++it)
         sortedColumns.push_back(it->column());
     std::sort(sortedColumns.begin(), sortedColumns.end(), std::greater<int>());
 
@@ -796,20 +815,31 @@ SheetTableView::~SheetTableView()
 
 }
 
-void SheetTableView::updateCellSpan(CellAddress address)
+void SheetTableView::updateCellSpan()
 {
     int rows, cols;
 
-    sheet->getSpans(address, rows, cols);
+    // Unspan first to avoid overlap
+    for (const auto &addr : spanChanges) {
+        if (rowSpan(addr.row(), addr.col()) > 1 || columnSpan(addr.row(), addr.col()) > 1)
+            setSpan(addr.row(), addr.col(), 1, 1);
+    }
 
-    if (rows != rowSpan(address.row(), address.col()) || cols != columnSpan(address.row(), address.col()))
-        setSpan(address.row(), address.col(), rows, cols);
+    for (const auto &addr : spanChanges) {
+        sheet->getSpans(addr, rows, cols);
+        if (rows > 1 || cols > 1)
+            setSpan(addr.row(), addr.col(), rows, cols);
+    }
+    spanChanges.clear();
 }
 
 void SheetTableView::setSheet(Sheet* _sheet)
 {
     sheet = _sheet;
-    cellSpanChangedConnection = sheet->cellSpanChanged.connect(bind(&SheetTableView::updateCellSpan, this, bp::_1));
+    cellSpanChangedConnection = sheet->cellSpanChanged.connect([&](const CellAddress &addr) {
+        spanChanges.insert(addr);
+        timer.start(10);
+    });
 
     // Update row and column spans
     std::vector<std::string> usedCells = sheet->getUsedCells();
@@ -820,8 +850,11 @@ void SheetTableView::setSheet(Sheet* _sheet)
         if(cell && !cell->hasException() && cell->isPersistentEditMode())
             openPersistentEditor(model()->index(address.row(),address.col()));
 
-        if (sheet->isMergedCell(address))
-            updateCellSpan(address);
+        if (sheet->isMergedCell(address)) {
+            int rows, cols;
+            sheet->getSpans(address, rows, cols);
+            setSpan(address.row(), address.col(), rows, cols);
+        }
     }
 
     // Update column widths and row height
@@ -880,6 +913,9 @@ bool SheetTableView::event(QEvent* event)
         // Also handle the delete key here:
         case Qt::Key_Delete:
             deleteSelection();
+            return true;
+        case Qt::Key_Escape:
+            sheet->setCopyOrCutRanges({});
             return true;
         default:
             break;
@@ -940,6 +976,10 @@ bool SheetTableView::event(QEvent* event)
             kevent->accept();
         }
     }
+    else if (event->type() == QEvent::LanguageChange) {
+        delete contextMenu;
+        buildContextMenu();
+    }
     return QTableView::event(event);
 }
 
@@ -947,7 +987,7 @@ void SheetTableView::deleteSelection()
 {
     QModelIndexList selection = selectionModel()->selectedIndexes();
 
-    if (selection.size() > 0) {
+    if (!selection.empty()) {
         App::AutoTransaction committer(QT_TRANSLATE_NOOP("Command", "Clear cell(s)"));
         try {
             std::vector<Range> ranges = selectedRanges();
@@ -1072,13 +1112,13 @@ void SheetTableView::_pasteClipboard(const char *name, int type)
         Range range = ranges.back();
         if (!mimeData->hasFormat(_SheetMime)) {
             CellAddress current = range.from();
-            QStringList cells;
             QString text = mimeData->text();
+            QStringList cells = text.split(QLatin1Char('\n'));
             int i=0;
-            for (auto it : text.split(QLatin1Char('\n'))) {
+            for (const auto& it : cells) {
                 QStringList cols = it.split(QLatin1Char('\t'));
                 int j=0;
-                for (auto jt : cols) {
+                for (const auto& jt : cols) {
                     QModelIndex index = model()->index(current.row()+i, current.col()+j);
                     model()->setData(index, jt);
                     j++;
@@ -1088,7 +1128,7 @@ void SheetTableView::_pasteClipboard(const char *name, int type)
         }else{
             QByteArray res = mimeData->data(_SheetMime);
             Base::ByteArrayIStreambuf buf(res);
-            std::istream in(0);
+            std::istream in(nullptr);
             in.rdbuf(&buf);
             Base::XMLReader reader("<memory>", in);
             sheet->getCells()->pasteCells(reader,range,(Cell::PasteType)type);
@@ -1174,7 +1214,7 @@ void SheetTableView::finishEditWithMove(int keyPressed, Qt::KeyboardModifiers mo
     {
         // End should take you to the last occupied cell in the current column
         // Ctrl-End takes you to the last cell in the sheet
-        auto usedCells = sheet->getCells()->getUsedCells();
+        auto usedCells = sheet->getCells()->getNonEmptyCells();
         for (const auto& cell : usedCells) {
             if (modifiers == Qt::NoModifier) {
                 if (cell.col() == targetColumn)
@@ -1349,18 +1389,24 @@ void SheetTableView::closeEditor(QWidget * editor, QAbstractItemDelegate::EndEdi
     }
 }
 
+void SheetTableView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+    Gui::getMainWindow()->updateActions();
+    QTableView::selectionChanged(selected, deselected);
+}
+
 void SheetTableView::edit ( const QModelIndex & index )
 {
     QTableView::edit(index);
 }
 
 void SheetTableView::contextMenuEvent(QContextMenuEvent *) {
-    QAction *action = 0;
+    QAction *action = nullptr;
     bool persistent = false;
     auto ranges = selectedRanges();
     for(auto &range : ranges) {
         do {
-            auto cell = sheet->getCell(range.address());
+            auto cell = sheet->getCell(CellAddress(range.address().c_str()));
             if(!cell) continue;
             persistent = persistent || cell->isPersistentEditMode();
             /*[[[cog
@@ -1429,8 +1475,9 @@ void SheetTableView::contextMenuEvent(QContextMenuEvent *) {
         actionCut->setEnabled(true);
         actionCopy->setEnabled(true);
         actionDel->setEnabled(true);
-        actionSplit->setEnabled(true);
-        actionMerge->setEnabled(true);
+        actionSplit->setEnabled(selectedIndexesRaw().size() == 1 &&
+            sheet->isMergedCell(CellAddress(currentIndex().row(),currentIndex().column())));
+        actionMerge->setEnabled(selectedIndexesRaw().size() > 1);
     }
 
     actionBind->setEnabled(ranges.size()>=1 && ranges.size()<=2);
@@ -1491,6 +1538,131 @@ QColor SheetTableView::aliasForegroundColor() const
     if (m)
         return m->aliasForegroundColor();
     return QColor();
+}
+
+QString SheetTableView::toHtml() const
+{
+    auto cells = sheet->getCells()->getNonEmptyCells();
+    int rowCount = 0;
+    int colCount = 0;
+    for (const auto& it : cells) {
+        rowCount = std::max(rowCount, it.row());
+        colCount = std::max(colCount, it.col());
+    }
+
+    std::unique_ptr<QTextDocument> doc(new QTextDocument);
+    doc->setDocumentMargin(10);
+    QTextCursor cursor(doc.get());
+
+    cursor.movePosition(QTextCursor::Start);
+
+    QTextTableFormat tableFormat;
+    tableFormat.setCellSpacing(0.0);
+    tableFormat.setCellPadding(2.0);
+    QVector<QTextLength> constraints;
+    for (int col = 0; col < colCount + 1; col++) {
+        constraints.append(QTextLength(QTextLength::FixedLength, sheet->getColumnWidth(col)));
+    }
+    constraints.prepend(QTextLength(QTextLength::FixedLength, 30.0));
+    tableFormat.setColumnWidthConstraints(constraints);
+
+    QTextCharFormat boldFormat;
+    QFont boldFont = boldFormat.font();
+    boldFont.setBold(true);
+    boldFormat.setFont(boldFont);
+
+    QColor bgColor;
+    bgColor.setNamedColor(QStringLiteral("#f0f0f0"));
+    QTextCharFormat bgFormat;
+    bgFormat.setBackground(QBrush(bgColor));
+
+    QTextTable *table = cursor.insertTable(rowCount + 2, colCount + 2, tableFormat);
+
+    // The header cells of the rows
+    for (int row = 0; row < rowCount + 1; row++) {
+        QTextTableCell headerCell = table->cellAt(row+1, 0);
+        headerCell.setFormat(bgFormat);
+        QTextCursor headerCellCursor = headerCell.firstCursorPosition();
+        QString data = model()->headerData(row, Qt::Vertical).toString();
+        headerCellCursor.insertText(data, boldFormat);
+    }
+
+    // The header cells of the columns
+    for (int col = 0; col < colCount + 1; col++) {
+        QTextTableCell headerCell = table->cellAt(0, col+1);
+        headerCell.setFormat(bgFormat);
+        QTextCursor headerCellCursor = headerCell.firstCursorPosition();
+        QTextBlockFormat blockFormat = headerCellCursor.blockFormat();
+        blockFormat.setAlignment(Qt::AlignHCenter);
+        headerCellCursor.setBlockFormat(blockFormat);
+        QString data = model()->headerData(col, Qt::Horizontal).toString();
+        headerCellCursor.insertText(data, boldFormat);
+    }
+
+    // The cells
+    for (const auto& it : cells) {
+        if (sheet->isMergedCell(it)) {
+            int rows, cols;
+            sheet->getSpans(it, rows, cols);
+            table->mergeCells(it.row() + 1, it.col() + 1, rows, cols);
+        }
+        QModelIndex index = model()->index(it.row(), it.col());
+
+        QTextCharFormat cellFormat;
+        QTextTableCell cell = table->cellAt(it.row() + 1, it.col() + 1);
+
+        // font
+        QVariant font = model()->data(index, Qt::FontRole);
+        if (font.isValid()) {
+            cellFormat.setFont(font.value<QFont>());
+        }
+
+        // foreground
+        QVariant fgColor = model()->data(index, Qt::ForegroundRole);
+        if (fgColor.isValid()) {
+            cellFormat.setForeground(QBrush(fgColor.value<QColor>()));
+        }
+
+        // background
+        QVariant cbgClor = model()->data(index, Qt::BackgroundRole);
+        if (cbgClor.isValid()) {
+            QTextCharFormat bgFormat;
+            bgFormat.setBackground(QBrush(cbgClor.value<QColor>()));
+            cell.setFormat(bgFormat);
+        }
+
+        QTextCursor cellCursor = cell.firstCursorPosition();
+
+        // alignment
+        QVariant align = model()->data(index, Qt::TextAlignmentRole);
+        if (align.isValid()) {
+            Qt::Alignment alignment = static_cast<Qt::Alignment>(align.toInt());
+            QTextBlockFormat blockFormat = cellCursor.blockFormat();
+            blockFormat.setAlignment(alignment);
+            cellCursor.setBlockFormat(blockFormat);
+
+            // This doesn't seem to have any effect on single cells but works if several
+            // cells are merged
+            QTextCharFormat::VerticalAlignment valign = QTextCharFormat::AlignMiddle;
+            QTextCharFormat format = cell.format();
+            if (alignment & Qt::AlignTop) {
+                valign = QTextCharFormat::AlignTop;
+            }
+            else if (alignment & Qt::AlignBottom) {
+                valign = QTextCharFormat::AlignBottom;
+            }
+            format.setVerticalAlignment(valign);
+            cell.setFormat(format);
+        }
+
+        // text
+        QString data = model()->data(index).toString().simplified();
+        cellCursor.insertText(data, cellFormat);
+    }
+
+    cursor.movePosition(QTextCursor::End);
+    cursor.insertBlock();
+    return doc->toHtml();
 }
 
 #include "moc_SheetTableView.cpp"

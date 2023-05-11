@@ -20,23 +20,18 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
+# include <QString>
 #endif
 
-#include <QString>
-#include <QSlider>
+#include <Gui/Application.h>
+#include <Gui/BitmapFactory.h>
+#include <Gui/Document.h>
+#include <Gui/ViewProvider.h>
+
 #include "ui_TaskEdge2TracParameter.h"
 #include "TaskEdge2TracParameter.h"
-#include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
-#include <Base/Console.h>
-#include <Gui/Selection.h>
 
 
 using namespace RobotGui;
@@ -48,7 +43,7 @@ TaskEdge2TracParameter::TaskEdge2TracParameter(Robot::Edge2TracObject *pcObject,
       true, 
       parent),
       pcObject(pcObject),
-      HideShowObj(0)
+      HideShowObj(nullptr)
 {
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
@@ -65,7 +60,7 @@ TaskEdge2TracParameter::TaskEdge2TracParameter(Robot::Edge2TracObject *pcObject,
     setHideShowObject();
 
 }
-void TaskEdge2TracParameter::setHideShowObject(void)
+void TaskEdge2TracParameter::setHideShowObject()
 {
     HideShowObj = pcObject->Source.getValue();
 
@@ -77,7 +72,7 @@ void TaskEdge2TracParameter::setHideShowObject(void)
     }
 }
 
-void TaskEdge2TracParameter::hideShow(void)
+void TaskEdge2TracParameter::hideShow()
 {
     setHideShowObject();
 

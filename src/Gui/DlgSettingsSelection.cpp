@@ -20,17 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
+#include <App/Application.h>
 
 #include "DlgSettingsSelection.h"
 #include "ui_DlgSettingsSelection.h"
+#include <App/Application.h>
 #include "TreeParams.h"
 #include "ViewParams.h"
-#include <App/Application.h>
 
 using namespace Gui;
 using namespace Gui::Dialog;

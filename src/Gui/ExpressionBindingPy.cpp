@@ -21,14 +21,14 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
-#ifndef _PreComp_
-#endif
+
+#include <App/DocumentObjectPy.h>
+
 #include "ExpressionBindingPy.h"
-#include "ExpressionBinding.h"
+#include "InputField.h"
 #include "PythonWrapper.h"
 #include "QuantitySpinBox.h"
-#include "InputField.h"
-#include <App/DocumentObjectPy.h>
+
 
 using namespace Gui;
 
@@ -43,37 +43,39 @@ void ExpressionBindingPy::init_type()
     behaviors().set_tp_new(PyMake);
     behaviors().readyType();
 
-    add_varargs_method("bind",&ExpressionBindingPy::bind,"Bind with an expression");
-    add_varargs_method("isBound",&ExpressionBindingPy::isBound,"Check if already bound with an expression");
-    add_varargs_method("apply",&ExpressionBindingPy::apply,"apply");
-    add_varargs_method("hasExpression",&ExpressionBindingPy::hasExpression,"hasExpression");
-    add_varargs_method("autoApply",&ExpressionBindingPy::autoApply,"autoApply");
-    add_varargs_method("setAutoApply",&ExpressionBindingPy::setAutoApply,"setAutoApply");
+    add_varargs_method("bind", &ExpressionBindingPy::bind, "Bind with an expression");
+    add_varargs_method("isBound", &ExpressionBindingPy::isBound, "Check if already bound with an expression");
+    add_varargs_method("apply", &ExpressionBindingPy::apply, "apply");
+    add_varargs_method("hasExpression", &ExpressionBindingPy::hasExpression, "hasExpression");
+    add_varargs_method("autoApply", &ExpressionBindingPy::autoApply, "autoApply");
+    add_varargs_method("setAutoApply", &ExpressionBindingPy::setAutoApply, "setAutoApply");
 }
 
 PyObject *ExpressionBindingPy::PyMake(struct _typeobject *, PyObject * args, PyObject *)
 {
-    Py::Tuple tuple(args);
+    PyObject* pyObj;
+    if (!PyArg_ParseTuple(args, "O", &pyObj))
+        return nullptr;
 
     ExpressionBinding* expr = nullptr;
     PythonWrapper wrap;
     wrap.loadWidgetsModule();
 
-    QWidget* obj = dynamic_cast<QWidget*>(wrap.toQObject(tuple.getItem(0)));
+    QWidget* obj = dynamic_cast<QWidget*>(wrap.toQObject(Py::Object(pyObj)));
     if (obj) {
         do {
-            QuantitySpinBox* sb = qobject_cast<QuantitySpinBox*>(obj);
-            if (sb) {
-                expr = sb;
+            auto qsb = qobject_cast<QuantitySpinBox*>(obj);
+            if (qsb) {
+                expr = qsb;
                 break;
             }
-            InputField* le = qobject_cast<InputField*>(obj);
-            if (le) {
-                expr = le;
+            auto inp = qobject_cast<InputField*>(obj);
+            if (inp) {
+                expr = inp;
                 break;
             }
         }
-        while(false);
+        while (false);
     }
 
     if (!expr) {
@@ -162,7 +164,7 @@ Py::Object ExpressionBindingPy::setAutoApply(const Py::Tuple& args)
     if (!PyArg_ParseTuple(args.ptr(), "O!", &PyBool_Type, &b))
         throw Py::Exception();
 
-    bool value = PyObject_IsTrue(b) ? true : false;
+    bool value = Base::asBoolean(b);
     expr->setAutoApply(value);
     return Py::None();
 }

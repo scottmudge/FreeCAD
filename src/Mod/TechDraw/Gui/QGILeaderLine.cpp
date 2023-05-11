@@ -22,52 +22,30 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-#include <BRep_Builder.hxx>
-#include <TopoDS_Compound.hxx>
-#include <TopoDS_Shape.hxx>
-#include <TopoDS_Edge.hxx>
-#include <TopoDS.hxx>
-#include <BRepAdaptor_Curve.hxx>
-#include <Precision.hxx>
+# include <cmath>
 
-#include <QGraphicsScene>
-#include <QGraphicsSceneMouseEvent>
-#include <QPainter>
-#include <QPainterPath>
-#include <QPaintDevice>
-#include <QSvgGenerator>
-#include <QVector2D>
-#include <math.h>
+# include <QGraphicsScene>
+# include <QGraphicsSceneMouseEvent>
+# include <QPainter>
+# include <QPainterPath>
+# include <QVector2D>
 #endif
 
-#include <App/Application.h>
-#include <App/Material.h>
 #include <Base/Console.h>
-#include <Base/Exception.h>
-#include <Base/Parameter.h>
-#include <Base/UnitsApi.h>
-#include <Gui/Command.h>
-
-#include <Mod/Part/App/PartFeature.h>
-
+#include <Mod/TechDraw/App/ArrowPropEnum.h>
 #include <Mod/TechDraw/App/DrawLeaderLine.h>
 #include <Mod/TechDraw/App/DrawUtil.h>
-#include <Mod/TechDraw/App/Geometry.h>
 #include <Mod/TechDraw/App/LineGroup.h>
-#include <Mod/TechDraw/App/ArrowPropEnum.h>
-
-#include "Rez.h"
-#include "ZVALUE.h"
-#include "PreferencesGui.h"
-#include "QGIArrow.h"
-#include "ViewProviderLeader.h"
-#include "MDIViewPage.h"
-#include "DrawGuiUtil.h"
-#include "QGVPage.h"
-#include "QGIPrimPath.h"
-#include "QGEPath.h"
 
 #include "QGILeaderLine.h"
+#include "PreferencesGui.h"
+#include "QGEPath.h"
+#include "QGIArrow.h"
+#include "QGIPrimPath.h"
+#include "Rez.h"
+#include "ViewProviderLeader.h"
+#include "ZVALUE.h"
+
 
 using namespace TechDrawGui;
 using namespace TechDraw;
@@ -75,10 +53,8 @@ using namespace TechDraw;
 //**************************************************************
 QGILeaderLine::QGILeaderLine() :
     m_parentItem(nullptr),
-    m_lineWidth(1.0),
     m_lineColor(Qt::black),
     m_lineStyle(Qt::SolidLine),
-    m_editPathStyle(Qt::SolidLine),
     m_hasHover(false),
     m_saveX(0.0),
     m_saveY(0.0),
@@ -90,15 +66,15 @@ QGILeaderLine::QGILeaderLine() :
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemIsMovable, false);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, false);
-    setFlag(QGraphicsItem::ItemSendsGeometryChanges,true);
-    
+    setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
+
     setCacheMode(QGraphicsItem::NoCache);
 
     m_line = new QGIPrimPath();
     addToGroup(m_line);
     m_line->setFlag(QGraphicsItem::ItemIsSelectable, false);
     m_line->setAcceptHoverEvents(false);
-    m_line->setPos(0.0,0.0);
+    m_line->setPos(0.0, 0.0);
 
     m_editPath = new QGEPath(this);
     addToGroup(m_editPath);
@@ -111,7 +87,7 @@ QGILeaderLine::QGILeaderLine() :
 
     m_arrow1 = new QGIArrow();
     addToGroup(m_arrow1);
-    m_arrow1->setPos(0.0,0.0);
+    m_arrow1->setPos(0.0, 0.0);
     m_arrow1->hide();
     m_arrow2 = new QGIArrow();
     addToGroup(m_arrow2);
@@ -133,7 +109,7 @@ void QGILeaderLine::setLeaderFeature(TechDraw::DrawLeaderLine* feat)
 
     float x = Rez::guiX(feat->X.getValue());
     float y = Rez::guiX(-feat->Y.getValue());
-    setPos(x,y);
+    setPos(x, y);
 
     setNormalColorAll();
     setPrettyNormal();
@@ -160,25 +136,20 @@ QVariant QGILeaderLine::itemChange(GraphicsItemChange change, const QVariant &va
 //QGILL isn't draggable so skip QGIV::mousePress have event
 void QGILeaderLine::mousePressEvent(QGraphicsSceneMouseEvent * event)
 {
-//    Base::Console().Message("QGILL::mousePressEvent() - %s\n",getViewName());
+//    Base::Console().Message("QGILL::mousePressEvent() - %s\n", getViewName());
     QGraphicsItem::mousePressEvent(event);
 }
-
-//void QGILeaderLine::mouseMoveEvent(QGraphicsSceneMouseEvent * event)
-//{
-//    QGraphicsItem::mouseMoveEvent(event);
-//}
 
 //QGILL isn't draggable so skip QGIV::mouseRelease
 void QGILeaderLine::mouseReleaseEvent(QGraphicsSceneMouseEvent * event)
 {
-//    Base::Console().Message("QGILL::mouseReleaseEvent() - %s\n",getViewName());
+//    Base::Console().Message("QGILL::mouseReleaseEvent() - %s\n", getViewName());
     QGraphicsItem::mouseReleaseEvent(event);
 }
 
 void QGILeaderLine::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
-//    Base::Console().Message("QGILL::hoverEnter() - selected; %d\n",isSelected());
+//    Base::Console().Message("QGILL::hoverEnter() - selected; %d\n", isSelected());
     m_hasHover = true;
     if (!isSelected()) {
         setPrettyPre();
@@ -188,7 +159,7 @@ void QGILeaderLine::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 
 void QGILeaderLine::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
-//    Base::Console().Message("QGILL::hoverLeave() - selected; %d\n",isSelected());
+//    Base::Console().Message("QGILL::hoverLeave() - selected; %d\n", isSelected());
     m_hasHover = false;
     if(!isSelected()) {
         setPrettyNormal();
@@ -198,15 +169,15 @@ void QGILeaderLine::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 
 void QGILeaderLine::onSourceChange(TechDraw::DrawView* newParent)
 {
-//    Base::Console().Message("QGILL::onSoureChange(%s)\n",newParent->getNameInDocument());
+//    Base::Console().Message("QGILL::onSoureChange(%s)\n", newParent->getNameInDocument());
     std::string parentName = newParent->getNameInDocument();
     QGIView* qgiParent = getQGIVByName(parentName);
-    if (qgiParent != nullptr) {
+    if (qgiParent) {
         m_parentItem = qgiParent;
         setParentItem(m_parentItem);
         draw();
     } else {
-        Base::Console().Warning("QGILL::onSourceChange - new parent %s has no QGIView\n",parentName.c_str());
+        Base::Console().Warning("QGILL::onSourceChange - new parent %s has no QGIView\n", parentName.c_str());
     }
 }
 
@@ -243,30 +214,28 @@ void QGILeaderLine::setPrettySel() {
 }
 
 
-void QGILeaderLine::closeEdit(void)
+void QGILeaderLine::closeEdit()
 {
 //    Base::Console().Message("QGIL::closeEdit()\n");
-    if (m_editPath != nullptr) {
-        m_editPath->onEndEdit();   //tell QEPath that edit session ended 
+    if (m_editPath) {
+        m_editPath->onEndEdit();   //tell QEPath that edit session ended
     }
 }
 
 //signaled from QEPath
 void QGILeaderLine::onLineEditFinished(QPointF tipDisplace, std::vector<QPointF> points)
 {
-//    Base::Console().Message("QGILL::onLineEditFinished(%s, %d)\n", 
+//    Base::Console().Message("QGILL::onLineEditFinished(%s, %d)\n",
 //                            TechDraw::DrawUtil::formatVector(tipDisplace).c_str(),
 //                            points.size());
     m_blockDraw = true;
     auto featLeader = getFeature();
-    if (featLeader == nullptr) {
-        //tarfu
+    if (!featLeader)
         return;
-    }
     double baseScale = featLeader->getBaseScale();
 
-    if ( !(TechDraw::DrawUtil::fpCompare(tipDisplace.x(),0.0) &&
-           TechDraw::DrawUtil::fpCompare(tipDisplace.y(),0.0))  )  {
+    if ( !(TechDraw::DrawUtil::fpCompare(tipDisplace.x(), 0.0) &&
+           TechDraw::DrawUtil::fpCompare(tipDisplace.y(), 0.0))  )  {
         //tip was moved. need to change AttachPoint
         QPointF oldAttach = getAttachFromFeature();
         QPointF newAttach = oldAttach + (tipDisplace / baseScale);
@@ -278,7 +247,7 @@ void QGILeaderLine::onLineEditFinished(QPointF tipDisplace, std::vector<QPointF>
     std::vector<Base::Vector3d> waypoints;
     for (auto& p: points) {
         QPointF moved = p - tipDisplace;
-        Base::Vector3d v(moved.x(),moved.y(),0.0);
+        Base::Vector3d v(moved.x(), moved.y(), 0.0);
         waypoints.push_back(v);
     }
     waypoints.at(0) = Base::Vector3d(0.0, 0.0, 0.0);
@@ -295,13 +264,12 @@ void QGILeaderLine::onLineEditFinished(QPointF tipDisplace, std::vector<QPointF>
     draw();
 }
 
-void QGILeaderLine::startPathEdit(void)
+void QGILeaderLine::startPathEdit()
 {
     saveState();
     auto featLeader( dynamic_cast<TechDraw::DrawLeaderLine*>(getViewObject()) );
-    if (featLeader == nullptr) {
+    if (!featLeader)
         return;
-    }
 
     double scale = featLeader->getScale();
     m_editPath->setScale(scale);
@@ -310,22 +278,22 @@ void QGILeaderLine::startPathEdit(void)
     m_editPath->startPathEdit(getWayPointsFromFeature());
 }
 
-void QGILeaderLine::saveState(void)
+void QGILeaderLine::saveState()
 {
 //    Base::Console().Message("QGILL::saveState()\n");
     auto featLeader = getFeature();
-    if (featLeader != nullptr) {
+    if (featLeader) {
         m_savePoints = featLeader->WayPoints.getValues();
         m_saveX = featLeader->X.getValue();
         m_saveY = featLeader->Y.getValue();
     }
 }
 
-void QGILeaderLine::restoreState(void)
+void QGILeaderLine::restoreState()
 {
 //    Base::Console().Message("QGILL::restoreState()\n");
     auto featLeader = getFeature();
-    if (featLeader != nullptr) {
+    if (featLeader) {
         featLeader->WayPoints.setValues(m_savePoints);
         featLeader->X.setValue(m_saveX);
         featLeader->Y.setValue(m_saveY);
@@ -337,61 +305,53 @@ void QGILeaderLine::restoreState(void)
 
 void QGILeaderLine::updateView(bool update)
 {
-//    Base::Console().Message("QGIL::updateView() %s\n",getViewObject()->getNameInDocument());
+//    Base::Console().Message("QGIL::updateView() %s\n", getViewObject()->getNameInDocument());
     Q_UNUSED(update);
     auto featLeader( dynamic_cast<TechDraw::DrawLeaderLine*>(getViewObject()) );
-    if ( featLeader == nullptr ) {
+    if (!featLeader) {
         Base::Console().Warning("QGILL::updateView - no feature!\n");
         return;
     }
 
     auto vp = static_cast<ViewProviderLeader*>(getViewProvider(getViewObject()));
-    if ( vp == nullptr ) {
+    if (!vp)
         return;
-    }
     draw();
 }
 
 void QGILeaderLine::draw()
 {
 //    Base::Console().Message("QGILL::draw()- %s\n", getViewObject()->getNameInDocument());
-    if (m_blockDraw) {
+    if (m_blockDraw)
         return;
-    }
-    if (!isVisible()) {
+    if (!isVisible())
         return;
-    }
     TechDraw::DrawLeaderLine* featLeader = getFeature();
-    if((!featLeader) ) {
+    if (!featLeader)
         return;
-    }
     auto vp = static_cast<ViewProviderLeader*>(getViewProvider(getViewObject()));
-    if ( vp == nullptr ) {
+    if (!vp)
         return;
-    }
 
     double scale = 1.0;
     TechDraw::DrawView* parent = featLeader->getBaseView();
-    if (parent != nullptr) {
+    if (parent)
         scale = parent->getScale();
-    }
 
-    if (m_editPath->inEdit()) {
+    if (m_editPath->inEdit())
         return;
-    }
 
 //********
-    if (featLeader->isLocked()) {
+    if (featLeader->isLocked())
         setFlag(QGraphicsItem::ItemIsMovable, false);
-    } else {
+    else
         setFlag(QGraphicsItem::ItemIsMovable, true);
-    }
-    m_lineStyle = (Qt::PenStyle) vp->LineStyle.getValue();
 
+    m_lineStyle = static_cast<Qt::PenStyle>(vp->LineStyle.getValue());
     double baseScale = featLeader->getBaseScale();
     double x = Rez::guiX(featLeader->X.getValue());
     double y = - Rez::guiX(featLeader->Y.getValue());
-    QPointF aPoint(x,y);
+    QPointF aPoint(x, y);
     aPoint *= baseScale;
     setPos(aPoint);
 
@@ -399,7 +359,7 @@ void QGILeaderLine::draw()
     m_line->setStyle(m_lineStyle);
     m_line->setWidth(getLineWidth());
 
-    m_line->setPos(0,0);                          //make m_line coords == leader coords
+    m_line->setPos(0, 0);                          //make m_line coords == leader coords
 
     std::vector<QPointF> qPoints = getWayPointsFromFeature();
     if (featLeader->Scalable.getValue()) {
@@ -427,14 +387,14 @@ QPainterPath QGILeaderLine::makeLeaderPath(std::vector<QPointF> qPoints)
 //    Base::Console().Message("QGILeaderLine::makeLeaderPath()\n");
     QPainterPath result;
     DrawLeaderLine* featLeader = getFeature();
-    if (featLeader == nullptr) {
+    if (!featLeader) {
         Base::Console().Message("QGILL::makeLeaderPath - featLeader is nullptr\n");
         return  result;
     }
 
-    QPointF startAdjVec(0.0,0.0);
+    QPointF startAdjVec(0.0, 0.0);
     double  startAdjLength(0.0);
-    QPointF endAdjVec(0.0,0.0);
+    QPointF endAdjVec(0.0, 0.0);
     double  endAdjLength(0.0);
     if (qPoints.size() > 1) {
         //make path adjustment to hide leaderline ends behind arrowheads
@@ -469,7 +429,7 @@ QPainterPath QGILeaderLine::makeLeaderPath(std::vector<QPointF> qPoints)
    return result;
 }
 
-QPointF QGILeaderLine::getAttachFromFeature(void)
+QPointF QGILeaderLine::getAttachFromFeature()
 {
 //    Base::Console().Message("QGILL::getAttachFromFeature()\n");
     QPointF result;
@@ -480,16 +440,16 @@ QPointF QGILeaderLine::getAttachFromFeature(void)
     }
     double x = Rez::guiX(featLeader->X.getValue());
     double y = - Rez::guiX(featLeader->Y.getValue());
-    result = QPointF(x,y);
+    result = QPointF(x, y);
     return result;
 }
 
-std::vector<QPointF> QGILeaderLine::getWayPointsFromFeature(void)
+std::vector<QPointF> QGILeaderLine::getWayPointsFromFeature()
 {
     std::vector<QPointF> qPoints;
 
     DrawLeaderLine* featLeader = getFeature();
-    if (featLeader == nullptr) {
+    if (!featLeader) {
         Base::Console().Message("QGILL::getWayPointsFromFeature - featLeader is nullptr\n");
         return  qPoints;
     }
@@ -508,7 +468,7 @@ std::vector<QPointF> QGILeaderLine::getWayPointsFromFeature(void)
 void QGILeaderLine::setArrows(std::vector<QPointF> pathPoints)
 {
 //    Base::Console().Message("QGILL::setArrows()\n");
-    Base::Vector3d stdX(1.0,0.0,0.0);
+    Base::Vector3d stdX(1.0, 0.0, 0.0);
     TechDraw::DrawLeaderLine* featLeader = getFeature();
 
     QPointF lastOffset = (pathPoints.back() - pathPoints.front());
@@ -525,16 +485,16 @@ void QGILeaderLine::setArrows(std::vector<QPointF> pathPoints)
             QPointF s = (*it);
             QPointF e = (*(it + 1));
             QPointF qsVec = s - e;
-            Base::Vector3d sVec(qsVec.x(),qsVec.y(),0.0);
+            Base::Vector3d sVec(qsVec.x(), qsVec.y(), 0.0);
             m_arrow1->setDirection(sVec);
-            m_arrow1->setPos(0.0,0.0);
+            m_arrow1->setPos(0.0, 0.0);
         }
         m_arrow1->draw();
         m_arrow1->show();
     } else {
         m_arrow1->hide();
     }
-    
+
     if (featLeader->EndSymbol.getValue() != ArrowType::NONE) {
         m_arrow2->setStyle(featLeader->EndSymbol.getValue());
         m_arrow2->setWidth(getLineWidth());
@@ -545,7 +505,7 @@ void QGILeaderLine::setArrows(std::vector<QPointF> pathPoints)
             QPointF s = (*itr);
             QPointF e = (*(itr + 1));
             QPointF qeVec = s - e;
-            Base::Vector3d eVec(qeVec.x(),qeVec.y(),0.0);
+            Base::Vector3d eVec(qeVec.x(), qeVec.y(), 0.0);
             m_arrow2->setDirection(eVec);
             m_arrow2->setPos(lastOffset);
         }
@@ -565,7 +525,7 @@ void QGILeaderLine::drawBorder()
 //******************************************************************************
 
 
-void QGILeaderLine::abandonEdit(void)
+void QGILeaderLine::abandonEdit()
 {
 //    Base::Console().Message("QGIL::abandonEdit()\n");
     m_editPath->clearMarkers();
@@ -573,56 +533,41 @@ void QGILeaderLine::abandonEdit(void)
     restoreState();
 }
 
-double QGILeaderLine::getLineWidth(void)
+double QGILeaderLine::getLineWidth()
 {
     auto vp = static_cast<ViewProviderLeader*>(getViewProvider(getViewObject()));
-    if ( vp == nullptr ) {
+    if (!vp)
         return Rez::guiX(LineGroup::getDefaultWidth("Graphic"));
-    }
     return Rez::guiX(vp->LineWidth.getValue());
 }
 
-TechDraw::DrawLeaderLine* QGILeaderLine::getFeature(void)
+TechDraw::DrawLeaderLine* QGILeaderLine::getFeature()
 {
-    TechDraw::DrawLeaderLine* result = 
+    TechDraw::DrawLeaderLine* result =
          static_cast<TechDraw::DrawLeaderLine*>(getViewObject());
     return result;
 }
 
-double QGILeaderLine::getEdgeFuzz(void) const
+double QGILeaderLine::getEdgeFuzz() const
 {
     return PreferencesGui::edgeFuzz();
 }
 
-QColor QGILeaderLine::getNormalColor()
+QColor QGILeaderLine::prefNormalColor()
 {
 //    Base::Console().Message("QGILL::getNormalColor()\n");
-    m_colNormal = PreferencesGui::leaderQColor();
+    setNormalColor(PreferencesGui::leaderQColor());
 
-    auto lead( dynamic_cast<TechDraw::DrawLeaderLine*>(getViewObject()) );
-    if( lead == nullptr ) {
-//        Base::Console().Message("QGILL::getNormalColor - no feature\n");
-        return m_colNormal;
+    auto vp = dynamic_cast<ViewProviderLeader*>(getViewProvider(getViewObject()));
+    if (vp) {
+        setNormalColor(vp->Color.getValue().asValue<QColor>());
     }
-
-    auto vp = static_cast<ViewProviderLeader*>(getViewProvider(getViewObject()));
-    if ( vp == nullptr ) {
-//        Base::Console().Message("QGILL::getNormalColor - no viewProvider\n");
-        return m_colNormal;
-    }
-
-    m_colNormal = vp->Color.getValue().asValue<QColor>();
-    return m_colNormal;
+    return getNormalColor();
 }
 
 QRectF QGILeaderLine::boundingRect() const
 {
     return childrenBoundingRect();
-}
-
-QPainterPath QGILeaderLine::shape() const
-{
-    return QGraphicsItemGroup::shape();
 }
 
 void QGILeaderLine::paint ( QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget) {

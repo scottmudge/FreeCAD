@@ -25,11 +25,11 @@
 #define GUI_DIALOG_DOCUMENTRECOVERY_H
 
 #include <QDialog>
-#include <QScopedPointer>
-#include <QList>
 #include <QFileInfo>
-#include <string>
-#include <functional>
+#include <QFileInfoList>
+#include <QList>
+#include <QScopedPointer>
+
 
 namespace Gui { namespace Dialog {
 
@@ -43,17 +43,16 @@ class DocumentRecovery : public QDialog
     Q_OBJECT
 
 public:
-    DocumentRecovery(const QList<QFileInfo>&, QWidget* parent = 0);
-    virtual ~DocumentRecovery();
+    explicit DocumentRecovery(const QList<QFileInfo>&, QWidget* parent = nullptr);
+    ~DocumentRecovery() override;
 
-    void accept();
+    void accept() override;
     bool foundDocuments() const;
 
 protected:
-    void closeEvent(QCloseEvent*);
-    void contextMenuEvent(QContextMenuEvent*);
+    void closeEvent(QCloseEvent*) override;
+    void contextMenuEvent(QContextMenuEvent*) override;
     QString createProjectFile(const QString&);
-    void clearDirectory(const QFileInfo&);
     void cleanup(QDir&, const QList<QFileInfo>&, const QString&);
 
 protected Q_SLOTS:
@@ -69,11 +68,11 @@ private:
 
 class DocumentRecoveryFinder {
 public:
-    void checkForPreviousCrashes();
+    bool checkForPreviousCrashes();
 
 private:
     void checkDocumentDirs(QDir&, const QList<QFileInfo>&, const QString&);
-    void showRecoveryDialogIfNeeded();
+    bool showRecoveryDialogIfNeeded();
 
 private:
     QList<QFileInfo> restoreDocFiles;
@@ -82,6 +81,21 @@ private:
 class DocumentRecoveryHandler {
 public:
     void checkForPreviousCrashes(const std::function<void(QDir&, const QList<QFileInfo>&, const QString&)> & callableFunc) const;
+};
+
+class DocumentRecoveryCleaner {
+public:
+    void clearDirectory(const QFileInfo& dir);
+    void setIgnoreFiles(const QStringList&);
+    void setIgnoreDirectories(const QFileInfoList&);
+
+private:
+    void subtractFiles(QStringList&);
+    void subtractDirs(QFileInfoList&);
+
+private:
+    QStringList ignoreFiles;
+    QFileInfoList ignoreDirs;
 };
 
 } //namespace Dialog

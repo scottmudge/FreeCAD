@@ -26,32 +26,75 @@
 #include <QTimer>
 #include <App/DocumentObserver.h>
 #include <Base/Parameter.h>
+#include <Base/Bitmask.h>
 
 class QCheckBox;
+class QTreeWidgetItem;
+class QTreeWidget;
 
 namespace Gui {
 
 class PrefWidgetStates;
 
 class Ui_DlgObjectSelection;
+
+/** Dialog for object dependency selection
+ */
 class GuiExport DlgObjectSelection : public QDialog
 {
     Q_OBJECT
 
 public:
+    /** Constructor
+     *
+     * Creates a dialog for selecting the given objects and their dependent
+     * objects
+     *
+     * @param objs: initial objects
+     * @param parent: optional parent widget
+     * @param fl: optional window flags
+     */
     DlgObjectSelection(const std::vector<App::DocumentObject*> &objs,
-            QWidget* parent = 0, Qt::WindowFlags fl = Qt::WindowFlags());
+            QWidget* parent = nullptr, Qt::WindowFlags fl = Qt::WindowFlags());
+
+    /** Constructor
+     *
+     * Creates a dialog for selecting the given objects and their dependent
+     * objects with exclusions
+     *
+     * @param objs: initial objects
+     * @param excludes: excluded objects. The objects and their dependents will
+     *                  still be in the list but unchecked.
+     * @param parent: optional parent widget
+     * @param fl: optional window flags
+     */
     DlgObjectSelection(const std::vector<App::DocumentObject*> &objs,
                        const std::vector<App::DocumentObject*> &excludes,
-            QWidget* parent = 0, Qt::WindowFlags fl = Qt::WindowFlags());
-    ~DlgObjectSelection();
+            QWidget* parent = nullptr, Qt::WindowFlags fl = Qt::WindowFlags());
 
-    std::vector<App::DocumentObject*> getSelections(bool invert=false, bool sort=false) const;
+    /// Destructor
+    ~DlgObjectSelection() override;
+
+    /// Options for getSelections()
+    enum class SelectionOptions {
+        /// Invert the selection, i.e. return the unselected objects
+        Invert = 1,
+        /// Sort the returned object in depending order
+        Sort = 2,
+        /// Return the unselected objects sorted in depending order
+        InvertSort = 3,
+    };
+    /// Get the selected objects
+    std::vector<App::DocumentObject*> getSelections(SelectionOptions options = SelectionOptions()) const;
+
+    /// Add a user defined checkbox at the bottom of the dialog
     void addCheckBox(QCheckBox *box);
+
+    /// Override the prompt message
     void setMessage(const QString &);
 
-    void accept();
-    void reject();
+    void accept() override;
+    void reject() override;
 
 private Q_SLOTS:
     void onDepItemChanged(QTreeWidgetItem * item, int);
@@ -85,8 +128,8 @@ private:
     std::map<App::SubObjectT, QTreeWidgetItem*> depMap;
     std::map<App::SubObjectT, QTreeWidgetItem*> inMap;
     std::map<App::SubObjectT, Qt::CheckState> itemChanged;
-    QTreeWidgetItem *allItem = nullptr;    
-    
+    QTreeWidgetItem *allItem = nullptr;
+
     QPushButton* useOriginalsBtn;
     bool returnOriginals = false;
 
@@ -98,6 +141,7 @@ private:
 
 } // namespace Gui
 
+ENABLE_BITMASK_OPERATORS(Gui::DlgObjectSelection::SelectionOptions);
 
 #endif // GUI_DLGOBJECTSELECTION_H
 

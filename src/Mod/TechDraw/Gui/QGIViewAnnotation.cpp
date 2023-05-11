@@ -23,42 +23,29 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-#include <cmath>
-#include <QGraphicsScene>
-#include <QMouseEvent>
-#include <QGraphicsSceneHoverEvent>
-#include <QGraphicsItem>
-#include <QStyleOptionGraphicsItem>
-#include <QGraphicsTextItem>
-#include <QPainterPathStroker>
-#include <QPainter>
-#include <QString>
-#include <QTextOption>
-#include <sstream>
+# include <cmath>
+# include <regex>
+# include <sstream>
+# include <string>
+
+# include <QDialog>
+# include <QDialogButtonBox>
+# include <QGraphicsScene>
+# include <QGraphicsItem>
+# include <QGraphicsTextItem>
+# include <QString>
+# include <QVBoxLayout>
 #endif
 
-#include <string>
-#include <regex>
-
-#include <qmath.h>
-#include <QTextDocument>
-#include <QTextBlock>
-#include <QTextBlockFormat>
-#include <QTextFrame>
-#include <QSizeF>
-
 #include <App/Application.h>
-#include <App/Material.h>
 #include <Base/Console.h>
-#include <Base/Parameter.h>
-#include <Base/Tools.h>
 #include <Gui/Widgets.h>
-
-
 #include <Mod/TechDraw/App/DrawViewAnnotation.h>
-#include "Rez.h"
+
 #include "QGIViewAnnotation.h"
 #include "QGCustomText.h"
+#include "Rez.h"
+
 
 using namespace TechDrawGui;
 
@@ -73,16 +60,10 @@ QGIViewAnnotation::QGIViewAnnotation()
     m_textItem->setTextInteractionFlags(Qt::NoTextInteraction);
     //To allow on screen editing of text:
     //m_textItem->setTextInteractionFlags(Qt::TextEditorInteraction);   //this works
-    //QObject::connect(QGraphicsTextItem::document(), SIGNAL(contentsChanged()),m_textItem, SLOT(updateText()));  //not tested
+    //QObject::connect(QGraphicsTextItem::document(), SIGNAL(contentsChanged()), m_textItem, SLOT(updateText()));  //not tested
     addToGroup(m_textItem);
-    m_textItem->setPos(0.,0.);
+    m_textItem->setPos(0., 0.);
 
-}
-
-
-QVariant QGIViewAnnotation::itemChange(GraphicsItemChange change, const QVariant &value)
-{
-    return QGIView::itemChange(change, value);
 }
 
 void QGIViewAnnotation::setViewAnnoFeature(TechDraw::DrawViewAnnotation *obj)
@@ -94,7 +75,7 @@ void QGIViewAnnotation::setViewAnnoFeature(TechDraw::DrawViewAnnotation *obj)
 void QGIViewAnnotation::updateView(bool update)
 {
     auto viewAnno( dynamic_cast<TechDraw::DrawViewAnnotation *>(getViewObject()) );
-    if( viewAnno == nullptr)
+    if (!viewAnno)
         return;
 
     if (update ||
@@ -127,19 +108,19 @@ void QGIViewAnnotation::draw()
 void QGIViewAnnotation::drawAnnotation()
 {
     auto viewAnno( dynamic_cast<TechDraw::DrawViewAnnotation *>(getViewObject()) );
-    if( viewAnno == nullptr ) {
+    if (!viewAnno) {
         return;
     }
 
     const std::vector<std::string>& annoText = viewAnno->Text.getValues();
-    int fontSize = calculateFontPixelSize(viewAnno->TextSize.getValue());
+    int scaledSize = exactFontSize(viewAnno->Font.getValue(), viewAnno->TextSize.getValue());
 
     //build HTML/CSS formatting around Text lines
     std::stringstream ss;
     ss << "<html>\n<head>\n<style>\n";
     ss << "p {";
     ss << "font-family:" << viewAnno->Font.getValue() << "; ";
-    ss << "font-size:" << fontSize << "px; ";
+    ss << "font-size:" << scaledSize << "px; ";
     if (viewAnno->TextStyle.isValue("Normal")) {
         ss << "font-weight:normal; font-style:normal; ";
     } else if (viewAnno->TextStyle.isValue("Bold")) {
@@ -149,12 +130,12 @@ void QGIViewAnnotation::drawAnnotation()
     } else if (viewAnno->TextStyle.isValue("Bold-Italic")) {
         ss << "font-weight:bold; font-style:italic; ";
     } else {
-        Base::Console().Warning("%s has invalid TextStyle\n",viewAnno->getNameInDocument());
+        Base::Console().Warning("%s has invalid TextStyle\n", viewAnno->getNameInDocument());
         ss << "font-weight:normal; font-style:normal; ";
     }
     ss << "line-height:" << viewAnno->LineSpace.getValue() << "%; ";
     App::Color c = viewAnno->TextColor.getValue();
-    ss << "color:" << c.asCSSString() << "; ";
+    ss << "color:" << c.asHexString() << "; ";
     ss << "}\n</style>\n</head>\n<body>\n<p>";
     for(std::vector<std::string>::const_iterator it = annoText.begin(); it != annoText.end(); it++) {
         if (it != annoText.begin()) {
@@ -165,16 +146,16 @@ void QGIViewAnnotation::drawAnnotation()
         std::string lt   = std::regex_replace((*it), std::regex("<"), "&lt;");
         ss << lt;
     }
-    ss << "<br></p>\n</body>\n</html> ";
+    ss << "</p>\n</body>\n</html> ";
 
     prepareGeometryChange();
     m_textItem->setTextWidth(Rez::guiX(viewAnno->MaxWidth.getValue()));
     QString qs = QString::fromUtf8(ss.str().c_str());
     m_textItem->setHtml(qs);
-    m_textItem->centerAt(0.,0.);
+    m_textItem->centerAt(0., 0.);
 }
 
-void QGIViewAnnotation::rotateView(void)
+void QGIViewAnnotation::rotateView()
 {
     QRectF r = m_textItem->boundingRect();
     m_textItem->setTransformOriginPoint(r.center());
@@ -187,13 +168,13 @@ void QGIViewAnnotation::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
     Q_UNUSED(event);
 
     TechDraw::DrawViewAnnotation *annotation = dynamic_cast<TechDraw::DrawViewAnnotation *>(getViewObject());
-    if (annotation == nullptr) {
+    if (!annotation) {
         return;
     }
 
     const std::vector<std::string> &values = annotation->Text.getValues();
     QString text;
-    if (values.size() > 0) {
+    if (!values.empty()) {
         text = QString::fromUtf8(values[0].c_str());
 
         for (unsigned int i = 1; i < values.size(); ++i) {
@@ -202,7 +183,7 @@ void QGIViewAnnotation::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
         }
     }
 
-    QDialog dialog(0);
+    QDialog dialog(nullptr);
     dialog.setWindowTitle(tr("Text"));
 
     Gui::PropertyListEditor editor(&dialog);

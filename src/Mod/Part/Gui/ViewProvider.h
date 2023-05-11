@@ -37,43 +37,43 @@ class ViewProviderShapeBuilder : public Gui::ViewProviderBuilder
 {
 public:
     ViewProviderShapeBuilder(){}
-    ~ViewProviderShapeBuilder(){}
-    virtual void buildNodes(const App::Property*, std::vector<SoNode*>&) const;
+    ~ViewProviderShapeBuilder() override{}
+    void buildNodes(const App::Property*, std::vector<SoNode*>&) const override;
     void createShape(const App::Property*, SoSeparator*) const;
 };
 
 class PartGuiExport ViewProviderPart : public ViewProviderPartExt
 {
-    typedef ViewProviderPartExt inherited;
+    using inherited = ViewProviderPartExt;
     PROPERTY_HEADER_WITH_OVERRIDE(PartGui::ViewProviderPart);
 
 public:
     /// constructor
     ViewProviderPart();
     /// destructor
-    virtual ~ViewProviderPart();
-    virtual bool doubleClicked(void) override;
+    ~ViewProviderPart() override;
+    bool doubleClicked(void) override;
 
     virtual QPixmap getTagIcon() const;
 
-    virtual bool canReplaceObject(App::DocumentObject *oldObj, App::DocumentObject *newObj) override;
-    virtual bool reorderObjects(const std::vector<App::DocumentObject *> &objs, App::DocumentObject *before) override;
-    virtual bool canReorderObject(App::DocumentObject *obj, App::DocumentObject *before) override;
-    virtual bool canDropObjects() const override;
-    virtual bool canDropObject(App::DocumentObject*) const override;
-    virtual void dropObject(App::DocumentObject*) override;
-    virtual bool canDragObjects() const override;
-    virtual bool canDragObject(App::DocumentObject*) const override;
-    virtual void dragObject(App::DocumentObject*) override;
+    bool canReplaceObject(App::DocumentObject *oldObj, App::DocumentObject *newObj) override;
+    bool reorderObjects(const std::vector<App::DocumentObject *> &objs, App::DocumentObject *before) override;
+    bool canReorderObject(App::DocumentObject *obj, App::DocumentObject *before) override;
+    bool canDropObjects() const override;
+    bool canDropObject(App::DocumentObject*) const override;
+    void dropObject(App::DocumentObject*) override;
+    bool canDragObjects() const override;
+    bool canDragObject(App::DocumentObject*) const override;
+    void dragObject(App::DocumentObject*) override;
 
-    virtual void getExtraIcons(std::vector<std::pair<QByteArray, QPixmap> > &) const override;
-    virtual QString getToolTip(const QByteArray &iconTag) const override;
-    virtual std::vector<App::DocumentObject*> claimChildren(void) const override;
-    virtual bool iconMouseEvent(QMouseEvent *ev, const QByteArray &iconTag) override;
+    void getExtraIcons(std::vector<std::pair<QByteArray, QPixmap> > &) const override;
+    QString getToolTip(const QByteArray &iconTag) const override;
+    std::vector<App::DocumentObject*> claimChildren(void) const override;
+    bool iconMouseEvent(QMouseEvent *ev, const QByteArray &iconTag) override;
 
-    virtual void setupContextMenu(QMenu*, QObject*, const char*) override;
+    void setupContextMenu(QMenu*, QObject*, const char*) override;
 
-    virtual void updateData(const App::Property *) override;
+    void updateData(const App::Property *) override;
 
 protected:
     void applyColor(const Part::ShapeHistory& hist,

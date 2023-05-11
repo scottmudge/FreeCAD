@@ -24,14 +24,14 @@
 #ifndef GUI_COMMAND_T_H
 #define GUI_COMMAND_T_H
 
-#include <Base/Exception.h>
 #include <App/Document.h>
 #include <App/DocumentObject.h>
+#include <Base/Exception.h>
 #include <Gui/Command.h>
-#include <exception>
 #include <type_traits>
 #include <typeinfo>
 #include <boost/format.hpp>
+
 
 namespace Gui {
 
@@ -101,6 +101,33 @@ void _cmdDocument(Gui::Command::DoCmd_Type cmdType, const App::Document* doc, co
         throw Base::RuntimeError("Invalid document");
 }
 
+/** Runs a command for accessing document attribute or method
+ * This function is an alternative to _FCMD_DOC_CMD
+ * @param doc: document name
+ * @param mod: module name, "Gui" or "App"
+ * @param cmd: command string, streamable
+ *
+ * Example:
+ * @code{.cpp}
+ *      _cmdDocument(Gui::Command::Gui, doc, "Gui", std::stringstream() << "getObject('" << objName << "')");
+ * @endcode
+ *
+ * Translates to command (assuming doc's name is 'DocName', and
+ * and objName contains value 'ObjName'):
+ * @code{.py}
+ *       Gui.getDocument('DocName').getObject('ObjName')
+ * @endcode
+ */
+template<typename T>
+void _cmdDocument(Gui::Command::DoCmd_Type cmdType, const std::string& doc, const std::string& mod, T&& cmd) {
+    if (!doc.empty()) {
+        std::stringstream str;
+        str << mod << ".getDocument('" << doc << "')."
+            << FormatString::str(cmd);
+        Gui::Command::runCommand(cmdType, str.str().c_str());
+    }
+}
+
 /** Runs a command for accessing App.Document attribute or method
  * This function is an alternative to FCMD_DOC_CMD
  *
@@ -125,6 +152,29 @@ inline void cmdAppDocument(const App::Document* doc, T&& cmd) {
 }
 
 /** Runs a command for accessing App.Document attribute or method
+ * This function is an alternative to FCMD_DOC_CMD
+ *
+ * @param doc: document name
+ * @param cmd: command string, streamable
+ * @sa _cmdDocument()
+ *
+ * Example:
+ * @code{.cpp}
+ *      cmdAppDocument(doc, std::stringstream() << "getObject('" << objName << "')");
+ * @endcode
+ *
+ * Translates to command (assuming doc's name is 'DocName', and
+ * and objName contains value 'ObjName'):
+ * @code{.py}
+ *       App.getDocument('DocName').getObject('ObjName')
+ * @endcode
+ */
+template<typename T>
+inline void cmdAppDocument(const std::string& doc, T&& cmd) {
+    _cmdDocument(Gui::Command::Doc, doc, "App", std::forward<T>(cmd));
+}
+
+/** Runs a command for accessing App.Document attribute or method
  *
  * @param doc: pointer to a document
  * @param cmd: command string, streamable
@@ -143,6 +193,28 @@ inline void cmdAppDocument(const App::Document* doc, T&& cmd) {
  */
 template<typename T>
 inline void cmdGuiDocument(const App::Document* doc, T&& cmd) {
+    _cmdDocument(Gui::Command::Gui, doc, "Gui", std::forward<T>(cmd));
+}
+
+/** Runs a command for accessing App.Document attribute or method
+ *
+ * @param doc: document name
+ * @param cmd: command string, streamable
+ * @sa _cmdDocument()
+ *
+ * Example:
+ * @code{.cpp}
+ *      cmdGuiDocument(doc, std::stringstream() << "getObject('" << objName << "')");
+ * @endcode
+ *
+ * Translates to command (assuming doc's name is 'DocName', and
+ * and objName contains value 'ObjName'):
+ * @code{.py}
+ *       Gui.getDocument('DocName').getObject('ObjName')
+ * @endcode
+ */
+template<typename T>
+inline void cmdGuiDocument(const std::string& doc, T&& cmd) {
     _cmdDocument(Gui::Command::Gui, doc, "Gui", std::forward<T>(cmd));
 }
 
@@ -284,11 +356,11 @@ inline void cmdAppObjectShow(const App::DocumentObject* obj) {
  * in-place editing an object, which may be brought in through linking to an
  * external group.
  */
-inline void cmdSetEdit(const App::DocumentObject* obj) {
+inline void cmdSetEdit(const App::DocumentObject* obj, int mod = 0) {
     if (obj && obj->getNameInDocument()) {
         Gui::Command::doCommand(Gui::Command::Gui,
-            "Gui.ActiveDocument.setEdit(App.getDocument('%s').getObject('%s'))",
-            obj->getDocument()->getName(), obj->getNameInDocument());
+            "Gui.ActiveDocument.setEdit(App.getDocument('%s').getObject('%s'), %d)",
+            obj->getDocument()->getName(), obj->getNameInDocument(), mod);
     } else
         throw Base::RuntimeError("Invalid object");
 }

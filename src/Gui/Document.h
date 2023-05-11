@@ -20,18 +20,20 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_DOCUMENT_H
 #define GUI_DOCUMENT_H
-
-#include "MDIView.h"
 
 #include <list>
 #include <map>
 #include <string>
+#include <boost_signals2.hpp>
+#include <QString>
 
-#include <Base/Persistence.h>
 #include <App/Document.h>
+#include <Base/Persistence.h>
+#include <Gui/TreeItemMode.h>
+
+#include "MDIView.h"
 
 class SoNode;
 class SoPath;
@@ -41,18 +43,23 @@ class Matrix4D;
 }
 
 namespace App {
+class Document;
+class DocumentObject;
 class DocumentObjectGroup;
 class SubObjectT;
+class Property;
+class Transaction;
 }
 
 namespace Gui {
 
+class BaseView;
+class MDIView;
 class ViewProvider;
 class ViewProviderDocumentObject;
 class Application;
 class DocumentPy;
 class TransactionViewProvider;
-enum  class HighlightMode;
 
 /** The Gui Document
  *  This is the document on GUI level. Its main responsibility is keeping
@@ -66,7 +73,7 @@ class GuiExport Document : public Base::Persistence
 {
 public:
     Document(App::Document* pcDocument, Application * app);
-    ~Document();
+    ~Document() override;
 
 protected:
     /** @name I/O of the document */
@@ -144,23 +151,23 @@ public:
 
     /** @name I/O of the document */
     //@{
-    unsigned int getMemSize (void) const;
+    unsigned int getMemSize () const override;
     /// Save the document
-    bool save(void);
+    bool save();
     /// Save the document under a new file name
-    bool saveAs(void);
+    bool saveAs();
     /// Save a copy of the document under a new file name
-    bool saveCopy(void);
+    bool saveCopy();
     /// Save all open document
     static void saveAll();
     /// This method is used to save properties or very small amounts of data to an XML document.
-    virtual void Save (Base::Writer &writer) const;
+    void Save (Base::Writer &writer) const override;
     /// This method is used to restore properties from an XML document.
-    virtual void Restore(Base::XMLReader &reader);
+    void Restore(Base::XMLReader &reader) override;
     /// This method is used to save large amounts of data to a binary file.
-    virtual void SaveDocFile (Base::Writer &writer) const;
+    void SaveDocFile (Base::Writer &writer) const override;
     /// This method is used to restore large amounts of data from a binary file.
-    virtual void RestoreDocFile(Base::Reader &reader);
+    void RestoreDocFile(Base::Reader &reader) override;
     void exportObjects(const std::vector<App::DocumentObject*>&, Base::Writer&);
     void importObjects(const std::vector<App::DocumentObject*>&, Base::Reader&,
                        const std::map<std::string, std::string>& nameMapping);
@@ -176,15 +183,15 @@ public:
     bool isModified() const;
 
     /// Getter for the App Document
-    App::Document*  getDocument(void) const;
+    App::Document*  getDocument() const;
 
     /** @name methods for View handling */
     //@{
     /// Getter for the active view
-    Gui::MDIView* getActiveView(void) const;
+    Gui::MDIView* getActiveView() const;
     void setActiveWindow(Gui::MDIView* view);
     Gui::MDIView* getEditingViewOfViewProvider(Gui::ViewProvider*) const;
-    Gui::MDIView* getViewOfViewProvider(Gui::ViewProvider*) const;
+    Gui::MDIView* getViewOfViewProvider(const Gui::ViewProvider*) const;
     Gui::MDIView* getViewOfNode(SoNode*) const;
     Gui::MDIView* getEditingView(void) const;
     /// Create a new view
@@ -214,9 +221,9 @@ public:
     /// Get all view providers along the path and the corresponding node index in the path
     std::vector<std::pair<ViewProviderDocumentObject*,int> > getViewProvidersByPath(SoPath * path) const;
     /// call update on all attached views
-    void onUpdate(void);
+    void onUpdate();
     /// call relabel to all attached views
-    void onRelabel(void);
+    void onRelabel();
     /// returns a list of all attached MDI views
     std::list<MDIView*> getMDIViews() const;
     /// returns a list of all MDI views of a certain type
@@ -242,7 +249,7 @@ public:
     BaseView *getViewByID(int id) const;
     //@}
 
-    MDIView *setActiveView(ViewProviderDocumentObject *vp=0, Base::Type typeId = Base::Type());
+    MDIView *setActiveView(ViewProviderDocumentObject *vp=nullptr, Base::Type typeId = Base::Type());
 
     /** @name View provider handling  */
     //@{
@@ -266,16 +273,16 @@ public:
     std::vector<ViewProvider*> getViewProvidersOfType(const Base::Type& typeId) const;
     ViewProvider *getViewProviderByName(const char* name) const;
     /// set the ViewProvider in special edit mode
-    bool setEdit(Gui::ViewProvider* p, int ModNum=0, const char *subname=0);
+    bool setEdit(Gui::ViewProvider* p, int ModNum=0, const char *subname=nullptr);
     const Base::Matrix4D &getEditingTransform() const;
     void setEditingTransform(const Base::Matrix4D &mat);
     /// reset from edit mode, this cause all document to reset edit
-    void resetEdit(void);
+    void resetEdit();
     /// reset edit of this document
-    void _resetEdit(void);
+    void _resetEdit();
     /// get the in edit ViewProvider or NULL
-    ViewProvider *getInEdit(ViewProviderDocumentObject **parentVp=0,
-            std::string *subname=0, int *mode=0, std::string *subElement=0) const;
+    ViewProvider *getInEdit(ViewProviderDocumentObject **parentVp=nullptr,
+            std::string *subname=nullptr, int *mode=nullptr, std::string *subElement=nullptr) const;
     /// get the in edit ViewProvider or NULL
     App::SubObjectT getInEditT(int *mode=0) const;
     /// set the in edit ViewProvider subname reference
@@ -291,17 +298,17 @@ public:
     /** @name methods for the UNDO REDO handling */
     //@{
     /// Open a new Undo transaction on the document
-    void openCommand(const char* sName=0);
+    void openCommand(const char* sName=nullptr);
     /// Commit the Undo transaction on the document
-    void commitCommand(void);
+    void commitCommand();
     /// Abort the Undo transaction on the document
-    void abortCommand(void);
+    void abortCommand();
     /// Check if an Undo transaction is open
-    bool hasPendingCommand(void) const;
+    bool hasPendingCommand() const;
     /// Get an Undo string vector with the Undo names
-    std::vector<std::string> getUndoVector(void) const;
+    std::vector<std::string> getUndoVector() const;
     /// Get an Redo string vector with the Redo names
-    std::vector<std::string> getRedoVector(void) const;
+    std::vector<std::string> getRedoVector() const;
     /// Will UNDO one or more steps
     void undo(int iSteps);
     /// Will REDO one or more steps
@@ -316,12 +323,12 @@ public:
 
     /// handles the application close event
     bool canClose(bool checkModify=true, bool checkLink=false);
-    bool isLastView(void);
+    bool isLastView();
 
     /// called by Application before being deleted
     void beforeDelete();
 
-    virtual PyObject *getPyObject(void);
+    PyObject *getPyObject() override;
 
     const char *getCameraSettings(const std::string *settings=nullptr) const;
     bool saveCameraSettings(const char *, std::string *dst=nullptr) const;

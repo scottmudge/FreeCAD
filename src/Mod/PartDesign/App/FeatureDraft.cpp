@@ -25,43 +25,34 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <BRepOffsetAPI_DraftAngle.hxx>
+# include <BRepBuilderAPI_MakeEdge.hxx>
 # include <TopTools_IndexedMapOfShape.hxx>
 # include <TopExp.hxx>
-# include <TopExp_Explorer.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Face.hxx>
-# include <BRepAdaptor_Surface.hxx>
 # include <BRepAdaptor_Curve.hxx>
-# include <gp_Dir.hxx>
-# include <gp_Pln.hxx>
-# include <gp_Ax1.hxx>
-//# include <BRepAdaptor_CompCurve.hxx>
-# include <gp_Pln.hxx>
-# include <gp_Lin.hxx>
-# include <gp_Dir.hxx>
-# include <gp_Circ.hxx>
-# include <GeomAbs_SurfaceType.hxx>
-# include <GeomAPI_IntSS.hxx>
-# include <Geom_Plane.hxx>
+# include <BRepAdaptor_Surface.hxx>
 # include <Geom_Curve.hxx>
 # include <Geom_Line.hxx>
-# include <BRepBuilderAPI_MakeEdge.hxx>
+# include <Geom_Plane.hxx>
+# include <GeomAPI_IntSS.hxx>
+# include <gp_Circ.hxx>
+# include <gp_Dir.hxx>
+# include <gp_Lin.hxx>
+# include <gp_Pln.hxx>
 #endif
 
 #include <App/OriginFeature.h>
-#include <Base/Tools.h>
-#include <Base/Exception.h>
 #include <App/Document.h>
+#include <Base/Console.h>
+#include <Base/Exception.h>
+#include <Base/Tools.h>
 #include <Mod/Part/App/TopoShape.h>
 
 #include "FeatureDraft.h"
 #include "DatumLine.h"
 #include "DatumPlane.h"
 
-
-#include <Base/Console.h>
-#include <Base/Exception.h>
-#include <Base/Tools.h>
 
 using namespace PartDesign;
 
@@ -76,8 +67,8 @@ Draft::Draft()
 {
     ADD_PROPERTY(Angle,(1.5));
     Angle.setConstraints(&floatAngle);
-    ADD_PROPERTY_TYPE(NeutralPlane,(0),"Draft",(App::PropertyType)(App::Prop_None),"NeutralPlane");
-    ADD_PROPERTY_TYPE(PullDirection,(0),"Draft",(App::PropertyType)(App::Prop_None),"PullDirection");
+    ADD_PROPERTY_TYPE(NeutralPlane,(nullptr),"Draft",(App::PropertyType)(App::Prop_None),"NeutralPlane");
+    ADD_PROPERTY_TYPE(PullDirection,(nullptr),"Draft",(App::PropertyType)(App::Prop_None),"PullDirection");
     ADD_PROPERTY(Reversed,(0));
 }
 
@@ -107,7 +98,7 @@ short Draft::mustExecute() const
     return DressUp::mustExecute();
 }
 
-App::DocumentObjectExecReturn *Draft::execute(void)
+App::DocumentObjectExecReturn *Draft::execute()
 {
     // Get parameters
     // Base shape
@@ -121,7 +112,7 @@ App::DocumentObjectExecReturn *Draft::execute(void)
 
     // Faces where draft should be applied
     auto faces = getFaces(baseShape);
-    if (faces.size() == 0)
+    if (faces.empty())
         return new App::DocumentObjectExecReturn("No faces specified");
 
     // Draft angle
@@ -129,8 +120,8 @@ App::DocumentObjectExecReturn *Draft::execute(void)
 
     // Pull direction
     gp_Dir pullDirection;
-    App::DocumentObject* refDirection = PullDirection.getValue();    
-    if (refDirection != NULL) {
+    App::DocumentObject* refDirection = PullDirection.getValue();
+    if (refDirection) {
         if (refDirection->getTypeId().isDerivedFrom(PartDesign::Line::getClassTypeId())) {
                     PartDesign::Line* line = static_cast<PartDesign::Line*>(refDirection);
                     Base::Vector3d d = line->getDirection();
@@ -167,7 +158,7 @@ App::DocumentObjectExecReturn *Draft::execute(void)
     // Neutral plane
     gp_Pln neutralPlane;
     App::DocumentObject* refPlane = NeutralPlane.getValue();
-    if (refPlane == NULL) {
+    if (!refPlane) {
         // Try to guess a neutral plane from the first selected face
         // Get edges of first selected face
         TopoDS_Shape face = TopoDS::Face(faces[0].getShape());
@@ -243,7 +234,7 @@ App::DocumentObjectExecReturn *Draft::execute(void)
 
                 neutralPlane = adapt.Plane();
             } else if (ref.ShapeType() == TopAbs_EDGE) {
-                if (refDirection != NULL) {
+                if (refDirection) {
                     // Create neutral plane through edge normal to pull direction
                     TopoDS_Edge refEdge = TopoDS::Edge(ref);
                     if (refEdge.IsNull())
@@ -269,7 +260,7 @@ App::DocumentObjectExecReturn *Draft::execute(void)
         neutralPlane.Transform(invObjLoc.Transformation());
     }
 
-    if (refDirection == NULL) {
+    if (!refDirection) {
         // Choose pull direction normal to neutral plane
         pullDirection = neutralPlane.Axis().Direction();
     }

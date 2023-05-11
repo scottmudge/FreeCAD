@@ -20,33 +20,32 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <TopExp_Explorer.hxx>
 # include <QMessageBox>
 #endif
 
-#include "Tessellation.h"
-#include "ui_Tessellation.h"
 #include <Base/Console.h>
 #include <Base/Exception.h>
+#include <Base/Stream.h>
 #include <Base/Tools.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <Gui/Application.h>
+#include <Gui/BitmapFactory.h>
 #include <Gui/Command.h>
 #include <Gui/Control.h>
 #include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
 #include <Gui/Selection.h>
-#include <Gui/ViewProvider.h>
 #include <Gui/WaitCursor.h>
-#include <Mod/Mesh/App/Mesh.h>
 #include <Mod/Mesh/App/MeshFeature.h>
 #include <Mod/Part/App/BodyBase.h>
 #include <Mod/Mesh/Gui/ViewProvider.h>
 #include <Mod/Part/Gui/ViewProvider.h>
+
+#include "Tessellation.h"
+#include "ui_Tessellation.h"
+
 
 using namespace MeshPartGui;
 
@@ -59,7 +58,7 @@ Tessellation::Tessellation(QWidget* parent)
     gmsh = new Mesh2ShapeGmsh(this);
     connect(gmsh, SIGNAL(processed()), this, SLOT(gmshProcessed()));
 
-    ui->stackedWidget->addTab(gmsh, tr("gmsh"));
+    ui->stackedWidget->addTab(gmsh, tr("Gmsh"));
 
     ParameterGrp::handle handle = App::GetApplication().GetParameterGroupByPath
         ("User parameter:BaseApp/Preferences/Mod/Mesh/Meshing/Standard");
@@ -192,7 +191,7 @@ void Tessellation::on_estimateMaximumEdgeLength_clicked()
     }
 
     double edgeLen = 0;
-    for (auto &sel : Gui::Selection().getSelection("*",0)) {
+    for (auto &sel : Gui::Selection().getSelection("*", Gui::ResolveMode::NoResolve)) {
         auto shape = Part::Feature::getTopoShape(sel.pObject,sel.SubName);
         if (shape.hasSubShape(TopAbs_FACE)) {
             Base::BoundBox3d bbox = shape.getBoundBox();
@@ -224,7 +223,7 @@ bool Tessellation::accept()
 
     bool bodyWithNoTip = false;
     bool partWithNoFace = false;
-    for (auto &sel : Gui::Selection().getSelection("*",0)) {
+    for (auto &sel : Gui::Selection().getSelection("*", Gui::ResolveMode::NoResolve)) {
         auto shape = Part::Feature::getTopoShape(sel.pObject,sel.SubName);
         if (shape.hasSubShape(TopAbs_FACE)) {
             shapeObjects.emplace_back(sel.pObject, sel.SubName);
@@ -260,7 +259,7 @@ bool Tessellation::accept()
     bool doClose = !ui->checkBoxDontQuit->isChecked();
     int method = ui->stackedWidget->currentIndex();
 
-    // For gmsh the workflow is very different because it uses an executable
+    // For Gmsh the workflow is very different because it uses an executable
     // and therefore things are asynchronous
     if (method == Gmsh) {
         gmsh->process(activeDoc, shapeObjects);
@@ -306,11 +305,11 @@ void Tessellation::process(int method, App::Document* doc, const std::list<App::
                 "__mesh__.Mesh=MeshPart.meshFromShape(%4)\n"
                 "__mesh__.Label=\"%5 (Meshed)\"\n"
                 "del __doc__, __mesh__, __part__, __shape__\n")
-                .arg(this->document)
-                .arg(objname)
-                .arg(subname)
-                .arg(param)
-                .arg(label);
+                .arg(this->document,
+                     objname,
+                     subname,
+                     param,
+                     label);
 
             Gui::Command::runCommand(Gui::Command::Doc, cmd.toUtf8());
 
@@ -369,7 +368,7 @@ std::vector<App::Color> Tessellation::getUniqueColors(const std::vector<App::Col
 
     std::vector<App::Color> unique;
     for (const auto& it : col_set)
-        unique.push_back(App::Color(it));
+        unique.emplace_back(it);
     return unique;
 }
 
@@ -522,7 +521,7 @@ bool Mesh2ShapeGmsh::writeProject(QString& inpFile, QString& outFile)
                 maxSize = 1.0e22;
             double minSize = getMinSize();
 
-            // gmsh geo file
+            // Gmsh geo file
             Base::FileInfo geo(d->geoFile);
             Base::ofstream geoOut(geo, std::ios::out);
             geoOut << "// geo file for meshing with Gmsh meshing software created by FreeCAD\n"
@@ -607,7 +606,7 @@ TaskTessellation::TaskTessellation()
     widget = new Tessellation();
     Gui::TaskView::TaskBox* taskbox = new Gui::TaskView::TaskBox(
         QPixmap()/*Gui::BitmapFactory().pixmap("MeshPart_Mesher")*/,
-        widget->windowTitle(), true, 0);
+        widget->windowTitle(), true, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

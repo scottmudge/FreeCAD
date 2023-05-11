@@ -24,14 +24,14 @@ import FreeCAD
 import Draft
 import ArchCommands
 import DraftVecUtils
-import sys
 import ArchIFC
 import tempfile
 import os
 if FreeCAD.GuiUp:
     import FreeCADGui
-    from DraftTools import translate
+    from draftutils.translate import translate
     from PySide.QtCore import QT_TRANSLATE_NOOP
+    import draftutils.units as units
 else:
     # \cond
     def translate(ctxt,txt):
@@ -39,8 +39,7 @@ else:
     def QT_TRANSLATE_NOOP(ctxt,txt):
         return txt
     # \endcond
-if sys.version_info.major >= 3:
-    unicode = str
+unicode = str
 
 ## @package ArchBuildingPart
 #  \ingroup ARCH
@@ -456,7 +455,7 @@ class BuildingPart(ArchIFC.IfcProduct):
         shapes = []
         solidindex = 0
         materialstable = {}
-        for child in Draft.get_group_contents(obj):
+        for child in Draft.get_group_contents(obj, walls=True):
             if not Draft.get_type(child) in ["Space"]:
                 if hasattr(child,'Shape') and child.Shape:
                     shapes.append(child.Shape)
@@ -486,13 +485,20 @@ class BuildingPart(ArchIFC.IfcProduct):
 
         "Touches all descendents where applicable"
 
-        for child in obj.Group:
+        g = []
+        if hasattr(obj,"Group"):
+            g = obj.Group
+        elif (Draft.getType(obj) in ["Wall","Structure"]):
+            g = obj.Additions
+        for child in g:
             if Draft.getType(child) in ["Wall","Structure"]:
                 if not child.Height.Value:
-                    print("Executing ",child.Label)
+                    FreeCAD.Console.PrintLog("Auto-updating Height of "+child.Name+"\n")
+                    self.touchChildren(child)
                     child.Proxy.execute(child)
             elif Draft.getType(child) in ["Group","BuildingPart"]:
                 self.touchChildren(child)
+
 
     def addObject(self,obj,child):
 
@@ -652,8 +658,10 @@ class ViewProviderBuildingPart:
         self.sep.addChild(self.dst)
         self.lco = coin.SoCoordinate3()
         self.sep.addChild(self.lco)
+        import PartGui # Required for "SoBrepEdgeSet" (because a BuildingPart is not a Part::FeaturePython object).
         lin = coin.SoType.fromName("SoBrepEdgeSet").createInstance()
-        lin.coordIndex.setValues([0,1,-1,2,3,-1,4,5,-1])
+        if lin:
+            lin.coordIndex.setValues([0,1,-1,2,3,-1,4,5,-1])
         self.sep.addChild(lin)
         self.bbox = coin.SoSwitch()
         self.bbox.whichChild = -1
@@ -724,7 +732,7 @@ class ViewProviderBuildingPart:
         "recursively get the colors of objects inside this BuildingPart"
 
         colors = []
-        for child in Draft.get_group_contents(obj):
+        for child in Draft.get_group_contents(obj, walls=True):
             if not Draft.get_type(child) in ["Space"]:
                 if hasattr(child,'Shape') and (hasattr(child.ViewObject,"DiffuseColor") or hasattr(child.ViewObject,"ShapeColor")):
                     if hasattr(child.ViewObject,"DiffuseColor") and len(child.ViewObject.DiffuseColor) == len(child.Shape.Faces):
@@ -747,14 +755,11 @@ class ViewProviderBuildingPart:
             if hasattr(vobj,"LineWidth"):
                 self.dst.lineWidth = vobj.LineWidth
         elif prop == "FontName":
-            if hasattr(vobj,"FontName"):
+            if hasattr(vobj,"FontName") and hasattr(self,"fon"):
                 if vobj.FontName:
-                    if sys.version_info.major < 3:
-                        self.fon.name = vobj.FontName.encode("utf8")
-                    else:
-                        self.fon.name = vobj.FontName
+                    self.fon.name = vobj.FontName
         elif prop in ["FontSize","DisplayOffset","OriginOffset"]:
-            if hasattr(vobj,"FontSize") and hasattr(vobj,"DisplayOffset") and hasattr(vobj,"OriginOffset"):
+            if hasattr(vobj,"FontSize") and hasattr(vobj,"DisplayOffset") and hasattr(vobj,"OriginOffset") and hasattr(self,"fon"):
                 fs = vobj.FontSize.Value
                 if fs:
                     self.fon.size = fs
@@ -767,7 +772,7 @@ class ViewProviderBuildingPart:
                     else:
                         self.lco.point.setValues([[-fs,0,0],[fs,0,0],[0,-fs,0],[0,fs,0],[0,0,-fs],[0,0,fs]])
         elif prop in ["OverrideUnit","ShowUnit","ShowLevel","ShowLabel"]:
-            if hasattr(vobj,"OverrideUnit") and hasattr(vobj,"ShowUnit") and hasattr(vobj,"ShowLevel") and hasattr(vobj,"ShowLabel"):
+            if hasattr(vobj,"OverrideUnit") and hasattr(vobj,"ShowUnit") and hasattr(vobj,"ShowLevel") and hasattr(vobj,"ShowLabel") and hasattr(self,"txt"):
                 z = vobj.Object.Placement.Base.z + vobj.Object.LevelOffset.Value
                 q = FreeCAD.Units.Quantity(z,FreeCAD.Units.Length)
                 txt = ""
@@ -783,14 +788,14 @@ class ViewProviderBuildingPart:
                     else:
                         u = q.getUserPreferred()[2]
                     try:
-                        q = q.getValueAs(u)
+                        txt += units.display_external(float(q),None,'Length',vobj.ShowUnit,u)
                     except Exception:
                         q = q.getValueAs(q.getUserPreferred()[2])
-                    d = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",0)
-                    fmt = "{0:."+ str(d) + "f}"
-                    if not vobj.ShowUnit:
-                        u = ""
-                    txt += fmt.format(float(q)) + str(u)
+                        d = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Units").GetInt("Decimals",0)
+                        fmt = "{0:."+ str(d) + "f}"
+                        if not vobj.ShowUnit:
+                            u = ""
+                        txt += fmt.format(float(q)) + str(u)
                 if not txt:
                     txt = " " # empty texts make coin crash...
                 if isinstance(txt,unicode):

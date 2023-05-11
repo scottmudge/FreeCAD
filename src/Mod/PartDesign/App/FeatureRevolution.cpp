@@ -23,30 +23,22 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <BRep_Builder.hxx>
-# include <BRepBndLib.hxx>
-# include <BRepPrimAPI_MakeRevol.hxx>
-# include <BRepBuilderAPI_MakeFace.hxx>
-# include <TopoDS.hxx>
-# include <TopoDS_Face.hxx>
-# include <TopoDS_Wire.hxx>
-# include <TopExp_Explorer.hxx>
 # include <BRepAlgoAPI_Fuse.hxx>
-# include <Precision.hxx>
+# include <BRepPrimAPI_MakeRevol.hxx>
 # include <gp_Lin.hxx>
+# include <Precision.hxx>
+# include <TopExp_Explorer.hxx>
+# include <TopoDS.hxx>
 #endif
 
 #include <Base/Axis.h>
-#include <Base/Console.h>
 #include <Base/Exception.h>
 #include <Base/Placement.h>
 #include <Base/Tools.h>
 #include <App/Document.h>
-
 #include <Mod/Part/App/TopoShape.h>
 #include <Mod/Part/App/TopoShapeOpCode.h>
 #include "FeatureRevolution.h"
-
 
 using namespace PartDesign;
 
@@ -63,7 +55,7 @@ Revolution::Revolution()
     ADD_PROPERTY_TYPE(Axis,(Base::Vector3d(0.0,1.0,0.0)),"Revolution", App::Prop_ReadOnly, "Axis");
     ADD_PROPERTY_TYPE(Angle,(360.0),"Revolution", App::Prop_None, "Angle");
     Angle.setConstraints(&floatAngle);
-    ADD_PROPERTY_TYPE(ReferenceAxis,(0),"Revolution",(App::Prop_None),"Reference axis of revolution");
+    ADD_PROPERTY_TYPE(ReferenceAxis,(nullptr),"Revolution",(App::Prop_None),"Reference axis of revolution");
 }
 
 short Revolution::mustExecute() const
@@ -77,7 +69,7 @@ short Revolution::mustExecute() const
     return ProfileBased::mustExecute();
 }
 
-App::DocumentObjectExecReturn *Revolution::execute(void)
+App::DocumentObjectExecReturn *Revolution::execute()
 {
     // Validate parameters
     double angle = Angle.getValue();
@@ -144,7 +136,7 @@ App::DocumentObjectExecReturn *Revolution::execute(void)
         for (;xp.More(); xp.Next()) {
             if (checkLineCrossesFace(gp_Lin(pnt, dir), TopoDS::Face(xp.Current())))
                 return new App::DocumentObjectExecReturn("Revolve axis intersects the sketch");
-        }        
+        }
 
         // revolve the face to a solid
         TopoShape result(0,getDocument()->getStringHasher());
@@ -212,7 +204,7 @@ App::DocumentObjectExecReturn *Revolution::execute(void)
     }
 }
 
-bool Revolution::suggestReversed(void)
+bool Revolution::suggestReversed()
 {
     try {
         updateAxis();
@@ -223,13 +215,13 @@ bool Revolution::suggestReversed(void)
     return ProfileBased::getReversedAngle(Base.getValue(), Axis.getValue()) < 0.0;
 }
 
-void Revolution::updateAxis(void)
+void Revolution::updateAxis()
 {
     App::DocumentObject *pcReferenceAxis = ReferenceAxis.getValue();
     const std::vector<std::string> &subReferenceAxis = ReferenceAxis.getSubValues();
     Base::Vector3d base;
     Base::Vector3d dir;
-    getAxis(pcReferenceAxis, subReferenceAxis, base, dir);
+    getAxis(pcReferenceAxis, subReferenceAxis, base, dir, ForbiddenAxis::NotParallelWithNormal);
 
     Base.setValue(base.x,base.y,base.z);
     Axis.setValue(dir.x,dir.y,dir.z);

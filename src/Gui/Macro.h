@@ -24,7 +24,6 @@
 #ifndef GUI_MACRO_H
 #define GUI_MACRO_H
 
-// Std. configurations
 #include <QString>
 #include <QStringList>
 #include <QPointer>
@@ -46,7 +45,7 @@ class GuiExport MacroManager : public Base::Observer<const char*>
 {
 protected:
     MacroManager();
-    ~MacroManager();
+    ~MacroManager() override;
 
 public:
 
@@ -75,11 +74,11 @@ public:
      */
     void open(MacroType eType,const char *sName);
     /// close (and save) the recording session
-    void commit(void);
+    void commit();
     /// cancels the recording session
-    void cancel(void);
+    void cancel();
     /// indicates if a macro recording is in progress
-    bool isOpen(void) const {return openMacro;}
+    bool isOpen() const {return openMacro;}
     /// insert a new line in the macro
     void addLine(LineType Type,const char* sLine,bool pending=false);
     /** Set the active module
@@ -92,7 +91,7 @@ public:
     /// Get the Python debugger
     PythonDebugger* debugger() const;
     /** Observes its parameter group. */
-    void OnChange(Base::Subject<const char*> &rCaller, const char * sReason);
+    void OnChange(Base::Subject<const char*> &rCaller, const char * sReason) override;
 
     /// Return the added lines regardless of recording or not
     long getLines() const {return totalLines;}

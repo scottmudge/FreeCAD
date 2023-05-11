@@ -24,14 +24,14 @@
 #define SURFACEGUI_VIEWPROVIDEREXTEND_H
 
 #include <Mod/Part/Gui/ViewProviderSpline.h>
-#include <Mod/Surface/App/FeatureExtend.h>
+
 
 namespace SurfaceGui
 {
 
 class ViewProviderExtend : public PartGui::ViewProviderSpline
 {
-    PROPERTY_HEADER(SurfaceGui::ViewProviderExtend);
+    PROPERTY_HEADER_WITH_OVERRIDE(SurfaceGui::ViewProviderExtend);
 
 public:
     ViewProviderExtend();

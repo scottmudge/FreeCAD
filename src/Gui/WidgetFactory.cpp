@@ -23,8 +23,8 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <algorithm>
-# include <limits>
+# include <QApplication>
+# include <QVBoxLayout>
 #endif
 
 #ifdef FC_OS_WIN32
@@ -36,18 +36,15 @@
 #endif
 #endif
 
-#include <CXX/Objects.hxx>
 #include <App/Application.h>
 #include <Base/Console.h>
 #include <Base/Exception.h>
 #include <Base/Interpreter.h>
 
-
 #include "WidgetFactory.h"
-#include "UiLoader.h"
-#include "PythonWrapper.h"
 #include "PrefWidgets.h"
-#include "PropertyPage.h"
+#include "PythonWrapper.h"
+#include "UiLoader.h"
 
 
 using namespace Gui;
@@ -56,14 +53,14 @@ Gui::WidgetFactoryInst* Gui::WidgetFactoryInst::_pcSingleton = nullptr;
 
 WidgetFactoryInst& WidgetFactoryInst::instance()
 {
-    if (_pcSingleton == nullptr)
+    if (!_pcSingleton)
         _pcSingleton = new WidgetFactoryInst;
     return *_pcSingleton;
 }
 
 void WidgetFactoryInst::destruct ()
 {
-    if (_pcSingleton != nullptr)
+    if (_pcSingleton)
         delete _pcSingleton;
     _pcSingleton = nullptr;
 }
@@ -75,7 +72,7 @@ void WidgetFactoryInst::destruct ()
  */
 QWidget* WidgetFactoryInst::createWidget (const char* sName, QWidget* parent) const
 {
-    QWidget* w = (QWidget*)Produce(sName);
+    auto w = static_cast<QWidget*>(Produce(sName));
 
     // this widget class is not registered
     if (!w) {
@@ -117,7 +114,7 @@ QWidget* WidgetFactoryInst::createWidget (const char* sName, QWidget* parent) co
  */
 Gui::Dialog::PreferencePage* WidgetFactoryInst::createPreferencePage (const char* sName, QWidget* parent) const
 {
-    Gui::Dialog::PreferencePage* w = (Gui::Dialog::PreferencePage*)Produce(sName);
+    auto w = (Gui::Dialog::PreferencePage*)Produce(sName);
 
     // this widget class is not registered
     if (!w) {
@@ -167,7 +164,7 @@ QWidget* WidgetFactoryInst::createPrefWidget(const char* sName, QWidget* parent,
     w->setParent(parent);
 
     try {
-        PrefWidget* pw = dynamic_cast<PrefWidget*>(w);
+        auto pw = dynamic_cast<PrefWidget*>(w);
         if (pw) {
             pw->setEntryName(sPref);
             pw->restorePreferences();
@@ -220,7 +217,7 @@ PrefPageUiProducer::~PrefPageUiProducer()
 void* PrefPageUiProducer::Produce () const
 {
     QWidget* page = new Gui::Dialog::PreferenceUiForm(fn);
-    return (void*)page;
+    return static_cast<void*>(page);
 }
 
 // ----------------------------------------------------
@@ -288,7 +285,7 @@ PreferencePagePython::PreferencePagePython(const Py::Object& p, QWidget* parent)
             QWidget* form = qobject_cast<QWidget*>(object);
             if (form) {
                 this->setWindowTitle(form->windowTitle());
-                QVBoxLayout *layout = new QVBoxLayout;
+                auto layout = new QVBoxLayout;
                 layout->addWidget(form);
                 setLayout(layout);
             }
@@ -364,7 +361,7 @@ ContainerDialog::ContainerDialog( QWidget* templChild )
     buttonOk->setDefault( true );
 
     MyDialogLayout->addWidget( buttonOk, 1, 0 );
-    QSpacerItem* spacer = new QSpacerItem( 210, 20, QSizePolicy::Expanding, QSizePolicy::Minimum );
+    auto spacer = new QSpacerItem( 210, 20, QSizePolicy::Expanding, QSizePolicy::Minimum );
     MyDialogLayout->addItem( spacer, 1, 1 );
 
     buttonCancel = new QPushButton(this);
@@ -431,7 +428,7 @@ void PyResource::load(const char* name)
     // checks whether it's a relative path
     if (fi.isRelative()) {
         QString cwd = QDir::currentPath ();
-        QString home= QDir(QString::fromUtf8(App::GetApplication().getHomePath())).path();
+        QString home= QDir(QString::fromStdString(App::Application::getHomePath())).path();
 
         // search in cwd and home path for the file
         //
@@ -479,7 +476,7 @@ void PyResource::load(const char* name)
         throw Base::ValueError("Invalid widget.");
 
     if (w->inherits("QDialog")) {
-        myDlg = (QDialog*)w;
+        myDlg = static_cast<QDialog*>(w);
     }
     else {
         myDlg = new ContainerDialog(w);
@@ -513,7 +510,7 @@ bool PyResource::connect(const char* sender, const char* signal, PyObject* cb)
     }
 
     if (objS) {
-        SignalConnect* sc = new SignalConnect(this, cb);
+        auto sc = new SignalConnect(this, cb);
         mySignals.push_back(sc);
         return QObject::connect(objS, sigStr.toUtf8(), sc, SLOT ( onExecute() )  );
     }

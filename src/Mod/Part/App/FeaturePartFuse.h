@@ -20,20 +20,18 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef PART_FEATUREPARTFUSE_H
 #define PART_FEATUREPARTFUSE_H
 
-#include <App/PropertyLinks.h>
-
 #include "FeaturePartBoolean.h"
+
 
 namespace Part
 {
 
 class Fuse : public Boolean
 {
-    PROPERTY_HEADER(Part::Fuse);
+    PROPERTY_HEADER_WITH_OVERRIDE(Part::Fuse);
 
 public:
     Fuse();
@@ -42,8 +40,8 @@ public:
     //@{
     /// recalculate the Feature
 protected:
-    BRepAlgoAPI_BooleanOperation* makeOperation(const TopoDS_Shape&, const TopoDS_Shape&) const;
-    const char *opCode() const;
+    BRepAlgoAPI_BooleanOperation* makeOperation(const TopoDS_Shape&, const TopoDS_Shape&) const override;
+    const char *opCode() const override;
     //@}
 };
 
@@ -61,15 +59,15 @@ public:
     /** @name methods override feature */
     //@{
     /// recalculate the Feature
-    virtual App::DocumentObjectExecReturn *execute(void) override;
-    virtual short mustExecute() const override;
+    App::DocumentObjectExecReturn *execute(void) override;
+    short mustExecute() const override;
     //@}
     /// returns the type name of the ViewProvider
-    virtual const char* getViewProviderName(void) const override {
+    const char* getViewProviderName(void) const override {
         return "PartGui::ViewProviderMultiFuse";
     }
 
-    virtual App::PropertyLinkList *getShapeLinksProperty() override {return &Shapes;}
+    App::PropertyLinkList *getShapeLinksProperty() override {return &Shapes;}
 };
 
 }

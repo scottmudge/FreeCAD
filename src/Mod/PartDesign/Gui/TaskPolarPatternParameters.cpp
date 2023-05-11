@@ -29,6 +29,7 @@
 # include <QTimer>
 #endif
 
+#include <Base/ExceptionSafeCall.h>
 #include <Base/UnitsApi.h>
 #include <Base/Tools.h>
 #include <App/Application.h>
@@ -101,9 +102,23 @@ TaskPolarPatternParameters::TaskPolarPatternParameters(TaskMultiTransformParamet
     setupUI();
 }
 
+void TaskPolarPatternParameters::connectSignals()
+{
+    TaskTransformedParameters::connectSignals();
+    Base::connect(ui->comboAxis, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                  this, &TaskPolarPatternParameters::onAxisChanged);
+    Base::connect(ui->checkReverse, &QCheckBox::toggled, this, &TaskPolarPatternParameters::onCheckReverse);
+    Base::connect(ui->polarAngle, QOverload<double>::of(&Gui::QuantitySpinBox::valueChanged),
+                  this, &TaskPolarPatternParameters::onAngle);
+    Base::connect(ui->spinOccurrences, QOverload<uint>::of(&Gui::UIntSpinBox::valueChanged),
+                  this, &TaskPolarPatternParameters::onOccurrences);
+    Base::connect(ui->checkBoxUpdateView, &QCheckBox::toggled, this, &TaskPolarPatternParameters::onUpdateView);
+}
+
 void TaskPolarPatternParameters::setupUI()
 {
     TaskTransformedParameters::setupUI();
+
 
     PartDesign::PolarPattern* pcPolarPattern = static_cast<PartDesign::PolarPattern*>(getObject());
     ui->polarAngle->bind(pcPolarPattern->Angle);
@@ -122,7 +137,7 @@ void TaskPolarPatternParameters::setupUI()
         this->fillAxisCombo(axesLinks, static_cast<Part::Part2DObject*>(sketch));
     }
     else {
-        this->fillAxisCombo(axesLinks, NULL);
+        this->fillAxisCombo(axesLinks, nullptr);
     }
 
     //show the parts coordinate system axis for selection
@@ -140,17 +155,7 @@ void TaskPolarPatternParameters::setupUI()
     }
 
     updateUI();
-
-    connect(ui->comboAxis, SIGNAL(activated(int)),
-            this, SLOT(onAxisChanged(int)));
-    connect(ui->checkReverse, SIGNAL(toggled(bool)),
-            this, SLOT(onCheckReverse(bool)));
-    connect(ui->polarAngle, SIGNAL(valueChanged(double)),
-            this, SLOT(onAngle(double)));
-    connect(ui->spinOccurrences, SIGNAL(valueChanged(uint)),
-            this, SLOT(onOccurrences(uint)));
-    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
-            this, SLOT(onUpdateView(bool)));
+    connectSignals();
 }
 
 void TaskPolarPatternParameters::updateUI()
@@ -236,22 +241,17 @@ void TaskPolarPatternParameters::onAxisChanged(int /*num*/)
     PartDesign::PolarPattern* pcPolarPattern = static_cast<PartDesign::PolarPattern*>(getObject());
 
     try{
-        if(axesLinks.getCurrentLink().getValue() == 0){
+        if (!axesLinks.getCurrentLink().getValue()) {
             // enter reference selection mode
             selectionMode = reference;
             Gui::Selection().clearSelection();
-            ReferenceSelection::Config conf;
-            conf.edge = true;
-            conf.plane = false;
-            conf.planar = false;
-            conf.circle = true;
-            addReferenceSelectionGate(conf);
+            addReferenceSelectionGate(AllowSelection::EDGE | AllowSelection::CIRCLE);
         } else {
             exitSelectionMode();
             pcPolarPattern->Axis.Paste(axesLinks.getCurrentLink());
         }
     } catch (Base::Exception &e) {
-        QMessageBox::warning(0,tr("Error"),QString::fromUtf8(e.what()));
+        QMessageBox::warning(nullptr,tr("Error"),QString::fromUtf8(e.what()));
     }
 
     kickUpdateViewTimer();

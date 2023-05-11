@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_UILOADER_H
 #define GUI_UILOADER_H
 
@@ -33,7 +32,9 @@
 #else
 #include <QObject>
 #endif
+
 #include <CXX/Extensions.hxx>
+
 
 QT_BEGIN_NAMESPACE
 class QLayout;
@@ -44,21 +45,6 @@ class QIODevice;
 class QWidget;
 QT_END_NAMESPACE
 
-
-namespace Gui {
-
-class PySideUicModule : public Py::ExtensionModule<PySideUicModule>
-{
-
-public:
-    PySideUicModule();
-    virtual ~PySideUicModule() {}
-
-private:
-    Py::Object loadUiType(const Py::Tuple& args);
-    Py::Object loadUi(const Py::Tuple& args);
-    Py::Object createCustomWidget(const Py::Tuple&);
-};
 
 #if !defined (HAVE_QT_UI_TOOLS)
 class QUiLoader : public QObject
@@ -97,6 +83,21 @@ private:
 };
 #endif
 
+namespace Gui {
+
+class PySideUicModule : public Py::ExtensionModule<PySideUicModule>
+{
+
+public:
+    PySideUicModule();
+    ~PySideUicModule() override {}
+
+private:
+    Py::Object loadUiType(const Py::Tuple& args);
+    Py::Object loadUi(const Py::Tuple& args);
+    Py::Object createCustomWidget(const Py::Tuple&);
+};
+
 /**
  * The UiLoader class provides the abitlity to use the widget factory
  * framework of FreeCAD within the framework provided by Qt. This class
@@ -106,15 +107,15 @@ private:
 class UiLoader : public QUiLoader
 {
 public:
-    UiLoader(QObject* parent=nullptr);
-    virtual ~UiLoader();
+    explicit UiLoader(QObject* parent=nullptr);
+    ~UiLoader() override;
 
     /**
      * Creates a widget of the type \a className with the parent \a parent.
      * For more details see the documentation to QWidgetFactory.
      */
     QWidget* createWidget(const QString & className, QWidget * parent=nullptr,
-                          const QString& name = QString());
+                          const QString& name = QString()) override;
 
 private:
     QStringList cw;
@@ -128,9 +129,9 @@ public:
     static void init_type();    // announce properties and methods
 
     UiLoaderPy();
-    ~UiLoaderPy();
+    ~UiLoaderPy() override;
 
-    Py::Object repr();
+    Py::Object repr() override;
     Py::Object createWidget(const Py::Tuple&);
     Py::Object load(const Py::Tuple&);
 

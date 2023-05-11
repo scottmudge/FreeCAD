@@ -35,29 +35,29 @@ namespace PartDesignGui {
 
 class PartDesignGuiExport ViewProviderAddSub : public ViewProvider
 {
-    PROPERTY_HEADER(PartDesignGui::ViewProviderAddSub);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderAddSub);
 
 public:
     /// constructor
     ViewProviderAddSub();
     /// destructor
-    virtual ~ViewProviderAddSub();
+    ~ViewProviderAddSub() override;
     
-    virtual void attach(App::DocumentObject*);
-    virtual void reattach(App::DocumentObject *);
-    virtual void beforeDelete();
-    virtual void updateData(const App::Property*);
-    virtual bool setEdit(int ModNum);
-    virtual void unsetEdit(int ModNum);
+    void attach(App::DocumentObject*) override;
+    void reattach(App::DocumentObject *) override;
+    void beforeDelete() override;
+    void updateData(const App::Property*) override;
+    bool setEdit(int ModNum) override;
+    void unsetEdit(int ModNum) override;
+    void finishRestoring() override;
+    bool getDetailPath(const char *subname,
+                       SoFullPath *pPath,
+                       bool append,
+                       SoDetail *&det) const override;
+    QIcon getIcon(void) const override;
+    
     bool isPreviewMode() const;
-    virtual void finishRestoring();
-    virtual bool getDetailPath(const char *subname,
-                               SoFullPath *pPath,
-                               bool append,
-                               SoDetail *&det) const;
-    
     void setPreviewDisplayMode(bool);
-    virtual QIcon getIcon(void) const;
     virtual void checkAddSubColor();
 
 protected: 

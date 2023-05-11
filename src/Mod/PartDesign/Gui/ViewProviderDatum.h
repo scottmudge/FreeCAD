@@ -25,8 +25,11 @@
 #ifndef PARTDESGIN_ViewProviderDatum_H
 #define PARTDESGIN_ViewProviderDatum_H
 
+#include <QCoreApplication>
+
 #include <Gui/ViewProviderDatum.h>
 #include <Mod/Part/Gui/ViewProviderAttachExtension.h>
+#include <Mod/PartDesign/PartDesignGlobal.h>
 
 class SoPickStyle;
 class SbBox3f;
@@ -36,24 +39,25 @@ namespace PartDesignGui {
 
 class PartDesignGuiExport ViewProviderDatum : public Gui::ViewProviderDatum, PartGui::ViewProviderAttachExtension
 {
+    Q_DECLARE_TR_FUNCTIONS(PartDesignGui::ViewProviderDatum)
     PROPERTY_HEADER_WITH_EXTENSIONS(PartDesignGui::ViewProviderDatum);
 
 public:
     /// constructor
     ViewProviderDatum();
     /// destructor
-    virtual ~ViewProviderDatum();
+    ~ViewProviderDatum() override;
 
     /// grouping handling
     void setupContextMenu(QMenu*, QObject*, const char*) override;
 
-    virtual bool doubleClicked(void) override;
+    bool doubleClicked(void) override;
 
-    virtual Base::Vector3d getBasePoint () const override;
+    Base::Vector3d getBasePoint () const override;
 
 protected:
-    virtual bool setEdit(int ModNum) override;
-    virtual void unsetEdit(int ModNum) override;
+    bool setEdit(int ModNum) override;
+    void unsetEdit(int ModNum) override;
 
 private:
     std::string oldWb;

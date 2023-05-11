@@ -20,14 +20,12 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-#include <TopTools_IndexedMapOfShape.hxx>
-#include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
+#include <BRep_Builder.hxx>
+#include <BRep_Tool.hxx>
 #include <TopExp.hxx>
 #include <TopoDS.hxx>
-#include <BRep_Tool.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopExp_Explorer.hxx>
 #endif
@@ -54,7 +52,7 @@ DressUp::DressUp()
     ADD_PROPERTY_TYPE(DressUpShape,(TopoDS_Shape()),"Base",
             (App::PropertyType)(App::Prop_NoPersist|App::Prop_Output), nullptr);
 
-    ADD_PROPERTY(Base,(0));
+    ADD_PROPERTY(Base,(nullptr));
     Placement.setStatus(App::Property::ReadOnly, true);
 
     ADD_PROPERTY_TYPE(SupportTransform,(false),"Base", App::Prop_None,
@@ -71,10 +69,10 @@ short DressUp::mustExecute() const
 {
     if (Base.getValue() && Base.getValue()->isTouched())
         return 1;
-    return PartDesign::Feature::mustExecute();
+    return PartDesign::FeatureAddSub::mustExecute();
 }
 
-void DressUp::positionByBaseFeature(void)
+void DressUp::positionByBaseFeature()
 {
     Part::Feature *base = static_cast<Part::Feature*>(BaseFeature.getValue());
     if (base && base->getTypeId().isDerivedFrom(Part::Feature::getClassTypeId()))
@@ -166,7 +164,10 @@ std::vector<TopoShape> DressUp::getFaces(const TopoShape &shape) {
         TopoShape subshape;
         try {
             subshape = shape.getSubTopoShape(ref.c_str());
-        }catch(...){}
+        }catch(...)
+        {
+        }
+
         if(subshape.isNull()) {
             FC_ERR(getFullName() << ": invalid face reference '" << ref << "'");
             throw Part::NullShapeException("Invalid Invalid face link");
@@ -236,7 +237,7 @@ void DressUp::getAddSubShape(std::vector<std::pair<Part::TopoShape, Type> > &add
                 for(Feature *current=this; ;current=static_cast<DressUp*>(base)) {
                     base = Base::freecad_dynamic_cast<FeatureAddSub>(current->getBaseObject(true));
                     if(!base)
-                        FC_THROWM(Base::CADKernelError, 
+                        FC_THROWM(Base::CADKernelError,
                                 "Cannot find additive or subtractive support for " << getFullName());
                     if(!base->isDerivedFrom(DressUp::getClassTypeId()))
                         break;

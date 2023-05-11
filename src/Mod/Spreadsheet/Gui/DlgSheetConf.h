@@ -1,5 +1,5 @@
 /****************************************************************************
- *   Copyright (c) 2019 Zheng Lei (realthunder) <realthunder.dev@gmail.com> *
+ *   Copyright (c) 2019 Zheng, Lei (realthunder) <realthunder.dev@gmail.com>*
  *                                                                          *
  *   This file is part of the FreeCAD CAx development system.               *
  *                                                                          *
@@ -37,10 +37,10 @@ class DlgSheetConf : public QDialog
     Q_OBJECT
     
 public:
-    explicit DlgSheetConf(Spreadsheet::Sheet *sheet, App::Range range, QWidget *parent = 0);
-    ~DlgSheetConf();
+    explicit DlgSheetConf(Spreadsheet::Sheet *sheet, App::Range range, QWidget *parent = nullptr);
+    ~DlgSheetConf() override;
     
-    void accept();
+    void accept() override;
 
     App::Property *prepare(App::CellAddress &from, App::CellAddress &to,
                 std::string &rangeConf, App::ObjectIdentifier &path, bool init);

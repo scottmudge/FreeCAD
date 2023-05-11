@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -29,8 +28,7 @@
 #include <App/DocumentObjectGroup.h>
 #include <Gui/Control.h>
 #include <Gui/BitmapFactory.h>
-
-#include <Mod/Path/App/FeaturePathCompound.h>
+#include <Gui/Control.h>
 
 #include "TaskDlgPathCompound.h"
 
@@ -70,7 +68,7 @@ static void getObjectsInGroup(App::DocumentObject *obj, std::set<App::DocumentOb
     }
 }
 
-std::vector<App::DocumentObject*> ViewProviderPathCompound::claimChildren(void)const
+std::vector<App::DocumentObject*> ViewProviderPathCompound::claimChildren()const
 {
     auto feat = static_cast<Path::FeatureCompound *>(getObject());
     auto res = feat->Group.getValues();

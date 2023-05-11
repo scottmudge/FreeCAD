@@ -1,366 +1,560 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="1.1" language="eu" sourcelanguage="en">
+<TS version="2.1" language="eu" sourcelanguage="en">
   <context>
-    <name>AddonInstaller</name>
+    <name>AddCustomRepositoryDialog</name>
     <message>
-      <location filename="addonmanager_workers.py" line="535"/>
-      <source>Installed location</source>
-      <translation>Instalatutako kokapena</translation>
+      <location filename="../../AddonManagerOptions_AddCustomRepository.ui" line="14"/>
+      <source>Custom repository</source>
+      <translation>Biltegi pertsonalizatua</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions_AddCustomRepository.ui" line="20"/>
+      <source>Repository URL</source>
+      <translation>Biltegiaren URLa</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions_AddCustomRepository.ui" line="30"/>
+      <source>Branch</source>
+      <translation>Adarra</translation>
     </message>
   </context>
   <context>
-    <name>AddonsInstaller</name>
+    <name>CompactView</name>
     <message>
-      <location filename="addonmanager_macro.py" line="157"/>
-      <source>Unable to fetch the code of this macro.</source>
-      <translation>Ezin izan da makro honen kodea eskuratu.</translation>
+      <location filename="../../compact_view.ui" line="20"/>
+      <source>Form</source>
+      <translation>Inprimakia</translation>
     </message>
     <message>
-      <location filename="addonmanager_macro.py" line="164"/>
-      <source>Unable to retrieve a description for this macro.</source>
-      <translation>Ezin izan da makro honen deskribapen bat eskuratu.</translation>
+      <location filename="../../compact_view.ui" line="59"/>
+      <source>Icon</source>
+      <translation>Ikonoa</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="86"/>
-      <source>The addons that can be installed here are not officially part of FreeCAD, and are not reviewed by the FreeCAD team. Make sure you know what you are installing!</source>
-      <translation>Hemen instalatu daitezkeen makroak ez dira FreeCADen makro ofizialak eta FreeCAD taldeak ez ditu gainbegiratzen. Ziurtatu badakizula zer ari zaren instalatzen!</translation>
+      <location filename="../../compact_view.ui" line="66"/>
+      <source>&lt;b&gt;Package Name&lt;/b&gt;</source>
+      <translation>&lt;b&gt;Pakete-izena&lt;/b&gt;</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="199"/>
-      <source>Addon manager</source>
-      <translation>Gehigarrien kudeatzailea</translation>
+      <location filename="../../compact_view.ui" line="73"/>
+      <source>Version</source>
+      <translation>Bertsioa</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="204"/>
-      <source>You must restart FreeCAD for changes to take effect. Press Ok to restart FreeCAD now, or Cancel to restart later.</source>
-      <translation>FreeCAD berrabiarazi behar da aldaketak indarrean sartu daitezen. Sakatu 'Ados' FreeCAD orain berrabiarazteko edo 'Utzi' geroago berrabiarazteko.</translation>
+      <location filename="../../compact_view.ui" line="86"/>
+      <source>Description</source>
+      <translation>Deskribapena</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="243"/>
-      <source>Checking for updates...</source>
-      <translation>Eguneraketak bilatzen...</translation>
+      <location filename="../../compact_view.ui" line="102"/>
+      <source>UpdateAvailable</source>
+      <translation>Eguneratzea eskuragarri</translation>
+    </message>
+  </context>
+  <context>
+    <name>DependencyDialog</name>
+    <message>
+      <location filename="../../developer_mode_dependencies.ui" line="14"/>
+      <source>Dependencies</source>
+      <translation>Mendekotasunak</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="262"/>
-      <source>Apply</source>
-      <translation>Aplikatu</translation>
+      <location filename="../../developer_mode_dependencies.ui" line="39"/>
+      <source>Dependency type</source>
+      <translation>Mendekotasun mota</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="263"/>
-      <source>update(s)</source>
-      <translation>eguneraketa</translation>
+      <location filename="../../developer_mode_dependencies.ui" line="44"/>
+      <source>Name</source>
+      <translation>Izena</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="266"/>
-      <source>No update available</source>
-      <translation>Ez dago eguneraketarik eskuragarri</translation>
+      <location filename="../../developer_mode_dependencies.ui" line="49"/>
+      <source>Optional?</source>
+      <translation>Aukerakoa?</translation>
+    </message>
+  </context>
+  <context>
+    <name>DependencyResolutionDialog</name>
+    <message>
+      <location filename="../../dependency_resolution_dialog.ui" line="17"/>
+      <source>Resolve Dependencies</source>
+      <translation>Ebatzi mendekotasunak</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="433"/>
-      <source>Macro successfully installed. The macro is now available from the Macros dialog.</source>
-      <translation>Makroa ongi instalatu da. Orain makroa erabilgarri dago 'Makroak' elkarrizketa-koadroan.</translation>
+      <location filename="../../dependency_resolution_dialog.ui" line="29"/>
+      <source>This Addon has the following required and optional dependencies. You must install them before this Addon can be used.
+
+Do you want the Addon Manager to install them automatically? Choose &quot;Ignore&quot; to install the Addon without installing the dependencies.</source>
+      <translation>Gehigarri honek derrigorrezko eta aukerako hurrengo mendekotasunak ditu. Haiek instalatu behar dira gehigarria erabili ahal izateko.
+
+Gehigarrien kudeatzaileak automatikoki instalatu ditzan nahi al duzu? Aukeratu &quot;Ez ikusi&quot; gehigarria mendekotasunik gabe instalatzeko.</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="435"/>
-      <source>Unable to install</source>
-      <translation>Ezin izan da instalatu</translation>
+      <location filename="../../dependency_resolution_dialog.ui" line="43"/>
+      <source>FreeCAD Addons</source>
+      <translation>FreeCAD gehigarriak</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="494"/>
-      <source>Addon successfully removed. Please restart FreeCAD</source>
-      <translation>Gehigarria ongi kendu da. Berrabiarazi FreeCAD</translation>
+      <location filename="../../dependency_resolution_dialog.ui" line="55"/>
+      <source>Required Python modules</source>
+      <translation>Beharrezko Python moduluak</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="496"/>
-      <source>Unable to remove this addon</source>
-      <translation>Ezin izan da gehigarri hau kendu</translation>
+      <location filename="../../dependency_resolution_dialog.ui" line="67"/>
+      <source>Optional Python modules</source>
+      <translation>Aukerako Python moduluak</translation>
+    </message>
+  </context>
+  <context>
+    <name>DeveloperModeDialog</name>
+    <message>
+      <location filename="../../developer_mode.ui" line="14"/>
+      <source>Addon Developer Tools</source>
+      <translation>Gehigarrien garatzaile-tresnak</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="502"/>
-      <source>Macro successfully removed.</source>
-      <translation>Makroa ongi kendu da.</translation>
+      <location filename="../../developer_mode.ui" line="25"/>
+      <source>Path to Addon</source>
+      <translation>Gehigarriaren bide-izena</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="504"/>
-      <source>Macro could not be removed.</source>
-      <translation>Makroa ezin izan da kendu.</translation>
+      <location filename="../../developer_mode.ui" line="45"/>
+      <location filename="../../developer_mode.ui" line="195"/>
+      <source>Browse...</source>
+      <translation>Arakatu...</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="167"/>
-      <source>Unable to download addon list.</source>
-      <translation>Ezin izan da gehigarrien zerrenda deskargatu.</translation>
+      <location filename="../../developer_mode.ui" line="54"/>
+      <source>Metadata</source>
+      <translation>Metadatuak</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="172"/>
-      <source>Workbenches list was updated.</source>
-      <translation>Lan-mahaien zerrenda eguneratu da.</translation>
+      <location filename="../../developer_mode.ui" line="65"/>
+      <source>Primary branch</source>
+      <translation>Adar nagusia</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="738"/>
-      <source>Outdated GitPython detected, consider upgrading with pip.</source>
-      <translation>GitPython zaharkitua detektatu da, eguneratu ezazu pip bidez.</translation>
+      <location filename="../../developer_mode.ui" line="77"/>
+      <location filename="../../developer_mode.ui" line="160"/>
+      <source>Explanation of what this Addon provides. Displayed in the Addon Manager. It is not necessary for this to state that this is a FreeCAD Addon.</source>
+      <translation type="unfinished">Explanation of what this Addon provides. Displayed in the Addon Manager. It is not necessary for this to state that this is a FreeCAD Addon.</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="296"/>
-      <source>List of macros successfully retrieved.</source>
-      <translation>Makroen zerrenda ongi atzitu da.</translation>
+      <location filename="../../developer_mode.ui" line="80"/>
+      <source>Description</source>
+      <translation>Deskribapena</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="651"/>
-      <source>Retrieving description...</source>
-      <translation>Deskribapena atzitzen...</translation>
+      <location filename="../../developer_mode.ui" line="90"/>
+      <source>Discussion URL</source>
+      <translation type="unfinished">Discussion URL</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="391"/>
-      <source>Retrieving info from</source>
-      <translation>Informazioa berreskuratzen hemendik</translation>
+      <location filename="../../developer_mode.ui" line="97"/>
+      <source>Icon</source>
+      <translation>Ikonoa</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="533"/>
-      <source>An update is available for this addon.</source>
-      <translation>Eguneraketa bat eskuragarri dago gehigarri honetarako.</translation>
+      <location filename="../../developer_mode.ui" line="104"/>
+      <source>Bugtracker URL</source>
+      <translation type="unfinished">Bugtracker URL</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="521"/>
-      <source>This addon is already installed.</source>
-      <translation>Gehigarri hau instalatuta dago.</translation>
+      <location filename="../../developer_mode.ui" line="113"/>
+      <source>Semantic (1.2.3-beta) or CalVer (2022.08.30) styles supported</source>
+      <translation type="unfinished">Semantic (1.2.3-beta) or CalVer (2022.08.30) styles supported</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="653"/>
-      <source>Retrieving info from git</source>
-      <translation>Informazioa atzitzen git biltegitik</translation>
+      <location filename="../../developer_mode.ui" line="120"/>
+      <source>Set to today (CalVer style)</source>
+      <translation type="unfinished">Set to today (CalVer style)</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="656"/>
-      <source>Retrieving info from wiki</source>
-      <translation>Informazioa atzitzen wikitik</translation>
+      <location filename="../../developer_mode.ui" line="132"/>
+      <location filename="../../developer_mode.ui" line="146"/>
+      <location filename="../../developer_mode.ui" line="180"/>
+      <location filename="../../developer_mode.ui" line="218"/>
+      <source>(Optional)</source>
+      <translation>(Aukerakoa)</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="700"/>
-      <source>GitPython not found. Using standard download instead.</source>
-      <translation>GitPython ez da aurkitu. Deskarga estandarra erabiltzen.</translation>
+      <location filename="../../developer_mode.ui" line="139"/>
+      <location filename="../../developer_mode.ui" line="225"/>
+      <source>Displayed in the Addon Manager&apos;s list of Addons. Should not include the word &quot;FreeCAD&quot;, and must be a valid directory name on all support operating systems.</source>
+      <translation type="unfinished">Displayed in the Addon Manager&apos;s list of Addons. Should not include the word &quot;FreeCAD&quot;, and must be a valid directory name on all support operating systems.</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="705"/>
-      <source>Your version of python doesn&apos;t appear to support ZIP files. Unable to proceed.</source>
-      <translation>Badirudi zure Python bertsioak ez duela ZIP fitxategirik onartzen. Ezin da jarraitu.</translation>
+      <location filename="../../developer_mode.ui" line="153"/>
+      <source>README URL</source>
+      <translation type="unfinished">README URL</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="786"/>
-      <source>Workbench successfully installed. Please restart FreeCAD to apply the changes.</source>
-      <translation>Lan-mahaia ongi instalatu da. Berrabiarazi FreeCAD aldaketak aplikatzeko.</translation>
+      <location filename="../../developer_mode.ui" line="166"/>
+      <source>TIP: Since this is displayed within FreeCAD, in the Addon Manager, it is not necessary to take up space saying things like &quot;This is a FreeCAD Addon...&quot; -- just say what it does.</source>
+      <translation type="unfinished">TIP: Since this is displayed within FreeCAD, in the Addon Manager, it is not necessary to take up space saying things like &quot;This is a FreeCAD Addon...&quot; -- just say what it does.</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="835"/>
-      <source>Missing workbench</source>
-      <translation>Lan-mahaia falta da</translation>
+      <location filename="../../developer_mode.ui" line="173"/>
+      <source>Repository URL</source>
+      <translation>Biltegiaren URLa</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="844"/>
-      <source>Missing python module</source>
-      <translation>Python modulua falta da</translation>
+      <location filename="../../developer_mode.ui" line="204"/>
+      <source>Website URL</source>
+      <translation>Webgunearen URLa</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="854"/>
-      <source>Missing optional python module (doesn&apos;t prevent installing)</source>
-      <translation>Aukerako Python modulua falta da (ez du instalazioa eragozten)</translation>
+      <location filename="../../developer_mode.ui" line="211"/>
+      <source>Documentation URL</source>
+      <translation>Dokumentazioaren URLa</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="857"/>
-      <source>Some errors were found that prevent to install this workbench</source>
-      <translation>Lan-mahai hau instalatzea eragozten duten zenbait errore aurkitu dira</translation>
+      <location filename="../../developer_mode.ui" line="228"/>
+      <source>Addon Name</source>
+      <translation>Gehigarriaren izena</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="859"/>
-      <source>Please install the missing components first.</source>
-      <translation>Instalatu falta diren osagaiak.</translation>
+      <location filename="../../developer_mode.ui" line="235"/>
+      <source>Version</source>
+      <translation>Bertsioa</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="880"/>
-      <source>Error: Unable to download</source>
-      <translation>Errorea: Ezin da deskargatu</translation>
+      <location filename="../../developer_mode.ui" line="242"/>
+      <source>(Recommended)</source>
+      <translation>(Gomendatua)</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="893"/>
-      <source>Successfully installed</source>
-      <translation>Ongi instalatu da</translation>
+      <location filename="../../developer_mode.ui" line="249"/>
+      <source>Minimum Python</source>
+      <translation>Gutxieneko Python bertsioa</translation>
     </message>
     <message>
-      <location filename="addonmanager_workers.py" line="310"/>
-      <source>GitPython not installed! Cannot retrieve macros from git</source>
-      <translation>GitPython ez dago instalatuta! Ezin dira makroak atzitu git biltegitik</translation>
+      <location filename="../../developer_mode.ui" line="258"/>
+      <source>(Optional, only 3.x version supported)</source>
+      <translation type="unfinished">(Optional, only 3.x version supported)</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="567"/>
-      <source>Installed</source>
-      <translation>Instalatuta</translation>
+      <location filename="../../developer_mode.ui" line="265"/>
+      <source>Detect...</source>
+      <translation>Detektatu...</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="586"/>
-      <source>Update available</source>
-      <translation>Eguneraketa eskuragarri</translation>
-    </message>
-    <message>
-      <location filename="AddonManager.py" line="542"/>
-      <source>Restart required</source>
-      <translation>Berrabiaraztea beharrezkoa da</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="665"/>
-      <source>This macro is already installed.</source>
-      <translation>Makro hau instalatuta dago.</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="799"/>
-      <source>A macro has been installed and is available under Macro -&gt; Macros menu</source>
-      <translation>Makro bat instalatu da eta 'Makroa -&gt; Makroak' menuan erabilgarri dago</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="547"/>
-      <source>This addon is marked as obsolete</source>
-      <translation>Gehigarri hau zaharkituta dago</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="551"/>
-      <source>This usually means it is no longer maintained, and some more advanced addon in this list provides the same functionality.</source>
-      <translation>Horrek esan nahi du ez dela mantentzen eta zerrenda honetako gehigarri aurreratuagoren batek funtzionaltasun bera eskaintzen duela.</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="873"/>
-      <source>Error: Unable to locate zip from</source>
-      <translation>Errorea: Ezin izan da ZIP fitxategia aurkitu</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="319"/>
-      <source>Something went wrong with the Git Macro Retrieval, possibly the Git executable is not in the path</source>
-      <translation>Zerbait gaizki atera da Git makroak atzitzean, ziur aski Git exekutagarria ez dago bidean</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="559"/>
-      <source>This addon is marked as Python 2 Only</source>
-      <translation>Gehigarri hau Python 2 bertsiorako soilik da</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="564"/>
-      <source>This workbench may no longer be maintained and installing it on a Python 3 system will more than likely result in errors at startup or while in use.</source>
-      <translation>Lan-mahai honek beharbada ez du jadanik mantenimendurik eta Python 3 duen sistema batean instalatzen bada erroreak sortu ditzake bai abioan bai erabiltzen ari denean.</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="727"/>
-      <source>User requested updating a Python 2 workbench on a system running Python 3 - </source>
-      <translation>Erabiltzaileak Python 2 lan-mahai bat eguneratzea eskatu du Python 3 duen sistema batean - </translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="763"/>
-      <source>Workbench successfully updated. Please restart FreeCAD to apply the changes.</source>
-      <translation>Lan-mahaia ongi eguneratu da. Berrabiarazi FreeCAD aldaketak aplikatzeko.</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="771"/>
-      <source>User requested installing a Python 2 workbench on a system running Python 3 - </source>
-      <translation>Erabiltzaileak Python 2 lan-mahai bat instalatzea eskatu du Python 3 duen sistema batean - </translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="343"/>
-      <source>Appears to be an issue connecting to the Wiki, therefore cannot retrieve Wiki macro list at this time</source>
-      <translation>Badirudi arazo bat dagoela wikiarekin konektatzean, ezin da atzitu wikiko makroen zerrenda momentu honetan</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="433"/>
-      <source>Raw markdown displayed</source>
-      <translation>Markdown gordina bistaratzen ari da.</translation>
-    </message>
-    <message>
-      <location filename="addonmanager_workers.py" line="435"/>
-      <source>Python Markdown library is missing.</source>
-      <translation>Python Markdown liburutegia falta da.</translation>
+      <location filename="../../developer_mode.ui" line="277"/>
+      <source>Addon Contents</source>
+      <translation>Gehigarri-edukiak</translation>
     </message>
   </context>
   <context>
     <name>Dialog</name>
     <message>
-      <location filename="AddonManager.ui" line="37"/>
-      <source>Workbenches</source>
-      <translation>Lan-mahaiak</translation>
+      <location filename="../../AddonManager.ui" line="14"/>
+      <source>Addon Manager</source>
+      <translation>Gehigarrien kudeatzailea</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="47"/>
-      <source>Macros</source>
-      <translation>Makroak</translation>
-    </message>
-    <message>
-      <location filename="AddonManager.ui" line="59"/>
-      <source>Execute</source>
-      <translation>Exekutatu</translation>
-    </message>
-    <message>
-      <location filename="AddonManager.ui" line="113"/>
+      <location filename="../../AddonManager.ui" line="64"/>
       <source>Downloading info...</source>
       <translation>Informazioa deskargatzen...</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="150"/>
-      <source>Update all</source>
-      <translation>Eguneratu dena</translation>
+      <location filename="../../AddonManager.ui" line="71"/>
+      <source>Pause cache update</source>
+      <translation>Pausatu cache-eguneratzea</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="56"/>
-      <source>Executes the selected macro, if installed</source>
-      <translation>Hautatutako makroa exekutatzen du, instalatuta badago</translation>
+      <location filename="../../AddonManager.ui" line="103"/>
+      <source>Refresh local cache</source>
+      <translation>Freskatu cache lokala</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="127"/>
-      <source>Uninstalls a selected macro or workbench</source>
-      <translation>Hautatutako makroa edo lan-mahaia desinstalatzen du</translation>
-    </message>
-    <message>
-      <location filename="AddonManager.ui" line="137"/>
-      <source>Installs or updates the selected macro or workbench</source>
-      <translation>Hautatutako makroa edo lan-mahaia instalatzen edo eguneratzen du</translation>
-    </message>
-    <message>
-      <location filename="AddonManager.ui" line="147"/>
+      <location filename="../../AddonManager.ui" line="110"/>
       <source>Download and apply all available updates</source>
       <translation>Deskargatu eta aplikatu erabilgarri dauden eguneraketa guztiak</translation>
     </message>
     <message>
-      <location filename="AddonManagerOptions.ui" line="35"/>
-      <source>Custom repositories (one per line):</source>
-      <translation>Biltegi pertsonalizatuak (bat lerroko):</translation>
+      <location filename="../../AddonManager.ui" line="113"/>
+      <source>Update all Addons</source>
+      <translation>Eguneratu gehigarri guztiak</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="89"/>
-      <source>Sets configuration options for the Addon Manager</source>
-      <translation>Gehigarrien kudeatzailearen konfigurazio-aukerak ezartzen ditu</translation>
+      <location filename="../../AddonManager.ui" line="120"/>
+      <source>Check for updates</source>
+      <translation>Begiratu eguneraketak dauden</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="92"/>
-      <source>Configure...</source>
-      <translation>Konfiguratu...</translation>
+      <location filename="../../AddonManager.ui" line="130"/>
+      <source>View and update Python package dependencies</source>
+      <translation type="unfinished">View and update Python package dependencies</translation>
     </message>
     <message>
-      <location filename="AddonManagerOptions.ui" line="14"/>
-      <source>Addon manager options</source>
-      <translation>Gehigarrien kudeatzailearen aukerak</translation>
+      <location filename="../../AddonManager.ui" line="133"/>
+      <source>Python dependencies...</source>
+      <translation type="unfinished">Python dependencies...</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="130"/>
-      <source>Uninstall selected</source>
-      <translation>Desinstalazioa hautatu da</translation>
+      <location filename="../../AddonManager.ui" line="140"/>
+      <source>Developer tools...</source>
+      <translation type="unfinished">Developer tools...</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="140"/>
-      <source>Install/update selected</source>
-      <translation>Instalazioa/eguneraketa hautatu da</translation>
+      <location filename="../../AddonManager.ui" line="160"/>
+      <source>Close the Addon Manager</source>
+      <translation>Itxi gehigarren kudeatzailea</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="160"/>
+      <location filename="../../AddonManager.ui" line="163"/>
       <source>Close</source>
       <translation>Itxi</translation>
     </message>
     <message>
-      <location filename="AddonManagerOptions.ui" line="20"/>
+      <location filename="../../first_run.ui" line="17"/>
+      <source>Welcome to the Addon Manager</source>
+      <translation>Ongi etorri gehigarri-kudeatzailera</translation>
+    </message>
+    <message>
+      <location filename="../../first_run.ui" line="23"/>
+      <source>The addons that can be installed here are not officially part of FreeCAD, and are not reviewed by the FreeCAD team. Make sure you know what you are installing!</source>
+      <translation>Hemen instalatu daitezkeen gehigarriak ez dira FreeCADen gehigarri ofizialak eta FreeCAD taldeak ez ditu gainbegiratzen. Ziurtatu badakizula zer ari zaren instalatzen!</translation>
+    </message>
+    <message>
+      <location filename="../../first_run.ui" line="46"/>
+      <source>Download Settings</source>
+      <translation>Deskaga-ezarpenak</translation>
+    </message>
+    <message>
+      <location filename="../../first_run.ui" line="53"/>
+      <source>Automatically check installed Addons for updates</source>
+      <translation>Egiaztatu automatikoki instalatutako gehigarriek eguneraketak dituzten</translation>
+    </message>
+    <message>
+      <location filename="../../first_run.ui" line="60"/>
+      <source>Download Macro metadata (approximately 10MB)</source>
+      <translation>Deskargatu makroen metadatuak (10MB inguru)</translation>
+    </message>
+    <message>
+      <location filename="../../first_run.ui" line="70"/>
+      <source>No proxy</source>
+      <translation>Proxyrik ez</translation>
+    </message>
+    <message>
+      <location filename="../../first_run.ui" line="75"/>
+      <source>System proxy</source>
+      <translation>Sistemaren proxya</translation>
+    </message>
+    <message>
+      <location filename="../../first_run.ui" line="80"/>
+      <source>User-defined proxy:</source>
+      <translation>Erabilitzaileak definitutako proxya:</translation>
+    </message>
+    <message>
+      <location filename="../../first_run.ui" line="93"/>
+      <source>These and other settings are available in the FreeCAD Preferences window.</source>
+      <translation>FreeCADen hobespen-leihoan ezarpen hauek eta beste batzuk daude erabilgarri.</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_tags.ui" line="14"/>
+      <source>Edit Tags</source>
+      <translation>Editatu etiketak</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_tags.ui" line="20"/>
+      <source>Comma-separated list of tags describing this item:</source>
+      <translation type="unfinished">Comma-separated list of tags describing this item:</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_tags.ui" line="35"/>
+      <source>HINT: Common tags include &quot;Assembly&quot;, &quot;FEM&quot;, &quot;Mesh&quot;, &quot;NURBS&quot;, etc.</source>
+      <translation type="unfinished">HINT: Common tags include &quot;Assembly&quot;, &quot;FEM&quot;, &quot;Mesh&quot;, &quot;NURBS&quot;, etc.</translation>
+    </message>
+  </context>
+  <context>
+    <name>EditDependencyDialog</name>
+    <message>
+      <location filename="../../developer_mode_edit_dependency.ui" line="14"/>
+      <source>Edit Dependency</source>
+      <translation>Editatu mendekotasuna</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_edit_dependency.ui" line="20"/>
+      <source>Dependency Type</source>
+      <translation>Mendekotasun mota</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_edit_dependency.ui" line="30"/>
+      <source>Dependency</source>
+      <translation>Mendekotasuna</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_edit_dependency.ui" line="42"/>
+      <source>Package name, if &quot;Other...&quot;</source>
+      <translation type="unfinished">Package name, if &quot;Other...&quot;</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_edit_dependency.ui" line="54"/>
+      <source>NOTE: If &quot;Other...&quot; is selected, the package is not in the ALLOWED_PYTHON_PACKAGES.txt file, and will not be automatically installed by the Addon Manager. Submit a PR at &lt;a href=&quot;https://github.com/FreeCAD/FreeCAD-addons&quot;&gt;https://github.com/FreeCAD/FreeCAD-addons&lt;/a&gt; to request addition of a package.</source>
+      <translation type="unfinished">NOTE: If &quot;Other...&quot; is selected, the package is not in the ALLOWED_PYTHON_PACKAGES.txt file, and will not be automatically installed by the Addon Manager. Submit a PR at &lt;a href=&quot;https://github.com/FreeCAD/FreeCAD-addons&quot;&gt;https://github.com/FreeCAD/FreeCAD-addons&lt;/a&gt; to request addition of a package.</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_edit_dependency.ui" line="69"/>
+      <source>If this is an optional dependency, the Addon Manager will offer to install it (when possible), but will not block installation if the user chooses not to, or cannot, install the package.</source>
+      <translation type="unfinished">If this is an optional dependency, the Addon Manager will offer to install it (when possible), but will not block installation if the user chooses not to, or cannot, install the package.</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_edit_dependency.ui" line="72"/>
+      <source>Optional</source>
+      <translation type="unfinished">Optional</translation>
+    </message>
+  </context>
+  <context>
+    <name>ExpandedView</name>
+    <message>
+      <location filename="../../expanded_view.ui" line="20"/>
+      <source>Form</source>
+      <translation>Inprimakia</translation>
+    </message>
+    <message>
+      <location filename="../../expanded_view.ui" line="68"/>
+      <source>Icon</source>
+      <translation>Ikonoa</translation>
+    </message>
+    <message>
+      <location filename="../../expanded_view.ui" line="101"/>
+      <source>&lt;h1&gt;Package Name&lt;/h1&gt;</source>
+      <translation>&lt;h1&gt;Pakete-izena&lt;/h1&gt;</translation>
+    </message>
+    <message>
+      <location filename="../../expanded_view.ui" line="114"/>
+      <source>Version</source>
+      <translation>Bertsioa</translation>
+    </message>
+    <message>
+      <location filename="../../expanded_view.ui" line="121"/>
+      <source>(tags)</source>
+      <translation>(etiketak)</translation>
+    </message>
+    <message>
+      <location filename="../../expanded_view.ui" line="149"/>
+      <source>Description</source>
+      <translation>Deskribapena</translation>
+    </message>
+    <message>
+      <location filename="../../expanded_view.ui" line="171"/>
+      <source>Maintainer</source>
+      <translation>Mantentzailea</translation>
+    </message>
+    <message>
+      <location filename="../../expanded_view.ui" line="186"/>
+      <source>UpdateAvailable</source>
+      <translation>Eguneratzea eskuragarri</translation>
+    </message>
+  </context>
+  <context>
+    <name>Form</name>
+    <message>
+      <location filename="../../developer_mode_licenses_table.ui" line="14"/>
+      <location filename="../../developer_mode_people_table.ui" line="14"/>
+      <source>Form</source>
+      <translation>Inprimakia</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_licenses_table.ui" line="38"/>
+      <source>Licenses</source>
+      <translation type="unfinished">Licenses</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_licenses_table.ui" line="69"/>
+      <source>License</source>
+      <translation>Lizentzia</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_licenses_table.ui" line="74"/>
+      <source>License file</source>
+      <translation>Lizentzia-fitxategia</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_people_table.ui" line="26"/>
+      <source>People</source>
+      <translation>Jendea</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_people_table.ui" line="57"/>
+      <source>Kind</source>
+      <translation>Mota</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_people_table.ui" line="62"/>
+      <source>Name</source>
+      <translation>Izena</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_people_table.ui" line="67"/>
+      <source>Email</source>
+      <translation>Posta elektronikoa</translation>
+    </message>
+  </context>
+  <context>
+    <name>FreeCADVersionToBranchMapDialog</name>
+    <message>
+      <location filename="../../developer_mode_advanced_freecad_versions.ui" line="14"/>
+      <source>Advanced Version Mapping</source>
+      <translation type="unfinished">Advanced Version Mapping</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_advanced_freecad_versions.ui" line="20"/>
+      <source>Upcoming versions of the FreeCAD Addon Manager will support developers&apos; setting a specific branch or tag for use with a specific version of FreeCAD (e.g. setting a specific tag as the last version of your Addon to support v0.19, etc.)</source>
+      <translation type="unfinished">Upcoming versions of the FreeCAD Addon Manager will support developers&apos; setting a specific branch or tag for use with a specific version of FreeCAD (e.g. setting a specific tag as the last version of your Addon to support v0.19, etc.)</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_advanced_freecad_versions.ui" line="43"/>
+      <source>FreeCAD Version</source>
+      <translation>FreeCAD bertsioa</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_advanced_freecad_versions.ui" line="48"/>
+      <source>Best-available branch, tag, or commit</source>
+      <translation type="unfinished">Best-available branch, tag, or commit</translation>
+    </message>
+  </context>
+  <context>
+    <name>FreeCADVersionsDialog</name>
+    <message>
+      <location filename="../../developer_mode_freecad_versions.ui" line="14"/>
+      <source>Supported FreeCAD Versions</source>
+      <translation type="unfinished">Supported FreeCAD Versions</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_freecad_versions.ui" line="20"/>
+      <source>Minimum FreeCAD Version Supported</source>
+      <translation type="unfinished">Minimum FreeCAD Version Supported</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_freecad_versions.ui" line="27"/>
+      <location filename="../../developer_mode_freecad_versions.ui" line="41"/>
+      <source>Optional</source>
+      <translation type="unfinished">Optional</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_freecad_versions.ui" line="34"/>
+      <source>Maximum FreeCAD Version Supported</source>
+      <translation type="unfinished">Maximum FreeCAD Version Supported</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_freecad_versions.ui" line="48"/>
+      <source>Advanced version mapping...</source>
+      <translation type="unfinished">Advanced version mapping...</translation>
+    </message>
+  </context>
+  <context>
+    <name>Gui::Dialog::DlgSettingsAddonManager</name>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="14"/>
+      <source>Addon manager options</source>
+      <translation>Gehigarrien kudeatzailearen aukerak</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="20"/>
       <source>If this option is selected, when launching the Addon Manager,
 installed addons will be checked for available updates
 (this requires the GitPython package installed on your system)</source>
@@ -369,59 +563,606 @@ denean gehigarrien eguneraketarik dagoen begiratuko da
 (GitPython paketeak instalatuta egon behar du zure sisteman)</translation>
     </message>
     <message>
-      <location filename="AddonManagerOptions.ui" line="25"/>
-      <source>Automatically check for updates at start (requires GitPython)</source>
-      <translation>Automatikoki egiaztatu abioan eguneraketarik dagoen (GitPython behar du)</translation>
+      <location filename="../../AddonManagerOptions.ui" line="25"/>
+      <source>Automatically check for updates at start (requires git)</source>
+      <translation type="unfinished">Automatically check for updates at start (requires git)</translation>
     </message>
     <message>
-      <location filename="AddonManagerOptions.ui" line="57"/>
-      <source>Proxy </source>
-      <translation>Proxya </translation>
+      <location filename="../../AddonManagerOptions.ui" line="41"/>
+      <source>Download Macro metadata (approximately 10MB)</source>
+      <translation>Deskargatu makroen metadatuak (10MB inguru)</translation>
     </message>
     <message>
-      <location filename="AddonManagerOptions.ui" line="64"/>
+      <location filename="../../AddonManagerOptions.ui" line="373"/>
+      <location filename="../../AddonManagerOptions.ui" line="386"/>
+      <source>Addons</source>
+      <translation>Gehigarriak</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="56"/>
+      <source>Cache update frequency</source>
+      <translation>Cachearen eguneratze-maiztasuna</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="76"/>
+      <source>Manual (no automatic updates)</source>
+      <translation>Eskuzkoa (eguneratze automatikorik ez)</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="81"/>
+      <source>Daily</source>
+      <translation>Egunero</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="86"/>
+      <source>Weekly</source>
+      <translation>Astero</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="96"/>
+      <source>Hide Addons marked Python 2 Only</source>
+      <translation>Ezkutatu Python 2 bertsiorako soilik diren gehigarriak</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="112"/>
+      <source>Hide Addons marked Obsolete</source>
+      <translation>Ezkutatu zaharkituta dauden gehigarriak</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="128"/>
+      <source>Hide Addons that require a newer version of FreeCAD</source>
+      <translation>Ezkutatu FreeCADen bertsio berriagoa behar duten gehigarriak</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="150"/>
+      <source>Custom repositories</source>
+      <translation>Biltegi pertsonalizatuak</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="354"/>
+      <source>Show option to change branches (requires git)</source>
+      <translation type="unfinished">Show option to change branches (requires git)</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="367"/>
+      <source>Disable git (fall back to ZIP downloads only)</source>
+      <translation type="unfinished">Disable git (fall back to ZIP downloads only)</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="370"/>
+      <source>disableGit</source>
+      <translation type="unfinished">disableGit</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="380"/>
+      <source>Activate Addon Manager options intended for developers of new Addons.</source>
+      <translation type="unfinished">Activate Addon Manager options intended for developers of new Addons.</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="383"/>
+      <source>Addon developer mode</source>
+      <translation type="unfinished">Addon developer mode</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="389"/>
+      <source>developerMode</source>
+      <translation type="unfinished">developerMode</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="204"/>
+      <source>Proxy</source>
+      <translation>Proxya</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="210"/>
       <source>No proxy</source>
       <translation>Proxyrik ez</translation>
     </message>
     <message>
-      <location filename="AddonManagerOptions.ui" line="71"/>
+      <location filename="../../AddonManagerOptions.ui" line="226"/>
       <source>User system proxy</source>
       <translation>Erabili sistemaren proxya</translation>
     </message>
     <message>
-      <location filename="AddonManagerOptions.ui" line="78"/>
-      <source>User defined proxy :</source>
+      <location filename="../../AddonManagerOptions.ui" line="239"/>
+      <source>User-defined proxy:</source>
       <translation>Erabilitzaileak definitutako proxya:</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="14"/>
-      <source>Addon Manager</source>
-      <translation>Gehigarrien kudeatzailea</translation>
+      <location filename="../../AddonManagerOptions.ui" line="276"/>
+      <source>Python executable (optional):</source>
+      <translation>Python exekutagarria (aukerakoa):</translation>
     </message>
     <message>
-      <location filename="AddonManager.ui" line="157"/>
-      <source>Close the Addon Manager</source>
-      <translation>Itxi gehigarren kudeatzailea</translation>
+      <location filename="../../AddonManagerOptions.ui" line="295"/>
+      <source>The path to the Python executable for package installation with pip. Autodetected if needed and not specified.</source>
+      <translation>Paketeak pip bidez instalatzeko Python exekutagarriaren bide-izena. Automatikoki detektatuko da beharrezkoa bada eta zehaztu ez bada.</translation>
     </message>
     <message>
-      <location filename="AddonManagerOptions.ui" line="42"/>
-      <source>You can use this window to specify additional addon repositories
-to be scanned for available addons</source>
-      <translation>Leiho honetan biltegi gehiago zehaztu daitezke
-gehigarri erabilgarri gehiago bilatzeko</translation>
+      <location filename="../../AddonManagerOptions.ui" line="308"/>
+      <source>git executable (optional):</source>
+      <translation type="unfinished">git executable (optional):</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="327"/>
+      <source>The path to the git executable. Autodetected if needed and not specified.</source>
+      <translation type="unfinished">The path to the git executable. Autodetected if needed and not specified.</translation>
+    </message>
+    <message>
+      <location filename="../../AddonManagerOptions.ui" line="348"/>
+      <source>Advanced Options</source>
+      <translation>Aukera aurreratuak</translation>
     </message>
   </context>
   <context>
-    <name>Std_AddonMgr</name>
+    <name>PackageDetails</name>
     <message>
-      <location filename="AddonManager.py" line="68"/>
-      <source>&amp;Addon manager</source>
-      <translation>&amp;Gehigarrien kudeatzailea</translation>
+      <location filename="../../package_details.ui" line="14"/>
+      <source>Form</source>
+      <translation>Inprimakia</translation>
     </message>
     <message>
-      <location filename="AddonManager.py" line="69"/>
-      <source>Manage external workbenches and macros</source>
-      <translation>Kudeatu kanpoko lan-mahaiak eta makroak</translation>
+      <location filename="../../package_details.ui" line="49"/>
+      <source>Uninstalls a selected macro or workbench</source>
+      <translation>Hautatutako makroa edo lan-mahaia desinstalatzen du</translation>
+    </message>
+    <message>
+      <location filename="../../package_details.ui" line="52"/>
+      <source>Install</source>
+      <translation>Instalatu</translation>
+    </message>
+    <message>
+      <location filename="../../package_details.ui" line="59"/>
+      <source>Uninstall</source>
+      <translation>Desinstalatu</translation>
+    </message>
+    <message>
+      <location filename="../../package_details.ui" line="66"/>
+      <source>Update</source>
+      <translation>Eguneratu</translation>
+    </message>
+    <message>
+      <location filename="../../package_details.ui" line="73"/>
+      <source>Run Macro</source>
+      <translation>Exekutatu makroa</translation>
+    </message>
+    <message>
+      <location filename="../../package_details.ui" line="80"/>
+      <source>Change branch</source>
+      <translation>Aldatu adarra</translation>
+    </message>
+  </context>
+  <context>
+    <name>PythonDependencyUpdateDialog</name>
+    <message>
+      <location filename="../../PythonDependencyUpdateDialog.ui" line="14"/>
+      <source>Manage Python Dependencies</source>
+      <translation type="unfinished">Manage Python Dependencies</translation>
+    </message>
+    <message>
+      <location filename="../../PythonDependencyUpdateDialog.ui" line="20"/>
+      <source>The following Python packages have been installed locally by the Addon Manager to satisfy Addon dependencies. Installation location:</source>
+      <translation type="unfinished">The following Python packages have been installed locally by the Addon Manager to satisfy Addon dependencies. Installation location:</translation>
+    </message>
+    <message>
+      <location filename="../../PythonDependencyUpdateDialog.ui" line="59"/>
+      <source>Package name</source>
+      <translation>Paketearen izena</translation>
+    </message>
+    <message>
+      <location filename="../../PythonDependencyUpdateDialog.ui" line="64"/>
+      <source>Installed version</source>
+      <translation>Instalatutako bertsioa</translation>
+    </message>
+    <message>
+      <location filename="../../PythonDependencyUpdateDialog.ui" line="69"/>
+      <source>Available version</source>
+      <translation>Bertsio eskuragarria</translation>
+    </message>
+    <message>
+      <location filename="../../PythonDependencyUpdateDialog.ui" line="74"/>
+      <source>Used by</source>
+      <translation type="unfinished">Used by</translation>
+    </message>
+    <message>
+      <location filename="../../PythonDependencyUpdateDialog.ui" line="87"/>
+      <source>An asterisk (*) in the &quot;Used by&quot; column indicates an optional dependency. Note that Used by only records direct imports in the Addon. Other Python packages that those packages depend upon may have been installed as well.</source>
+      <translation type="unfinished">An asterisk (*) in the &quot;Used by&quot; column indicates an optional dependency. Note that Used by only records direct imports in the Addon. Other Python packages that those packages depend upon may have been installed as well.</translation>
+    </message>
+    <message>
+      <location filename="../../PythonDependencyUpdateDialog.ui" line="99"/>
+      <source>Update all available</source>
+      <translation type="unfinished">Update all available</translation>
+    </message>
+  </context>
+  <context>
+    <name>SelectFromList</name>
+    <message>
+      <location filename="../../developer_mode_select_from_list.ui" line="14"/>
+      <source>Dialog</source>
+      <translation>Elkarrizketa-koadroa</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_select_from_list.ui" line="20"/>
+      <source>TextLabel</source>
+      <translation>Testu-etiketa</translation>
+    </message>
+  </context>
+  <context>
+    <name>UpdateAllDialog</name>
+    <message>
+      <location filename="../../update_all.ui" line="14"/>
+      <source>Updating Addons</source>
+      <translation type="unfinished">Updating Addons</translation>
+    </message>
+    <message>
+      <location filename="../../update_all.ui" line="23"/>
+      <source>Updating out-of-date addons...</source>
+      <translation type="unfinished">Updating out-of-date addons...</translation>
+    </message>
+  </context>
+  <context>
+    <name>addContentDialog</name>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="14"/>
+      <source>Content Item</source>
+      <translation type="unfinished">Content Item</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="25"/>
+      <source>Content type:</source>
+      <translation type="unfinished">Content type:</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="33"/>
+      <source>Macro</source>
+      <translation>Makroa</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="38"/>
+      <source>Preference Pack</source>
+      <translation type="unfinished">Preference Pack</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="43"/>
+      <source>Workbench</source>
+      <translation>Lan-mahaia</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="51"/>
+      <source>If this is the only thing in the Addon, all other metadata can be inherited from the top level, and does not need to be specified here.</source>
+      <translation type="unfinished">If this is the only thing in the Addon, all other metadata can be inherited from the top level, and does not need to be specified here.</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="54"/>
+      <source>This is the only item in the Addon</source>
+      <translation type="unfinished">This is the only item in the Addon</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="86"/>
+      <source>Main macro file</source>
+      <translation type="unfinished">Main macro file</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="93"/>
+      <source>The file with the macro&apos;s metadata in it</source>
+      <translation type="unfinished">The file with the macro&apos;s metadata in it</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="100"/>
+      <location filename="../../developer_mode_add_content.ui" line="161"/>
+      <location filename="../../developer_mode_add_content.ui" line="193"/>
+      <source>Browse...</source>
+      <translation>Arakatu...</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="111"/>
+      <source>Preference Pack Name</source>
+      <translation>Hobespen-paketearen izena</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="125"/>
+      <source>Workbench class name</source>
+      <translation type="unfinished">Workbench class name</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="132"/>
+      <source>Class that defines &quot;Icon&quot; data member</source>
+      <translation type="unfinished">Class that defines &quot;Icon&quot; data member</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="145"/>
+      <source>Subdirectory</source>
+      <translation>Azpidirektorioa</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="154"/>
+      <source>Optional, defaults to name of content item</source>
+      <translation type="unfinished">Optional, defaults to name of content item</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="170"/>
+      <source>Icon</source>
+      <translation>Ikonoa</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="179"/>
+      <source>actualIcon</source>
+      <translation type="unfinished">actualIcon</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="186"/>
+      <source>Optional, defaults to inheriting from top-level Addon</source>
+      <translation type="unfinished">Optional, defaults to inheriting from top-level Addon</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="206"/>
+      <source>Tags...</source>
+      <translation>Etiketak...</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="213"/>
+      <source>Dependencies...</source>
+      <translation>Mendekotasunak...</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="220"/>
+      <source>FreeCAD Versions...</source>
+      <translation>FreeCAD bertsioak...</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="258"/>
+      <source>Other Metadata</source>
+      <translation type="unfinished">Other Metadata</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="264"/>
+      <source>Displayed in the Addon Manager&apos;s list of Addons. Should not include the word &quot;FreeCAD&quot;.</source>
+      <translation type="unfinished">Displayed in the Addon Manager&apos;s list of Addons. Should not include the word &quot;FreeCAD&quot;.</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="278"/>
+      <source>Version</source>
+      <translation>Bertsioa</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="285"/>
+      <source>Description</source>
+      <translation>Deskribapena</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="297"/>
+      <source>Semantic (1.2.3-beta) or CalVer (2022.08.30) styles supported</source>
+      <translation type="unfinished">Semantic (1.2.3-beta) or CalVer (2022.08.30) styles supported</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="304"/>
+      <source>Set to today (CalVer style)</source>
+      <translation type="unfinished">Set to today (CalVer style)</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="313"/>
+      <source>Display Name</source>
+      <translation>Bistaratze-izena</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_add_content.ui" line="330"/>
+      <source>Any fields left blank are inherited from the top-level Addon metadata, so technically they are all optional. For Addons with multiple content items, each item should provide a unique Display Name and Description.</source>
+      <translation type="unfinished">Any fields left blank are inherited from the top-level Addon metadata, so technically they are all optional. For Addons with multiple content items, each item should provide a unique Display Name and Description.</translation>
+    </message>
+  </context>
+  <context>
+    <name>add_toolbar_button_dialog</name>
+    <message>
+      <location filename="../../add_toolbar_button_dialog.ui" line="14"/>
+      <source>Add button?</source>
+      <translation>Gehitu botoia?</translation>
+    </message>
+    <message>
+      <location filename="../../add_toolbar_button_dialog.ui" line="20"/>
+      <source>Add a toolbar button for this macro?</source>
+      <translation>Gehitu tresna-barrako botoi bat makro honi?</translation>
+    </message>
+    <message>
+      <location filename="../../add_toolbar_button_dialog.ui" line="32"/>
+      <source>Yes</source>
+      <translation>Bai</translation>
+    </message>
+    <message>
+      <location filename="../../add_toolbar_button_dialog.ui" line="39"/>
+      <source>No</source>
+      <translation>Ez</translation>
+    </message>
+    <message>
+      <location filename="../../add_toolbar_button_dialog.ui" line="46"/>
+      <source>Never</source>
+      <translation>Inoiz ez</translation>
+    </message>
+  </context>
+  <context>
+    <name>change_branch</name>
+    <message>
+      <location filename="../../change_branch.ui" line="14"/>
+      <source>Change Branch</source>
+      <translation>Aldatu adarra</translation>
+    </message>
+    <message>
+      <location filename="../../change_branch.ui" line="23"/>
+      <source>Change to branch or tag:</source>
+      <translation>Aldatu adarrera edo etiketara:</translation>
+    </message>
+  </context>
+  <context>
+    <name>copyrightInformationDialog</name>
+    <message>
+      <location filename="../../developer_mode_copyright_info.ui" line="14"/>
+      <source>Copyright Information</source>
+      <translation>Copyright informazioa</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_copyright_info.ui" line="22"/>
+      <source>Copyright holder:</source>
+      <translation type="unfinished">Copyright holder:</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_copyright_info.ui" line="32"/>
+      <source>Copyright year:</source>
+      <translation type="unfinished">Copyright year:</translation>
+    </message>
+  </context>
+  <context>
+    <name>personDialog</name>
+    <message>
+      <location filename="../../developer_mode_people.ui" line="14"/>
+      <source>Add Person</source>
+      <translation>Gehitu pertsona</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_people.ui" line="20"/>
+      <source>A maintainer is someone with current commit access on this project. An author is anyone else you&apos;d like to give credit to.</source>
+      <translation type="unfinished">A maintainer is someone with current commit access on this project. An author is anyone else you&apos;d like to give credit to.</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_people.ui" line="29"/>
+      <source>Name:</source>
+      <translation>Izena:</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_people.ui" line="39"/>
+      <source>Email:</source>
+      <translation type="unfinished">Email:</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_people.ui" line="46"/>
+      <source>Email is required for maintainers, and optional for authors.</source>
+      <translation type="unfinished">Email is required for maintainers, and optional for authors.</translation>
+    </message>
+  </context>
+  <context>
+    <name>proxy_authentication</name>
+    <message>
+      <location filename="../../proxy_authentication.ui" line="14"/>
+      <source>Proxy login required</source>
+      <translation>Proxyan saioa hasi behar da</translation>
+    </message>
+    <message>
+      <location filename="../../proxy_authentication.ui" line="20"/>
+      <source>Proxy requires authentication</source>
+      <translation>Proxyak autentifikazioa behar du</translation>
+    </message>
+    <message>
+      <location filename="../../proxy_authentication.ui" line="29"/>
+      <source>Proxy:</source>
+      <translation>Proxya:</translation>
+    </message>
+    <message>
+      <location filename="../../proxy_authentication.ui" line="42"/>
+      <source>Placeholder for proxy address</source>
+      <translation>Proxy-helbiderako leku-marka</translation>
+    </message>
+    <message>
+      <location filename="../../proxy_authentication.ui" line="49"/>
+      <source>Realm:</source>
+      <translation>Domeinua:</translation>
+    </message>
+    <message>
+      <location filename="../../proxy_authentication.ui" line="56"/>
+      <source>Placeholder for proxy realm</source>
+      <translation>Proxy-domeinurako leku-marka</translation>
+    </message>
+    <message>
+      <location filename="../../proxy_authentication.ui" line="67"/>
+      <source>Username</source>
+      <translation>Erabiltzaile-izena</translation>
+    </message>
+    <message>
+      <location filename="../../proxy_authentication.ui" line="77"/>
+      <source>Password</source>
+      <translation>Pasahitza</translation>
+    </message>
+  </context>
+  <context>
+    <name>selectLicenseDialog</name>
+    <message>
+      <location filename="../../developer_mode_license.ui" line="14"/>
+      <source>Select a license</source>
+      <translation>Hautatu lizentzia</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_license.ui" line="35"/>
+      <source>About...</source>
+      <translation>Honi buruz...</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_license.ui" line="46"/>
+      <source>License name:</source>
+      <translation>Lizentzia-izena:</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_license.ui" line="60"/>
+      <source>Path to license file:</source>
+      <translation>Lizentzia-fitxategiaren bide-izena:</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_license.ui" line="67"/>
+      <source>(if required by license)</source>
+      <translation>(lizentziak eskatzen badu)</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_license.ui" line="74"/>
+      <source>Browse...</source>
+      <translation>Arakatu...</translation>
+    </message>
+    <message>
+      <location filename="../../developer_mode_license.ui" line="81"/>
+      <source>Create...</source>
+      <translation>Sortu...</translation>
+    </message>
+  </context>
+  <context>
+    <name>select_toolbar_dialog</name>
+    <message>
+      <location filename="../../select_toolbar_dialog.ui" line="14"/>
+      <source>Select Toolbar</source>
+      <translation>Hautatu tresna-barra</translation>
+    </message>
+    <message>
+      <location filename="../../select_toolbar_dialog.ui" line="26"/>
+      <source>Select a toolbar to add this macro to:</source>
+      <translation>Hautatu makro hau zein tresna-barrari gehituko zaion:</translation>
+    </message>
+    <message>
+      <location filename="../../select_toolbar_dialog.ui" line="36"/>
+      <source>Ask every time</source>
+      <translation>Galdetu beti</translation>
+    </message>
+  </context>
+  <context>
+    <name>toolbar_button</name>
+    <message>
+      <location filename="../../toolbar_button.ui" line="14"/>
+      <source>Add button?</source>
+      <translation>Gehitu botoia?</translation>
+    </message>
+    <message>
+      <location filename="../../toolbar_button.ui" line="20"/>
+      <source>Add a toolbar button for this macro?</source>
+      <translation>Gehitu tresna-barrako botoi bat makro honi?</translation>
+    </message>
+    <message>
+      <location filename="../../toolbar_button.ui" line="32"/>
+      <source>Yes</source>
+      <translation>Bai</translation>
+    </message>
+    <message>
+      <location filename="../../toolbar_button.ui" line="39"/>
+      <source>No</source>
+      <translation>Ez</translation>
+    </message>
+    <message>
+      <location filename="../../toolbar_button.ui" line="46"/>
+      <source>Never</source>
+      <translation>Inoiz ez</translation>
     </message>
   </context>
 </TS>

@@ -35,14 +35,14 @@ namespace PartDesign
 class PartDesignExport Solid : public Part::Feature
 {
     PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::Solid);
-    typedef Part::Feature inherited;
+    using inherited = Part::Feature;
 
 public:
     App::PropertyLink Parent;
     App::PropertyBool Active;
 
     Solid();
-    virtual void onChanged(const App::Property* prop) override;
+    void onChanged(const App::Property* prop) override;
     const char* getViewProviderName(void) const override {
         return "PartDesignGui::ViewProviderSolid";
     }

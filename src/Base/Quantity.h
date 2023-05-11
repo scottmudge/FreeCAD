@@ -49,7 +49,7 @@ struct BaseExport QuantityFormat {
         Scientific = 2
     };
 
-    typedef int NumberOptions;
+    using NumberOptions = int;
     NumberOptions option;
     NumberFormat format;
     int precision;
@@ -86,7 +86,7 @@ struct BaseExport QuantityFormat {
             return 'g';
         }
     }
-    static inline NumberFormat toFormat(char c, bool* ok = 0) {
+    static inline NumberFormat toFormat(char c, bool* ok = nullptr) {
         if (ok)
             *ok = true;
         switch (c) {
@@ -113,11 +113,12 @@ class BaseExport Quantity
 {
 public:
     /// default constructor
-    Quantity(void);
+    Quantity();
     Quantity(const Quantity&);
-    explicit Quantity(double Value, const Unit& unit=Unit());
+    explicit Quantity(double value, const Unit& unit=Unit());
+    explicit Quantity(double value, const QString& unit);
     /// Destruction
-    ~Quantity () {}
+    ~Quantity () = default;
 
     /** Operators. */
     //@{
@@ -127,7 +128,7 @@ public:
     Quantity& operator +=(const Quantity &p);
     Quantity operator -(const Quantity &p) const;
     Quantity& operator -=(const Quantity &p);
-    Quantity operator -(void) const;
+    Quantity operator -() const;
     Quantity operator /(const Quantity &p) const;
     Quantity operator /(double p) const;
     bool operator ==(const Quantity&) const;
@@ -149,7 +150,7 @@ public:
     }
     /// transfer to user preferred unit/potence
     QString getUserString(double &factor, QString &unitString) const;
-    QString getUserString(void) const { // to satisfy GCC
+    QString getUserString() const { // to satisfy GCC
         double  dummy1;
         QString dummy2;
         return getUserString(dummy1,dummy2);
@@ -165,11 +166,11 @@ public:
     static bool fromUnitString(Quantity &q, const char *name);
 
     /// returns the unit of the quantity
-    const Unit & getUnit(void) const{return _Unit;}
+    const Unit & getUnit() const{return _Unit;}
     /// set the unit of the quantity
     void setUnit(const Unit &un){_Unit = un;}
     /// get the Value of the quantity
-    double getValue(void) const{return _Value;}
+    double getValue() const{return _Value;}
     /// set the value of the quantity
     void setValue(double val){_Value = val;}
     /** get the Value in a special unit given as quantity.
@@ -179,13 +180,13 @@ public:
 
 
     /// true if it has a number without a unit
-    bool isDimensionless(void)const;
+    bool isDimensionless()const;
     /// true if it has a number and a valid unit
-    bool isQuantity(void)const;
+    bool isQuantity()const;
     /// true if it has a number with or without a unit
-    bool isValid(void)const;
+    bool isValid()const;
     /// sets the quantity invalid
-    void setInvalid(void);
+    void setInvalid();
 
 
     /** Predefined Unit types. */
@@ -256,7 +257,7 @@ public:
     static Quantity MilliNewtonPerMeter;
     static Quantity KiloNewtonPerMeter;
     static Quantity MegaNewtonPerMeter;
-    
+
     static Quantity Pascal;
     static Quantity KiloPascal;
     static Quantity MegaPascal;

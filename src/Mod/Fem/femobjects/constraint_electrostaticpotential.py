@@ -47,12 +47,14 @@ class ConstraintElectrostaticPotential(base_fempythonobject.BaseFemPythonObject)
     def add_properties(self, obj):
         if not hasattr(obj, "Potential"):
             obj.addProperty(
-                "App::PropertyFloat",
+                "App::PropertyElectricPotential",
                 "Potential",
                 "Parameter",
-                "Potential"
-            ),
-            obj.Potential = 0.0
+                "Electric Potential"
+            )
+            # setting  1 V assures that the unit does not switch to mV
+            # and the constraint holds usually Volts
+            obj.Potential = "1 V"
 
         if not hasattr(obj, "PotentialEnabled"):
             obj.addProperty(
@@ -60,8 +62,8 @@ class ConstraintElectrostaticPotential(base_fempythonobject.BaseFemPythonObject)
                 "PotentialEnabled",
                 "Parameter",
                 "Potential Enabled"
-            ),
-            obj.PotentialEnabled = False
+            )
+            obj.PotentialEnabled = True
 
         if not hasattr(obj, "PotentialConstant"):
             obj.addProperty(
@@ -69,7 +71,7 @@ class ConstraintElectrostaticPotential(base_fempythonobject.BaseFemPythonObject)
                 "PotentialConstant",
                 "Parameter",
                 "Potential Constant"
-            ),
+            )
             obj.PotentialConstant = False
 
         if not hasattr(obj, "ElectricInfinity"):
@@ -78,7 +80,7 @@ class ConstraintElectrostaticPotential(base_fempythonobject.BaseFemPythonObject)
                 "ElectricInfinity",
                 "Parameter",
                 "Electric Infinity"
-            ),
+            )
             obj.ElectricInfinity = False
 
         if not hasattr(obj, "ElectricForcecalculation"):
@@ -87,7 +89,7 @@ class ConstraintElectrostaticPotential(base_fempythonobject.BaseFemPythonObject)
                 "ElectricForcecalculation",
                 "Parameter",
                 "Electric Force Calculation"
-            ),
+            )
             obj.ElectricForcecalculation = False
 
         if not hasattr(obj, "CapacitanceBody"):
@@ -96,7 +98,7 @@ class ConstraintElectrostaticPotential(base_fempythonobject.BaseFemPythonObject)
                 "CapacitanceBody",
                 "Parameter",
                 "Capacitance Body"
-            ),
+            )
             obj.CapacitanceBody = 0
 
         if not hasattr(obj, "CapacitanceBodyEnabled"):

@@ -23,26 +23,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#include <BRepAdaptor_Curve.hxx>
-#include <BRepAdaptor_Surface.hxx>
-#include <Precision.hxx>
-#include <TopoDS.hxx>
-#include <gp_Lin.hxx>
-#include <gp_Pln.hxx>
-#include <gp_Pnt.hxx>
-#endif
-
 #include "FemConstraintTemperature.h"
+
 
 using namespace Fem;
 
 PROPERTY_SOURCE(Fem::ConstraintTemperature, Fem::Constraint)
 
-static const char* ConstraintTypes[] = {"CFlux","Temperature", NULL};
+static const char* ConstraintTypes[] = {"CFlux","Temperature", nullptr};
 
 ConstraintTemperature::ConstraintTemperature()
 {
@@ -60,12 +50,12 @@ ConstraintTemperature::ConstraintTemperature()
     Normals.setValues(std::vector<Base::Vector3d>());
 }
 
-App::DocumentObjectExecReturn *ConstraintTemperature::execute(void)
+App::DocumentObjectExecReturn *ConstraintTemperature::execute()
 {
     return Constraint::execute();
 }
 
-const char* ConstraintTemperature::getViewProviderName(void) const
+const char* ConstraintTemperature::getViewProviderName() const
 {
     return "FemGui::ViewProviderFemConstraintTemperature";
 }

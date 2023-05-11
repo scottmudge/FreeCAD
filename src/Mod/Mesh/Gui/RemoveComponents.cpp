@@ -20,21 +20,20 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
 # include <QPushButton>
 #endif
 
-#include "RemoveComponents.h"
-#include "ui_RemoveComponents.h"
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/Selection.h>
 
-using namespace MeshGui;
+#include "RemoveComponents.h"
+#include "ui_RemoveComponents.h"
 
+
+using namespace MeshGui;
 
 RemoveComponents::RemoveComponents(QWidget* parent, Qt::WindowFlags fl)
   : QWidget(parent, fl)
@@ -125,7 +124,8 @@ void RemoveComponents::on_cbDeselectComp_toggled(bool on)
 void RemoveComponents::deleteSelection()
 {
     Gui::Document* doc = Gui::Application::Instance->activeDocument();
-    if (!doc) return;
+    if (!doc)
+        return;
     // delete all selected faces
     doc->openCommand(QT_TRANSLATE_NOOP("Command", "Delete selection"));
     bool ok = meshSel.deleteSelection();
@@ -174,7 +174,7 @@ RemoveComponentsDialog::RemoveComponentsDialog(QWidget* parent, Qt::WindowFlags 
     okButton->setText(MeshGui::TaskRemoveComponents::tr("Delete"));
     buttonBox->addButton(MeshGui::TaskRemoveComponents::tr("Invert"),
         QDialogButtonBox::ActionRole);
-    
+
     connect(buttonBox, SIGNAL(clicked(QAbstractButton*)),
             this, SLOT(clicked(QAbstractButton*)));
 
@@ -215,7 +215,7 @@ TaskRemoveComponents::TaskRemoveComponents()
 {
     widget = new RemoveComponents();
     taskbox = new Gui::TaskView::TaskBox(
-        QPixmap(), widget->windowTitle(), false, 0);
+        QPixmap(), widget->windowTitle(), false, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

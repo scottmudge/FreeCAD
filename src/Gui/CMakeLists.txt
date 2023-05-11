@@ -4,7 +4,7 @@ add_subdirectory(PreferencePacks)
 add_subdirectory(PreferencePackTemplates)
 
 if(WIN32)
-add_definitions(-DFCGui -DQIIS_MAKEDLL -DQSINT_MAKEDLL -DOVR_OS_WIN32 -DQUARTER_INTERNAL -DQUARTER_MAKE_DLL -DCOIN_DLL)
+add_definitions(-DFCGui -DQSINT_MAKEDLL -DOVR_OS_WIN32 -DQUARTER_INTERNAL -DQUARTER_MAKE_DLL -DCOIN_DLL)
 endif(WIN32)
 
 IF(CMAKE_BUILD_TYPE)
@@ -78,79 +78,72 @@ else(MSVC)
     )
 endif(MSVC)
 
-if (BUILD_QT5)
+if (QtWebEngineWidgets_FOUND AND BUILD_WITH_CONDA)
+    add_definitions(-DQTWEBENGINE)
+endif()
 
-    if (Qt5WebEngineWidgets_FOUND AND BUILD_WITH_CONDA)
-        add_definitions(-DQTWEBENGINE)
-    endif()
+include_directories(
+    ${QtCore_INCLUDE_DIRS}
+    ${QtWidgets_INCLUDE_DIRS}
+    ${QtOpenGL_INCLUDE_DIRS}
+    ${QtPrintSupport_INCLUDE_DIRS}
+    ${QtSvg_INCLUDE_DIRS}
+    ${QtSvgWidgets_INCLUDE_DIRS}
+    ${QtNetwork_INCLUDE_DIRS}
+    ${QtUiTools_INCLUDE_DIRS}
+)
+list(APPEND FreeCADGui_LIBS
+    ${QtCore_LIBRARIES}
+    ${QtWidgets_LIBRARIES}
+    ${QtOpenGL_LIBRARIES}
+    ${QtPrintSupport_LIBRARIES}
+    ${QtSvg_LIBRARIES}
+    ${QtSvgWidgets_LIBRARIES}
+    ${QtNetwork_LIBRARIES}
+    ${QtUiTools_LIBRARIES}
+)
 
+if(${Qt5WinExtras_FOUND})
     include_directories(
-        ${Qt5Core_INCLUDE_DIRS}
-        ${Qt5Widgets_INCLUDE_DIRS}
-        ${Qt5OpenGL_INCLUDE_DIRS}
-        ${Qt5PrintSupport_INCLUDE_DIRS}
-        ${Qt5Svg_INCLUDE_DIRS}
-        ${Qt5Network_INCLUDE_DIRS}
-        ${Qt5UiTools_INCLUDE_DIRS}
-    )
-    list(APPEND FreeCADGui_LIBS
-        ${Qt5Core_LIBRARIES}
-        ${Qt5Widgets_LIBRARIES}
-        ${Qt5OpenGL_LIBRARIES}
-        ${Qt5PrintSupport_LIBRARIES}
-        ${Qt5Svg_LIBRARIES}
-        ${Qt5Network_LIBRARIES}
-        ${Qt5UiTools_LIBRARIES}
-    )
-    if(${Qt5WinExtras_FOUND})
-      include_directories(
         ${Qt5WinExtras_INCLUDE_DIRS}
-      )
-      list(APPEND FreeCADGui_LIBS
-        ${Qt5WinExtras_LIBRARIES}
-      )
-    endif()
-else()
-    include_directories(
-        ${QT_INCLUDE_DIR}
     )
     list(APPEND FreeCADGui_LIBS
-        ${QT_LIBRARIES}
-        ${QT_QTUITOOLS_LIBRARY}
+        ${Qt5WinExtras_LIBRARIES}
     )
 endif()
 
 IF(SPNAV_FOUND)
     if(SPNAV_USE_X11)
-      add_definitions(-DSPNAV_USE_X11)
-      if (BUILD_QT5 AND UNIX AND NOT APPLE)
-        find_package(Qt5X11Extras REQUIRED)
-        include_directories(${Qt5X11Extras_INCLUDE_DIRS})
-        list(APPEND FreeCADGui_LIBS ${Qt5X11Extras_LIBRARIES})
-      endif()
-      find_package(X11 QUIET)
-      if (X11_FOUND)
-        list(APPEND FreeCADGui_LIBS
-            ${X11_X11_LIB}
-        )
-      endif(X11_FOUND)
-      SET(FreeCADGui_SDK_SRCS
-        3Dconnexion/GuiAbstractNativeEvent.cpp
-        3Dconnexion/GuiNativeEventLinuxX11.cpp
-        )
-      SET(FreeCADGui_SDK_MOC_HDRS
-        3Dconnexion/GuiAbstractNativeEvent.h
-        3Dconnexion/GuiNativeEventLinuxX11.h
-        )
+        add_definitions(-DSPNAV_USE_X11)
+        if (FREECAD_QT_MAJOR_VERSION EQUAL 5 AND UNIX AND NOT APPLE)
+            find_package(Qt5X11Extras REQUIRED)
+            include_directories(${Qt5X11Extras_INCLUDE_DIRS})
+            list(APPEND FreeCADGui_LIBS ${Qt5X11Extras_LIBRARIES})
+            # Note that Qt6 has removed the QtX11Extras files
+        endif()
+        find_package(X11 QUIET)
+        if (X11_FOUND)
+            list(APPEND FreeCADGui_LIBS
+                ${X11_X11_LIB}
+            )
+        endif(X11_FOUND)
+        SET(FreeCADGui_SDK_SRCS
+            3Dconnexion/GuiAbstractNativeEvent.cpp
+            3Dconnexion/GuiNativeEventLinuxX11.cpp
+            )
+        SET(FreeCADGui_SDK_MOC_HDRS
+            3Dconnexion/GuiAbstractNativeEvent.h
+            3Dconnexion/GuiNativeEventLinuxX11.h
+            )
     else(SPNAV_USE_X11)
-      SET(FreeCADGui_SDK_SRCS
-        3Dconnexion/GuiAbstractNativeEvent.cpp
-        3Dconnexion/GuiNativeEventLinux.cpp
-      )
-      SET(FreeCADGui_SDK_MOC_HDRS
-        3Dconnexion/GuiAbstractNativeEvent.h
-        3Dconnexion/GuiNativeEventLinux.h
-      )
+        SET(FreeCADGui_SDK_SRCS
+            3Dconnexion/GuiAbstractNativeEvent.cpp
+            3Dconnexion/GuiNativeEventLinux.cpp
+            )
+        SET(FreeCADGui_SDK_MOC_HDRS
+            3Dconnexion/GuiAbstractNativeEvent.h
+            3Dconnexion/GuiNativeEventLinux.h
+            )
     endif(SPNAV_USE_X11)
     SOURCE_GROUP("3D connexion SDK" FILES ${FreeCADGui_SDK_SRCS})
 
@@ -174,10 +167,10 @@ IF(OCULUS_FOUND)
 ENDIF(OCULUS_FOUND)
 
 if(FREECAD_USE_SHIBOKEN)
-    if (BUILD_QT5)
+    if (FREECAD_QT_MAJOR_VERSION EQUAL 5)
         add_definitions(-DHAVE_SHIBOKEN2)
     else()
-        add_definitions(-DHAVE_SHIBOKEN)
+        add_definitions(-DHAVE_SHIBOKEN${FREECAD_QT_MAJOR_VERSION})
     endif()
     include_directories(
         ${SHIBOKEN_INCLUDE_DIR}
@@ -190,6 +183,10 @@ if(FREECAD_USE_SHIBOKEN)
         if (TARGET Shiboken2::libshiboken)
             list(APPEND FreeCADGui_LIBS
                 Shiboken2::libshiboken
+            )
+        elseif (TARGET Shiboken6::libshiboken)
+            list(APPEND FreeCADGui_LIBS
+                Shiboken6::libshiboken
             )
         endif (TARGET Shiboken2::libshiboken)
     endif (SHIBOKEN_LIBRARY)
@@ -210,15 +207,19 @@ if(FREECAD_USE_PYSIDE)
             list(APPEND FreeCADGui_LIBS
                 PySide2::pyside2
             )
-        endif (TARGET PySide2::pyside2)
+        elseif (TARGET PySide6::pyside6)
+            list(APPEND FreeCADGui_LIBS
+                PySide6::pyside6
+            )
+        endif ()
     endif (PYSIDE_LIBRARY)
-    if (BUILD_QT5)
-        include_directories(
-            ${PYSIDE_INCLUDE_DIR}/QtWidgets
-        )
+    include_directories(
+        ${PYSIDE_INCLUDE_DIR}/QtWidgets
+    )
+    if (FREECAD_QT_MAJOR_VERSION EQUAL 5)
         add_definitions(-DHAVE_PYSIDE2)
     else()
-        add_definitions(-DHAVE_PYSIDE)
+        add_definitions(-DHAVE_PYSIDE${FREECAD_QT_MAJOR_VERSION})
     endif()
 endif(FREECAD_USE_PYSIDE)
 
@@ -240,6 +241,7 @@ generate_from_xml(CommandPy)
 generate_from_xml(FileDialogPy)
 generate_from_xml(MDIViewPy)
 generate_from_xml(View3DInventorPy)
+generate_from_xml(AbstractSplitViewPy)
 
 generate_from_py(FreeCADGuiInit GuiInitScript.h)
 
@@ -260,6 +262,7 @@ SET(FreeCADGui_XML_SRCS
     FileDialogPy.xml
     MDIViewPy.xml
     View3DInventorPy.xml
+    AbstractSplitViewPy.xml
 )
 SOURCE_GROUP("XML" FILES ${FreeCADApp_XML_SRCS})
 
@@ -291,20 +294,14 @@ SET(FreeCADGui_SDK_MOC_HDRS
 )
 endif(FREECAD_USE_3DCONNEXION AND APPLE)
 
-if (BUILD_QT5)
-    set_property(SOURCE GraphvizView.h GraphvizView.cpp PROPERTY SKIP_AUTOMOC ON)
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp
-        COMMAND ${Qt5Core_MOC_EXECUTABLE} -o ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.cpp
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.cpp)
+set_property(SOURCE GraphvizView.h GraphvizView.cpp PROPERTY SKIP_AUTOMOC ON)
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp
+    COMMAND ${QtCore_MOC_EXECUTABLE} -o ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.cpp
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.cpp)
 
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView.cpp
-        COMMAND ${Qt5Core_MOC_EXECUTABLE} -o ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView.cpp ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.h
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.h)
-else()
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp
-        COMMAND ${QT_MOC_EXECUTABLE} -o ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.cpp
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.cpp)
-endif()
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView.cpp
+    COMMAND ${QtCore_MOC_EXECUTABLE} -o ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView.cpp ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/GraphvizView.h)
 
 set_property(SOURCE GraphvizView.cpp APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView-internal.cpp)
 set_property(SOURCE GraphvizView.h APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/moc_GraphvizView.cpp)
@@ -333,12 +330,15 @@ SET(Gui_UIC_SRCS
     DlgOnlineHelp.ui
     DlgParameter.ui
     DlgParameterFind.ui
+    DlgPreferencePackManagement.ui
     DlgPreferences.ui
     DlgProjectInformation.ui
     DlgProjectUtility.ui
     DlgPropertyLink.ui
     DlgReportView.ui
+    DlgRevertToBackupConfig.ui
     DlgSettings3DView.ui
+    DlgSettingsCacheDirectory.ui
     DlgSettingsNavigation.ui
     DlgSettingsSelection.ui
     DlgSettingsUnits.ui
@@ -348,6 +348,7 @@ SET(Gui_UIC_SRCS
     DlgSettingsImage.ui
     DlgSettingsLazyLoaded.ui
     DlgSettingsMacro.ui
+    DlgSettingsPythonConsole.ui
     DlgCheckableMessageBox.ui
     DlgToolbars.ui
     DlgWorkbenches.ui
@@ -375,17 +376,11 @@ SET(Gui_UIC_SRCS
 SET(Gui_RES_SRCS
     Icons/resource.qrc
     Language/translation.qrc
-    iisTaskPanel/src/iisTaskPanel.qrc
     QSint/actionpanel/schemes.qrc
 )
 
-if (BUILD_QT5)
-    QT5_ADD_RESOURCES(Gui_QRC_SRCS ${Gui_RES_SRCS})
-    QT5_WRAP_UI(Gui_UIC_HDRS ${Gui_UIC_SRCS})
-else()
-    QT4_ADD_RESOURCES(Gui_QRC_SRCS ${Gui_RES_SRCS})
-    QT4_WRAP_UI(Gui_UIC_HDRS ${Gui_UIC_SRCS})
-endif()
+qt_add_resources(Gui_QRC_SRCS ${Gui_RES_SRCS})
+
 SOURCE_GROUP("Uic" FILES ${Gui_UIC_HDRS})
 
 # The command sources
@@ -434,9 +429,11 @@ SET(Dialog_CPP_SRCS
     DlgMaterialPropertiesImp.cpp
     DlgParameterImp.cpp
     DlgParameterFind.cpp
+    DlgPreferencePackManagementImp.cpp
     DlgProjectInformationImp.cpp
     DlgProjectUtility.cpp
     DlgPropertyLink.cpp
+    DlgRevertToBackupConfigImp.cpp
     DlgExpressionInput.cpp
     TaskDlgRelocation.cpp
     DlgCheckableMessageBox.cpp
@@ -473,9 +470,11 @@ SET(Dialog_HPP_SRCS
     DlgMaterialPropertiesImp.h
     DlgParameterImp.h
     DlgParameterFind.h
+    DlgPreferencePackManagementImp.h
     DlgProjectInformationImp.h
     DlgProjectUtility.h
     DlgPropertyLink.h
+    DlgRevertToBackupConfigImp.h
     DlgCheckableMessageBox.h
     DlgExpressionInput.h
     TaskDlgRelocation.h
@@ -517,9 +516,11 @@ SET(Dialog_SRCS
     DlgMaterialProperties.ui
     DlgParameter.ui
     DlgParameterFind.ui
+    DlgPreferencePackManagement.ui
     DlgProjectInformation.ui
     DlgProjectUtility.ui
     DlgPropertyLink.ui
+    DlgRevertToBackupConfig.ui
     DlgCheckableMessageBox.ui
     DlgTreeWidget.ui
     DlgExpressionInput.ui
@@ -583,6 +584,7 @@ SET(Dialog_Settings_CPP_SRCS
     DlgPreferencesImp.cpp
     DlgReportViewImp.cpp
     DlgSettings3DViewImp.cpp
+    DlgSettingsCacheDirectory.cpp
     DlgSettingsNavigation.cpp
     DlgSettingsSelection.cpp
     DlgSettingsUnitsImp.cpp
@@ -595,6 +597,7 @@ SET(Dialog_Settings_CPP_SRCS
     DlgSettingsLazyLoadedImp.cpp
     DlgSettingsMacroImp.cpp
     DlgSettingsObjects.cpp
+    DlgSettingsPythonConsole.cpp
 )
 SET(Dialog_Settings_HPP_SRCS
     DlgEditorImp.h
@@ -603,6 +606,7 @@ SET(Dialog_Settings_HPP_SRCS
     DlgPreferencesImp.h
     DlgReportViewImp.h
     DlgSettings3DViewImp.h
+    DlgSettingsCacheDirectory.h
     DlgSettingsNavigation.h
     DlgSettingsSelection.h
     DlgSettingsUnitsImp.h
@@ -615,6 +619,7 @@ SET(Dialog_Settings_HPP_SRCS
     DlgSettingsLazyLoadedImp.h
     DlgSettingsMacroImp.h
     DlgSettingsObjects.h
+    DlgSettingsPythonConsole.h
 )
 SET(Dialog_Settings_SRCS
     ${Dialog_Settings_CPP_SRCS}
@@ -625,6 +630,7 @@ SET(Dialog_Settings_SRCS
     DlgPreferences.ui
     DlgReportView.ui
     DlgSettings3DView.ui
+    DlgSettingsCacheDirectory.ui
     DlgSettingsNavigation.ui
     DlgSettingsSelection.ui
     DlgSettingsUnits.ui
@@ -634,6 +640,7 @@ SET(Dialog_Settings_SRCS
     DlgSettingsImage.ui
     DlgSettingsLazyLoaded.ui
     DlgSettingsMacro.ui
+    DlgSettingsPythonConsole.ui
 )
 SOURCE_GROUP("Dialog\\Settings" FILES ${Dialog_Settings_SRCS})
 
@@ -766,40 +773,6 @@ SET(Task_View_SRCS
 )
 SOURCE_GROUP("Task View" FILES ${Task_View_SRCS})
 
-SET(iisTaskPanel_SRCS
-    iisTaskPanel/src/iisfreecadscheme.cpp
-    iisTaskPanel/src/iisfreecadscheme.h
-    iisTaskPanel/src/iisiconlabel.cpp
-    iisTaskPanel/src/iisiconlabel.h
-    iisTaskPanel/src/iistaskbox.cpp
-    iisTaskPanel/src/iistaskbox.h
-    iisTaskPanel/src/iistaskgroup.cpp
-    iisTaskPanel/src/iistaskgroup.h
-    iisTaskPanel/src/iistaskheader.cpp
-    iisTaskPanel/src/iistaskheader.h
-    iisTaskPanel/src/iistaskpanel.cpp
-    iisTaskPanel/src/iistaskpanel.h
-    iisTaskPanel/src/iistaskpanelscheme.cpp
-    iisTaskPanel/src/iistaskpanelscheme.h
-    iisTaskPanel/src/iiswinxptaskpanelscheme.cpp
-    iisTaskPanel/src/iiswinxptaskpanelscheme.h
-    iisTaskPanel/src/iistaskpanel_global.h
-)
-SOURCE_GROUP("Widget\\iisTaskPanel" FILES ${iisTaskPanel_SRCS})
-set(iis_MOC_HDRS
-    iisTaskPanel/src/iisiconlabel.h
-    iisTaskPanel/src/iistaskbox.h
-    iisTaskPanel/src/iistaskgroup.h
-    iisTaskPanel/src/iistaskheader.h
-)
-
-if (BUILD_QT5)
-    qt5_wrap_cpp(iis_MOC_SRCS ${iis_MOC_HDRS})
-else()
-    qt4_wrap_cpp(iis_MOC_SRCS ${iis_MOC_HDRS})
-endif()
-SOURCE_GROUP("Widget\\iisTaskPanel\\Mocs" FILES ${iis_MOC_SRCS})
-
 SET(qsintActionPanel_SRCS
     QSint/actionpanel/actionbox.cpp
     QSint/actionpanel/actionbox.h
@@ -835,17 +808,13 @@ set(qsint_MOC_HDRS
     QSint/actionpanel/taskheader_p.h
 )
 
-if(BUILD_QT5)
-    qt5_wrap_cpp(qsint_MOC_SRCS ${qsint_MOC_HDRS})
-else()
-    qt4_wrap_cpp(qsint_MOC_SRCS ${qsint_MOC_HDRS})
-endif()
+qt_wrap_cpp(qsint_MOC_SRCS ${qsint_MOC_HDRS})
 SOURCE_GROUP("Widget\\QSintActionPanel\\Mocs" FILES ${qsint_MOC_SRCS})
 
 #SET(Resource_RCS
 #   Icons/resource.qrc
 #   Language/translation.qrc)
-#qt4_add_resources(Resource_SRCS ${Resource_RCS})
+#qt_add_resources(Resource_SRCS ${Resource_RCS})
 #SET(Resource_SRCS
 #   ${Resource_SRCS}
 #   Icons/resource.qrc
@@ -867,16 +836,19 @@ SET(View3D_CPP_SRCS
     MayaGestureNavigationStyle.cpp
     OpenCascadeNavigationStyle.cpp
     OpenSCADNavigationStyle.cpp
+    TinkerCADNavigationStyle.cpp
     TouchpadNavigationStyle.cpp
     GestureNavigationStyle.cpp
     SplitView3DInventor.cpp
     View.cpp
     View3DInventor.cpp
     View3DInventorExamples.cpp
+    View3DInventorSelection.cpp
     View3DInventorViewer.cpp
     View3DInventorRiftViewer.cpp
     CoinRiftWidget.cpp
     View3DInventorPyImp.cpp
+    AbstractSplitViewPyImp.cpp
     View3DViewerPy.cpp
     NaviCube.cpp
 )
@@ -892,6 +864,7 @@ SET(View3D_SRCS
     View.h
     View3DInventor.h
     View3DInventorExamples.h
+    View3DInventorSelection.h
     View3DInventorViewer.h
     View3DInventorRiftViewer.h
     CoinRiftWidget.h
@@ -914,14 +887,11 @@ SET(Quarter_MOC_HDR
     Quarter/eventhandlers/EventFilter.h
     Quarter/QuarterWidget.h
 )
-if(BUILD_QT5)
-    qt5_wrap_cpp(Quarter_MOC_SRCS ${Quarter_MOC_HDR})
-else()
-    qt4_wrap_cpp(Quarter_MOC_SRCS ${Quarter_MOC_HDR})
-endif()
 
-SET(Quarter_SRCS 
-    ${Quarter_CPP_SRC} 
+qt_wrap_cpp(Quarter_MOC_SRCS ${Quarter_MOC_HDR})
+
+SET(Quarter_SRCS
+    ${Quarter_CPP_SRC}
     ${Quarter_H_SRC}
     ${Quarter_MOC_SRCS}
 )
@@ -1094,6 +1064,7 @@ SOURCE_GROUP("View3D\\Inventor" FILES ${Inventor_SRCS})
 SET(Widget_CPP_SRCS
     FileDialog.cpp
     MainWindow.cpp
+    MainWindowPy.cpp
     PrefWidgets.cpp
     InputField.cpp
     ProgressBar.cpp
@@ -1111,6 +1082,7 @@ SET(Widget_CPP_SRCS
 SET(Widget_HPP_SRCS
     FileDialog.h
     MainWindow.h
+    MainWindowPy.h
     PrefWidgets.h
     InputField.h
     ProgressBar.h
@@ -1137,6 +1109,7 @@ SET(Params_CPP_SRCS
     ExprParams.cpp
     ReportViewParams.cpp
     OverlayParams.cpp
+    TreeParams.cpp
 )
 
 SET(Params_HPP_SRCS
@@ -1144,6 +1117,7 @@ SET(Params_HPP_SRCS
     ExprParams.h
     ReportViewParams.h
     OverlayParams.h
+    TreeParams.h
 )
 
 SET(Params_SRCS
@@ -1156,11 +1130,13 @@ SOURCE_GROUP("Params" FILES ${Params_SRCS})
 SET(View_CPP_SRCS
     MDIView.cpp
     MDIViewPyImp.cpp
+    MDIViewPyWrap.cpp
     GraphvizView.cpp
     ActiveObjectList.cpp
 )
 SET(View_HPP_SRCS
     MDIView.h
+    MDIViewPyWrap.h
     GraphvizView.h
     ActiveObjectList.h
 )
@@ -1206,6 +1182,8 @@ SET(Selection_SRCS
     SelectionFilter.cpp
     SelectionFilter.y
     SelectionFilter.l
+    SelectionObserverPython.cpp
+    SelectionObserverPython.h
 )
 SOURCE_GROUP("Selection" FILES ${Selection_SRCS})
 
@@ -1239,8 +1217,9 @@ SET(FreeCADGui_CPP_SRCS
     WaitCursor.cpp
     ManualAlignment.cpp
     TransactionObject.cpp
+    UserSettings.cpp
 )
-SET(FreeCADGui_SRCS 
+SET(FreeCADGui_SRCS
     Application.h
     AutoSaver.h
     BitmapFactory.h
@@ -1263,15 +1242,17 @@ SET(FreeCADGui_SRCS
     MetaTypes.h
     PreCompiled.cpp
     PreCompiled.h
-    Qt4All.h
+    QtAll.h
     Control.h
     SpaceballEvent.h
     PreferencePackManager.h
     Thumbnail.h
+    Tools.h
     Utilities.h
     WaitCursor.h
     ManualAlignment.h
     TransactionObject.h
+    UserSettings.h
     ${FreeCADGui_SDK_MOC_HDRS}
 )
 
@@ -1279,7 +1260,6 @@ SET(FreeCADGui_SRCS
     ${FreeCADGui_SDK_SRCS}
     ${FreeCADGui_CPP_SRCS}
     ${FreeCADGui_XML_SRCS}
-    ${iis_MOC_SRCS}
     ${qsint_MOC_SRCS}
     ${Gui_QRC_SRCS}
     ${Gui_UIC_HDRS}
@@ -1294,7 +1274,6 @@ SET(FreeCADGui_SRCS
     ${Language_SRCS}
     ${Propertyeditor_SRCS}
     ${Task_View_SRCS}
-    ${iisTaskPanel_SRCS}
     ${qsintActionPanel_SRCS}
     ${Resource_SRCS}
     ${Quarter_SRCS}

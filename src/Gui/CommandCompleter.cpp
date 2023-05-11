@@ -55,7 +55,7 @@ class CommandModel : public QAbstractItemModel
     int revision = 0;
 
 public:
-    CommandModel(QObject* parent)
+    explicit CommandModel(QObject* parent)
         : QAbstractItemModel(parent)
     {
         update();
@@ -156,9 +156,11 @@ CommandCompleter::CommandCompleter(QLineEdit *lineedit, QObject *parent)
     this->setCaseSensitivity(Qt::CaseInsensitive);
     this->setCompletionMode(QCompleter::PopupCompletion);
     this->setWidget(lineedit);
-    connect(lineedit, SIGNAL(textEdited(QString)), this, SLOT(onTextChanged(QString)));
-    connect(this, SIGNAL(activated(QModelIndex)), this, SLOT(onCommandActivated(QModelIndex)));
-    connect(this, SIGNAL(highlighted(QString)), lineedit, SLOT(setText(QString)));
+    connect(lineedit, &QLineEdit::textEdited, this, &CommandCompleter::onTextChanged);
+    connect(this, qOverload<const QModelIndex&>(&CommandCompleter::activated),
+            this, &CommandCompleter::onCommandActivated);
+    connect(this, qOverload<const QString&>(&CommandCompleter::highlighted),
+            lineedit, &QLineEdit::setText);
 }
 
 bool CommandCompleter::eventFilter(QObject *o, QEvent *ev)
@@ -182,7 +184,7 @@ bool CommandCompleter::eventFilter(QObject *o, QEvent *ev)
         }
         case Qt::Key_Tab: {
             if (this->popup()->isVisible()) {
-                QKeyEvent kevent(ke->type(),Qt::Key_Down,0);
+                QKeyEvent kevent(ke->type(), Qt::Key_Down, Qt::NoModifier);
                 qApp->sendEvent(this->popup(), &kevent);
                 return true;
             }
@@ -190,7 +192,7 @@ bool CommandCompleter::eventFilter(QObject *o, QEvent *ev)
         }
         case Qt::Key_Backtab: {
             if (this->popup()->isVisible()) {
-                QKeyEvent kevent(ke->type(),Qt::Key_Up,0);
+                QKeyEvent kevent(ke->type(), Qt::Key_Up, Qt::NoModifier);
                 qApp->sendEvent(this->popup(), &kevent);
                 return true;
             }

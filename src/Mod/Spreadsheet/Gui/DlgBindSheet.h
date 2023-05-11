@@ -1,5 +1,5 @@
 /****************************************************************************
- *   Copyright (c) 2019 Zheng Lei (realthunder) <realthunder.dev@gmail.com> *
+ *   Copyright (c) 2019 Zheng, Lei (realthunder) <realthunder.dev@gmail.com>*
  *                                                                          *
  *   This file is part of the FreeCAD CAx development system.               *
  *                                                                          *
@@ -37,10 +37,10 @@ class DlgBindSheet : public QDialog
     Q_OBJECT
     
 public:
-    explicit DlgBindSheet(Spreadsheet::Sheet *sheet, const std::vector<App::Range> &range, QWidget *parent = 0);
-    ~DlgBindSheet();
+    explicit DlgBindSheet(Spreadsheet::Sheet *sheet, const std::vector<App::Range> &range, QWidget *parent = nullptr);
+    ~DlgBindSheet() override;
     
-    void accept();
+    void accept() override;
 
 public Q_SLOTS:
     void onDiscard();

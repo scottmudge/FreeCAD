@@ -20,16 +20,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <qobject.h>
 #endif
 
-#include "Workbench.h"
-#include <Gui/ToolBarManager.h>
 #include <Gui/MenuManager.h>
+#include <Gui/ToolBarManager.h>
+
+#include "Workbench.h"
 
 
 using namespace FemGui;
@@ -73,6 +73,7 @@ using namespace FemGui;
     qApp->translate("Workbench", "Utilities");
 #endif
 
+
 /// @namespace FemGui @class Workbench
 TYPESYSTEM_SOURCE(FemGui::Workbench, Gui::StdWorkbench)
 
@@ -86,7 +87,7 @@ Workbench::~Workbench()
 
 void Workbench::setupContextMenu(const char* recipient, Gui::MenuItem* item) const
 {
-    StdWorkbench::setupContextMenu( recipient, item );
+    StdWorkbench::setupContextMenu(recipient, item);
     *item
         << "Separator"
         << "FEM_MeshClear"
@@ -122,6 +123,7 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
     fluid->setCommand("Fluid Constraints");
     *fluid
         << "FEM_ConstraintInitialFlowVelocity"
+        << "FEM_ConstraintInitialPressure"
         << "Separator"
         << "FEM_ConstraintFlowVelocity";
 
@@ -155,8 +157,8 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
         << "FEM_ConstraintTemperature"
         << "FEM_ConstraintBodyHeatSource";
 
-     Gui::ToolBarItem* mesh = new Gui::ToolBarItem(root);
-     mesh->setCommand("Mesh");
+    Gui::ToolBarItem* mesh = new Gui::ToolBarItem(root);
+    mesh->setCommand("Mesh");
 #ifdef FCWithNetgen
      *mesh
         << "FEM_MeshNetgenFromShape";
@@ -170,12 +172,12 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
         << "Separator"
         << "FEM_FEMMesh2Mesh";
 
-     Gui::ToolBarItem* solve = new Gui::ToolBarItem(root);
-     solve->setCommand("Solve");
+    Gui::ToolBarItem* solve = new Gui::ToolBarItem(root);
+    solve->setCommand("Solve");
      *solve
         << "FEM_SolverCalculixCxxtools"
-        << "FEM_SolverCalculiX"
         << "FEM_SolverElmer"
+        << "FEM_SolverZ88"
         << "Separator"
         << "FEM_EquationElasticity"
         << "FEM_EquationElectricforce"
@@ -187,8 +189,8 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
         << "FEM_SolverControl"
         << "FEM_SolverRun";
 
-     Gui::ToolBarItem* results = new Gui::ToolBarItem(root);
-     results->setCommand("Results");
+    Gui::ToolBarItem* results = new Gui::ToolBarItem(root);
+    results->setCommand("Results");
      *results
         << "FEM_ResultsPurge"
         << "FEM_ResultShow";
@@ -209,8 +211,8 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
         << "FEM_PostCreateFunctions";
 #endif
 
-     Gui::ToolBarItem* utils = new Gui::ToolBarItem(root);
-     utils->setCommand("Utilities");
+    Gui::ToolBarItem* utils = new Gui::ToolBarItem(root);
+    utils->setCommand("Utilities");
      *utils
         << "FEM_ClippingPlaneAdd"
         << "FEM_ClippingPlaneRemoveAll"
@@ -250,6 +252,7 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     fluid->setCommand("&Fluid Constraints");
     *fluid
         << "FEM_ConstraintInitialFlowVelocity"
+        << "FEM_ConstraintInitialPressure"
         << "Separator"
         << "FEM_ConstraintFlowVelocity";
 

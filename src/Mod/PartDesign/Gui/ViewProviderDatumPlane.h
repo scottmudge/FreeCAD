@@ -25,7 +25,6 @@
 #ifndef PARTGUI_ViewProviderDatumPlane_H
 #define PARTGUI_ViewProviderDatumPlane_H
 
-#include "Gui/ViewProviderGeometryObject.h"
 #include "ViewProviderDatum.h"
 
 namespace PartGui {
@@ -36,17 +35,17 @@ namespace PartDesignGui {
 
 class PartDesignGuiExport ViewProviderDatumPlane : public PartDesignGui::ViewProviderDatum
 {
-    PROPERTY_HEADER(PartDesignGui::ViewProviderDatumPlane);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderDatumPlane);
 
 public:
     /// Constructor
     ViewProviderDatumPlane();
-    virtual ~ViewProviderDatumPlane();
+    ~ViewProviderDatumPlane() override;
 
-    virtual void attach ( App::DocumentObject *obj );
-    virtual void updateData(const App::Property*);
+    void attach ( App::DocumentObject *obj ) override;
+    void updateData(const App::Property*) override;
 
-    void setExtents (Base::BoundBox3d bbox);
+    void setExtents (Base::BoundBox3d bbox) override;
     void setExtents(double l, double w);
     virtual void updateExtents();
 

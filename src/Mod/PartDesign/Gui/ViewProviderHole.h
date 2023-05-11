@@ -33,20 +33,20 @@ class TaskDlgFeatureParameters;
 
 class PartDesignGuiExport ViewProviderHole : public ViewProviderAddSub
 {
-    PROPERTY_HEADER(PartDesignGui::ViewProviderHole);
-    typedef ViewProviderAddSub inherited;
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderHole);
+    using inherited = ViewProviderAddSub;
 
 public:
     /// constructor
     ViewProviderHole();
     /// destructor
-    virtual ~ViewProviderHole();
+    ~ViewProviderHole() override;
 
     /// grouping handling 
-    std::vector<App::DocumentObject*> _claimChildren(void)const;
-    void setupContextMenu(QMenu *menu, QObject *receiver, const char *member);
-    bool onDelete(const std::vector<std::string> &s);
-    TaskDlgFeatureParameters* getEditDialog();
+    std::vector<App::DocumentObject*> _claimChildren() const override;
+    void setupContextMenu(QMenu *menu, QObject *receiver, const char *member) override;
+    bool onDelete(const std::vector<std::string> &s) override;
+    TaskDlgFeatureParameters* getEditDialog() override;
 };
 
 

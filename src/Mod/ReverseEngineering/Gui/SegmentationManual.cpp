@@ -20,31 +20,26 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
 # include <QPushButton>
 #endif
 
-#include "SegmentationManual.h"
-#include "ui_SegmentationManual.h"
 #include <App/Document.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/Selection.h>
-
 #include <Mod/Mesh/App/Core/Approximation.h>
 #include <Mod/Mesh/App/Core/Algorithm.h>
 #include <Mod/Mesh/App/Core/Segmentation.h>
-#include <Mod/Mesh/App/Core/Curvature.h>
-#include <Mod/Mesh/App/Core/Smoothing.h>
-#include <Mod/Mesh/App/Mesh.h>
 #include <Mod/Mesh/App/MeshFeature.h>
 #include <Mod/Mesh/Gui/ViewProvider.h>
 
-using namespace ReverseEngineeringGui;
+#include "SegmentationManual.h"
+#include "ui_SegmentationManual.h"
 
+
+using namespace ReverseEngineeringGui;
 
 SegmentationManual::SegmentationManual(QWidget* parent, Qt::WindowFlags fl)
   : QWidget(parent, fl)
@@ -150,7 +145,7 @@ static void findGeometry(int minFaces, double tolerance,
                     (surfFit, kernel, minFaces, tolerance));
                 finder.FindSegments(segm);
 
-                for (auto segmIt : segm) {
+                for (const auto& segmIt : segm) {
                     const std::vector<MeshCore::MeshSegment>& data = segmIt->GetSegments();
                     for (const auto& dataIt : data) {
                         vpm->addSelection(dataIt);
@@ -295,7 +290,7 @@ TaskSegmentationManual::TaskSegmentationManual()
 {
     widget = new SegmentationManual();
     taskbox = new Gui::TaskView::TaskBox(
-        QPixmap(), widget->windowTitle(), false, 0);
+        QPixmap(), widget->windowTitle(), false, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

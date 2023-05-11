@@ -6,18 +6,14 @@
  ***************************************************************************/
 
 #include "taskheader_p.h"
-#include "actionpanelscheme.h"
-#include "actionlabel.h"
 
-#include <QtCore/QVariant>
-#include <QtCore/QEvent>
-#include <QtCore/QTimer>
-
-#include <QHBoxLayout>
-#include <QPainter>
-#include <QMouseEvent>
 #include <QApplication>
+#include <QEvent>
+#include <QHBoxLayout>
+#include <QMouseEvent>
+#include <QPainter>
 #include <QStyle>
+#include <QTimer>
 
 
 namespace QSint
@@ -31,7 +27,7 @@ TaskHeader::TaskHeader(const QIcon &icon, const QString &title, bool expandable,
   m_buttonOver(false),
   m_fold(true),
   m_opacity(0.1),
-  myButton(0)
+  myButton(nullptr)
 {
     setProperty("class", "header");
 
@@ -44,7 +40,7 @@ TaskHeader::TaskHeader(const QIcon &icon, const QString &title, bool expandable,
     connect(myTitle, SIGNAL(clicked()), this, SLOT(fold()));
 
     QHBoxLayout *hbl = new QHBoxLayout();
-    hbl->setMargin(2);
+    hbl->setContentsMargins(2, 2, 2, 2);
     setLayout(hbl);
 
     hbl->addWidget(myTitle);
@@ -79,9 +75,9 @@ void TaskHeader::setExpandable(bool expandable)
             return;
 
         myButton->removeEventFilter(this);
-        myButton->setParent(0);
+        myButton->setParent(nullptr);
         delete myButton;
-        myButton = 0;
+        myButton = nullptr;
         changeIcons();
     }
 }
@@ -196,20 +192,6 @@ void TaskHeader::fold()
 {
   if (myExpandable) {
     Q_EMIT activated();
-    // Toggling the 'm_fold' member here may lead to inconsistencies with its ActionGroup.
-    // Thus, the method setFold() was added and called from ActionGroup when required.
-#if 0
-    m_fold = !m_fold;
-    changeIcons();
-    if (myButton) {
-      myButton->setProperty("fold", m_fold);
-      if (myButton->style()) {
-        myButton->style()->unpolish(myButton);
-        myButton->style()->polish(myButton);
-        myButton->update();
-      }
-    }
-#endif
   }
 }
 

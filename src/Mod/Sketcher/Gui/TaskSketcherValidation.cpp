@@ -20,43 +20,32 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
-# include <Standard_math.hxx>
+# include <algorithm>
 # include <QDoubleValidator>
 # include <QLocale>
 # include <QMessageBox>
+# include <Precision.hxx>
+
 # include <Inventor/nodes/SoBaseColor.h>
 # include <Inventor/nodes/SoCoordinate3.h>
 # include <Inventor/nodes/SoDrawStyle.h>
 # include <Inventor/nodes/SoMarkerSet.h>
 # include <Inventor/nodes/SoSeparator.h>
-# include <Inventor/nodes/SoShapeHints.h>
-# include <BRep_Tool.hxx>
-# include <gp_Pnt.hxx>
-# include <Precision.hxx>
-# include <TopTools_IndexedMapOfShape.hxx>
-# include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
-# include <TopExp.hxx>
-# include <TopExp_Explorer.hxx>
-# include <TopoDS.hxx>
-# include <TopoDS_Edge.hxx>
-# include <TopoDS_Vertex.hxx>
-# include <algorithm>
 #endif
 
-#include "ui_TaskSketcherValidation.h"
-#include "TaskSketcherValidation.h"
-#include <Mod/Sketcher/App/SketchObject.h>
-#include <Mod/Part/App/Geometry.h>
 #include <App/Document.h>
-#include <Gui/TaskView/TaskView.h>
 #include <Gui/Application.h>
 #include <Gui/ViewProvider.h>
 #include <Gui/WaitCursor.h>
 #include <Gui/Inventor/MarkerBitmaps.h>
+#include <Gui/TaskView/TaskView.h>
+#include <Mod/Sketcher/App/SketchObject.h>
+
+#include "ui_TaskSketcherValidation.h"
+#include "TaskSketcherValidation.h"
+
 
 using namespace SketcherGui;
 using namespace Gui::TaskView;
@@ -64,7 +53,7 @@ using namespace Gui::TaskView;
 /* TRANSLATOR SketcherGui::SketcherValidation */
 
 SketcherValidation::SketcherValidation(Sketcher::SketchObject* Obj, QWidget* parent)
-: QWidget(parent), ui(new Ui_TaskSketcherValidation()), sketch(Obj), sketchAnalyser(Obj), coincidenceRoot(0)
+: QWidget(parent), ui(new Ui_TaskSketcherValidation()), sketch(Obj), sketchAnalyser(Obj), coincidenceRoot(nullptr)
 {
     ui->setupUi(this);
     ui->fixButton->setEnabled(false);
@@ -230,7 +219,7 @@ void SketcherValidation::on_findReversed_clicked()
         }
     }
     hidePoints();
-    if(points.size()>0){
+    if(!points.empty()){
         int nc = sketch->port_reversedExternalArcs(/*justAnalyze=*/true);
         showPoints(points);
         if(nc>0){
@@ -319,7 +308,8 @@ void SketcherValidation::on_delConstrExtr_clicked()
                         tr("Delete constraints to external geom."),
                         tr("You are about to delete ALL constraints that deal with external geometry. This is useful to rescue a sketch with broken/changed links to external geometry. Are you sure you want to delete the constraints?"),
                         QMessageBox::No|QMessageBox::Yes,QMessageBox::No);
-    if(reply!=QMessageBox::Yes) return;
+    if(reply!=QMessageBox::Yes)
+        return;
 
     App::Document* doc = sketch->getDocument();
     doc->openTransaction("Delete constraints");
@@ -431,7 +421,7 @@ TaskSketcherValidation::TaskSketcherValidation(Sketcher::SketchObject* Obj)
 {
     QWidget* widget = new SketcherValidation(Obj);
     Gui::TaskView::TaskBox* taskbox = new Gui::TaskView::TaskBox(
-        QPixmap(), widget->windowTitle(), true, 0);
+        QPixmap(), widget->windowTitle(), true, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

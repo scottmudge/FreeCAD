@@ -22,15 +22,11 @@
 
 #include "PreCompiled.h"
 
+#include <Gui/View3DInventor.h>
 
 #include "TaskCurveOnMesh.h"
 #include "ui_TaskCurveOnMesh.h"
 #include "CurveOnMesh.h"
-
-#include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/View3DInventor.h>
-#include <Gui/View3DInventorViewer.h>
 
 
 using namespace MeshPartGui;
@@ -101,7 +97,7 @@ TaskCurveOnMesh::TaskCurveOnMesh(Gui::View3DInventor* view)
     widget = new CurveOnMeshWidget(view);
     taskbox = new Gui::TaskView::TaskBox(
         QPixmap(),
-        widget->windowTitle(), true, 0);
+        widget->windowTitle(), true, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

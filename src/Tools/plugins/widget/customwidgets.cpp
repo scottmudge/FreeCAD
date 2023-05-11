@@ -28,6 +28,8 @@
 #include <QFileDialog>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QRegularExpression>
+#include <QRegularExpressionMatch>
 #include <QStyleOptionButton>
 #include <QStylePainter>
 #include <QToolTip>
@@ -140,10 +142,10 @@ void LocationWidget::retranslateUi()
 } 
 
 FileChooser::FileChooser( QWidget *parent )
-  : QWidget( parent ), md( File ), _filter( QString::null )
+  : QWidget( parent ), md( File ), _filter( QString() )
 {
     QHBoxLayout *layout = new QHBoxLayout( this );
-    layout->setMargin( 0 );
+    layout->setContentsMargins( 0, 0, 0, 0 );
     layout->setSpacing( 6 );
 
     lineEdit = new QLineEdit( this );
@@ -153,7 +155,11 @@ FileChooser::FileChooser( QWidget *parent )
             this, SIGNAL(fileNameChanged(const QString &)));
 
     button = new QPushButton( "...", this );
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+    button->setFixedWidth(2 * button->fontMetrics().horizontalAdvance(" ... "));
+#else
     button->setFixedWidth(2*button->fontMetrics().width( " ... " ));
+#endif
     layout->addWidget( button );
 
     connect(button, SIGNAL(clicked()), this, SLOT(chooseFile()));
@@ -216,8 +222,13 @@ void FileChooser::setFilter ( const QString& filter )
 void FileChooser::setButtonText( const QString& txt )
 {
     button->setText( txt );
-    int w1 = 2*button->fontMetrics().width(txt);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+    int w1 = 2 * button->fontMetrics().horizontalAdvance(txt);
+    int w2 = 2 * button->fontMetrics().horizontalAdvance(" ... ");
+#else
+    int w1 = 2 * button->fontMetrics().width(txt);
     int w2 = 2*button->fontMetrics().width(" ... ");
+#endif
     button->setFixedWidth((w1 > w2 ? w1 : w2));
 }
 
@@ -1134,12 +1145,62 @@ void QuantitySpinBox::stepBy(int steps)
 
 QSize QuantitySpinBox::sizeHint() const
 {
-    return QAbstractSpinBox::sizeHint();
+    ensurePolished();
+
+    const QFontMetrics fm(fontMetrics());
+    int frameWidth = lineEdit()->style()->pixelMetric(QStyle::PM_SpinBoxFrameWidth);
+    int iconHeight = fm.height() - frameWidth;
+    int h = lineEdit()->sizeHint().height();
+    int w = 0;
+
+    QString s = QStringLiteral("000000000000000000");
+    QString fixedContent = QStringLiteral(" ");
+    s += fixedContent;
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+    w = fm.horizontalAdvance(s);
+#else
+    w = fm.width(s);
+#endif
+
+    w += 2; // cursor blinking space
+    w += iconHeight;
+
+    QStyleOptionSpinBox opt;
+    initStyleOption(&opt);
+    QSize hint(w, h);
+    QSize size = style()->sizeFromContents(QStyle::CT_SpinBox, &opt, hint, this);
+    return size;
 }
 
 QSize QuantitySpinBox::minimumSizeHint() const
 {
-    return QAbstractSpinBox::minimumSizeHint();
+    ensurePolished();
+
+    const QFontMetrics fm(fontMetrics());
+    int frameWidth = lineEdit()->style()->pixelMetric(QStyle::PM_SpinBoxFrameWidth);
+    int iconHeight = fm.height() - frameWidth;
+    int h = lineEdit()->minimumSizeHint().height();
+    int w = 0;
+
+    QString s = QStringLiteral("000000000000000000");
+    QString fixedContent = QStringLiteral(" ");
+    s += fixedContent;
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+    w = fm.horizontalAdvance(s);
+#else
+    w = fm.width(s);
+#endif
+
+    w += 2; // cursor blinking space
+    w += iconHeight;
+
+    QStyleOptionSpinBox opt;
+    initStyleOption(&opt);
+    QSize hint(w, h);
+    QSize size = style()->sizeFromContents(QStyle::CT_SpinBox, &opt, hint, this);
+    return size;
 }
 
 void QuantitySpinBox::showEvent(QShowEvent * event)
@@ -1231,27 +1292,16 @@ void QuantitySpinBox::clear()
 
 void QuantitySpinBox::selectNumber()
 {
-    QString str = lineEdit()->text();
-    unsigned int i = 0;
-
-    QChar d = locale().decimalPoint();
-    QChar g = locale().groupSeparator();
-    QChar n = locale().negativeSign();
-
-    for (QString::iterator it = str.begin(); it != str.end(); ++it) {
-        if (it->isDigit())
-            i++;
-        else if (*it == d)
-            i++;
-        else if (*it == g)
-            i++;
-        else if (*it == n)
-            i++;
-        else // any non-number character
-            break;
+    QString expr = QStringLiteral("^([%1%2]?[0-9\\%3]*)\\%4?([0-9]+(%5[%1%2]?[0-9]+)?)")
+                   .arg(locale().negativeSign())
+                   .arg(locale().positiveSign())
+                   .arg(locale().groupSeparator())
+                   .arg(locale().decimalPoint())
+                   .arg(locale().exponential());
+    auto rmatch = QRegularExpression(expr).match(lineEdit()->text());
+    if (rmatch.hasMatch()) {
+        lineEdit()->setSelection(0, rmatch.capturedLength());
     }
-
-    lineEdit()->setSelection(0, i);
 }
 
 QString QuantitySpinBox::textFromValue(const Base::Quantity& value) const
@@ -1391,7 +1441,7 @@ void CommandIconView::startDrag ( Qt::DropActions /*supportedActions*/ )
     drag->setMimeData(mimeData);
     drag->setHotSpot(QPoint(pixmap.width()/2, pixmap.height()/2));
     drag->setPixmap(pixmap);
-    drag->start(Qt::MoveAction);
+    drag->exec(Qt::MoveAction);
 }
 
 void CommandIconView::onSelectionChanged(QListWidgetItem * item, QListWidgetItem *)

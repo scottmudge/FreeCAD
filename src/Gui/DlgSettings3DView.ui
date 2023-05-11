@@ -24,24 +24,77 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="Gui::PrefCheckBox" name="CheckBox_CornerCoordSystem">
-        <property name="toolTip">
-         <string>Main coordinate system will always be shown in
+       <layout class="QHBoxLayout" name="horizontalLayoutCoord">
+        <item>
+         <widget class="Gui::PrefCheckBox" name="CheckBox_CornerCoordSystem">
+          <property name="toolTip">
+           <string>Main coordinate system will always be shown in
 lower right corner within opened files</string>
-        </property>
-        <property name="text">
-         <string>Show coordinate system in the corner</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-        <property name="prefEntry" stdset="0">
-         <cstring>CornerCoordSystem</cstring>
-        </property>
-        <property name="prefPath" stdset="0">
-         <cstring>View</cstring>
-        </property>
-       </widget>
+          </property>
+          <property name="text">
+           <string>Show coordinate system in the corner</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>CornerCoordSystem</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacerCoord">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>0</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelCoordSize">
+          <property name="text">
+           <string>Relative size :   </string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="Gui::PrefSpinBox" name="SpinBox_CornerCoordSystemSize">
+          <property name="toolTip">
+           <string>Size of main coordinate system representation
+in the corner -- in % of height/width of viewport</string>
+          </property>
+          <property name="suffix">
+           <string notr="true">%</string>
+          </property>
+          <property name="minimum">
+           <number>2</number>
+          </property>
+          <property name="maximum">
+           <number>100</number>
+          </property>
+          <property name="value">
+           <number>10</number>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>CornerCoordSystemSize</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <widget class="Gui::PrefCheckBox" name="CheckBox_ShowAxisCross">
@@ -311,14 +364,14 @@ geometry shape, and may cause some initial lag due to bufferring.</string>
          </widget>
         </item>
         <item row="10" column="1" colspan="2">
-         <widget class="Gui::PrefDoubleSpinBox" name="spinPreselectionDelay">
-          <property name="decimals">
+         <widget class="Gui::PrefDoubleSpinBox" name="spinPreselectionDelay" native="true">
+          <property name="decimals" stdset="0">
            <number>3</number>
           </property>
-          <property name="singleStep">
+          <property name="singleStep" stdset="0">
            <double>0.100000000000000</double>
           </property>
-          <property name="value">
+          <property name="value" stdset="0">
            <double>0.100000000000000</double>
           </property>
           <property name="prefPath" stdset="0">
@@ -360,7 +413,7 @@ geometry shape, and may cause some initial lag due to bufferring.</string>
          </widget>
         </item>
         <item row="7" column="1" colspan="2">
-         <widget class="Gui::PrefDoubleSpinBox" name="spinPickRadius">
+         <widget class="Gui::PrefDoubleSpinBox" name="spinPickRadius" native="true">
           <property name="minimumSize">
            <size>
             <width>120</width>
@@ -375,16 +428,16 @@ Larger value eases to pick things, but can make small features impossible to sel
           <property name="inputMethodHints">
            <set>Qt::ImhPreferNumbers</set>
           </property>
-          <property name="decimals">
+          <property name="decimals" stdset="0">
            <number>1</number>
           </property>
-          <property name="minimum">
+          <property name="minimum" stdset="0">
            <double>0.500000000000000</double>
           </property>
-          <property name="maximum">
+          <property name="maximum" stdset="0">
            <double>200.000000000000000</double>
           </property>
-          <property name="value">
+          <property name="value" stdset="0">
            <double>5.000000000000000</double>
           </property>
           <property name="prefEntry" stdset="0">
@@ -505,7 +558,7 @@ but slower response to any scene changes.
          </widget>
         </item>
         <item row="9" column="1" colspan="2">
-         <widget class="Gui::PrefDoubleSpinBox" name="FloatSpinBox_EyeDistance">
+         <widget class="Gui::PrefDoubleSpinBox" name="FloatSpinBox_EyeDistance" native="true">
           <property name="minimumSize">
            <size>
             <width>120</width>
@@ -517,19 +570,19 @@ but slower response to any scene changes.
 The specified value is a factor that will be multiplied with the
 bounding box size of the 3D object that is currently displayed.</string>
           </property>
-          <property name="decimals">
+          <property name="decimals" stdset="0">
            <number>1</number>
           </property>
-          <property name="minimum">
+          <property name="minimum" stdset="0">
            <double>0.100000000000000</double>
           </property>
-          <property name="maximum">
+          <property name="maximum" stdset="0">
            <double>1000.000000000000000</double>
           </property>
-          <property name="singleStep">
+          <property name="singleStep" stdset="0">
            <double>2.000000000000000</double>
           </property>
-          <property name="value">
+          <property name="value" stdset="0">
            <double>5.000000000000000</double>
           </property>
           <property name="prefEntry" stdset="0">
@@ -728,6 +781,16 @@ bounding box size of the 3D object that is currently displayed.</string>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
+   <class>Gui::ColorButton</class>
+   <extends>QPushButton</extends>
+   <header>Gui/Widgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::PrefColorButton</class>
+   <extends>Gui::ColorButton</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+  <customwidget>
    <class>Gui::PrefCheckBox</class>
    <extends>QCheckBox</extends>
    <header>Gui/PrefWidgets.h</header>
@@ -738,23 +801,8 @@ bounding box size of the 3D object that is currently displayed.</string>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
   <customwidget>
-   <class>Gui::PrefComboBox</class>
-   <extends>QComboBox</extends>
-   <header>Gui/PrefWidgets.h</header>
-  </customwidget>
-  <customwidget>
-   <class>Gui::ColorButton</class>
-   <extends>QPushButton</extends>
-   <header>Gui/Widgets.h</header>
-  </customwidget>
-  <customwidget>
-   <class>Gui::PrefRadioButton</class>
-   <extends>QRadioButton</extends>
-   <header>Gui/PrefWidgets.h</header>
-  </customwidget>
-  <customwidget>
-   <class>Gui::PrefColorButton</class>
-   <extends>Gui::ColorButton</extends>
+   <class>Gui::PrefDoubleSpinBox</class>
+   <extends>QWidget</extends>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
   <customwidget>
@@ -763,8 +811,13 @@ bounding box size of the 3D object that is currently displayed.</string>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
   <customwidget>
-   <class>Gui::PrefDoubleSpinBox</class>
-   <extends>QDoubleSpinBox</extends>
+   <class>Gui::PrefComboBox</class>
+   <extends>QComboBox</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::PrefRadioButton</class>
+   <extends>QRadioButton</extends>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
  </customwidgets>

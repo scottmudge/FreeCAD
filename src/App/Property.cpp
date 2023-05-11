@@ -24,30 +24,33 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-#	include <cassert>
+#include <cassert>
 #endif
 
 #include <atomic>
 
 #include <boost/algorithm/string/predicate.hpp>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
+#include <Base/Console.h>
+#include <Base/Exception.h>
+#include <Base/Tools.h>
+#include <Base/Reader.h>
+#include <Base/Writer.h>
+#include <CXX/Objects.hxx>
+
 #include "Property.h"
+
+#include "Application.h"
+#include "Document.h"
+#include "DocumentObject.h"
+#include "DocumentParams.h"
 #include "ObjectIdentifier.h"
 #include "PropertyContainer.h"
 #include "Transactions.h"
-#include <Base/Exception.h>
-#include <Base/Tools.h>
-#include <Base/Console.h>
-#include "Application.h"
-#include "DocumentParams.h"
-#include "DocumentObject.h"
-#include "Document.h"
-
-FC_LOG_LEVEL_INIT("App",true,true)
 
 using namespace App;
 
+FC_LOG_LEVEL_INIT("App",true,true)
 
 //**************************************************************************
 //**************************************************************************
@@ -59,11 +62,11 @@ TYPESYSTEM_SOURCE_ABSTRACT(App::Property , Base::Persistence)
 //**************************************************************************
 // Construction/Destruction
 
-static std::atomic<long> _PropID;
+static std::atomic<int64_t> _PropID;
 
 // Here is the implementation! Description should take place in the header file!
 Property::Property()
-  :father(0), myName(0), _id(++_PropID)
+  :father(nullptr), myName(nullptr), _id(++_PropID)
 {
 }
 
@@ -126,7 +129,7 @@ std::string Property::getFileName(const char *postfix, const char *prefix) const
     return ss.str();
 }
 
-short Property::getType(void) const
+short Property::getType() const
 {
     short type = 0;
 #define GET_PTYPE(_name) do {\
@@ -153,12 +156,12 @@ void Property::syncType(unsigned type) {
     SYNC_PTYPE(NoPersist);
 }
 
-const char* Property::getGroup(void) const
+const char* Property::getGroup() const
 {
     return father->getPropertyGroup(this);
 }
 
-const char* Property::getDocumentation(void) const
+const char* Property::getDocumentation() const
 {
     return father->getPropertyDocumentation(this);
 }
@@ -211,7 +214,7 @@ namespace App {
  * active.
  */
 struct PropertyCleaner {
-    PropertyCleaner(Property *p)
+    explicit PropertyCleaner(Property *p)
         : prop(p)
     {
         ++_PropCleanerCounter;
@@ -220,7 +223,7 @@ struct PropertyCleaner {
         if(--_PropCleanerCounter)
             return;
         bool found = false;
-        while (_RemovedProps.size()) {
+        while (!_RemovedProps.empty()) {
             auto p = _RemovedProps.back();
             _RemovedProps.pop_back();
             if(p != prop)
@@ -281,7 +284,7 @@ void Property::setReadOnly(bool readOnly)
     this->setStatus(App::Property::ReadOnly, readOnly);
 }
 
-void Property::hasSetValue(void)
+void Property::hasSetValue()
 {
     if (father && _old) {
         if(isSame(*_old)) {
@@ -293,7 +296,7 @@ void Property::hasSetValue(void)
     touch();
 }
 
-void Property::aboutToSetValue(void)
+void Property::aboutToSetValue()
 {
     PropertyCleaner guard(this);
     if (father) {
@@ -314,11 +317,11 @@ void Property::verifyPath(const ObjectIdentifier &p) const
     p.verify(*this);
 }
 
-Property *Property::Copy(void) const
+Property *Property::Copy() const
 {
     // have to be reimplemented by a subclass!
     assert(0);
-    return 0;
+    return nullptr;
 }
 
 void Property::Paste(const Property& /*from*/)
@@ -397,6 +400,8 @@ bool Property::testStatus(const StatusBits &bits, const StatusBits &mask) const
 }
 
 bool Property::isSameContent(const Property &other) const {
+    if(&other == this)
+        return true;
     if(other.getTypeId() != getTypeId() || getMemSize() != other.getMemSize())
         return false;
 

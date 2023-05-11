@@ -21,26 +21,23 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskDressUpParameters_H
 #define GUI_TASKVIEW_TaskDressUpParameters_H
 
 #include <boost/signals2.hpp>
 
 #include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
 
 #include "TaskFeatureParameters.h"
 #include "ViewProviderDressUp.h"
 
+class QAction;
 class QTreeWidget;
 class QTreeWidgetItem;
 
 namespace Part {
     class Feature;
 }
-
-class Ui_TaskDressUpParameters;
 
 namespace PartDesignGui {
 
@@ -49,8 +46,8 @@ class TaskDressUpParameters : public Gui::TaskView::TaskBox, public Gui::Selecti
     Q_OBJECT
 
 public:
-    TaskDressUpParameters(ViewProviderDressUp *DressUpView, bool selectEdges, bool selectFaces, QWidget* parent = 0);
-    virtual ~TaskDressUpParameters();
+    TaskDressUpParameters(ViewProviderDressUp *DressUpView, bool selectEdges, bool selectFaces, QWidget* parent = nullptr);
+    ~TaskDressUpParameters() override;
 
     std::vector<std::string> getReferences(void) const;
     Part::Feature *getBase(void) const;
@@ -88,18 +85,22 @@ protected:
     virtual void onNewItem(QTreeWidgetItem *) {}
 
     QTreeWidgetItem *getCurrentItem() const;
+    void createAddAllEdgesAction(QTreeWidget* parentList);
+
+    void addAllEdges();
 
 protected:
     enum selectionModes { none, refToggle, plane, line };
     virtual void clearButtons(const selectionModes notThis);
-    virtual void onSelectionChanged(const Gui::SelectionChanges& msg);
-    virtual void changeEvent(QEvent *e) = 0;
-    bool event(QEvent *e);
+    void onSelectionChanged(const Gui::SelectionChanges& msg) override;
+    virtual void changeEvent(QEvent *e) override = 0;
+    bool event(QEvent *e) override;
+    bool handleEvent(QEvent *e);
 
     ViewProviderDressUp* getDressUpView() const
     { return DressUpView; }
 
-    bool eventFilter(QObject *o, QEvent *e);
+    bool eventFilter(QObject *o, QEvent *e) override;
 
 protected:
     QWidget* proxy;
@@ -110,6 +111,7 @@ protected:
     int transactionID = 0;
 
     QAction* deleteAction = nullptr;
+    QAction* addAllEdgesAction = nullptr;
     QTreeWidget *treeWidget = nullptr;
     QCheckBox *btnAdd = nullptr;
     QLabel *messageLabel = nullptr;
@@ -134,16 +136,16 @@ class TaskDlgDressUpParameters : public TaskDlgFeatureParameters
     Q_OBJECT
 
 public:
-    TaskDlgDressUpParameters(ViewProviderDressUp *DressUpView);
-    virtual ~TaskDlgDressUpParameters();
+    explicit TaskDlgDressUpParameters(ViewProviderDressUp *DressUpView);
+    ~TaskDlgDressUpParameters() override;
 
     ViewProviderDressUp* getDressUpView() const
     { return static_cast<ViewProviderDressUp*>(vp); }
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
-    virtual bool reject();
+    bool accept() override;
+    bool reject() override;
 
 protected:
     TaskDressUpParameters  *parameter;

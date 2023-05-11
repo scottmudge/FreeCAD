@@ -20,28 +20,26 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <QMouseEvent>
+# include <QMessageBox>
 #endif
 
-//#include "ViewProviderGroupExtensionPy.h"
-#include "ViewProviderGroupExtension.h"
-
-#include "Command.h"
-#include "Application.h"
-#include "Document.h"
-#include "MainWindow.h"
-#include <Base/Tools.h>
 #include <App/Document.h>
 #include <App/DocumentObject.h>
 #include <App/GroupExtension.h>
 #include <App/GeoFeatureGroupExtension.h>
-#include <App/Expression.h>
 #include <Base/Console.h>
-#include <QMessageBox>
+#include <Base/Tools.h>
+
+#include "ViewProviderGroupExtension.h"
+#include "ViewProviderDocumentObject.h"
+#include "Command.h"
+#include "Document.h"
+#include "MainWindow.h"
+
 
 using namespace Gui;
 
@@ -100,7 +98,7 @@ bool ViewProviderGroupExtension::extensionCanDropObject(App::DocumentObject* obj
 
 void ViewProviderGroupExtension::extensionDropObject(App::DocumentObject* obj) {
 
-    App::DocumentObject* grp = static_cast<App::DocumentObject*>(getExtendedViewProvider()->getObject());
+    auto grp = static_cast<App::DocumentObject*>(getExtendedViewProvider()->getObject());
     App::Document* doc = grp->getDocument();
 
     // build Python command for execution
@@ -132,7 +130,6 @@ void ViewProviderGroupExtension::extensionUpdateData(const App::Property *prop)
     }
     ViewProviderExtension::extensionUpdateData ( prop );
 }
-
 
 void ViewProviderGroupExtension::extensionClaimChildren(
         std::vector<App::DocumentObject *> &children) const 
@@ -224,7 +221,7 @@ bool ViewProviderGroupExtension::shouldCheckExport(App::DocumentObject *obj) con
 bool ViewProviderGroupExtension::extensionOnDelete(const std::vector< std::string >& ) {
 
     auto* group = getExtendedViewProvider()->getObject()->getExtensionByType<App::GroupExtension>();
-    // If the group is nonempty ask the user if he wants to delete its content
+    // If the group is nonempty ask the user if they want to delete its content
     if (group->Group.getSize() > 0) {
         QMessageBox::StandardButton choice =
             QMessageBox::question(getMainWindow(), QObject::tr ( "Delete group content?" ),

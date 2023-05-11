@@ -1,0 +1,16 @@
+name: Publish conda
+
+on:
+  push:
+    tags:
+      - "*"
+
+  workflow_dispatch:
+
+jobs:
+  make:
+    uses: realthunder/FreeCADMakeImage/.github/workflows/bundle.yaml@master
+    with:
+      ref: ${{ github.ref_name }}
+    secrets:
+      token: ${{ secrets.ANACONDA_TOKEN }}

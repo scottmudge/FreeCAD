@@ -25,17 +25,16 @@
 #define GUI_TASKVIEW_TaskTransformedMessages_H
 
 #include <Gui/TaskView/TaskView.h>
-#include <boost_signals2.hpp>
 
 class QCheckBox;
 class Ui_TaskTransformedMessages;
-typedef boost::signals2::connection Connection;
+using Connection = boost::signals2::connection;
 
 namespace App {
 class Property;
 }
 
-namespace PartDesignGui { 
+namespace PartDesignGui {
 
 class ViewProviderTransformed;
 
@@ -44,14 +43,14 @@ class TaskTransformedMessages : public Gui::TaskView::TaskBox
     Q_OBJECT
 
 public:
-    TaskTransformedMessages(ViewProviderTransformed *transformedView);
-    ~TaskTransformedMessages();
+    explicit TaskTransformedMessages(ViewProviderTransformed *transformedView);
+    ~TaskTransformedMessages() override;
 
     void slotDiagnosis(QString msg);
     QCheckBox *getCheckBox();
 
 private Q_SLOTS:
-    
+
 protected:
     ViewProviderTransformed *transformedView;
     Connection connectionDiagnosis;

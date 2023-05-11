@@ -24,10 +24,7 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <xercesc/sax/SAXParseException.hpp>
-# include <xercesc/sax/SAXException.hpp>
 # include <xercesc/sax2/XMLReaderFactory.hpp>
-# include <xercesc/sax2/SAX2XMLReader.hpp>
 #endif
 
 #include <locale>
@@ -35,24 +32,20 @@
 #include <boost/ref.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
 #include "Reader.h"
 #include "Base64.h"
-#include "Exception.h"
-#include "Persistence.h"
-#include "InputSource.h"
 #include "Console.h"
+#include "InputSource.h"
+#include "Persistence.h"
 #include "Sequencer.h"
+#include "Stream.h"
+#include "XMLTools.h"
 
 #ifdef _MSC_VER
 #include <zipios++/zipios-config.h>
 #endif
-#include <zipios++/zipfile.h>
 #include <zipios++/zipinputstream.h>
-#include <zipios++/zipoutputstream.h>
-#include <zipios++/meta-iostreams.h>
 
-#include "XMLTools.h"
 
 FC_LOG_LEVEL_INIT("Base",true,true);
 
@@ -172,14 +165,14 @@ Base::XMLReader::~XMLReader()
         delete _reader;
 }
 
-const char* Base::XMLReader::localName(void) const
+const char* Base::XMLReader::localName() const
 {
     return LocalName.c_str();
 }
 
-unsigned int Base::XMLReader::getAttributeCount(void) const
+unsigned int Base::XMLReader::getAttributeCount() const
 {
-    return (unsigned int)AttrMap.size();
+    return static_cast<unsigned int>(AttrMap.size());
 }
 
 long Base::XMLReader::getAttributeAsInteger(const char* AttrName, const char *def) const
@@ -216,7 +209,7 @@ bool Base::XMLReader::hasAttribute (const char* AttrName) const
     return AttrMap.find(AttrName) != AttrMap.end();
 }
 
-void Base::XMLReader::read(void)
+void Base::XMLReader::read()
 {
     if(ReadType == EndDocument)
         FC_READER_THROW("End of document reached");
@@ -561,13 +554,9 @@ void Base::XMLReader::endCDATA ()
     ReadType = EndCDATA;
 }
 
-#if (XERCES_VERSION_MAJOR == 2)
-void Base::XMLReader::characters(const   XMLCh* const chars, const unsigned int len)
-#else
-void Base::XMLReader::characters(const   XMLCh* const chars, const XMLSize_t len)
-#endif
+void Base::XMLReader::characters(const   XMLCh* const chars, const XMLSize_t length)
 {
-    (void)len;
+    (void)length;
     ReadType = Chars;
 
     // We only capture characters when some one wants it
@@ -578,11 +567,7 @@ void Base::XMLReader::characters(const   XMLCh* const chars, const XMLSize_t len
     }
 }
 
-#if (XERCES_VERSION_MAJOR == 2)
-void Base::XMLReader::ignorableWhitespace( const   XMLCh* const /*chars*/, const unsigned int /*length*/)
-#else
 void Base::XMLReader::ignorableWhitespace( const   XMLCh* const /*chars*/, const XMLSize_t /*length*/)
-#endif
 {
     //fSpaceCount += length;
 }
@@ -635,7 +620,7 @@ void Base::XMLReader::resetErrors()
 
 bool Base::XMLReader::testStatus(ReaderStatus pos) const
 {
-    return StatusBits.test((size_t)pos);
+    return StatusBits.test(static_cast<size_t>(pos));
 }
 
 void Base::XMLReader::setStatus(ReaderStatus pos, bool on)
@@ -643,7 +628,7 @@ void Base::XMLReader::setStatus(ReaderStatus pos, bool on)
     if(testStatus(pos)!=on) {
         if(_reader->getParent() && pos == PartialRestore)
             _reader->getParent()->setStatus(pos,on);
-        StatusBits.set((size_t)pos, on);
+        StatusBits.set(static_cast<size_t>(pos), on);
     }
 }
 
@@ -655,20 +640,20 @@ void Base::XMLReader::setPartialRestore(bool on)
     setStatus(PartialRestoreInObject, on);
 }
 
-void Base::XMLReader::clearPartialRestoreDocumentObject(void)
+void Base::XMLReader::clearPartialRestoreDocumentObject()
 {
     setStatus(PartialRestoreInDocumentObject, false);
     setStatus(PartialRestoreInProperty, false);
     setStatus(PartialRestoreInObject, false);
 }
 
-void Base::XMLReader::clearPartialRestoreProperty(void)
+void Base::XMLReader::clearPartialRestoreProperty()
 {
     setStatus(PartialRestoreInProperty, false);
     setStatus(PartialRestoreInObject, false);
 }
 
-void Base::XMLReader::clearPartialRestoreObject(void)
+void Base::XMLReader::clearPartialRestoreObject()
 {
     setStatus(PartialRestoreInObject, false);
 }

@@ -20,14 +20,9 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <cfloat>
-# include <QMessageBox>
-# include <Precision.hxx>
-# include <QApplication>
-# include <Standard_Version.hxx>
 # include <QMessageBox>
 #endif
 
@@ -36,9 +31,9 @@
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/Selection.h>
+#include <Gui/SelectionObject.h>
 #include <Gui/CommandT.h>
 #include <Gui/MainWindow.h>
-#include <Gui/DlgEditFileIncludePropertyExternal.h>
 
 #include <Gui/Action.h>
 #include <Gui/BitmapFactory.h>
@@ -49,7 +44,8 @@
 #include <Mod/Part/App/Geometry.h>
 #include <Mod/Sketcher/App/SketchObject.h>
 
-#include "CommandConstraints.h"
+#include "Utils.h"
+
 
 using namespace std;
 using namespace SketcherGui;
@@ -181,12 +177,12 @@ void CmdSketcherSwitchVirtualSpace::activated(int iMsg)
     }
 }
 
-bool CmdSketcherSwitchVirtualSpace::isActive(void)
+bool CmdSketcherSwitchVirtualSpace::isActive()
 {
     return isSketcherVirtualSpaceActive(getActiveGuiDocument(), false);
 }
 
-void CreateSketcherCommandsVirtualSpace(void)
+void CreateSketcherCommandsVirtualSpace()
 {
     Gui::CommandManager &rcCmdMgr = Gui::Application::Instance->commandManager();
 

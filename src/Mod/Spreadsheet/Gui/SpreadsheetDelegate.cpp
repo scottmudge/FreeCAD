@@ -23,8 +23,8 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
+
 #ifndef _PreComp_
-# include <QItemDelegate>
 # include <QLineEdit>
 # include <QPushButton>
 # include <QComboBox>
@@ -70,7 +70,7 @@ QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
     App::Range range(addr,addr);
     if(sheet && sheet->getCellBinding(range)) {
         FC_ERR("Bound cell " << addr.toString() << " cannot be edited");
-        return 0;
+        return nullptr;
     }
     auto cell = sheet->getCell(App::CellAddress(index.row(),index.column()));
     if(cell && !cell->hasException()) {

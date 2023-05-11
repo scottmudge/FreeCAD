@@ -24,22 +24,19 @@
 #ifndef _PreComp_
 # include <algorithm>
 # include <climits>
+# include <QBitmap>
+
 # include <Inventor/SbBox2s.h>
 # include <Inventor/SoPickedPoint.h>
 # include <Inventor/details/SoFaceDetail.h>
-# include <Inventor/events/SoLocation2Event.h>
 # include <Inventor/events/SoMouseButtonEvent.h>
 # include <Inventor/nodes/SoCamera.h>
-# include <QBitmap>
 #endif
 
-#include "MeshSelection.h"
-#include "ViewProvider.h"
-
-#include <Base/Console.h>
-#include <Base/Tools.h>
 #include <App/Application.h>
 #include <App/Document.h>
+#include <Base/Console.h>
+#include <Base/Tools.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/MouseSelection.h>
@@ -48,11 +45,13 @@
 #include <Gui/View3DInventor.h>
 #include <Gui/View3DInventorViewer.h>
 #include <Mod/Mesh/App/MeshFeature.h>
-#include <Mod/Mesh/App/Core/Algorithm.h>
 #include <Mod/Mesh/App/Core/MeshKernel.h>
 #include <Mod/Mesh/App/Core/Iterator.h>
 #include <Mod/Mesh/App/Core/TopoAlgorithm.h>
-#include <Mod/Mesh/App/Core/Tools.h>
+
+#include "MeshSelection.h"
+#include "ViewProvider.h"
+
 
 using namespace MeshGui;
 
@@ -81,9 +80,9 @@ MeshSelection::MeshSelection()
   , addToSelection(false)
   , addComponent(false)
   , removeComponent(false)
-  , activeCB(0)
-  , selectionCB(0)
-  , ivViewer(0)
+  , activeCB(nullptr)
+  , selectionCB(nullptr)
+  , ivViewer(nullptr)
 {
     setCallback(selectGLCallback);
 }
@@ -163,14 +162,15 @@ Gui::View3DInventorViewer* MeshSelection::getViewer() const
         return ivViewer;
 
     Gui::Document* doc = Gui::Application::Instance->activeDocument();
-    if (!doc) return 0;
+    if (!doc)
+        return nullptr;
     Gui::MDIView* view = doc->getActiveView();
     if (view && view->getTypeId().isDerivedFrom(Gui::View3DInventor::getClassTypeId())) {
         Gui::View3DInventorViewer* viewer = static_cast<Gui::View3DInventor*>(view)->getViewer();
         return viewer;
     }
 
-    return 0;
+    return nullptr;
 }
 
 void MeshSelection::startInteractiveCallback(Gui::View3DInventorViewer* viewer,SoEventCallbackCB *cb)
@@ -188,7 +188,7 @@ void MeshSelection::stopInteractiveCallback(Gui::View3DInventorViewer* viewer)
         return;
     viewer->setEditing(false);
     viewer->removeEventCallback(SoMouseButtonEvent::getClassTypeId(), this->activeCB, this);
-    this->activeCB = 0;
+    this->activeCB = nullptr;
 }
 
 void MeshSelection::prepareFreehandSelection(bool add,SoEventCallbackCB *cb)
@@ -220,9 +220,8 @@ void MeshSelection::prepareFreehandSelection(bool add,SoEventCallbackCB *cb)
             QCursor custom(cursor, mask, CROSS_HOT_X, CROSS_HOT_Y);
             viewer->setComponentCursor(custom);
         };
-#if (QT_VERSION >= 0x050000)
+
         QObject::connect(viewer, &Gui::View3DInventorViewer::devicePixelRatioChanged, setComponentCursor);
-#endif
         setComponentCursor();
         this->addToSelection = add;
     }
@@ -453,8 +452,8 @@ void MeshSelection::setRemoveComponentOnClick(bool on)
 void MeshSelection::selectGLCallback(void * ud, SoEventCallback * n)
 {
     // When this callback function is invoked we must leave the edit mode
-    Gui::View3DInventorViewer* view  = reinterpret_cast<Gui::View3DInventorViewer*>(n->getUserData());
-    MeshSelection* self = reinterpret_cast<MeshSelection*>(ud);
+    Gui::View3DInventorViewer* view  = static_cast<Gui::View3DInventorViewer*>(n->getUserData());
+    MeshSelection* self = static_cast<MeshSelection*>(ud);
     self->stopInteractiveCallback(view);
     n->setHandled();
     std::vector<SbVec2f> polygon = view->getGLPolygon();
@@ -534,13 +533,13 @@ void MeshSelection::pickFaceCallback(void * ud, SoEventCallback * n)
     // handle only mouse button events
     if (n->getEvent()->isOfType(SoMouseButtonEvent::getClassTypeId())) {
         const SoMouseButtonEvent * mbe = static_cast<const SoMouseButtonEvent*>(n->getEvent());
-        Gui::View3DInventorViewer* view  = reinterpret_cast<Gui::View3DInventorViewer*>(n->getUserData());
+        Gui::View3DInventorViewer* view  = static_cast<Gui::View3DInventorViewer*>(n->getUserData());
 
         // Mark all incoming mouse button events as handled, especially, to deactivate the selection node
         n->getAction()->setHandled();
         if (mbe->getButton() == SoMouseButtonEvent::BUTTON1 && mbe->getState() == SoButtonEvent::DOWN) {
             const SoPickedPoint * point = n->getPickedPoint();
-            if (point == NULL) {
+            if (!point) {
                 Base::Console().Message("No facet picked.\n");
                 return;
             }
@@ -549,11 +548,11 @@ void MeshSelection::pickFaceCallback(void * ud, SoEventCallback * n)
 
             // By specifying the indexed mesh node 'pcFaceSet' we make sure that the picked point is
             // really from the mesh we render and not from any other geometry
-            Gui::ViewProvider* vp = view->getDocument()->getViewProviderByPathFromTail(point->getPath());
+            Gui::ViewProvider* vp = view->getViewProviderByPathFromTail(point->getPath());
             if (!vp || !vp->getTypeId().isDerivedFrom(ViewProviderMesh::getClassTypeId()))
                 return;
             ViewProviderMesh* mesh = static_cast<ViewProviderMesh*>(vp);
-            MeshSelection* self = reinterpret_cast<MeshSelection*>(ud);
+            MeshSelection* self = static_cast<MeshSelection*>(ud);
             std::list<ViewProviderMesh*> views = self->getViewProviders();
             if (std::find(views.begin(), views.end(), mesh) == views.end())
                 return;

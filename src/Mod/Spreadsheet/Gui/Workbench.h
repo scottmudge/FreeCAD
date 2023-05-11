@@ -27,6 +27,7 @@
 
 #include <QPointer>
 #include <Gui/Workbench.h>
+#include <Mod/Spreadsheet/SpreadsheetGlobal.h>
 #include "qtcolorpicker.h"
 
 class QColor;
@@ -48,12 +49,12 @@ public Q_SLOTS:
 
 class SpreadsheetGuiExport Workbench : public Gui::StdWorkbench
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 
 public:
   Workbench();
-  virtual ~Workbench();
-  void activated();
+  ~Workbench() override;
+  void activated() override;
 
 private:
   bool initialized;
@@ -62,9 +63,9 @@ private:
   QPointer<QtColorPicker> backgroundColor;
 
 protected:
-  Gui::MenuItem *setupMenuBar() const;
-  Gui::ToolBarItem* setupToolBars() const;
-  Gui::ToolBarItem* setupCommandBars() const;
+  Gui::MenuItem *setupMenuBar() const override;
+  Gui::ToolBarItem* setupToolBars() const override;
+  Gui::ToolBarItem* setupCommandBars() const override;
   void onToolbarOrientationChange(QToolBar *);
 };
 

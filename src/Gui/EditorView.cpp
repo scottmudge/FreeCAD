@@ -23,7 +23,6 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <QAbstractTextDocumentLayout>
 # include <QApplication>
 # include <QCheckBox>
 # include <QClipboard>
@@ -32,16 +31,12 @@
 # include <QVBoxLayout>
 # include <QLineEdit>
 # include <QMessageBox>
-# include <QPainter>
 # include <QPrinter>
 # include <QPrintDialog>
-# include <QScrollBar>
 # include <QPlainTextEdit>
 # include <QPrintPreviewDialog>
 # include <QSpacerItem>
 # include <QStyle>
-# include <QTextBlock>
-# include <QTextCodec>
 # include <QTextCursor>
 # include <QTextDocument>
 # include <QTextStream>
@@ -51,16 +46,15 @@
 
 #include "EditorView.h"
 #include "Application.h"
-#include "BitmapFactory.h"
 #include "FileDialog.h"
 #include "Macro.h"
 #include "MainWindow.h"
-#include "PythonDebugger.h"
 #include "PythonEditor.h"
 
+#include <Base/Exception.h>
 #include <Base/Interpreter.h>
 #include <Base/Parameter.h>
-#include <Base/Exception.h>
+
 
 using namespace Gui;
 namespace Gui {
@@ -71,7 +65,7 @@ public:
     QString fileName;
     EditorView::DisplayName displayName;
     QTimer*  activityTimer;
-    uint timeStamp;
+    qint64 timeStamp;
     bool lock;
     bool aboutToClose;
     QStringList undos;
@@ -83,12 +77,14 @@ public:
 
 /* TRANSLATOR Gui::EditorView */
 
+TYPESYSTEM_SOURCE_ABSTRACT(Gui::EditorView, Gui::MDIView)
+
 /**
  *  Constructs a EditorView which is a child of 'parent', with the
  *  name 'name'.
  */
 EditorView::EditorView(QPlainTextEdit* editor, QWidget* parent)
-    : MDIView(0,parent,Qt::WindowFlags()), WindowParameter( "Editor" )
+    : MDIView(nullptr,parent,Qt::WindowFlags()), WindowParameter( "Editor" )
 {
     d = new EditorViewP;
     d->lock = false;
@@ -113,10 +109,11 @@ EditorView::EditorView(QPlainTextEdit* editor, QWidget* parent)
     connect(editor, SIGNAL(findPrevious()), d->searchBar, SLOT(findPrevious()));
 
     // Create the layout containing the workspace and a tab bar
-    QFrame* hbox = new QFrame(this);
-    hbox->setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
-    QVBoxLayout* layout = new QVBoxLayout();
-    layout->setMargin(1);
+    auto hbox = new QFrame(this);
+    hbox->setFrameShape(QFrame::StyledPanel);
+    hbox->setFrameShadow(QFrame::Sunken);
+    auto layout = new QVBoxLayout();
+    layout->setContentsMargins(1, 1, 1, 1);
     layout->addWidget(d->textEdit);
     layout->addWidget(d->searchBar);
     d->textEdit->setParent(hbox);
@@ -194,11 +191,11 @@ void EditorView::OnChange(Base::Subject<const char*> &rCaller,const char* rcReas
 void EditorView::checkTimestamp()
 {
     QFileInfo fi(d->fileName);
-    uint timeStamp =  fi.lastModified().toTime_t();
+    qint64 timeStamp =  fi.lastModified().toSecsSinceEpoch();
     if (timeStamp != d->timeStamp) {
         switch( QMessageBox::question( this, tr("Modified file"),
                 tr("%1.\n\nThis has been modified outside of the source editor. Do you want to reload it?").arg(d->fileName),
-                QMessageBox::Yes|QMessageBox::Default, QMessageBox::No|QMessageBox::Escape) )
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) )
         {
             case QMessageBox::Yes:
                 // updates time stamp and timer
@@ -206,6 +203,8 @@ void EditorView::checkTimestamp()
                 return;
             case QMessageBox::No:
                 d->timeStamp = timeStamp;
+                break;
+            default:
                 break;
         }
     }
@@ -313,7 +312,7 @@ bool EditorView::onHasMsg(const char* pMsg) const
 }
 
 /** Checking on close state. */
-bool EditorView::canClose(void)
+bool EditorView::canClose()
 {
     if ( !d->textEdit->document()->isModified() )
         return true;
@@ -321,8 +320,7 @@ bool EditorView::canClose(void)
     switch( QMessageBox::question(this, tr("Unsaved document"),
                                     tr("The document has been modified.\n"
                                        "Do you want to save your changes?"),
-                                     QMessageBox::Yes|QMessageBox::Default, QMessageBox::No,
-                                     QMessageBox::Cancel|QMessageBox::Escape))
+                                     QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Cancel))
     {
         case QMessageBox::Yes:
             return saveFile();
@@ -343,7 +341,7 @@ void EditorView::setDisplayName(EditorView::DisplayName type)
 /**
  * Saves the content of the editor to a file specified by the appearing file dialog.
  */
-bool EditorView::saveAs(void)
+bool EditorView::saveAs()
 {
     QString fn = FileDialog::getSaveFileName(this, QObject::tr("Save Macro"),
         QString(), QStringLiteral("%1 (*.FCMacro);;Python (*.py)").arg(tr("FreeCAD macro")));
@@ -372,7 +370,7 @@ bool EditorView::open(const QString& fileName)
     file.close();
 
     QFileInfo fi(fileName);
-    d->timeStamp =  fi.lastModified().toTime_t();
+    d->timeStamp =  fi.lastModified().toSecsSinceEpoch();
     d->activityTimer->setSingleShot(true);
     d->activityTimer->start(3000);
 
@@ -384,7 +382,7 @@ bool EditorView::open(const QString& fileName)
  * Copies the selected text to the clipboard and deletes it from the text edit.
  * If there is no selected text nothing happens.
  */
-void EditorView::cut(void)
+void EditorView::cut()
 {
     d->textEdit->cut();
 }
@@ -392,7 +390,7 @@ void EditorView::cut(void)
 /**
  * Copies any selected text to the clipboard.
  */
-void EditorView::copy(void)
+void EditorView::copy()
 {
     d->textEdit->copy();
 }
@@ -401,7 +399,7 @@ void EditorView::copy(void)
  * Pastes the text from the clipboard into the text edit at the current cursor position.
  * If there is no text in the clipboard nothing happens.
  */
-void EditorView::paste(void)
+void EditorView::paste()
 {
     d->textEdit->paste();
 }
@@ -410,7 +408,7 @@ void EditorView::paste(void)
  * Undoes the last operation.
  * If there is no operation to undo, i.e. there is no undo step in the undo/redo history, nothing happens.
  */
-void EditorView::undo(void)
+void EditorView::undo()
 {
     d->lock = true;
     if (!d->undos.isEmpty()) {
@@ -425,7 +423,7 @@ void EditorView::undo(void)
  * Redoes the last operation.
  * If there is no operation to undo, i.e. there is no undo step in the undo/redo history, nothing happens.
  */
-void EditorView::redo(void)
+void EditorView::redo()
 {
     d->lock = true;
     if (!d->redos.isEmpty()) {
@@ -481,7 +479,7 @@ void EditorView::printPdf()
 void EditorView::setCurrentFileName(const QString &fileName)
 {
     d->fileName = fileName;
-    /*emit*/ changeFileName(d->fileName);
+    Q_EMIT changeFileName(d->fileName);
     d->textEdit->document()->setModified(false);
 
     QString name;
@@ -525,13 +523,15 @@ bool EditorView::saveFile()
     if (!file.open(QFile::WriteOnly))
         return false;
     QTextStream ts(&file);
-    ts.setCodec(QTextCodec::codecForName("UTF-8"));
+#if QT_VERSION < 0x060000
+    ts.setCodec("UTF-8");
+#endif
     ts << d->textEdit->document()->toPlainText();
     file.close();
     d->textEdit->document()->setModified(false);
 
     QFileInfo fi(d->fileName);
-    d->timeStamp =  fi.lastModified().toTime_t();
+    d->timeStamp =  fi.lastModified().toSecsSinceEpoch();
     return true;
 }
 
@@ -586,6 +586,8 @@ void EditorView::focusInEvent (QFocusEvent *)
 
 // ---------------------------------------------------------
 
+TYPESYSTEM_SOURCE_ABSTRACT(Gui::PythonEditorView, Gui::EditorView)
+
 PythonEditorView::PythonEditorView(PythonEditor* editor, QWidget* parent)
   : EditorView(editor, parent), _pye(editor)
 {
@@ -623,9 +625,12 @@ bool PythonEditorView::onMsg(const char* pMsg,const char** ppReturn)
  */
 bool PythonEditorView::onHasMsg(const char* pMsg) const
 {
-    if (strcmp(pMsg,"Run")==0)  return true;
-    if (strcmp(pMsg,"StartDebug")==0)  return true;
-    if (strcmp(pMsg,"ToggleBreakpoint")==0)  return true;
+    if (strcmp(pMsg,"Run")==0)
+        return true;
+    if (strcmp(pMsg,"StartDebug")==0)
+        return true;
+    if (strcmp(pMsg,"ToggleBreakpoint")==0)
+        return true;
     return EditorView::onHasMsg(pMsg);
 }
 
@@ -636,7 +641,7 @@ void PythonEditorView::executeScript()
 {
     // always save the macro when it is modified
     if (EditorView::onHasMsg("Save"))
-        EditorView::onMsg("Save", 0);
+        EditorView::onMsg("Save", nullptr);
     try {
         Application::Instance->macroManager()->run(Gui::MacroManager::File,fileName().toUtf8());
     }
@@ -816,9 +821,16 @@ void SearchBar::findText(bool skip, bool next, const QString& str)
 
     textEditor->setTextCursor(newCursor);
 
-    QPalette palette;
-    palette.setColor(QPalette::Active, QPalette::Base, found ? Qt::white : QColor(255, 80, 80));
-    searchText->setPalette(palette);
+    QString styleSheet;
+    if (!found) {
+        styleSheet = QStringLiteral(
+            " QLineEdit {\n"
+            "     background-color: rgb(221,144,161);\n"
+            " }\n"
+        );
+    }
+
+    searchText->setStyleSheet(styleSheet);
 }
 
 void SearchBar::updateButtons()

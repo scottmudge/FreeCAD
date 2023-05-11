@@ -23,21 +23,21 @@
 
 #include "PreCompiled.h"
 
-#include <Base/Rotation.h>
-#include <Base/Tools.h>
 #include <Base/GeometryPyCXX.h>
+#include <Base/Tools.h>
 
 // inclusion of the generated files (generated out of RotationPy.xml)
-#include "VectorPy.h"
 #include "RotationPy.h"
 #include "RotationPy.cpp"
+#include "VectorPy.h"
+
 
 using namespace Base;
 
 // returns a string which represents the object e.g. when printed in python
 std::string RotationPy::representation() const
 {
-    RotationPy::PointerType ptr = reinterpret_cast<RotationPy::PointerType>(_pcTwinPointer);
+    RotationPy::PointerType ptr = getRotationPtr();
     Py::Float q0(ptr->getValue()[0]);
     Py::Float q1(ptr->getValue()[1]);
     Py::Float q2(ptr->getValue()[2]);
@@ -187,7 +187,7 @@ int RotationPy::PyInit(PyObject* args, PyObject* kwds)
             str += "FreeCAD exception thrown (";
             str += e.what();
             str += ")";
-            PyErr_SetString(Base::BaseExceptionFreeCADError,str.c_str());
+            PyErr_SetString(Base::PyExc_FC_GeneralError,str.c_str());
             return -1;
         }
 
@@ -280,7 +280,7 @@ PyObject* RotationPy::slerp(PyObject * args)
     PyObject *rot;
     double t;
     if (!PyArg_ParseTuple(args, "O!d", &(RotationPy::Type), &rot, &t))
-        return 0;
+        return nullptr;
     Rotation *rot0 = this->getRotationPtr();
     Rotation *rot1 = static_cast<RotationPy*>(rot)->getRotationPtr();
     Rotation sl = Rotation::slerp(*rot0, *rot1, t);
@@ -357,7 +357,7 @@ PyObject* RotationPy::toEulerAngles(PyObject * args)
 PyObject* RotationPy::toMatrix(PyObject * args)
 {
     if (!PyArg_ParseTuple(args, ""))
-        return NULL;
+        return nullptr;
     Base::Matrix4D mat;
     getRotationPtr()->getValue(mat);
     return new MatrixPy(new Matrix4D(mat));
@@ -420,7 +420,7 @@ Py::Object RotationPy::getRawAxis() const
     return Py::Vector(axis);
 }
 
-Py::Object RotationPy::getAxis(void) const
+Py::Object RotationPy::getAxis() const
 {
     Base::Vector3d axis; double angle;
     this->getRotationPtr()->getValue(axis, angle);

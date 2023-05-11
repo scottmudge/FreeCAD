@@ -20,44 +20,46 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <QApplication>
 # include <QAction>
+# include <QApplication>
 # include <QToolBar>
 # include <QToolButton>
 # include <QMenu>
-# include <QPointer>
-# include <QPointer>
 # include <QHBoxLayout>
-# include <QStatusBar>
 # include <QMouseEvent>
 # include <QCheckBox>
+# include <QPointer>
+# include <QStatusBar>
 #endif
 
 #include <QWidgetAction>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string.hpp>
+
 #include <Base/Tools.h>
 #include <Base/Console.h>
+
 #include "ToolBarManager.h"
-#include "MainWindow.h"
+
+#include "Action.h"
 #include "Application.h"
 #include "Command.h"
-#include "Action.h"
+#include "MainWindow.h"
 #include "OverlayWidgets.h"
 
 FC_LOG_LEVEL_INIT("Toolbar", true, 2)
 
+
 using namespace Gui;
 
-ToolBarItem::ToolBarItem()
+ToolBarItem::ToolBarItem() : forceHide(HideStyle::VISIBLE)
 {
 }
 
-ToolBarItem::ToolBarItem(ToolBarItem* item)
+ToolBarItem::ToolBarItem(ToolBarItem* item, HideStyle forcehide) : forceHide(forcehide)
 {
     if ( item )
         item->appendItem(this);
@@ -98,24 +100,24 @@ ToolBarItem* ToolBarItem::findItem(const std::string& name)
     if ( _name == name ) {
         return this;
     } else {
-        for ( QList<ToolBarItem*>::ConstIterator it = _items.begin(); it != _items.end(); ++it ) {
+        for ( QList<ToolBarItem*>::Iterator it = _items.begin(); it != _items.end(); ++it ) {
             if ( (*it)->_name == name ) {
                 return *it;
             }
         }
     }
 
-    return 0;
+    return nullptr;
 }
 
 ToolBarItem* ToolBarItem::copy() const
 {
-    ToolBarItem* root = new ToolBarItem;
+    auto root = new ToolBarItem;
     root->setCommand( command() );
     root->setID( id() );
 
     QList<ToolBarItem*> items = getItems();
-    for ( QList<ToolBarItem*>::ConstIterator it = items.begin(); it != items.end(); ++it ) {
+    for ( QList<ToolBarItem*>::Iterator it = items.begin(); it != items.end(); ++it ) {
         root->appendItem( (*it)->copy() );
     }
 
@@ -166,7 +168,7 @@ ToolBarItem& ToolBarItem::operator << (ToolBarItem* item)
 
 ToolBarItem& ToolBarItem::operator << (const std::string& command)
 {
-    ToolBarItem* item = new ToolBarItem(this);
+    auto item = new ToolBarItem(this);
     item->setCommand(command);
     return *this;
 }
@@ -178,7 +180,7 @@ QList<ToolBarItem*> ToolBarItem::getItems() const
 
 // -----------------------------------------------------------
 
-ToolBarManager* ToolBarManager::_instance=0;
+ToolBarManager* ToolBarManager::_instance=nullptr;
 
 ToolBarManager* ToolBarManager::getInstance()
 {
@@ -190,7 +192,7 @@ ToolBarManager* ToolBarManager::getInstance()
 void ToolBarManager::destruct()
 {
     delete _instance;
-    _instance = 0;
+    _instance = nullptr;
 }
 
 class StatusBarArea : public QWidget
@@ -548,7 +550,7 @@ void ToolBarManager::connectToolBar(QToolBar *toolbar)
     });
     QByteArray name = p->objectName().toUtf8();
     p->setMovable(hMovable->GetBool(name, isDefaultMovable()));
-    FC_LOG("connect toolbar " << name.constData() << ' ' << p);
+    FC_TRACE("connect toolbar " << name.constData() << ' ' << p);
 }
 
 void ToolBarManager::removeToolBar(const QString &id)
@@ -648,7 +650,7 @@ void ToolBarManager::setup(ToolBarItem* toolBarItems)
         setup(item, toolbar);
         if (isToolBarEmpty(toolbar)) {
             toolbar->toggleViewAction()->setVisible(false);
-            FC_LOG("Empty toolbar " << name.toUtf8().constData());
+            FC_TRACE("Empty toolbar " << name.toUtf8().constData());
             continue;
         }
 
@@ -880,7 +882,7 @@ std::map<QString, QPointer<QToolBar>> ToolBarManager::toolBars()
                 std::swap(a, b);
             if (!a->windowTitle().isEmpty() || !isToolBarEmpty(a)) {
                 // replace toolbar and insert it at the same location
-                FC_LOG("replacing " << name.toUtf8().constData() << ' ' << b << " -> " << a);
+                FC_TRACE("replacing " << name.toUtf8().constData() << ' ' << b << " -> " << a);
                 getMainWindow()->insertToolBar(b, a);
                 p = a;
                 connectToolBar(a);

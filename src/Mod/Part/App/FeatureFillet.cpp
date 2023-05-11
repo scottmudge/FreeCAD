@@ -20,10 +20,10 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <BRepFilletAPI_MakeFillet.hxx>
+# include <Precision.hxx>
 # include <TopExp.hxx>
 # include <TopExp_Explorer.hxx>
 # include <TopoDS.hxx>
@@ -31,16 +31,14 @@
 # include <TopTools_IndexedMapOfShape.hxx>
 #endif
 
+#include <Base/Exception.h>
 
 #include <App/Document.h>
 #include "TopoShapeOpCode.h"
 #include "FeatureFillet.h"
-#include <Base/Exception.h>
 
-#include <Precision.hxx>
 
 using namespace Part;
-
 
 PROPERTY_SOURCE(Part::Fillet, Part::FilletBase)
 
@@ -48,7 +46,7 @@ Fillet::Fillet()
 {
 }
 
-App::DocumentObjectExecReturn *Fillet::execute(void)
+App::DocumentObjectExecReturn *Fillet::execute()
 {
     App::DocumentObject* link = Base.getValue();
     if (!link)

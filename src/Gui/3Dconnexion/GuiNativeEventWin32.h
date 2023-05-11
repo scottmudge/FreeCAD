@@ -29,11 +29,8 @@
 
 #include <map>
 
-//#define _WIN32_WINNT 0x0501  //target at least windows XP
 #include <Windows.h>
-#if QT_VERSION >= 0x050000
 #include "GuiRawInputEventFilter.h"
-#endif
 
 class QMainWindow;
 class GUIApplicationNativeEventAware;

@@ -22,28 +22,27 @@
 
 
 #include "PreCompiled.h"
-#ifndef _PreComp_
-# include <cmath>
-# include <climits>
-#endif
 
 #include <boost/algorithm/string/predicate.hpp>
+#include "Base/Exception.h"
+
 #include "Rotation.h"
 #include "Matrix.h"
-#include "Base/Exception.h"
+#include "Precision.h"
+
 
 using namespace Base;
 
 Rotation::Rotation()
+    : quat{0.0,0.0,0.0,1.0}
+    , _axis{0.0,0.0,1.0}
+    , _angle{0.0}
 {
-    quat[0]=quat[1]=quat[2]=0.0;quat[3]=1.0;
-
-    _axis.Set(0.0, 0.0, 1.0);
-    _angle = 0.0;
 }
 
 /** Construct a rotation by rotation axis and angle */
 Rotation::Rotation(const Vector3d& axis, const double fAngle)
+    : Rotation()
 {
     // set to (0,0,1) as fallback in case the passed axis is the null vector
     _axis.Set(0.0, 0.0, 1.0);
@@ -51,6 +50,7 @@ Rotation::Rotation(const Vector3d& axis, const double fAngle)
 }
 
 Rotation::Rotation(const Matrix4D& matrix)
+    : Rotation()
 {
     this->setValue(matrix);
 }
@@ -60,6 +60,7 @@ Rotation::Rotation(const Matrix4D& matrix)
  * where the quaternion is specified by q=w+xi+yj+zk.
  */
 Rotation::Rotation(const double q[4])
+    : Rotation()
 {
     this->setValue(q);
 }
@@ -69,16 +70,19 @@ Rotation::Rotation(const double q[4])
  * where the quaternion is specified by q=w+xi+yj+zk.
  */
 Rotation::Rotation(const double q0, const double q1, const double q2, const double q3)
+    : Rotation()
 {
     this->setValue(q0, q1, q2, q3);
 }
 
 Rotation::Rotation(const Vector3d & rotateFrom, const Vector3d & rotateTo)
+    : Rotation()
 {
     this->setValue(rotateFrom, rotateTo);
 }
 
 Rotation::Rotation(const Rotation& rot)
+    : Rotation()
 {
     this->quat[0] = rot.quat[0];
     this->quat[1] = rot.quat[1];
@@ -106,7 +110,7 @@ Rotation & Rotation::operator = (const Rotation& rot)
     return *this;
 }
 
-const double * Rotation::getValue(void) const
+const double * Rotation::getValue() const
 {
     return &this->quat[0];
 }
@@ -176,10 +180,14 @@ void Rotation::getValue(Matrix4D & matrix) const
 {
     // Taken from <http://de.wikipedia.org/wiki/Quaternionen>
     //
-    const double x = this->quat[0];
-    const double y = this->quat[1];
-    const double z = this->quat[2];
-    const double w = this->quat[3];
+    const double l = sqrt(this->quat[0] * this->quat[0] +
+                          this->quat[1] * this->quat[1] +
+                          this->quat[2] * this->quat[2] +
+                          this->quat[3] * this->quat[3]);
+    const double x = this->quat[0] / l;
+    const double y = this->quat[1] / l;
+    const double z = this->quat[2] / l;
+    const double w = this->quat[3] / l;
 
     matrix[0][0] = 1.0-2.0*(y*y+z*z);
     matrix[0][1] = 2.0*(x*y-z*w);
@@ -317,7 +325,7 @@ void Rotation::normalize()
     }
 }
 
-Rotation & Rotation::invert(void)
+Rotation & Rotation::invert()
 {
     this->quat[0] = -this->quat[0];
     this->quat[1] = -this->quat[1];
@@ -330,7 +338,7 @@ Rotation & Rotation::invert(void)
     return *this;
 }
 
-Rotation Rotation::inverse(void) const
+Rotation Rotation::inverse() const
 {
     Rotation rot;
     rot.quat[0] = -this->quat[0];
@@ -341,10 +349,35 @@ Rotation Rotation::inverse(void) const
     rot._axis[0] = -this->_axis[0];
     rot._axis[1] = -this->_axis[1];
     rot._axis[2] = -this->_axis[2];
+    rot._angle = this->_angle;
     return rot;
 }
 
+/*!
+  Let this rotation be right-multiplied by \a q. Returns reference to
+  self.
+
+  \sa multRight()
+*/
 Rotation & Rotation::operator*=(const Rotation & q)
+{
+    return multRight(q);
+}
+
+Rotation Rotation::operator*(const Rotation & q) const
+{
+    Rotation quat(*this);
+    quat *= q;
+    return quat;
+}
+
+/*!
+  Let this rotation be right-multiplied by \a q. Returns reference to
+  self.
+
+  \sa multLeft()
+*/
+Rotation& Rotation::multRight(const Base::Rotation& q)
 {
     // Taken from <http://de.wikipedia.org/wiki/Quaternionen>
     double x0, y0, z0, w0;
@@ -359,23 +392,37 @@ Rotation & Rotation::operator*=(const Rotation & q)
     return *this;
 }
 
-Rotation Rotation::operator*(const Rotation & q) const
+/*!
+  Let this rotation be left-multiplied by \a q. Returns reference to
+  self.
+
+  \sa multRight()
+*/
+Rotation& Rotation::multLeft(const Base::Rotation& q)
 {
-    Rotation quat(*this);
-    quat *= q;
-    return quat;
+    // Taken from <http://de.wikipedia.org/wiki/Quaternionen>
+    double x0, y0, z0, w0;
+    q.getValue(x0, y0, z0, w0);
+    double x1, y1, z1, w1;
+    this->getValue(x1, y1, z1, w1);
+
+    this->setValue(w0*x1 + x0*w1 + y0*z1 - z0*y1,
+                   w0*y1 - x0*z1 + y0*w1 + z0*x1,
+                   w0*z1 + x0*y1 - y0*x1 + z0*w1,
+                   w0*w1 - x0*x1 - y0*y1 - z0*z1);
+    return *this;
 }
 
 bool Rotation::operator==(const Rotation & q) const
 {
-     if ((this->quat[0] == q.quat[0] &&
-          this->quat[1] == q.quat[1] &&
-          this->quat[2] == q.quat[2] &&
-          this->quat[3] == q.quat[3]) ||
-         (this->quat[0] == -q.quat[0] &&
-          this->quat[1] == -q.quat[1] &&
-          this->quat[2] == -q.quat[2] &&
-          this->quat[3] == -q.quat[3]))
+    if ((this->quat[0] == q.quat[0] &&
+         this->quat[1] == q.quat[1] &&
+         this->quat[2] == q.quat[2] &&
+         this->quat[3] == q.quat[3]) ||
+        (this->quat[0] == -q.quat[0] &&
+         this->quat[1] == -q.quat[1] &&
+         this->quat[2] == -q.quat[2] &&
+         this->quat[3] == -q.quat[3]))
         return true;
     return false;
 }
@@ -438,6 +485,20 @@ void Rotation::multVec(const Vector3d & src, Vector3d & dst) const
     dst.z = dz;
 }
 
+void Rotation::multVec(const Vector3f & src, Vector3f & dst) const
+{
+    Base::Vector3d srcd = Base::toVector<double>(src);
+    multVec(srcd, srcd);
+    dst = Base::toVector<float>(srcd);
+}
+
+Vector3f Rotation::multVec(const Vector3f & src) const
+{
+    Vector3f dst;
+    multVec(src,dst);
+    return dst;
+}
+
 void Rotation::scaleAngle(const double scaleFactor)
 {
     Vector3d axis;
@@ -483,14 +544,14 @@ Rotation Rotation::slerp(const Rotation & q0, const Rotation & q1, double t)
     return Rotation(x, y, z, w);
 }
 
-Rotation Rotation::identity(void)
+Rotation Rotation::identity()
 {
     return Rotation(0.0, 0.0, 0.0, 1.0);
 }
 
 Rotation Rotation::makeRotationByAxes(Vector3d xdir, Vector3d ydir, Vector3d zdir, const char* priorityOrder)
 {
-    const double tol = 1e-7; //equal to OCC Precision::Confusion
+    const double tol = Precision::Confusion();
     enum dirIndex {
         X,
         Y,
@@ -519,7 +580,7 @@ Rotation Rotation::makeRotationByAxes(Vector3d xdir, Vector3d ydir, Vector3d zdi
 
 
     auto dropPriority = [&order](int index){
-        char tmp;
+        int tmp;
         if (index == 0){
             tmp = order[0];
             order[0] = order[1];
@@ -535,7 +596,7 @@ Rotation Rotation::makeRotationByAxes(Vector3d xdir, Vector3d ydir, Vector3d zdi
     //pick up the strict direction
     Vector3d mainDir;
     for (int i = 0; i < 3; ++i){
-        mainDir = *(dirs[order[0]]);
+        mainDir = *(dirs[size_t(order[0])]);
         if (mainDir.Length() > tol)
             break;
         else
@@ -548,7 +609,7 @@ Rotation Rotation::makeRotationByAxes(Vector3d xdir, Vector3d ydir, Vector3d zdi
     //pick up the 2nd priority direction, "hint" direction.
     Vector3d hintDir;
     for (int i = 0; i < 2; ++i){
-        hintDir = *(dirs[order[1]]);
+        hintDir = *(dirs[size_t(order[1])]);
         if ((hintDir.Cross(mainDir)).Length() > tol)
             break;
         else
@@ -753,7 +814,7 @@ struct EulerSequence_Parameters
 
 EulerSequence_Parameters translateEulerSequence (const Rotation::EulerSequence theSeq)
 {
-    typedef EulerSequence_Parameters Params;
+    using Params = EulerSequence_Parameters;
     const bool F = false;
     const bool T = true;
 
@@ -853,7 +914,7 @@ const char *EulerSequenceNames[] = {
 const char * Rotation::eulerSequenceName(EulerSequence seq)
 {
     if (seq == Invalid || seq >= EulerSequenceLast)
-        return 0;
+        return nullptr;
     return EulerSequenceNames[seq-1];
 }
 
@@ -862,7 +923,7 @@ Rotation::EulerSequence Rotation::eulerSequenceFromName(const char *name)
     if (name) {
         for (unsigned i=0; i<sizeof(EulerSequenceNames)/sizeof(EulerSequenceNames[0]); ++i) {
             if (boost::iequals(name, EulerSequenceNames[i]))
-                return (EulerSequence)(i+1);
+                return static_cast<EulerSequence>(i+1);
         }
     }
     return Invalid;

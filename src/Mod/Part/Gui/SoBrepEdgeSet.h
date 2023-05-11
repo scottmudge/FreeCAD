@@ -23,21 +23,14 @@
 #ifndef PARTGUI_SOBREPEDGESET_H
 #define PARTGUI_SOBREPEDGESET_H
 
-#include <Inventor/fields/SoSFInt32.h>
 #include <Inventor/fields/SoMFInt32.h>
-#include <Inventor/fields/SoSFNode.h>
-#include <Inventor/fields/SoSubField.h>
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoSFColor.h>
-#include <Inventor/nodes/SoSubNode.h>
 #include <Inventor/nodes/SoIndexedLineSet.h>
-#include <Inventor/elements/SoLazyElement.h>
-#include <Inventor/elements/SoReplacedElement.h>
-#include <Inventor/sensors/SoFieldSensor.h>
-#include <vector>
 #include <memory>
-#include <set>
+#include <vector>
 #include <Gui/SoFCSelectionContext.h>
+#include <Mod/Part/PartGlobal.h>
 #include "BoundBoxRayPick.h"
 
 class SoCoordinateElement;
@@ -47,7 +40,7 @@ class SoTextureCoordinateBundle;
 namespace PartGui {
 
 class PartGuiExport SoBrepEdgeSet : public SoIndexedLineSet {
-    typedef SoIndexedLineSet inherited;
+    using inherited = SoIndexedLineSet;
 
     SO_NODE_HEADER(SoBrepEdgeSet);
 
@@ -65,23 +58,22 @@ public:
     void initBoundingBoxes(const SbVec3f *coords, int numverts);
 
 protected:
-    virtual void GLRender(SoGLRenderAction *action);
-    virtual void GLRenderInPath(SoGLRenderAction *action);
-    virtual void GLRenderBelowPath(SoGLRenderAction * action);
-    virtual void doAction(SoAction* action); 
-    virtual SoDetail * createLineSegmentDetail(
+    void GLRender(SoGLRenderAction *action) override;
+    void GLRenderInPath(SoGLRenderAction *action) override;
+    void GLRenderBelowPath(SoGLRenderAction * action) override;
+    void doAction(SoAction* action) override;
+    SoDetail * createLineSegmentDetail(
         SoRayPickAction *action,
         const SoPrimitiveVertex *v1,
         const SoPrimitiveVertex *v2,
-        SoPickedPoint *pp);
-
-    virtual void getBoundingBox(SoGetBoundingBoxAction * action);
-    virtual void notify(SoNotList * list);
-    virtual void rayPick(SoRayPickAction *action);
+        SoPickedPoint *pp) override;
+    void getBoundingBox(SoGetBoundingBoxAction * action) override;
+    void notify(SoNotList * list) override;
+    void rayPick(SoRayPickAction *action) override;
 
 private:
-    typedef Gui::SoFCSelectionContextEx SelContext;
-    typedef Gui::SoFCSelectionContextExPtr SelContextPtr;
+    using SelContext = Gui::SoFCSelectionContextEx;
+    using SelContextPtr = Gui::SoFCSelectionContextExPtr;
     
     void glRender(SoGLRenderAction *action, bool inpath);
     void renderHighlight(SoGLRenderAction *action, SelContextPtr);

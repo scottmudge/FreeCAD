@@ -20,40 +20,33 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <QGridLayout>
-# include <QHeaderView>
 # include <QEvent>
+# include <QHeaderView>
+# include <QGridLayout>
 # include <QTimer>
-# include <boost_bind_bind.hpp>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-#include <Base/Parameter.h>
-#include <App/PropertyStandard.h>
-#include <App/PropertyGeo.h>
-#include <App/PropertyLinks.h>
-#include <App/PropertyContainer.h>
-#include <App/DocumentObject.h>
 #include <App/Document.h>
+#include <App/DocumentObject.h>
 #include <Base/Console.h>
+#include <Base/Parameter.h>
 #include <Base/Tools.h>
 
 #include "PropertyView.h"
 #include "Application.h"
-#include "MainWindow.h"
 #include "Document.h"
-#include "BitmapFactory.h"
-#include "ViewProvider.h"
-#include "ViewProviderDocumentObject.h"
+#include "MainWindow.h"
+#include "SelectionObject.h"
 #include "Tree.h"
 #include "ViewParams.h"
-
+#include "ViewProvider.h"
+#include "ViewProviderDocumentObject.h"
 #include "propertyeditor/PropertyEditor.h"
+
 
 using namespace std;
 using namespace Gui;
@@ -78,7 +71,7 @@ static ParameterGrp::handle _GetParam() {
  * in two tabs.
  */
 PropertyView::PropertyView(QWidget *parent)
-  : QWidget(parent),SelectionObserver(false,0)
+  : QWidget(parent), SelectionObserver(false, ResolveMode::NoResolve)
 {
     hParam = App::GetApplication().GetParameterGroupByPath(
                 "User parameter:BaseApp/Preferences/PropertyView");
@@ -93,13 +86,13 @@ PropertyView::PropertyView(QWidget *parent)
                      || boost::equals(Name, "AutoExpandData")))
             {
                 paramChanged = true;
-                timer->start(100);
+                timer->start(ViewParams::getPropertyViewTimer());
             }
         });
 
-    QGridLayout* pLayout = new QGridLayout( this );
+    auto pLayout = new QGridLayout( this );
     pLayout->setSpacing(0);
-    pLayout->setMargin (0);
+    pLayout->setContentsMargins(0, 0, 0, 0);
 
     timer = new QTimer(this);
     timer->setSingleShot(true);
@@ -208,7 +201,8 @@ bool PropertyView::showAll() {
 void PropertyView::setShowAll(bool enable) {
     if(_ShowAll != enable) {
         _ShowAll = enable;
-        for(auto view : getMainWindow()->findChildren<PropertyView*>()) {
+        const auto views = getMainWindow()->findChildren<PropertyView*>();
+        for(auto view : views) {
             if(view->isVisible()) {
                 view->propertyEditorData->buildUp();
                 view->propertyEditorView->buildUp();
@@ -361,7 +355,7 @@ void PropertyView::checkEnable(const char *doc) {
     }
     // check if at least one selected object is part of the active document
     setEnabled(!Selection().hasSelection()
-            || Selection().hasSelection(doc,false));
+            || Selection().hasSelection(doc, ResolveMode::NoResolve));
 }
 
 struct PropertyView::PropInfo
@@ -373,7 +367,7 @@ struct PropertyView::PropInfo
 
 struct PropertyView::PropFind {
     const PropInfo& item;
-    PropFind(const PropInfo& item) : item(item) {}
+    explicit PropFind(const PropInfo& item) : item(item) {}
     bool operator () (const PropInfo& elem) const
     {
         return (elem.propId == item.propId) &&
@@ -432,9 +426,16 @@ void PropertyView::slotActivateView(const Gui::MDIView *view)
 }
 
 void PropertyView::onTimer() {
+    // See https://forum.freecadweb.org/viewtopic.php?f=8&t=72526
+    if (this->updating) {
+        timer->start(ViewParams::getPropertyViewTimer());
+        return;
+    }
+
+    Base::StateLocker guard(this->updating);
     timer->stop();
     applyParams();
-    if(!this->isConnectionAttached()) {
+    if(!this->isSelectionAttached()) {
         propertyEditorData->buildUp();
         propertyEditorView->buildUp();
         clearPropertyItemSelection();
@@ -479,7 +480,7 @@ void PropertyView::onTimer() {
     std::vector<PropInfo> propDataMap;
     std::vector<PropInfo> propViewMap;
     bool checkLink = true;
-    ViewProviderDocumentObject *vpLast = 0;
+    ViewProviderDocumentObject *vpLast = nullptr;
     auto sels = Gui::Selection().getSelectionEx("*");
     for(auto &sel : sels) {
         App::DocumentObject *ob = sel.getObject();
@@ -526,7 +527,7 @@ void PropertyView::onTimer() {
                 nameType.propName = ob->getPropertyName(prop);
                 nameType.propId = prop->getTypeId().getKey();
 
-                std::vector<PropInfo>::iterator pi = std::find_if(propDataMap.begin(), propDataMap.end(), PropFind(nameType));
+                auto pi = std::find_if(propDataMap.begin(), propDataMap.end(), PropFind(nameType));
                 if (pi != propDataMap.end()) {
                     pi->propList.push_back(prop);
                 }
@@ -547,7 +548,7 @@ void PropertyView::onTimer() {
                 nameType.propName = pt->first;
                 nameType.propId = pt->second->getTypeId().getKey();
 
-                std::vector<PropInfo>::iterator pi = std::find_if(propViewMap.begin(), propViewMap.end(), PropFind(nameType));
+                auto pi = std::find_if(propViewMap.begin(), propViewMap.end(), PropFind(nameType));
                 if (pi != propViewMap.end()) {
                     pi->propList.push_back(pt->second);
                 }
@@ -669,10 +670,10 @@ PropertyDockView::PropertyDockView(Gui::Document* pcDocument, QWidget *parent)
 {
     setWindowTitle(tr("Property View"));
 
-    PropertyView* view = new PropertyView(this);
-    QGridLayout* pLayout = new QGridLayout(this);
+    auto view = new PropertyView(this);
+    auto pLayout = new QGridLayout(this);
     pLayout->setSpacing(0);
-    pLayout->setMargin (0);
+    pLayout->setContentsMargins(0, 0, 0, 0);
     pLayout->addWidget(view, 0, 0);
 
     resize( 200, 400 );

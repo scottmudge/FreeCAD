@@ -62,7 +62,8 @@ macro(InitializeFreeCADBuildOptions)
         option(FREECAD_LIBPACK_USE "Use the LibPack to Build FreeCAD (only Win32 so far)." OFF)
         set(FREECAD_LIBPACK_DIR ""  CACHE PATH  "Directory of the FreeCAD LibPack")
     endif(MSVC)
-    option(BUILD_QT5 "Build with Qt5." ON)
+
+    ChooseQtVersion()
 
     # https://blog.kitware.com/constraining-values-with-comboboxes-in-cmake-cmake-gui/
     set(FREECAD_USE_OCC_VARIANT "Community Edition"  CACHE STRING  "Official OpenCASCADE version or community edition")
@@ -71,19 +72,9 @@ macro(InitializeFreeCADBuildOptions)
                  "Community Edition"
     )
 
-    if (BUILD_QT5)
-      option(FREECAD_USE_QTOPENGL_WIDGET "Replace QGLWidget with QOpenGLWidget." ON)
-      if (FREECAD_USE_QTOPENGL_WIDGET)
-          set(HAVE_QT5_OPENGL 1 )
-      endif()
-      set(FREECAD_USE_QTWEBMODULE "Automatic"  CACHE STRING  "Qt Webkit or Qt WebEngine")
-      set_property(CACHE FREECAD_USE_QTWEBMODULE PROPERTY STRINGS
-                   "Automatic"
-                   "Qt Webkit"
-                   "Qt WebEngine"
-      )
-    endif()
     configure_file(${CMAKE_SOURCE_DIR}/src/QtOpenGL.h.cmake ${CMAKE_BINARY_DIR}/src/QtOpenGL.h)
+
+    option(BUILD_DESIGNER_PLUGIN "Build and install the designer plugin" OFF)
 
     if(APPLE)
         option(FREECAD_CREATE_MAC_APP "Create app bundle on install" OFF)
@@ -114,10 +105,9 @@ macro(InitializeFreeCADBuildOptions)
     option(BUILD_TEMPLATE "Build the FreeCAD template module which is only for testing purposes" OFF)
     option(BUILD_ADDONMGR "Build the FreeCAD addon manager module" ON)
     option(BUILD_ARCH "Build the FreeCAD Architecture module" ON)
-    option(BUILD_ASSEMBLY "Build the FreeCAD Assembly module" OFF)
     option(BUILD_COMPLETE "Build the FreeCAD complete module" OFF)
     option(BUILD_DRAFT "Build the FreeCAD draft module" ON)
-    option(BUILD_DRAWING "Build the FreeCAD drawing module" ON)
+    option(BUILD_DRAWING "Build the FreeCAD drawing module" OFF)
     option(BUILD_IDF "Build the FreeCAD idf module" ON)
     option(BUILD_IMAGE "Build the FreeCAD image module" ON)
     option(BUILD_IMPORT "Build the FreeCAD import module" ON)

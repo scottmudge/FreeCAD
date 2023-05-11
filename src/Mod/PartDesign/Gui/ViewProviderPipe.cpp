@@ -24,24 +24,16 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QMessageBox>
 # include <QMenu>
-# include <TopExp.hxx>
-# include <TopTools_IndexedMapOfShape.hxx>
 #endif
 
-#include "Utils.h"
-#include "ViewProviderPipe.h"
-//#include "TaskPipeParameters.h"
-#include "TaskPipeParameters.h"
-#include <Mod/PartDesign/App/Body.h>
-#include <Mod/PartDesign/App/FeaturePipe.h>
-#include <Mod/Sketcher/App/SketchObject.h>
-#include <Gui/Control.h>
-#include <Gui/Command.h>
 #include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
+#include <Mod/PartDesign/App/FeaturePipe.h>
+#include <Mod/Part/Gui/ReferenceHighlighter.h>
 
+#include "ViewProviderPipe.h"
+#include "TaskPipeParameters.h"
 
 using namespace PartDesignGui;
 
@@ -56,31 +48,31 @@ ViewProviderPipe::~ViewProviderPipe()
 {
 }
 
-std::vector<App::DocumentObject*> ViewProviderPipe::_claimChildren(void)const
+std::vector<App::DocumentObject*> ViewProviderPipe::_claimChildren() const
 {
     std::vector<App::DocumentObject*> temp;
 
     PartDesign::Pipe* pcPipe = static_cast<PartDesign::Pipe*>(getObject());
 
     App::DocumentObject* sketch = pcPipe->Profile.getValue();
-    if (sketch != NULL && !sketch->isDerivedFrom(PartDesign::Feature::getClassTypeId()))
+    if (sketch && !sketch->isDerivedFrom(PartDesign::Feature::getClassTypeId()))
         temp.push_back(sketch);
 
     for(App::DocumentObject* obj : pcPipe->Sections.getValues()) {
-        if (obj != NULL && !obj->isDerivedFrom(PartDesign::Feature::getClassTypeId())) {
+        if (obj && !obj->isDerivedFrom(PartDesign::Feature::getClassTypeId())) {
             if (std::find(temp.begin(), temp.end(), obj) == temp.end())
                 temp.push_back(obj);
         }
     }
 
     App::DocumentObject* spine = pcPipe->Spine.getValue();
-    if (spine != NULL && !spine->isDerivedFrom(PartDesign::Feature::getClassTypeId())) {
+    if (spine && !spine->isDerivedFrom(PartDesign::Feature::getClassTypeId())) {
         if (std::find(temp.begin(), temp.end(), spine) == temp.end())
             temp.push_back(spine);
     }
 
     App::DocumentObject* auxspine = pcPipe->AuxillerySpine.getValue();
-    if (auxspine != NULL && !auxspine->isDerivedFrom(PartDesign::Feature::getClassTypeId())) {
+    if (auxspine && !auxspine->isDerivedFrom(PartDesign::Feature::getClassTypeId())) {
         if (std::find(temp.begin(), temp.end(), auxspine) == temp.end())
             temp.push_back(auxspine);
     }
@@ -90,13 +82,10 @@ std::vector<App::DocumentObject*> ViewProviderPipe::_claimChildren(void)const
 
 void ViewProviderPipe::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
 {
-    QAction* act;
-    act = menu->addAction(QObject::tr("Edit pipe"), receiver, member);
-    act->setData(QVariant((int)ViewProvider::Default));
+    addDefaultAction(menu, QObject::tr("Edit pipe"));
     PartDesignGui::ViewProvider::setupContextMenu(menu, receiver, member);
 }
 
 TaskDlgFeatureParameters* ViewProviderPipe::getEditDialog() {
     return new TaskDlgPipeParameters(this, false);
 }
-

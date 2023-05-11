@@ -20,32 +20,30 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <QApplication>
 # include <QDoubleSpinBox>
-# include <QRegExp>
 # include <QGridLayout>
-# include <QMessageBox>
 # include <memory>
 #endif
+
+#include <App/Application.h>
+#include <Base/Console.h>
+#include <Base/Parameter.h>
+#include <Base/Tools.h>
 
 #include "DlgSettingsNavigation.h"
 #include "ui_DlgSettingsNavigation.h"
 #include "MainWindow.h"
 #include "NavigationStyle.h"
-#include "PrefWidgets.h"
 #include "View3DInventor.h"
 #include "View3DInventorViewer.h"
-#include "ui_MouseButtons.h"
-#include <App/Application.h>
-#include <Base/Console.h>
-#include <Base/Parameter.h>
-#include <Base/Tools.h>
 #include "ViewParams.h"
+#include "ui_MouseButtons.h"
 #include "NaviCube.h"
+
 
 using namespace Gui::Dialog;
 
@@ -84,10 +82,6 @@ void DlgSettingsNavigation::saveSettings()
 
     int index = ui->comboOrbitStyle->currentIndex();
     hGrp->SetInt("OrbitStyle", index);
-
-    index = ui->naviCubeCorner->currentIndex();
-    hGrp->SetInt("CornerNaviCube", index);
-
     index = ui->comboRotationMode->currentIndex();
     hGrp->SetInt("RotationMode", index);
 
@@ -99,6 +93,7 @@ void DlgSettingsNavigation::saveSettings()
     ui->checkBoxUseAutoRotation->onSave();
     ui->qspinNewDocScale->onSave();
     ui->prefStepByTurn->onSave();
+    ui->naviCubeCorner->onSave();
     ui->naviCubeToNearest->onSave();
     ui->prefCubeSize->onSave();
 
@@ -126,6 +121,7 @@ void DlgSettingsNavigation::loadSettings()
     ui->checkBoxUseAutoRotation->onRestore();
     ui->qspinNewDocScale->onRestore();
     ui->prefStepByTurn->onRestore();
+    ui->naviCubeCorner->onRestore();
     ui->naviCubeToNearest->onRestore();
     ui->prefCubeSize->onRestore();
 
@@ -138,9 +134,6 @@ void DlgSettingsNavigation::loadSettings()
     index = hGrp->GetInt("OrbitStyle", int(NavigationStyle::Trackball));
     index = Base::clamp(index, 0, ui->comboOrbitStyle->count()-1);
     ui->comboOrbitStyle->setCurrentIndex(index);
-
-    index = hGrp->GetInt("CornerNaviCube", 1);
-    ui->naviCubeCorner->setCurrentIndex(index);
 
     index = hGrp->GetInt("RotationMode", 1);
     ui->comboRotationMode->setCurrentIndex(index);
@@ -225,9 +218,9 @@ void DlgSettingsNavigation::retranslate()
 
     // add submenu at the end to select navigation style
     std::map<Base::Type, std::string> styles = UserNavigationStyle::getUserFriendlyNames();
-    for (std::map<Base::Type, std::string>::iterator it = styles.begin(); it != styles.end(); ++it) {
-        QByteArray data(it->first.getName());
-        QString name = QApplication::translate(it->first.getName(), it->second.c_str());
+    for (const auto & style : styles) {
+        QByteArray data(style.first.getName());
+        QString name = QApplication::translate(style.first.getName(), style.second.c_str());
 
         ui->comboNavigationStyle->addItem(name, data);
     }
@@ -270,7 +263,7 @@ CameraDialog::CameraDialog(QWidget* parent)
     layout = new QGridLayout(groupBox);
 
     // Q0
-    QLabel* label0 = new QLabel(groupBox);
+    auto label0 = new QLabel(groupBox);
     label0->setText(tr("Q0"));
     layout->addWidget(label0, 0, 0, 1, 1);
 
@@ -280,7 +273,7 @@ CameraDialog::CameraDialog(QWidget* parent)
     layout->addWidget(sb0, 0, 1, 1, 1);
 
     // Q1
-    QLabel* label1 = new QLabel(groupBox);
+    auto label1 = new QLabel(groupBox);
     label1->setText(tr("Q1"));
     layout->addWidget(label1, 1, 0, 1, 1);
 
@@ -290,7 +283,7 @@ CameraDialog::CameraDialog(QWidget* parent)
     layout->addWidget(sb1, 1, 1, 1, 1);
 
     // Q2
-    QLabel* label2 = new QLabel(groupBox);
+    auto label2 = new QLabel(groupBox);
     label2->setText(tr("Q2"));
     layout->addWidget(label2, 2, 0, 1, 1);
 
@@ -300,7 +293,7 @@ CameraDialog::CameraDialog(QWidget* parent)
     layout->addWidget(sb2, 2, 1, 1, 1);
 
     // Q3
-    QLabel* label3 = new QLabel(groupBox);
+    auto label3 = new QLabel(groupBox);
     label3->setText(tr("Q3"));
     layout->addWidget(label3, 3, 0, 1, 1);
 
@@ -309,8 +302,7 @@ CameraDialog::CameraDialog(QWidget* parent)
     sb3->setSingleStep(0.1);
     layout->addWidget(sb3, 3, 1, 1, 1);
 
-    QPushButton *currentViewButton;
-    currentViewButton = new QPushButton(this);
+    auto currentViewButton = new QPushButton(this);
     currentViewButton->setText(tr("Current view"));
     currentViewButton->setObjectName(QStringLiteral("currentView"));
     layout->addWidget(currentViewButton, 4, 1, 2, 1);
@@ -342,7 +334,7 @@ void CameraDialog::getValues(double& q0, double& q1, double& q2, double& q3) con
 
 void CameraDialog::on_currentView_clicked()
 {
-    View3DInventor* mdi = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
+    auto mdi = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
     if (mdi) {
         SbRotation rot = mdi->getViewer()->getCameraOrientation();
         const float* q = rot.getValue();

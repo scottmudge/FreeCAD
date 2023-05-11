@@ -20,18 +20,18 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <algorithm>
+# include <functional>
 # include <QMenu>
 # include <QTimer>
+
 # include <Inventor/SbLine.h>
-# include <Inventor/SbPlane.h>
 # include <Inventor/SoPickedPoint.h>
 # include <Inventor/details/SoFaceDetail.h>
-# include <Inventor/details/SoPointDetail.h>
+# include <Inventor/events/SoKeyboardEvent.h>
 # include <Inventor/events/SoLocation2Event.h>
 # include <Inventor/events/SoMouseButtonEvent.h>
 # include <Inventor/nodes/SoBaseColor.h>
@@ -40,28 +40,27 @@
 # include <Inventor/nodes/SoDirectionalLight.h>
 # include <Inventor/nodes/SoDrawStyle.h>
 # include <Inventor/nodes/SoFaceSet.h>
-# include <Inventor/nodes/SoLineSet.h>
-# include <Inventor/nodes/SoMarkerSet.h>
 # include <Inventor/nodes/SoPickStyle.h>
+# include <Inventor/nodes/SoPointSet.h>
 # include <Inventor/nodes/SoSeparator.h>
 # include <Inventor/nodes/SoShapeHints.h>
-# include <boost_bind_bind.hpp>
 #endif
+
+#include <App/Application.h>
+#include <App/Document.h>
+#include <Gui/View3DInventor.h>
+#include <Gui/View3DInventorViewer.h>
+#include <Gui/WaitCursor.h>
+#include <Mod/Mesh/App/MeshFeature.h>
+#include <Mod/Mesh/App/Core/Algorithm.h>
 
 #include "MeshEditor.h"
 #include "SoFCMeshObject.h"
 #include "SoPolygon.h"
-#include <App/Document.h>
-#include <Mod/Mesh/App/MeshFeature.h>
-#include <Mod/Mesh/App/Core/Algorithm.h>
-#include <Mod/Mesh/App/Core/Triangulation.h>
-#include <Gui/Application.h>
-#include <Gui/WaitCursor.h>
-#include <Gui/View3DInventor.h>
-#include <Gui/View3DInventorViewer.h>
+
 
 using namespace MeshGui;
-namespace bp = boost::placeholders;
+namespace sp = std::placeholders;
 
 PROPERTY_SOURCE(MeshGui::ViewProviderFace, Gui::ViewProviderDocumentObject)
 
@@ -153,8 +152,8 @@ const char* ViewProviderFace::getDefaultDisplayMode() const
 std::vector<std::string> ViewProviderFace::getDisplayModes() const
 {
     std::vector<std::string> modes;
-    modes.push_back("Marker");
-    modes.push_back("Face");
+    modes.emplace_back("Marker");
+    modes.emplace_back("Face");
     return modes;
 }
 
@@ -289,7 +288,7 @@ void MeshFaceAddition::showMarker(SoPickedPoint* pp)
             int face_index = fd->getFaceIndex();
             if (face_index >= (int)facets.size())
                 return;
-            // is a border facet picked? 
+            // is a border facet picked?
             MeshCore::MeshFacet f = facets[face_index];
             if (!f.HasOpenEdge()) {
                 // check if a neighbour facet is at the border
@@ -342,9 +341,9 @@ void MeshFaceAddition::showMarker(SoPickedPoint* pp)
 
 void MeshFaceAddition::addFacetCallback(void * ud, SoEventCallback * n)
 {
-    MeshFaceAddition* that = reinterpret_cast<MeshFaceAddition*>(ud);
+    MeshFaceAddition* that = static_cast<MeshFaceAddition*>(ud);
     ViewProviderFace* face =  that->faceView;
-    Gui::View3DInventorViewer* view  = reinterpret_cast<Gui::View3DInventorViewer*>(n->getUserData());
+    Gui::View3DInventorViewer* view  = static_cast<Gui::View3DInventorViewer*>(n->getUserData());
 
     const SoEvent* ev = n->getEvent();
     // If we are in navigation mode then ignore all but key events
@@ -478,7 +477,7 @@ void MeshFillHole::startEditing(MeshGui::ViewProviderMesh* vp)
     viewer->addEventCallback(SoEvent::getClassTypeId(),
         MeshFillHole::fileHoleCallback, this);
     myConnection = App::GetApplication().signalChangedObject.connect(
-        boost::bind(&MeshFillHole::slotChangedObject, this, bp::_1, bp::_2));
+        std::bind(&MeshFillHole::slotChangedObject, this, sp::_1, sp::_2));
 
     Gui::coinRemoveAllChildren(myBoundariesRoot);
     myBoundariesRoot->addChild(viewer->getHeadlight());
@@ -653,8 +652,8 @@ float MeshFillHole::findClosestPoint(const SbLine& ray, const TBoundary& polygon
 
 void MeshFillHole::fileHoleCallback(void * ud, SoEventCallback * n)
 {
-    MeshFillHole* self = reinterpret_cast<MeshFillHole*>(ud);
-    Gui::View3DInventorViewer* view  = reinterpret_cast<Gui::View3DInventorViewer*>(n->getUserData());
+    MeshFillHole* self = static_cast<MeshFillHole*>(ud);
+    Gui::View3DInventorViewer* view  = static_cast<Gui::View3DInventorViewer*>(n->getUserData());
 
     const SoEvent* ev = n->getEvent();
     if (ev->getTypeId() == SoLocation2Event::getClassTypeId()) {

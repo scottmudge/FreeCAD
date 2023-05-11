@@ -1,5 +1,4 @@
 /***************************************************************************
- *   Copyright (c) 2010 Juergen Riegel <FreeCAD@juergen-riegel.net>        *
  *   Copyright (c) 2020 Zheng Lei (realthunder)<realthunder.dev@gmail.com> *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
@@ -32,13 +31,14 @@ namespace PartDesign
 
 class PartDesignExport Extrusion : public Pad
 {
-    PROPERTY_HEADER(PartDesign::Extrusion);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::Extrusion);
 
 public:
     Extrusion();
 
-    App::DocumentObjectExecReturn *execute(void);
-    const char* getViewProviderName(void) const {
+    App::DocumentObjectExecReturn *execute() override;
+
+    const char* getViewProviderName() const override {
         return "PartDesignGui::ViewProviderExtrusion";
     }
 };

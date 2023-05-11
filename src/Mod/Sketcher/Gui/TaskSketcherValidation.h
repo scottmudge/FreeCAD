@@ -20,19 +20,20 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef SKETCHERGUI_TASKSKETCHERVALIDATION_H
 #define SKETCHERGUI_TASKSKETCHERVALIDATION_H
 
-#include <vector>
 #include <memory>
-#include <Base/Vector3D.h>
+#include <vector>
+
 #include <App/DocumentObserver.h>
+#include <Base/Vector3D.h>
 #include <Gui/TaskView/TaskDialog.h>
 #include <Mod/Sketcher/App/SketchAnalysis.h>
 
+
 class SoGroup;
-namespace Sketcher { class SketchObject; } 
+namespace Sketcher { class SketchObject; }
 
 namespace SketcherGui {
 
@@ -42,11 +43,11 @@ class SketcherValidation : public QWidget
     Q_OBJECT
 
 public:
-    SketcherValidation(Sketcher::SketchObject* Obj, QWidget* parent = 0);
-    ~SketcherValidation();
+    explicit SketcherValidation(Sketcher::SketchObject* Obj, QWidget* parent = nullptr);
+    ~SketcherValidation() override;
 
 protected:
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
 
 private Q_SLOTS:
     void on_findButton_clicked();
@@ -78,9 +79,9 @@ class TaskSketcherValidation : public Gui::TaskView::TaskDialog
     Q_OBJECT
 
 public:
-    TaskSketcherValidation(Sketcher::SketchObject* Obj);
-    ~TaskSketcherValidation();
-    virtual QDialogButtonBox::StandardButtons getStandardButtons(void) const
+    explicit TaskSketcherValidation(Sketcher::SketchObject* Obj);
+    ~TaskSketcherValidation() override;
+    QDialogButtonBox::StandardButtons getStandardButtons(void) const override
     { return QDialogButtonBox::Close; }
 };
 

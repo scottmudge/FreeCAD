@@ -1,5 +1,4 @@
 #***************************************************************************
-#*                                                                         *
 #*   Copyright (c) 2018 Yorik van Havre <yorik@uncreated.net>              *
 #*                                                                         *
 #*   This program is free software; you can redistribute it and/or modify  *
@@ -21,21 +20,37 @@
 #***************************************************************************
 
 
-# This is the start page template. It builds a HTML global variable that contains
-# the html code of the start page. It is built only once per FreeCAD session for now...
+# This is the start page template. It builds an HTML global variable that
+# contains the html code of the start page.
+# Note: It is built only once per FreeCAD session for now...
 
-import sys,os,FreeCAD,FreeCADGui,tempfile,time,zipfile,re,hashlib
+import sys
+import os
+import tempfile
+import time
+import zipfile
+import re
+import hashlib
+import FreeCAD
+import FreeCADGui
 import urllib.parse
 from . import TranslationTexts
-from PySide import QtCore,QtGui
+from PySide import QtCore, QtGui
+
+try:
+    from addonmanager_macro import Macro as AM_Macro
+    has_am_macro = True
+except ImportError:
+    has_am_macro = False
+
 
 FreeCADGui.addLanguagePath(":/translations")
 FreeCADGui.updateLocale()
 
 iconprovider = QtGui.QFileIconProvider()
-iconbank = {} # to store already created icons so we don't overpollute the temp dir
-tempfolder = None # store icons inside a subfolder in temp dir
-defaulticon = None # store a default icon for problematic file types
+iconbank = {}       # store pre-existing icons so we don't overpollute temp dir
+tempfolder = None   # store icons inside a subfolder in temp dir
+defaulticon = None  # store a default icon for problematic file types
 logger = FreeCAD.Logger('StartPage')
 
 def encode(data):
@@ -258,18 +273,31 @@ def getInfo(filename):
             r = _Re_LastModifiedDate.search(doc)
             if r:
                 mtime = r.group(1)
+        elif filename.lower().endswith(".fcmacro"):
+            # For FreeCAD macros, use the Macro Editor icon (but we have to have it in a file for
+            # the web view to load it)
+            image = os.path.join(tempfolder,"fcmacro_icon.svg")
+            if not os.path.exists(image):
+                f = QtCore.QFile(":/icons/MacroEditor.svg")
+                f.copy(image)
+            iconbank[filename] = image
+
+            if has_am_macro:
+                macro = AM_Macro(os.path.basename(filename))
+                macro.fill_details_from_file(filename)
+                author = macro.author
 
         if not image:
             # use image itself as icon if it's an image file
-            if os.path.splitext(filename)[1].lower() in [".jpg",".jpeg",".png",".svg"]:
+            if QtGui.QImageReader.imageFormat(filename):
                 image = filename
                 iconbank[filename] = image
-
-            # use freedesktop thumbnail if available
-            fdthumb = getFreeDesktopThumbnail(filename)
-            if fdthumb:
-                image = fdthumb
-                iconbank[filename] = fdthumb
+            else:
+                # use freedesktop thumbnail if available
+                fdthumb = getFreeDesktopThumbnail(filename)
+                if fdthumb:
+                    image = fdthumb
+                    iconbank[filename] = fdthumb
 
         # retrieve default mime icon if needed
         if not image:
@@ -309,7 +337,8 @@ def getDefaultIcon():
 
 def buildCard(filename,method,arg=None):
 
-    "builds a html <li> element representing a file. method is a script + a keyword, for ex. url.py?key="
+    """builds an html <li> element representing a file. 
+    method is a script + a keyword, for ex. url.py?key="""
 
     global tempfolder
 
@@ -364,7 +393,7 @@ def buildCard(filename,method,arg=None):
             size = finfo[1]
             author = finfo[2]
             infostring = TranslationTexts.T_LOCATION+": "+os.path.dirname(filename)+"\n"
-            infostring += TranslationTexts.T_CREATIONDATE+": "+finfo[3]+"\n"
+            infostring = TranslationTexts.T_CREATIONDATE+": "+finfo[3] + "\n"
             infostring += TranslationTexts.T_LASTMODIFIED+": "+finfo[4]
             if finfo[5]:
                 infostring += "\n\n" + finfo[5]
@@ -420,7 +449,7 @@ def handle():
     else:
         html_filename = os.path.join(resources_dir, "StartPage.html")
     js_filename = os.path.join(resources_dir, "StartPage.js")
-    css_filename = os.path.join(resources_dir, "StartPage.css")
+    css_filename = p.GetString("CSSFile",os.path.join(resources_dir, "StartPage.css"))
     with open(html_filename, 'r', encoding='utf-8') as f:
         HTML = f.read()
     with open(js_filename, 'r', encoding='utf-8') as f:
@@ -603,6 +632,8 @@ def handle():
             wn = "FCGear"
         elif wn == "frame_":
             wn = "frame"
+        elif wn == "ReverseEngineering":
+            wn = "Reverse_Engineering"
         elif wn == "None":
             continue
         wblist.append(wn.lower())
@@ -612,7 +643,7 @@ def handle():
             img = os.path.join(FreeCAD.getResourceDir(),"Mod",wn,"Resources","icons",wn+"Workbench.svg")
             if not os.path.exists(img):
                 w = FreeCADGui.listWorkbenches()[wb]
-                if hasattr(w,"Icon"):
+                if hasattr(w,"Icon") and w.Icon:
                     xpm = w.Icon
                     if "XPM" in xpm:
                         xpm = xpm.replace("\n        ","\n") # some XPMs have some indent that QT doesn't like
@@ -627,7 +658,7 @@ def handle():
             iconbank[wb] = img
         UL_WORKBENCHES += '<li>'
         UL_WORKBENCHES += '<img src="file:///'+img.replace('\\','/')+'" alt="'+wn+'">&nbsp;'
-        UL_WORKBENCHES += '<a href="https://www.freecadweb.org/wiki/'+wn+'_Workbench">'+wn.replace("ReverseEngineering","ReverseEng")+'</a>'
+        UL_WORKBENCHES += '<a href="https://www.freecadweb.org/wiki/'+wn+'_Workbench">'+wn.replace("Reverse_Engineering","ReverseEng")+'</a>'
         UL_WORKBENCHES += '</li>'
     UL_WORKBENCHES += '</ul>'
     HTML = HTML.replace("UL_WORKBENCHES", UL_WORKBENCHES)
@@ -705,15 +736,6 @@ def handle():
 
     Start.iconbank = iconbank
     Start.tempfolder = tempfolder
-
-    # make sure we are always returning unicode
-    # HTML should be a str-object and therefore:
-    # - for py2 HTML is a bytes object and has to be decoded to unicode
-    # - for py3 HTML is already a unicode object and the next 2 lines can be removed
-    #    once py2-support is removed.
-
-    if isinstance(HTML, bytes):
-        HTML = HTML.decode("utf8")
 
     return HTML
 

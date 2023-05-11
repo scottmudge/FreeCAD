@@ -25,14 +25,10 @@
 #define PARTDESIGN_Body_H
 
 #include <deque>
-#include <array>
-#include <unordered_map>
 #include <boost/signals2.hpp>
 
-#include <App/PropertyStandard.h>
 #include <Mod/Part/App/BodyBase.h>
-
-#include <boost_signals2.hpp>
+#include <Mod/PartDesign/PartDesignGlobal.h>
 
 namespace App {
     class Origin;
@@ -63,11 +59,11 @@ public:
     /** @name methods override feature */
     //@{
     /// recalculate the feature
-    App::DocumentObjectExecReturn *execute(void) override;
+    App::DocumentObjectExecReturn *execute() override;
     short mustExecute() const override;
 
     /// returns the type name of the view provider
-    const char* getViewProviderName(void) const override {
+    const char* getViewProviderName() const override {
         return "PartDesignGui::ViewProviderBody";
     }
     //@}
@@ -76,8 +72,8 @@ public:
      * Add the feature into the body at the current insert point.
      * The insertion poin is the before next solid after the Tip feature
      */
-    virtual std::vector<App::DocumentObject*> addObject(App::DocumentObject*) override;
-    virtual std::vector< DocumentObject* > addObjects(std::vector< DocumentObject* > obj) override;
+    std::vector<App::DocumentObject*> addObject(App::DocumentObject*) override;
+    std::vector< DocumentObject* > addObjects(std::vector< DocumentObject* > obj) override;
 
     /**
      * Insert the feature into the body after the given feature.
@@ -109,7 +105,7 @@ public:
     void setBaseProperty(App::DocumentObject* feature);
 
     /// Remove the feature from the body
-    virtual std::vector<DocumentObject*> removeObject(DocumentObject* obj) override;
+    std::vector<DocumentObject*> removeObject(DocumentObject* obj) override;
 
     /**
      * Checks if the given document object lays after the current insert point
@@ -118,22 +114,24 @@ public:
     bool isAfterInsertPoint(App::DocumentObject* feature);
 
     /// Return true if the given feature is member of a MultiTransform feature
-    static bool isMemberOfMultiTransform(const App::DocumentObject* f);
+    static bool isMemberOfMultiTransform(const App::DocumentObject *obj);
 
     /**
       * Return true if the given feature is a solid feature allowed in a Body. Currently this is only valid
       * for features derived from PartDesign::Feature
       * Return false if the given feature is a Sketch or a Part::Datum feature
       */
-    bool isSolidFeature(const App::DocumentObject* f) const;
+    bool isSolidFeature(const App::DocumentObject* obj) const;
 
     /**
       * Return true if the given feature is allowed in a Body. Currently allowed are
       * all features derived from PartDesign::Feature and Part::Datum and sketches
       */
-    static bool isAllowed(const App::DocumentObject* f);
+    static bool isAllowed(const App::DocumentObject* obj);
     static bool isAllowed(const Base::Type &type);
-    virtual bool allowObject(DocumentObject* f) override {return isAllowed(f);}
+    bool allowObject(DocumentObject* obj) override {
+        return isAllowed(obj);
+    }
 
     /**
      * Return the body which this feature belongs too, or NULL
@@ -141,13 +139,15 @@ public:
      */
     static Body *findBodyOf(const App::DocumentObject* feature);
 
-    PyObject *getPyObject(void) override;
+    PyObject *getPyObject() override;
 
-    virtual std::vector<std::string> getSubObjects(int reason=0) const override;
-    virtual App::DocumentObject *getSubObject(const char *subname,
+    std::vector<std::string> getSubObjects(int reason=0) const override;
+    App::DocumentObject *getSubObject(const char *subname,
         PyObject **pyObj=nullptr, Base::Matrix4D *pmat=nullptr, bool transform=false, int depth=0) const override;
 
-    virtual bool canRemoveChild(App::DocumentObject *) const override {return false;}
+    bool canRemoveChild(App::DocumentObject *) const override {
+        return false;
+    }
 
     void setShowTip(bool enable) {
         showTip = enable;
@@ -157,13 +157,13 @@ public:
       * Return the solid feature before the given feature, or before the Tip feature
       * That is, sketches and datum features are skipped
       */
-    App::DocumentObject *getPrevSolidFeature(App::DocumentObject *start = NULL);
+    App::DocumentObject *getPrevSolidFeature(App::DocumentObject *start = nullptr);
 
     /**
       * Return the next solid feature after the given feature, or after the Tip feature
       * That is, sketches and datum features are skipped
       */
-    App::DocumentObject *getNextSolidFeature(App::DocumentObject* start = NULL);
+    App::DocumentObject *getNextSolidFeature(App::DocumentObject* start = nullptr);
 
     /// Describes the relation of two feature within the body
     enum Relation {
@@ -198,23 +198,23 @@ public:
     virtual int setElementVisible(const char *element, bool visible) override;
 
     // a body is solid if it has features that are solid according to member isSolidFeature.
-    bool isSolid(void);
+    bool isSolid();
 
     // Toggles for auto-aux grouping
     void toggleAutoAuxGrouping();
 
 protected:
-    virtual void onSettingDocument() override;
+    void onSettingDocument() override;
 
     /// Adjusts the first solid's feature's base on BaseFeature getting set
-    virtual void onChanged (const App::Property* prop) override;
+    void onChanged (const App::Property* prop) override;
 
     /// Creates the corresponding Origin object
-    virtual void setupObject () override;
+    void setupObject () override;
     /// Removes all planes and axis if they are still linked to the document
-    virtual void unsetupObject () override;
+    void unsetupObject () override;
 
-    virtual void onDocumentRestored() override;
+    void onDocumentRestored() override;
 
     virtual const App::PropertyLinkList& getExportGroupProperty(int reason) const override;
     virtual bool getChildDefaultExport(App::DocumentObject *obj) const override;

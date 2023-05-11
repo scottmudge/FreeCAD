@@ -8,6 +8,7 @@ import os
 import sys
 import io
 import FreeCAD, unittest, Mesh
+import MeshEnums
 from FreeCAD import Base
 import time, tempfile, math
 # http://python-kurs.eu/threads.php
@@ -29,7 +30,7 @@ class MeshTopoTestCases(unittest.TestCase):
         self.planarMesh = []
         for x in range(3):
             for y in range(3):
-                self.planarMesh.append( [0.0 + x, 0.0 + y,0.0000] ) 
+                self.planarMesh.append( [0.0 + x, 0.0 + y,0.0000] )
                 self.planarMesh.append( [1.0 + x, 1.0 + y,0.0000] )
                 self.planarMesh.append( [0.0 + x, 1.0 + y,0.0000] )
                 self.planarMesh.append( [0.0 + x, 0.0 + y,0.0000] )
@@ -192,6 +193,61 @@ class MeshSplitTestCases(unittest.TestCase):
         self.assertFalse(self.mesh.hasCorruptedFacets())
         self.assertTrue(self.mesh.isSolid())
 
+    def testFindNearest(self):
+        self.assertEqual(len(self.mesh.nearestFacetOnRay((-2,2,-6),(0,0,1))), 0)
+        self.assertEqual(len(self.mesh.nearestFacetOnRay((0.5,0.5,0.5),(0,0,1))), 1)
+        self.assertEqual(len(self.mesh.nearestFacetOnRay((0.5,0.5,0.5),(0,0,1),-math.pi/2)), 0)
+        self.assertEqual(len(self.mesh.nearestFacetOnRay((0.2,0.1,0.2),(0,0, 1))),
+                         len(self.mesh.nearestFacetOnRay((0.2,0.1,0.2),(0,0,-1))))
+        self.assertEqual(len(self.mesh.nearestFacetOnRay((0.2,0.1,0.2),(0,0, 1), math.pi/2)),
+                         len(self.mesh.nearestFacetOnRay((0.2,0.1,0.2),(0,0,-1), math.pi/2)))
+        # Apply placement to mesh
+        plm = Base.Placement(Base.Vector(1,2,3), Base.Rotation(1,1,1,1))
+        pnt = Base.Vector(0.5, 0.5, 0.5)
+        vec = Base.Vector(0.0, 0.0, 1.0)
+
+        self.mesh.Placement = plm
+        self.assertEqual(len(self.mesh.nearestFacetOnRay(pnt,vec)), 0)
+
+        # Apply the placement on the ray as well
+        pnt = plm.multVec(pnt)
+        vec = plm.Rotation.multVec(vec)
+        self.assertEqual(len(self.mesh.nearestFacetOnRay(pnt,vec)), 1)
+
+    def testForaminate(self):
+        class FilterAngle:
+            def __init__(self, mesh, vec, limit):
+                self.myMesh = mesh
+                self.vec = vec
+                self.limit = limit
+
+            def check_angle(self, item):
+                angle = self.myMesh.Facets[item].Normal.getAngle(self.vec)
+                return angle < self.limit
+
+        results = self.mesh.foraminate((0.0, 0.0, 0.0), (0,1,1))
+        filtered_result = list(filter(FilterAngle(self.mesh, FreeCAD.Vector(0,1,1), math.pi/2).check_angle, results.keys()))
+
+        self.assertEqual(filtered_result, list(self.mesh.foraminate((0.0, 0.0, 0.0), (0,1,1), math.pi/2).keys()))
+
+    def testForaminatePlacement(self):
+        pnt = Base.Vector(0.0, 0.0, 0.0)
+        vec = Base.Vector(0.0, 1.0, 1.0)
+        results = self.mesh.foraminate(pnt, vec)
+        self.assertEqual(len(results), 4)
+
+        # Apply placement to mesh
+        plm = Base.Placement(Base.Vector(1,2,3), Base.Rotation(1,1,1,1))
+        self.mesh.Placement = plm
+        self.assertEqual(len(self.mesh.foraminate(pnt, vec)), 0)
+
+        # Apply the placement on the ray as well
+        pnt = plm.multVec(pnt)
+        vec = plm.Rotation.multVec(vec)
+        results2 = self.mesh.foraminate(pnt, vec)
+        self.assertEqual(len(results2), 4)
+        self.assertEqual(list(results.keys()), list(results2.keys()))
+
 class MeshGeoTestCases(unittest.TestCase):
     def setUp(self):
         # set up a planar face with 2 triangles
@@ -199,7 +255,7 @@ class MeshGeoTestCases(unittest.TestCase):
 
 
     def testIntersection(self):
-        self.planarMesh.append( [0.9961,1.5413,4.3943] ) 
+        self.planarMesh.append( [0.9961,1.5413,4.3943] )
         self.planarMesh.append( [9.4796,10.024,-3.0937] )
         self.planarMesh.append( [1.4308,11.3841,2.6829] )
         self.planarMesh.append( [2.6493,2.2536,3.0679] )
@@ -213,7 +269,7 @@ class MeshGeoTestCases(unittest.TestCase):
 
 
     def testIntersection2(self):
-        self.planarMesh.append( [-16.097176,-29.891157,15.987688] ) 
+        self.planarMesh.append( [-16.097176,-29.891157,15.987688] )
         self.planarMesh.append( [-16.176304,-29.859991,15.947966] )
         self.planarMesh.append( [-16.071451,-29.900553,15.912505] )
         self.planarMesh.append( [-16.092241,-29.893408,16.020439] )
@@ -417,7 +473,7 @@ class PivyTestCases(unittest.TestCase):
     def testRayPick(self):
         if not FreeCAD.GuiUp:
             return
-        self.planarMesh.append( [-16.097176,-29.891157,15.987688] ) 
+        self.planarMesh.append( [-16.097176,-29.891157,15.987688] )
         self.planarMesh.append( [-16.176304,-29.859991,15.947966] )
         self.planarMesh.append( [-16.071451,-29.900553,15.912505] )
         self.planarMesh.append( [-16.092241,-29.893408,16.020439] )
@@ -432,16 +488,16 @@ class PivyTestCases(unittest.TestCase):
         rp.setRay(coin.SbVec3f(-16.05,16.0,16.0),coin.SbVec3f(0,-1,0))
         rp.apply(view.getSoRenderManager().getSceneGraph())
         pp=rp.getPickedPoint()
-        self.assertTrue(pp != None)
+        self.assertTrue(pp is not None)
         det=pp.getDetail()
         self.assertTrue(det.getTypeId() == coin.SoFaceDetail.getClassTypeId())
-        det=coin.cast(det,str(det.getTypeId().getName()))
+        det=coin.cast(det, det.getTypeId().getName().getString())
         self.assertTrue(det.getFaceIndex() == 1)
 
     def testPrimitiveCount(self):
         if not FreeCAD.GuiUp:
             return
-        self.planarMesh.append( [-16.097176,-29.891157,15.987688] ) 
+        self.planarMesh.append( [-16.097176,-29.891157,15.987688] )
         self.planarMesh.append( [-16.176304,-29.859991,15.947966] )
         self.planarMesh.append( [-16.071451,-29.900553,15.912505] )
         self.planarMesh.append( [-16.092241,-29.893408,16.020439] )
@@ -626,3 +682,44 @@ class MeshSubElement(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+class MeshProperty(unittest.TestCase):
+    def setUp(self):
+        self.doc = FreeCAD.newDocument("MeshTest")
+
+    def tearDown(self):
+        FreeCAD.closeDocument(self.doc.Name)
+
+    def testMaterial(self):
+        mesh = self.doc.addObject("Mesh::Feature", "Sphere")
+        mesh.Mesh = Mesh.createBox(1.0, 1.0, 1.0)
+        len1 = int(mesh.Mesh.CountFacets / 2)
+        len2 = int(mesh.Mesh.CountFacets - len1)
+        material = {"transparency" : [0.2] * len1 + [0.8] * len2}
+        material["binding"] = MeshEnums.Binding.PER_FACE
+        material["ambientColor"] = [(1,0,0)] * (len1 + len2)
+        material["diffuseColor"] = [(0,1,0)] * (len1 + len2)
+        material["specularColor"] = [(0,0,1)] * (len1 + len2)
+        material["emissiveColor"] = [(1,1,1)] * (len1 + len2)
+        material["shininess"] = [0.3] * (len1 + len2)
+
+        mesh.addProperty("Mesh::PropertyMaterial", "Material")
+        mesh.Material = material
+
+        TempPath = tempfile.gettempdir()
+        SaveName = TempPath + os.sep + "mesh_with_material.FCStd"
+        self.doc.saveAs(SaveName)
+        FreeCAD.closeDocument(self.doc.Name)
+
+        self.doc = FreeCAD.openDocument(SaveName)
+        mesh2 = self.doc.Sphere
+        material2 = mesh2.Material
+
+        self.assertEqual(int(material2["binding"]), int(MeshEnums.Binding.PER_FACE))
+        self.assertEqual(len(material2["ambientColor"]), len1 + len2)
+        self.assertEqual(len(material2["diffuseColor"]), len1 + len2)
+        self.assertEqual(len(material2["specularColor"]), len1 + len2)
+        self.assertEqual(len(material2["emissiveColor"]), len1 + len2)
+        self.assertEqual(len(material2["shininess"]), len1 + len2)
+        self.assertEqual(len(material2["transparency"]), len1 + len2)
+

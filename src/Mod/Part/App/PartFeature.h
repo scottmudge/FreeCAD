@@ -26,19 +26,14 @@
 
 #include <boost/container/map.hpp>
 
-#include "TopoShape.h"
-#include "PropertyTopoShape.h"
+#include <App/FeaturePython.h>
 #include <App/GeoFeature.h>
-#include <App/FeaturePython.h>
-#include <App/PropertyGeo.h>
-#include <App/FeaturePython.h>
-// includes for findAllFacesCutBy()
-#include <TopoDS_Face.hxx>
-#include <BRep_Builder.hxx>
-#include <TopoDS_Compound.hxx>
-class gp_Dir;
+#include <Mod/Part/PartGlobal.h>
 
-class BRepBuilderAPI_MakeShape;
+#include <TopoDS_Face.hxx>
+#include "PropertyTopoShape.h"
+
+class gp_Dir;
 
 namespace Data
 {
@@ -59,13 +54,13 @@ class PartFeaturePy;
  */
 class PartExport Feature : public App::GeoFeature
 {
-    typedef App::GeoFeature inherited;
+    using inherited = App::GeoFeature;
     PROPERTY_HEADER_WITH_OVERRIDE(Part::Feature);
 
 public:
     /// Constructor
-    Feature(void);
-    virtual ~Feature();
+    Feature();
+    ~Feature() override;
 
     PropertyPartShape Shape;
     App::PropertyLinkSubHidden ColoredElements;
@@ -75,18 +70,18 @@ public:
 
     /** @name methods override feature */
     //@{
-    virtual short mustExecute() const override;
+    short mustExecute() const override;
     //@}
 
     /// returns the type name of the ViewProvider
-    virtual const char* getViewProviderName() const override;
-    virtual const App::PropertyComplexGeoData* getPropertyOfGeometry() const override;
+    const char* getViewProviderName() const override;
+    const App::PropertyComplexGeoData* getPropertyOfGeometry() const override;
 
-    virtual PyObject* getPyObject(void) override;
+    PyObject* getPyObject() override;
 
     virtual App::PropertyLinkList *getShapeLinksProperty() {return nullptr;}
 
-    virtual std::pair<std::string,std::string> getElementName(
+    std::pair<std::string,std::string> getElementName(
             const char *name, ElementNameType type=Normal) const override;
 
     static std::list<Data::HistoryItem> getElementHistory(App::DocumentObject *obj,
@@ -116,7 +111,7 @@ public:
 
     TopLoc_Location getLocation() const;
 
-    virtual DocumentObject *getSubObject(const char *subname, PyObject **pyObj, 
+    DocumentObject *getSubObject(const char *subname, PyObject **pyObj, 
             Base::Matrix4D *mat, bool transform, int depth) const override;
 
     /** Convenience function to extract shape from fully qualified subname 
@@ -140,17 +135,17 @@ public:
      * if pmat already include obj's transformation matrix.
      */
     static TopoDS_Shape getShape(const App::DocumentObject *obj,
-            const char *subname=0, bool needSubElement=false, Base::Matrix4D *pmat=0, 
-            App::DocumentObject **owner=0, bool resolveLink=true, bool transform=true);
+            const char *subname=nullptr, bool needSubElement=false, Base::Matrix4D *pmat=nullptr, 
+            App::DocumentObject **owner=nullptr, bool resolveLink=true, bool transform=true);
 
     static TopoShape getTopoShape(const App::DocumentObject *obj,
-            const char *subname=0, bool needSubElement=false, Base::Matrix4D *pmat=0, 
-            App::DocumentObject **owner=0, bool resolveLink=true, bool transform=true, 
+            const char *subname=nullptr, bool needSubElement=false, Base::Matrix4D *pmat=nullptr, 
+            App::DocumentObject **owner=nullptr, bool resolveLink=true, bool transform=true, 
             bool noElementMap=false);
 
-    static App::DocumentObject *getShapeOwner(const App::DocumentObject *obj, const char *subname=0);
+    static App::DocumentObject *getShapeOwner(const App::DocumentObject *obj, const char *subname=nullptr);
 
-    static bool hasShapeOwner(const App::DocumentObject *obj, const char *subname=0) {
+    static bool hasShapeOwner(const App::DocumentObject *obj, const char *subname=nullptr) {
         auto owner = getShapeOwner(obj,subname);
         return owner && owner->isDerivedFrom(getClassTypeId());
     }
@@ -158,14 +153,14 @@ public:
     static void disableElementMapping(App::PropertyContainer *container, bool disable=true);
     static bool isElementMappingDisabled(App::PropertyContainer *container);
 
-    virtual const std::vector<std::string>& searchElementCache(const std::string &element,
-                                                               Data::SearchOptions options = Data::SearchOption::CheckGeometry,
-                                                               double tol = 1e-7,
-                                                               double atol = 1e-10) const override;
+    const std::vector<std::string>& searchElementCache(const std::string &element,
+                                                       Data::SearchOptions options = Data::SearchOption::CheckGeometry,
+                                                       double tol = 1e-7,
+                                                       double atol = 1e-10) const override;
 
-    virtual const std::vector<const char*>& getElementTypes(bool all=false) const override;
+    const std::vector<const char*>& getElementTypes(bool all=false) const override;
 
-    virtual void beforeSave() const override;
+    void beforeSave() const override;
 
     void expandShapeContents();
     void mergeShapeContents();
@@ -195,13 +190,13 @@ public:
 
 protected:
     /// recompute only this object
-    virtual App::DocumentObjectExecReturn *recompute() override;
+    App::DocumentObjectExecReturn *recompute() override;
     /// recalculate the feature
-    virtual App::DocumentObjectExecReturn *execute() override;
-    virtual void onBeforeChange(const App::Property* prop) override;
-    virtual void onChanged(const App::Property* prop) override;
-    virtual void unsetupObject() override;
-    virtual void onDocumentRestored() override;
+    App::DocumentObjectExecReturn *execute() override;
+    void onBeforeChange(const App::Property* prop) override;
+    void onChanged(const App::Property* prop) override;
+    void unsetupObject() override;
+    void onDocumentRestored() override;
 
     // Return true if need to apply the shape placement to the Placement property
     virtual bool shouldApplyPlacement();
@@ -236,12 +231,12 @@ public:
     PropertyFilletEdges Edges;
     App::PropertyLinkSub   EdgeLinks;
 
-    virtual short mustExecute() const override;
-    virtual void onUpdateElementReference(const App::Property *prop) override;
+    short mustExecute() const override;
+    void onUpdateElementReference(const App::Property *prop) override;
 
 protected:
-    virtual void onDocumentRestored() override;
-    virtual void onChanged(const App::Property *) override;
+    void onDocumentRestored() override;
+    void onChanged(const App::Property *) override;
     void syncEdgeLink();
 };
 
@@ -252,10 +247,10 @@ typedef App::FeaturePythonT<Feature> FeaturePython;
  */
 class PartExport FeatureExt : public Feature
 {
-    PROPERTY_HEADER(Part::FeatureExt);
+    PROPERTY_HEADER_WITH_OVERRIDE(Part::FeatureExt);
 
 public:
-    const char* getViewProviderName(void) const {
+    const char* getViewProviderName() const override {
         return "PartGui::ViewProviderPartExt";
     }
 };

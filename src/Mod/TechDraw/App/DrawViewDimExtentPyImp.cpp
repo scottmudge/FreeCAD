@@ -21,24 +21,17 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
-#ifndef _PreComp_
-#endif
-
-#include <Base/Console.h>
-#include <Base/PyObjectBase.h>
-#include <Base/Vector3D.h>
 
 #include "DrawViewDimExtent.h"
-
 // inclusion of the generated files (generated out of DrawViewDimExtentPy.xml)
-#include <Base/VectorPy.h>
 #include <Mod/TechDraw/App/DrawViewDimExtentPy.h>
 #include <Mod/TechDraw/App/DrawViewDimExtentPy.cpp>
+
 
 using namespace TechDraw;
 
 // returns a string which represents the object e.g. when printed in python
-std::string DrawViewDimExtentPy::representation(void) const
+std::string DrawViewDimExtentPy::representation() const
 {
     return std::string("<DrawViewDimExtent object>");
 }
@@ -53,7 +46,7 @@ PyObject* DrawViewDimExtentPy::tbd(PyObject* args)
 
 PyObject *DrawViewDimExtentPy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int DrawViewDimExtentPy::setCustomAttributes(const char* /*attr*/, PyObject* /*obj*/)

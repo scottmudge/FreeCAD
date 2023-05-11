@@ -31,7 +31,6 @@ __url__ = "https://www.freecadweb.org"
 #  \brief FreeCAD FEM _ViewProviderFemMaterial
 #  \brief task panel for common material object
 
-import sys
 from PySide import QtCore
 from PySide import QtGui
 
@@ -42,8 +41,7 @@ from FreeCAD import Units
 from femguiutils import selection_widgets
 
 
-if sys.version_info.major >= 3:
-    unicode = str
+unicode = str
 
 
 class _TaskPanel:
@@ -138,11 +136,13 @@ class _TaskPanel:
         self.toggleInputFieldsReadOnly()
 
         # hide some groupBox according to material category
+        # note: input_fd_vol_expansion_coefficient is currently not used
+        #       it might be used in future for solids
         self.parameterWidget.label_category.setText(self.obj.Category)
         if self.obj.Category == "Fluid":
             self.parameterWidget.groupBox_mechanical.setVisible(0)
-            self.parameterWidget.label_expansion_coefficient.setVisible(0)
-            self.parameterWidget.input_fd_expansion_coefficient.setVisible(0)
+            self.parameterWidget.label_vol_expansion_coefficient.setVisible(0)
+            self.parameterWidget.input_fd_vol_expansion_coefficient.setVisible(0)
         else:
             self.parameterWidget.groupBox_fluidic.setVisible(0)
             self.parameterWidget.label_vol_expansion_coefficient.setVisible(0)
@@ -206,9 +206,9 @@ class _TaskPanel:
     def accept(self):
         # print(self.material)
         if self.material == {}:  # happens if material editor was canceled
-                FreeCAD.Console.PrintError("Empty material dictionary, nothing was changed.\n")
-                self.recompute_and_set_back_all()
-                return True
+            FreeCAD.Console.PrintError("Empty material dictionary, nothing was changed.\n")
+            self.recompute_and_set_back_all()
+            return True
         if self.selectionWidget.has_equal_references_shape_types():
             self.do_not_set_thermal_zeros()
             from materialtools.cardutils import check_mat_units as checkunits
@@ -265,10 +265,9 @@ class _TaskPanel:
     # choose material ****************************************************************************
     def get_material_card(self, material):
         for a_mat in self.materials:
+            # check if every item of the current material fits to a known material card
+            # if all items were found we know it is the right card
             unmatched_items = set(self.materials[a_mat].items()) ^ set(material.items())
-            # print(a_mat + "  -->  unmatched_items = " + str(len(unmatched_items)))
-            # if len(unmatched_items) < 4:
-            #     print(unmatched_items)
             if len(unmatched_items) == 0:
                 return a_mat
         return ""
@@ -461,22 +460,36 @@ class _TaskPanel:
                     .format(self.material["Name"])
                 )
                 self.material["KinematicViscosity"] = "0 m^2/s"
+            if "ThermalExpansionCoefficient" in self.material:
+                vol_ther_ex_co = self.material["ThermalExpansionCoefficient"]
+                if "ThermalExpansionCoefficient" not in str(Units.Unit(vol_ther_ex_co)):
+                    FreeCAD.Console.PrintMessage(
+                        "ThermalExpansionCoefficient in material data "
+                        "seems to have no unit or a wrong unit (reset the value): {}\n"
+                        .format(self.material["Name"])
+                    )
+                    self.material["ThermalExpansionCoefficient"] = "0 1/K"
+            else:
+                FreeCAD.Console.PrintMessage(
+                    "ThermalExpansionCoefficient not found in {}\n"
+                    .format(self.material["Name"])
+                )
+                self.material["ThermalExpansionCoefficient"] = "0 1/K"
             if "VolumetricThermalExpansionCoefficient" in self.material:
                 # unit type VolumetricThermalExpansionCoefficient is ThermalExpansionCoefficient
                 vol_ther_ex_co = self.material["VolumetricThermalExpansionCoefficient"]
-                if "VolumetricThermalExpansionCoefficient" not in str(Units.Unit(vol_ther_ex_co)):
+                if "ThermalExpansionCoefficient" not in str(Units.Unit(vol_ther_ex_co)):
                     FreeCAD.Console.PrintMessage(
                         "VolumetricThermalExpansionCoefficient in material data "
                         "seems to have no unit or a wrong unit (reset the value): {}\n"
                         .format(self.material["Name"])
                     )
-                    self.material["VolumetricThermalExpansionCoefficient"] = "0 m^3/m^3/K"
+                    self.material["VolumetricThermalExpansionCoefficient"] = "0 1/K"
             else:
-                FreeCAD.Console.PrintMessage(
-                    "VolumetricThermalExpansionCoefficient not found in {}\n"
-                    .format(self.material["Name"])
-                )
-                self.material["VolumetricThermalExpansionCoefficient"] = "0 m^3/m^3/K"
+                # as fallback only add VolumetricThermalExpansionCoefficient if there is no
+                # ThermalExpansionCoefficient
+                if "ThermalExpansionCoefficient" not in self.material:
+                    self.material["VolumetricThermalExpansionCoefficient"] = "0 1/K"
         # Thermal properties
         if "ThermalConductivity" in self.material:
             # TODO implement for all task panel values
@@ -549,7 +562,7 @@ class _TaskPanel:
             # for example PoissonRatio
             value = Units.Quantity(inputfield_text).Value
             old_value = Units.Quantity(self.material[matProperty]).Value
-            # value = float(inputfield_text)  # this fails on locale with komma
+            # value = float(inputfield_text)  # this fails on locale with comma
             # https://forum.freecadweb.org/viewtopic.php?f=18&t=56912&p=523313#p523313
         if value:
             if not (1 - variation < float(old_value) / value < 1 + variation):
@@ -723,4 +736,4 @@ class _TaskPanel:
             self.parameterWidget.cb_materials.addItem(QtGui.QIcon(mat[2]), mat[0], mat[1])
             # the whole card path is added to the combo box to make it unique
             # see def choose_material:
-            # for assignment of self.card_path the path form the parameterWidget ist used
+            # for assignment of self.card_path the path form the parameterWidget is used

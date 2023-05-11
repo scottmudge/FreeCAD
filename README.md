@@ -31,9 +31,9 @@ out.
 [Git repository](https://github.com/FreeCAD/FreeCAD)
 
 
-[![Release](https://img.shields.io/github/release/freecad/freecad.svg)](https://github.com/freecad/freecad/releases/latest) [![Master][freecad-master-status]][travis-branches] [![Crowdin](https://d322cqt584bo4o.cloudfront.net/freecad/localized.svg)](https://crowdin.com/project/freecad) [![Gitter](https://img.shields.io/gitter/room/freecad/freecad.svg)](https://gitter.im/freecad/freecad?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/FreeCAD/FreeCAD.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/FreeCAD/FreeCAD/context:python) [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/FreeCAD/FreeCAD.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/FreeCAD/FreeCAD/context:cpp) [![Liberapay](https://img.shields.io/liberapay/receives/FreeCAD.svg?logo=liberapay)](https://liberapay.com/FreeCAD)
+[![Release](https://img.shields.io/github/release/freecad/freecad.svg)](https://github.com/freecad/freecad/releases/latest) [![Master][freecad-master-status]][gitlab-branch-master] [![Crowdin](https://d322cqt584bo4o.cloudfront.net/freecad/localized.svg)](https://crowdin.com/project/freecad) [![Gitter](https://img.shields.io/gitter/room/freecad/freecad.svg)](https://gitter.im/freecad/freecad?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/FreeCAD/FreeCAD.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/FreeCAD/FreeCAD/context:python) [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/FreeCAD/FreeCAD.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/FreeCAD/FreeCAD/context:cpp) [![Liberapay](https://img.shields.io/liberapay/receives/FreeCAD.svg?logo=liberapay)](https://liberapay.com/FreeCAD)
 
-![screenshot](https://wiki.freecadweb.org/images/thumb/7/72/Freecad016_screenshot1.jpg/800px-Freecad016_screenshot1.jpg)
+<img src="https://user-images.githubusercontent.com/1828501/174066870-1692005b-f8d7-43fb-a289-6d2f07f73d7f.png" width="800"/>
 
 Overview
 --------
@@ -64,24 +64,27 @@ whether you are a hobbyist, programmer, experienced CAD user, student or teacher
 Installing
 ----------
 
-Precompiled (installable) packages are available for Windows and macOS on the
+Precompiled packages for stable releases are available for Windows, macOS and Linux on the
 [Releases page](https://github.com/FreeCAD/FreeCAD/releases).
 
-On most Linux distributions, FreeCAD is directly installable from the 
+On most Linux distributions, FreeCAD is also directly installable from the 
 software center application.
+
+For development releases check the [weekly-builds page](https://github.com/FreeCAD/FreeCAD-Bundle/releases/tag/weekly-builds).
 
 Other options are described at the [wiki Download page](https://wiki.freecadweb.org/Download).
 
 Build Status
 ------------
 
-| Master | 0.19 | Translation |
+| Master | 0.20 | Translation |
 |:------:|:----:|:-----------:|
-|[![Master][freecad-master-status]][travis-branches]|[![0.19][freecad-0.19-status]][travis-branches]|[![Crowdin](https://d322cqt584bo4o.cloudfront.net/freecad/localized.svg)](https://crowdin.com/project/freecad)|
+|[![Master][freecad-master-status]][gitlab-branch-master]|[![0.20][freecad-0.20-status]][gitlab-branch-0.20]|[![Crowdin](https://d322cqt584bo4o.cloudfront.net/freecad/localized.svg)](https://crowdin.com/project/freecad)|
 
-[freecad-0.19-status]: https://travis-ci.org/FreeCAD/FreeCAD.svg?branch=releases/FreeCAD-0-19
-[freecad-master-status]: https://travis-ci.org/FreeCAD/FreeCAD.svg?branch=master
-[travis-branches]: https://travis-ci.org/FreeCAD/FreeCAD/branches
+[freecad-0.20-status]: https://gitlab.com/freecad/FreeCAD-CI/badges/releases/FreeCAD-0-20/pipeline.svg
+[freecad-master-status]: https://gitlab.com/freecad/FreeCAD-CI/badges/master/pipeline.svg
+[gitlab-branch-0.20]: https://gitlab.com/freecad/FreeCAD-CI/-/commits/releases/FreeCAD-0-20
+[gitlab-branch-master]: https://gitlab.com/freecad/FreeCAD-CI/-/commits/master
 [travis-builds]: https://travis-ci.org/FreeCAD/FreeCAD/builds
 
 Compiling
@@ -118,7 +121,7 @@ To report an issue please:
 For more detail see:
 - [Wiki Page about the Bug Tracker](https://wiki.freecadweb.org/Tracker)
 - [Bug Tracker](https://tracker.freecadweb.org)
-- [Help Forum](http://forum.freecadweb.org/viewforum.php?f=3)
+- [Help Forum](https://forum.freecadweb.org/viewforum.php?f=3)
 
 
 Usage & Getting help

@@ -32,6 +32,8 @@
 # @{
 from PySide.QtCore import QT_TRANSLATE_NOOP
 
+from draftutils.translate import translate
+
 # Comment out commands that aren't ready to be used
 
 
@@ -45,7 +47,7 @@ def get_draft_drawing_commands():
     return ["Draft_Line",
             "Draft_Wire",
             "Draft_Fillet",
-            ([QT_TRANSLATE_NOOP("Draft", "Arc tools")],
+            ([QT_TRANSLATE_NOOP("Workbench", "Arc tools")],
                 list(arc_group.GetCommands(arc_group))), # tuple len=2: submenu
             ("Draft_ArcTools", ),                        # tuple len=1: toolbar flyout
             "Draft_Circle",
@@ -53,7 +55,7 @@ def get_draft_drawing_commands():
             "Draft_Rectangle",
             "Draft_Polygon",
             "Draft_BSpline",
-            ([QT_TRANSLATE_NOOP("Draft", "Bezier tools")],
+            ([QT_TRANSLATE_NOOP("Workbench", "Bézier tools")],
                 list(bez_group.GetCommands(bez_group))),
             ("Draft_BezierTools", ),
             "Draft_Point",
@@ -84,7 +86,7 @@ def get_draft_modification_commands():
             "Draft_Stretch",
             "Separator",
             "Draft_Clone",
-            ([QT_TRANSLATE_NOOP("Draft", "Array tools")],
+            ([QT_TRANSLATE_NOOP("Workbench", "Array tools")],
                 list(arr_group.GetCommands(arr_group))), # tuple len=2: submenu
             ("Draft_ArrayTools", ),                      # tuple len=1: toolbar flyout
             "Separator",
@@ -139,22 +141,26 @@ def get_draft_utility_commands_toolbar():
 
 def get_draft_snap_commands():
     """Return the snapping commands list."""
-    return ['Draft_Snap_Lock',
-            'Draft_Snap_Endpoint',
-            'Draft_Snap_Midpoint',
-            'Draft_Snap_Center',
-            'Draft_Snap_Angle',
-            'Draft_Snap_Intersection',
-            'Draft_Snap_Perpendicular',
-            'Draft_Snap_Extension',
-            'Draft_Snap_Parallel',
-            'Draft_Snap_Special',
-            'Draft_Snap_Near',
-            'Draft_Snap_Ortho',
-            'Draft_Snap_Grid',
-            'Draft_Snap_WorkingPlane',
-            'Draft_Snap_Dimensions',
-            'Separator', 'Draft_ToggleGrid']
+    return ["Draft_Snap_Lock",
+            "Draft_Snap_Endpoint",
+            "Draft_Snap_Midpoint",
+            "Draft_Snap_Center",
+            "Draft_Snap_Angle",
+            "Draft_Snap_Intersection",
+            "Draft_Snap_Perpendicular",
+            "Draft_Snap_Extension",
+            "Draft_Snap_Parallel",
+            "Draft_Snap_Special",
+            "Draft_Snap_Near",
+            "Draft_Snap_Ortho",
+            "Draft_Snap_Grid",
+            "Draft_Snap_WorkingPlane",
+            "Draft_Snap_Dimensions",
+            # "Separator", # Removed: if the Python generated BIM snap toolbar
+                           # is displayed in the Draft WB the separator appears
+                           # after the last button. Can be reinstated when the
+                           # BIM WB has a `normal` snap toolbar as well.
+            "Draft_ToggleGrid"]
 
 
 def get_draft_context_commands():

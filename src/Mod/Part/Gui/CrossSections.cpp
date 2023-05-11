@@ -20,45 +20,41 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
+
 #ifndef _PreComp_
-# include <Standard_math.hxx>
-# include <BRep_Builder.hxx>
-# include <BRepAlgoAPI_Section.hxx>
-# include <BRepBuilderAPI_MakeWire.hxx>
-# include <TopoDS.hxx>
-# include <TopoDS_Compound.hxx>
-# include <TopExp_Explorer.hxx>
-# include <gp_Pln.hxx>
 # include <cfloat>
 # include <QFuture>
-# include <QFutureWatcher>
 # include <QKeyEvent>
-# include <QtConcurrentMap>
-# include <boost_bind_bind.hpp>
-# include <Python.h>
+
+# include <BRep_Builder.hxx>
+# include <Standard_math.hxx>
+# include <TopoDS.hxx>
+# include <TopoDS_Compound.hxx>
+
 # include <Inventor/nodes/SoBaseColor.h>
 # include <Inventor/nodes/SoCoordinate3.h>
 # include <Inventor/nodes/SoDrawStyle.h>
-# include <Inventor/nodes/SoFaceSet.h>
 # include <Inventor/nodes/SoLineSet.h>
 # include <Inventor/nodes/SoSeparator.h>
 #endif
 
-#include "ui_CrossSections.h"
-#include "CrossSections.h"
-#include <Mod/Part/App/PartFeature.h>
-#include <Mod/Part/App/CrossSection.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
+#include <App/Document.h>
+#include <Base/Sequencer.h>
+#include <Base/UnitsApi.h>
 #include <Gui/Application.h>
+#include <Gui/BitmapFactory.h>
 #include <Gui/Command.h>
 #include <Gui/Document.h>
 #include <Gui/View3DInventor.h>
 #include <Gui/View3DInventorViewer.h>
-#include <Base/Sequencer.h>
-#include <Base/UnitsApi.h>
+#include <Gui/ViewProvider.h>
+#include <Mod/Part/App/CrossSection.h>
+#include <Mod/Part/App/PartFeature.h>
+
+#include "CrossSections.h"
+#include "ui_CrossSections.h"
+
 
 using namespace PartGui;
 namespace bp = boost::placeholders;
@@ -83,19 +79,19 @@ public:
         this->pcRoot->addChild(coords);
         this->pcRoot->addChild(planes);
     }
-    ~ViewProviderCrossSections()
+    ~ViewProviderCrossSections() override
     {
         coords->unref();
         planes->unref();
     }
-    void updateData(const App::Property*)
+    void updateData(const App::Property*) override
     {
     }
-    const char* getDefaultDisplayMode() const
+    const char* getDefaultDisplayMode() const override
     {
         return "";
     }
-    std::vector<std::string> getDisplayModes(void) const
+    std::vector<std::string> getDisplayModes(void) const override
     {
         return std::vector<std::string>();
     }
@@ -146,7 +142,7 @@ CrossSections::CrossSections(const Base::BoundBox3d& bb, QWidget* parent, Qt::Wi
     }
 }
 
-/*  
+/*
  *  Destroys the object and frees any allocated resources
  */
 CrossSections::~CrossSections()
@@ -193,8 +189,14 @@ void CrossSections::accept()
 
 void CrossSections::apply()
 {
-    std::vector<App::DocumentObject*> obj = Gui::Selection().
-        getObjectsOfType(Part::Feature::getClassTypeId());
+    std::vector<App::DocumentObject*> docobjs = Gui::Selection().
+            getObjectsOfType(App::DocumentObject::getClassTypeId());
+    std::vector<App::DocumentObject*> obj;
+    for (std::vector<App::DocumentObject*>::iterator it = docobjs.begin(); it != docobjs.end(); ++it){
+        if (!Part::Feature::getTopoShape(*it).isNull()) {
+            obj.push_back((*it));
+        }
+    }
 
     std::vector<double> d;
     if (ui->sectionsBox->isChecked())
@@ -253,8 +255,8 @@ void CrossSections::apply()
         Gui::Command::runCommand(Gui::Command::App, QStringLiteral(
             "wires=list()\n"
             "shape=FreeCAD.getDocument(\"%1\").%2.Shape\n")
-            .arg(QString::fromUtf8(doc->getName()))
-            .arg(QString::fromUtf8((*it)->getNameInDocument())).toUtf8());
+            .arg(QString::fromUtf8(doc->getName()),
+                 QString::fromUtf8((*it)->getNameInDocument())).toUtf8());
 
         for (std::vector<double>::iterator jt = d.begin(); jt != d.end(); ++jt) {
             Gui::Command::runCommand(Gui::Command::App, QStringLiteral(
@@ -270,8 +272,8 @@ void CrossSections::apply()
             "slice.Shape=comp\n"
             "slice.purgeTouched()\n"
             "del slice,comp,wires,shape")
-            .arg(QString::fromUtf8(doc->getName()))
-            .arg(QString::fromUtf8(s.c_str())).toUtf8());
+            .arg(QString::fromUtf8(doc->getName()),
+                 QString::fromUtf8(s.c_str())).toUtf8());
 
         seq.next();
     }
@@ -517,7 +519,7 @@ TaskCrossSections::TaskCrossSections(const Base::BoundBox3d& bb)
     widget = new CrossSections(bb);
     taskbox = new Gui::TaskView::TaskBox(
         Gui::BitmapFactory().pixmap("Part_CrossSections"),
-        widget->windowTitle(), true, 0);
+        widget->windowTitle(), true, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

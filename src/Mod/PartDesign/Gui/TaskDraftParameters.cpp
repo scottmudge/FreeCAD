@@ -25,27 +25,22 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QMessageBox>
 # include <QAction>
 #endif
 
-#include "ui_TaskDraftParameters.h"
-#include "TaskDraftParameters.h"
-#include <Base/UnitsApi.h>
-#include <App/Application.h>
+#include <Base/Interpreter.h>
 #include <App/Document.h>
-#include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
+#include <App/DocumentObject.h>
 #include <Base/Console.h>
 #include <Base/Tools.h>
-#include <Gui/Selection.h>
 #include <Gui/Command.h>
-#include <Gui/MainWindow.h>
+#include <Gui/Selection.h>
+#include <Gui/ViewProvider.h>
 #include <Mod/PartDesign/App/FeatureDraft.h>
 #include <Mod/PartDesign/Gui/ReferenceSelection.h>
+
+#include "ui_TaskDraftParameters.h"
+#include "TaskDraftParameters.h"
 
 using namespace PartDesignGui;
 using namespace Gui;
@@ -212,11 +207,9 @@ void TaskDraftParameters::onButton(selectionModes mode, bool checked)
     selectionMode = mode;
     Gui::Selection().clearSelection();
 
-    ReferenceSelection::Config conf;
-    conf.edge = true;
-    conf.plane = mode==plane;
-    conf.planar = true;
-    std::unique_ptr<Gui::SelectionFilterGate> gateRefPtr(new ReferenceSelection(getBase(), conf));
+    AllowSelectionFlags allow = AllowSelection::EDGE | AllowSelection::PLANAR;
+    allow.setFlag(AllowSelection::FACE, mode==plane);
+    std::unique_ptr<Gui::SelectionFilterGate> gateRefPtr(new ReferenceSelection(getBase(), allow));
     std::unique_ptr<Gui::SelectionFilterGate> gateDepPtr(new NoDependentsSelection(pcDraft));
     Gui::Selection().addSelectionGate(new CombineSelectionFilterGates(gateRefPtr, gateDepPtr));
 
@@ -350,7 +343,8 @@ void TaskDraftParameters::onTimer()
         if(obj) {
             subname += subs.front();
             Gui::Selection().setPreselect(obj->getDocument()->getName(),
-                    obj->getNameInDocument(), subname.c_str(),0,0,0,2,true);
+                    obj->getNameInDocument(), subname.c_str(),0,0,0,
+                    Gui::SelectionChanges::MsgSource::TreeView,true);
         }
     }
 }

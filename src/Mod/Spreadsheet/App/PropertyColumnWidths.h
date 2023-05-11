@@ -26,12 +26,13 @@
 #include <map>
 #include <App/Property.h>
 #include <CXX/Objects.hxx>
+#include <Mod/Spreadsheet/SpreadsheetGlobal.h>
 
 namespace Spreadsheet {
 
 class SpreadsheetExport PropertyColumnWidths : public App::Property, std::map<int, int>
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
     PropertyColumnWidths();
 
@@ -50,27 +51,30 @@ public:
         return i != end() ? i->second : defaultWidth;
     }
 
-    virtual bool isSame(const Property &other) const {
+    bool isSame(const Property &other) const override {
         return other.isDerivedFrom(getClassTypeId())
             && *this == static_cast<const PropertyColumnWidths&>(other);
     }
-    virtual Property *copyBeforeChange() const {return Copy();}
 
-    virtual Property *Copy(void) const;
+    Property *copyBeforeChange() const override {
+        return Copy();
+    }
 
-    virtual void Paste(const Property &from);
+    Property *Copy() const override;
 
-    virtual void Save (Base::Writer & writer) const;
+    void Paste(const Property &from) override;
 
-    virtual void Restore(Base::XMLReader & reader);
+    void Save (Base::Writer & writer) const override;
 
-    bool isDirty() const { return dirty.size() > 0; }
+    void Restore(Base::XMLReader & reader) override;
+
+    bool isDirty() const { return !dirty.empty(); }
 
     void clearDirty() { dirty.clear(); }
 
     const std::set<int> & getDirty() const { return dirty; }
 
-    PyObject *getPyObject(void);
+    PyObject *getPyObject() override;
 
     void clear();
 

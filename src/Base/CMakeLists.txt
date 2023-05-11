@@ -56,17 +56,11 @@ else(MSVC)
     )
 endif(MSVC)
 
-if (BUILD_QT5)
-    include_directories(
-        ${Qt5Core_INCLUDE_DIRS}
-    )
-    list(APPEND FreeCADBase_LIBS ${Qt5Core_LIBRARIES})
-else()
-    include_directories(
-        ${QT_QTCORE_INCLUDE_DIR}
-    )
-    list(APPEND FreeCADBase_LIBS ${QT_QTCORE_LIBRARY})
-endif()
+include_directories(
+    ${QtCore_INCLUDE_DIRS}
+)
+list(APPEND FreeCADBase_LIBS ${QtCore_LIBRARIES})
+
 
 if (BUILD_DYNAMIC_LINK_PYTHON)
     list(APPEND FreeCADBase_LIBS ${PYTHON_LIBRARIES})
@@ -89,6 +83,7 @@ generate_from_xml(PlacementPy)
 generate_from_xml(AxisPy)
 generate_from_xml(UnitPy)
 generate_from_xml(QuantityPy)
+generate_from_xml(PrecisionPy)
 generate_from_any(Parameter.xsd Parameter.inl xmlSchemeString)
 
 if(SWIG_FOUND)
@@ -175,6 +170,7 @@ SET(FreeCADBase_XML_SRCS
     QuantityPy.xml
     TypePy.xml
     UnitPy.xml
+    PrecisionPy.xml
 )
 SOURCE_GROUP("XML" FILES ${FreeCADBase_XML_SRCS})
 
@@ -218,9 +214,11 @@ SET(FreeCADBase_CPP_SRCS
     Base64.cpp
     BaseClass.cpp
     BaseClassPyImp.cpp
+    BindingManager.cpp
     BoundBoxPyImp.cpp
     Builder3D.cpp
     Console.cpp
+    ConsoleObserver.cpp
     CoordinateSystem.cpp
     CoordinateSystemPyImp.cpp
     Debugger.cpp
@@ -240,6 +238,7 @@ SET(FreeCADBase_CPP_SRCS
     Matrix.cpp
     MatrixPyImp.cpp
     MemDebug.cpp
+    Mutex.cpp
     Parameter.xsd
     Parameter.cpp
     ParameterPy.cpp
@@ -247,18 +246,23 @@ SET(FreeCADBase_CPP_SRCS
     PersistencePyImp.cpp
     Placement.cpp
     PlacementPyImp.cpp
+    PrecisionPyImp.cpp
+    ProgressIndicatorPy.cpp
     PyExport.cpp
     PyObjectBase.cpp
+    QtTools.cpp
     Reader.cpp
     Rotation.cpp
     RotationPyImp.cpp
     Sequencer.cpp
+    SmartPtrPy.cpp
     Stream.cpp
     Swap.cpp
     ${SWIG_SRCS}
     TimeInfo.cpp
     Tools.cpp
     Tools2D.cpp
+    Tools3D.cpp
     Translate.cpp
     Type.cpp
     TypePyImp.cpp
@@ -268,6 +272,7 @@ SET(FreeCADBase_CPP_SRCS
     ViewProj.cpp
     Writer.cpp
     XMLTools.cpp
+    ZipHeader.cpp
 )
 
 SET(SWIG_HEADERS
@@ -278,9 +283,12 @@ SET(FreeCADBase_HPP_SRCS
     Axis.h
     Base64.h
     BaseClass.h
+    BindingManager.h
+    Bitmask.h
     BoundBox.h
     Builder3D.h
     Console.h
+    ConsoleObserver.h
     Converter.h
     CoordinateSystem.h
     Debugger.h
@@ -300,21 +308,27 @@ SET(FreeCADBase_HPP_SRCS
     Interpreter.h
     Matrix.h
     MemDebug.h
+    Mutex.h
     Observer.h
     Parameter.h
     Persistence.h
     Placement.h
+    Precision.h
+    ProgressIndicatorPy.h
     PyExport.h
     PyObjectBase.h
+    QtTools.h
     Reader.h
     Rotation.h
     Sequencer.h
+    SmartPtrPy.h
     Stream.h
     Swap.h
     ${SWIG_HEADERS}
     TimeInfo.h
     Tools.h
     Tools2D.h
+    Tools3D.h
     Translate.h
     Type.h
     Uuid.h
@@ -322,6 +336,7 @@ SET(FreeCADBase_HPP_SRCS
     ViewProj.h
     Writer.h
     XMLTools.h
+    ZipHeader.h
 )
 
 SET(FreeCADBase_SRCS

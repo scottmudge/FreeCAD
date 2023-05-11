@@ -31,24 +31,24 @@ namespace PartDesignGui {
 
 class PartDesignGuiExport ViewProviderHelix : public ViewProviderAddSub
 {
-    PROPERTY_HEADER(PartDesignGui::ViewProviderHelix);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderHelix);
 
 public:
     /// constructor
     ViewProviderHelix();
     /// destructor
-    virtual ~ViewProviderHelix();
+    ~ViewProviderHelix() override;
 
-    void setupContextMenu(QMenu*, QObject*, const char*);
+    void setupContextMenu(QMenu*, QObject*, const char*) override;
 
     /// grouping handling
-    std::vector<App::DocumentObject*> _claimChildren(void)const;
+    std::vector<App::DocumentObject*> _claimChildren(void)const override;
 
-    virtual bool onDelete(const std::vector<std::string> &);
+    bool onDelete(const std::vector<std::string> &) override;
 
 protected:
     /// Returns a newly created TaskDlgHelixParameters
-    virtual TaskDlgFeatureParameters *getEditDialog();
+    TaskDlgFeatureParameters *getEditDialog() override;
 };
 
 

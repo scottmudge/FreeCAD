@@ -20,20 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef PATH_FeaturePath_H
 #define PATH_FeaturePath_H
 
 #include <set>
 #include <App/DocumentObject.h>
 #include <App/GeoFeature.h>
-#include <App/PropertyFile.h>
-#include <App/PropertyGeo.h>
 #include <App/FeaturePython.h>
 #include <Mod/Part/App/PartFeature.h>
 
-#include "Path.h"
 #include "PropertyPath.h"
+
 
 namespace Path
 {
@@ -70,7 +67,7 @@ protected:
 
 Part::TopoShape PathExport shapeFromPath(const Toolpath &path, const std::set<int> &filter={});
 
-typedef App::FeaturePythonT<Feature> FeaturePython;
+using FeaturePython = App::FeaturePythonT<Feature>;
 
 } //namespace Path
 

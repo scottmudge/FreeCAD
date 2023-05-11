@@ -35,8 +35,8 @@ class DlgProjectUtility : public QDialog
     Q_OBJECT
 
 public:
-    DlgProjectUtility(QWidget* parent = 0, Qt::WindowFlags fl = Qt::WindowFlags());
-    ~DlgProjectUtility();
+    DlgProjectUtility(QWidget* parent = nullptr, Qt::WindowFlags fl = Qt::WindowFlags());
+    ~DlgProjectUtility() override;
 
 private Q_SLOTS:
     void on_extractButton_clicked();

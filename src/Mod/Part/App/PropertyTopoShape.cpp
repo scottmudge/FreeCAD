@@ -20,23 +20,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <sstream>
-# include <BRepAdaptor_Curve.hxx>
-# include <BRepAdaptor_Surface.hxx>
-# include <BRepBndLib.hxx>
-# include <BRepBuilderAPI_GTransform.hxx>
 # include <Bnd_Box.hxx>
+# include <BRepBndLib.hxx>
+# include <BRepBuilderAPI_Copy.hxx>
 # include <BRepTools.hxx>
 # include <BRepTools_ShapeSet.hxx>
-# include <BRepBuilderAPI_Copy.hxx>
-# include <TopTools_HSequenceOfShape.hxx>
-# include <TopTools_MapOfShape.hxx>
-# include <TopoDS.hxx>
-# include <TopoDS_Iterator.hxx>
+# include <OSD_OpenFile.hxx>
 # include <TopExp.hxx>
 # include <Standard_Failure.hxx>
 # include <Standard_Version.hxx>
@@ -45,41 +38,29 @@
 # include <BRepBuilderAPI_MakeShape.hxx>
 # include <TopTools_ListIteratorOfListOfShape.hxx>
 
-#if OCC_VERSION_HEX >= 0x060800
-# include <OSD_OpenFile.hxx>
-#endif
-
+# include <TopoDS.hxx>
 #endif // _PreComp_
 
-#include <boost_bind_bind.hpp>
-
-#include <Base/Console.h>
-#include <Base/Writer.h>
-#include <Base/Reader.h>
-#include <Base/Exception.h>
-#include <Base/FileInfo.h>
-#include <Base/Stream.h>
-#include <Base/Tools.h>
-#include <Base/QuantityPy.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DocumentObject.h>
 #include <App/ObjectIdentifier.h>
+#include <Base/Console.h>
+#include <Base/Exception.h>
+#include <Base/FileInfo.h>
+#include <Base/Interpreter.h>
+#include <Base/QuantityPy.h>
+#include <Base/Reader.h>
+#include <Base/Stream.h>
+#include <Base/Tools.h>
+#include <Base/Writer.h>
 #include <App/GeoFeature.h>
 
+#include "PartFeature.h"
+#include "PartParams.h"
 #include "PartPyCXX.h"
 #include "PropertyTopoShape.h"
 #include "TopoShapePy.h"
-#include "TopoShapeFacePy.h"
-#include "TopoShapeEdgePy.h"
-#include "TopoShapeWirePy.h"
-#include "TopoShapeVertexPy.h"
-#include "TopoShapeSolidPy.h"
-#include "TopoShapeShellPy.h"
-#include "TopoShapeCompSolidPy.h"
-#include "TopoShapeCompoundPy.h"
-#include "PartFeature.h"
-#include "PartParams.h"
 
 namespace bp = boost::placeholders;
 
@@ -205,6 +186,16 @@ Base::BoundBox3d PropertyPartShape::getBoundingBox() const
     }
 
     return box;
+}
+
+void PropertyPartShape::setTransform(const Base::Matrix4D &rclTrf)
+{
+    _Shape.setTransform(rclTrf);
+}
+
+Base::Matrix4D PropertyPartShape::getTransform() const
+{
+    return _Shape.getTransform();
 }
 
 void PropertyPartShape::transformGeometry(const Base::Matrix4D &rclTrf)
@@ -471,19 +462,17 @@ void PropertyPartShape::afterRestore()
     PropertyComplexGeoData::afterRestore();
 }
 
-// The following two functions are copied from OCCT BRepTools.cxx and modified
+// The following function is copied from OCCT BRepTools.cxx and modified
 // to disable saving of triangulation
 //
 
 static Standard_Boolean  BRepTools_Write(const TopoDS_Shape& Sh, const Standard_CString File)
 {
   std::ofstream os;
-#if OCC_VERSION_HEX >= 0x060800
   OSD_OpenStream(os, File, std::ios::out);
-#else
-  os.open(File, std::ios::out);
-#endif
-  if (!os.rdbuf()->is_open()) return Standard_False;
+
+  if (!os.rdbuf()->is_open())
+      return Standard_False;
 
   Standard_Boolean isGood = (os.good() && !os.eof());
   if(!isGood)
@@ -516,6 +505,103 @@ static Standard_Boolean  BRepTools_Write(const TopoDS_Shape& Sh, const Standard_
   return isGood;
 }
 
+void PropertyPartShape::saveToFile(Base::Writer &writer) const
+{
+    // create a temporary file and copy the content to the zip stream
+    // once the tmp. filename is known use always the same because otherwise
+    // we may run into some problems on the Linux platform
+    static Base::FileInfo fi(App::Application::getTempFileName());
+
+    TopoDS_Shape myShape = _Shape.getShape();
+    if (!BRepTools_Write(myShape,static_cast<Standard_CString>(fi.filePath().c_str()))) {
+        // Note: Do NOT throw an exception here because if the tmp. file could
+        // not be created we should not abort.
+        // We only print an error message but continue writing the next files to the
+        // stream...
+        App::PropertyContainer* father = this->getContainer();
+        if (father && father->isDerivedFrom(App::DocumentObject::getClassTypeId())) {
+            App::DocumentObject* obj = static_cast<App::DocumentObject*>(father);
+            Base::Console().Error("Shape of '%s' cannot be written to BRep file '%s'\n",
+                obj->Label.getValue(),fi.filePath().c_str());
+        }
+        else {
+            Base::Console().Error("Cannot save BRep file '%s'\n", fi.filePath().c_str());
+        }
+
+        std::stringstream ss;
+        ss << "Cannot save BRep file '" << fi.filePath() << "'";
+        writer.addError(ss.str());
+    }
+
+    Base::ifstream file(fi, std::ios::in | std::ios::binary);
+    if (file) {
+        std::streambuf* buf = file.rdbuf();
+        writer.Stream() << buf;
+    }
+
+    file.close();
+    // remove temp file
+    fi.deleteFile();
+}
+
+TopoDS_Shape PropertyPartShape::loadFromFile(Base::Reader &reader)
+{
+    BRep_Builder builder;
+    // create a temporary file and copy the content from the zip stream
+    Base::FileInfo fi(App::Application::getTempFileName());
+
+    // read in the ASCII file and write back to the file stream
+    Base::ofstream file(fi, std::ios::out | std::ios::binary);
+    unsigned long ulSize = 0;
+    if (reader) {
+        std::streambuf* buf = file.rdbuf();
+        reader >> buf;
+        file.flush();
+        ulSize = buf->pubseekoff(0, std::ios::cur, std::ios::in);
+    }
+    file.close();
+
+    // Read the shape from the temp file, if the file is empty the stored shape was already empty.
+    // If it's still empty after reading the (non-empty) file there must occurred an error.
+    TopoDS_Shape shape;
+    if (ulSize > 0) {
+        if (!BRepTools::Read(shape, static_cast<Standard_CString>(fi.filePath().c_str()), builder)) {
+            // Note: Do NOT throw an exception here because if the tmp. created file could
+            // not be read it's NOT an indication for an invalid input stream 'reader'.
+            // We only print an error message but continue reading the next files from the
+            // stream...
+            App::PropertyContainer* father = this->getContainer();
+            if (father && father->isDerivedFrom(App::DocumentObject::getClassTypeId())) {
+                App::DocumentObject* obj = static_cast<App::DocumentObject*>(father);
+                Base::Console().Error("BRep file '%s' with shape of '%s' seems to be empty\n",
+                    fi.filePath().c_str(),obj->Label.getValue());
+            }
+            else {
+                Base::Console().Warning("Loaded BRep file '%s' seems to be empty\n", fi.filePath().c_str());
+            }
+        }
+    }
+
+    // delete the temp file
+    fi.deleteFile();
+    return shape;
+}
+
+TopoDS_Shape PropertyPartShape::loadFromStream(Base::Reader &reader)
+{
+    TopoDS_Shape shape;
+    try {
+        reader.exceptions(std::istream::failbit | std::istream::badbit);
+        BRep_Builder builder;
+        BRepTools::Read(shape, reader, builder);
+    }
+    catch (const std::exception&) {
+        if (!reader.eof())
+            Base::Console().Warning("Failed to load BRep file %s\n", reader.getFileName().c_str());
+    }
+    return shape;
+}
+
 void PropertyPartShape::SaveDocFile (Base::Writer &writer) const
 {
     // Even if the shape is null, we shall still save it, so that there is
@@ -536,40 +622,7 @@ void PropertyPartShape::SaveDocFile (Base::Writer &writer) const
         bool direct = App::GetApplication().GetParameterGroupByPath
             ("User parameter:BaseApp/Preferences/Mod/Part/General")->GetBool("DirectAccess", true);
         if (!direct) {
-            // create a temporary file and copy the content to the zip stream
-            // once the tmp. filename is known use always the same because otherwise
-            // we may run into some problems on the Linux platform
-            static Base::FileInfo fi(App::Application::getTempFileName());
-
-            if (!BRepTools_Write(myShape,(Standard_CString)fi.filePath().c_str())) {
-                // Note: Do NOT throw an exception here because if the tmp. file could
-                // not be created we should not abort.
-                // We only print an error message but continue writing the next files to the
-                // stream...
-                App::PropertyContainer* father = this->getContainer();
-                if (father && father->isDerivedFrom(App::DocumentObject::getClassTypeId())) {
-                    App::DocumentObject* obj = static_cast<App::DocumentObject*>(father);
-                    Base::Console().Error("Shape of '%s' cannot be written to BRep file '%s'\n",
-                        obj->Label.getValue(),fi.filePath().c_str());
-                }
-                else {
-                    Base::Console().Error("Cannot save BRep file '%s'\n", fi.filePath().c_str());
-                }
-
-                std::stringstream ss;
-                ss << "Cannot save BRep file '" << fi.filePath() << "'";
-                writer.addError(ss.str());
-            }
-
-            Base::ifstream file(fi, std::ios::in | std::ios::binary);
-            if (file) {
-                std::streambuf* buf = file.rdbuf();
-                writer.Stream() << buf;
-            }
-
-            file.close();
-            // remove temp file
-            fi.deleteFile();
+            saveToFile(writer);
         }
         else {
             TopoShape shape;
@@ -598,49 +651,12 @@ void PropertyPartShape::RestoreDocFile(Base::Reader &reader)
                 "User parameter:BaseApp/Preferences/Mod/Part/General");
         bool direct = hGrp->GetBool("DirectAccess", true);
         if (!direct) {
-            BRep_Builder builder;
-            // create a temporary file and copy the content from the zip stream
-            Base::FileInfo fi(App::Application::getTempFileName());
-
-            // read in the ASCII file and write back to the file stream
-            Base::ofstream file(fi, std::ios::out | std::ios::binary);
-            unsigned long ulSize = 0;
-            if (reader) {
-                std::streambuf* buf = file.rdbuf();
-                reader >> buf;
-                file.flush();
-                ulSize = buf->pubseekoff(0, std::ios::cur, std::ios::in);
-            }
-            file.close();
-
-            // Read the shape from the temp file, if the file is empty the stored shape was already empty.
-            // If it's still empty after reading the (non-empty) file there must occurred an error.
-            if (ulSize > 0) {
-                if (!BRepTools::Read(sh, (Standard_CString)fi.filePath().c_str(), builder)) {
-                    // Note: Do NOT throw an exception here because if the tmp. created file could
-                    // not be read it's NOT an indication for an invalid input stream 'reader'.
-                    // We only print an error message but continue reading the next files from the
-                    // stream...
-                    App::PropertyContainer* father = this->getContainer();
-                    if (father && father->isDerivedFrom(App::DocumentObject::getClassTypeId())) {
-                        App::DocumentObject* obj = static_cast<App::DocumentObject*>(father);
-                        Base::Console().Error("BRep file '%s' with shape of '%s' seems to be empty\n",
-                            fi.filePath().c_str(),obj->Label.getValue());
-                    }
-                    else {
-                        Base::Console().Warning("Loaded BRep file '%s' seems to be empty\n", fi.filePath().c_str());
-                    }
-                }
-            }
-
-            // delete the temp file
-            fi.deleteFile();
-            shape.setShape(sh);
+            shape = loadFromFile(reader);
         }
         else {
-            BRep_Builder builder;
-            BRepTools::Read(sh, reader, builder);
-            shape.setShape(sh);
+            auto iostate = reader.exceptions();
+            shape = loadFromStream(reader);
+            reader.exceptions(iostate);
         }
     }
 

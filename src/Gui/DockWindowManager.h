@@ -20,13 +20,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_DOCKWINDOWMANAGER_H
 #define GUI_DOCKWINDOWMANAGER_H
 
 #include <Base/Parameter.h>
+#include <QObject>
+#include <FCGlobal.h>
+
 
 class QDockWidget;
+class QWidget;
 
 namespace Gui {
 
@@ -87,6 +90,8 @@ public:
     QWidget* getDockWindow(const char* name) const;
     /// Returns a list of all widgets which set to a QDockWidget.
     QList<QWidget*> getDockWindows() const;
+    /// If the corresponding dock widget isn't visible then activate it
+    void activate(QWidget* widget);
 
     void saveState();
     void loadState();
@@ -106,7 +111,7 @@ private:
     QDockWidget* findDockWidget(const QList<QDockWidget*>&, const QString&) const;
 
     DockWindowManager();
-    ~DockWindowManager();
+    ~DockWindowManager() override;
     static DockWindowManager* _instance;
     struct DockWindowManagerP* d;
 };

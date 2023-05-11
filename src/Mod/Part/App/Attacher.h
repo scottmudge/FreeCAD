@@ -28,17 +28,16 @@
 #ifndef PARTATTACHER_H
 #define PARTATTACHER_H
 
-#include <App/PropertyStandard.h>
-#include <App/PropertyLinks.h>
+#include <gp_Vec.hxx>
+#include <GProp_GProps.hxx>
+
 #include <App/GeoFeature.h>
-#include <Base/Vector3D.h>
-#include <Base/Placement.h>
+#include <App/PropertyLinks.h>
 #include <Base/Exception.h>
+#include <Base/Placement.h>
 
 #include "PartFeature.h"
 
-#include <gp_Vec.hxx>
-#include <GProp_GProps.hxx>
 
 namespace App
 {
@@ -151,8 +150,8 @@ enum eRefType {
 };
 
 
-typedef std::vector<eRefType> refTypeString; //a sequence of ref types, according to Support contents for example
-typedef std::vector<refTypeString> refTypeStringList; //a set of type strings, defines which selection sets are supported by a certain mode
+using refTypeString = std::vector<eRefType>; //a sequence of ref types, according to Support contents for example
+using refTypeStringList = std::vector<refTypeString>; //a set of type strings, defines which selection sets are supported by a certain mode
 
 
 /**
@@ -218,7 +217,7 @@ struct SuggestResult{
  */
 class PartExport AttachEngine : public Base::BaseClass
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public: //methods
     AttachEngine();
     void setUp(const App::PropertyLinkSubList &references,
@@ -287,7 +286,7 @@ public: //methods
                                       bool useRefOrg_Plane = false,
                                       bool makeYVertical = false,
                                       bool makeLegacyFlatFaceOrientation = false,
-                                      Base::Placement* placeOfRef = 0) const;
+                                      Base::Placement* placeOfRef = nullptr) const;
 
     /**
      * @brief suggestMapModes is the procedure that knows everything about
@@ -303,9 +302,9 @@ public: //methods
     /**
      * @brief EnableAllModes enables all modes that have shape type lists filled. The function acts on modeEnabled array.
      */
-    void EnableAllSupportedModes(void);
+    void EnableAllSupportedModes();
 
-    virtual ~AttachEngine(){};
+    ~AttachEngine() override{};
 
 public://helper functions that may be useful outside of the class
     /**
@@ -435,14 +434,14 @@ public: //members
 
 class PartExport AttachEngine3D : public AttachEngine
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
     AttachEngine3D();
-    virtual AttachEngine3D* copy() const;
-    virtual Base::Placement _calculateAttachedPlacement(
+    AttachEngine3D* copy() const override;
+    Base::Placement _calculateAttachedPlacement(
             const std::vector<App::DocumentObject*> &objs,
             const std::vector<std::string> &subs,
-            const Base::Placement &origPlacement) const;
+            const Base::Placement &origPlacement) const override;
 private:
     double calculateFoldAngle(gp_Vec axA, gp_Vec axB, gp_Vec edA, gp_Vec edB) const;
 };
@@ -450,40 +449,40 @@ private:
 //attacher specialized for datum planes
 class PartExport AttachEnginePlane : public AttachEngine
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
     AttachEnginePlane();
-    virtual AttachEnginePlane* copy() const;
-    virtual Base::Placement _calculateAttachedPlacement(
+    AttachEnginePlane* copy() const override;
+    Base::Placement _calculateAttachedPlacement(
             const std::vector<App::DocumentObject*> &objs,
             const std::vector<std::string> &subs,
-            const Base::Placement &origPlacement) const;
+            const Base::Placement &origPlacement) const override;
 };
 
 //attacher specialized for datum lines
 class PartExport AttachEngineLine : public AttachEngine
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
     AttachEngineLine();
-    virtual AttachEngineLine* copy() const;
-    virtual Base::Placement _calculateAttachedPlacement(
+    AttachEngineLine* copy() const override;
+    Base::Placement _calculateAttachedPlacement(
             const std::vector<App::DocumentObject*> &objs,
             const std::vector<std::string> &subs,
-            const Base::Placement &origPlacement) const;
+            const Base::Placement &origPlacement) const override;
 };
 
 //attacher specialized for datum points
 class PartExport AttachEnginePoint : public AttachEngine
 {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 public:
     AttachEnginePoint();
-    virtual AttachEnginePoint* copy() const;
-    virtual Base::Placement _calculateAttachedPlacement(
+    AttachEnginePoint* copy() const override;
+    Base::Placement _calculateAttachedPlacement(
             const std::vector<App::DocumentObject*> &objs,
             const std::vector<std::string> &subs,
-            const Base::Placement &origPlacement) const;
+            const Base::Placement &origPlacement) const override;
 
 private:
     gp_Pnt getProximityPoint(eMapMode mode, const TopoDS_Shape& s1, const TopoDS_Shape& s2) const;
@@ -495,8 +494,8 @@ class ExceptionCancel : public Base::Exception
 {
 public:
     ExceptionCancel(){}
-    ExceptionCancel(char* msg){this->setMessage(msg);}
-    virtual ~ExceptionCancel() throw() {}
+    explicit ExceptionCancel(char* msg){this->setMessage(msg);}
+    ~ExceptionCancel() throw() override {}
 };
 
 } // namespace Attacher

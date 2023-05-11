@@ -35,13 +35,7 @@ set(ImageGui_UIC_SRCS
     ImageOrientationDialog.ui
 )
 
-if(BUILD_QT5)
-    qt5_add_resources(ImageGui_QRC_SRCS ${ImageGui_RES_SRCS})
-    qt5_wrap_ui(ImageGui_UIC_HDRS ${ImageGui_UIC_SRCS})
-else()
-    qt4_add_resources(ImageGui_QRC_SRCS ${ImageGui_RES_SRCS})
-    qt4_wrap_ui(ImageGui_UIC_HDRS ${ImageGui_UIC_SRCS})
-endif()
+qt_add_resources(ImageGui_QRC_SRCS ${ImageGui_RES_SRCS})
 
 SET(ImageGui_SRCS
     ${ImageGui_QRC_SRCS}
@@ -51,6 +45,8 @@ SET(ImageGui_SRCS
     Command.cpp
     ImageOrientationDialog.cpp
     ImageOrientationDialog.h
+    OpenGLImageBox.cpp
+    OpenGLImageBox.h
     ViewProviderImagePlane.cpp
     ViewProviderImagePlane.h
     Resources/Image.qrc
@@ -63,17 +59,11 @@ SET(ImageGui_SRCS
     XpmImages.h
 )
 
-if(FREECAD_USE_QTOPENGL_WIDGET)
-    list(APPEND ImageGui_SRCS
-        OpenGLImageBox.cpp
-        OpenGLImageBox.h
-    )
-else()
-    list(APPEND ImageGui_SRCS
-        GLImageBox.cpp
-        GLImageBox.h
-    )
-endif()
+if(FREECAD_USE_PCH)
+    add_definitions(-D_PreComp_)
+    GET_MSVC_PRECOMPILED_SOURCE("PreCompiled.cpp" PCH_SRCS ${ImageGui_SRCS})
+    ADD_MSVC_PRECOMPILED_HEADER(ImageGui PreCompiled.h PreCompiled.cpp PCH_SRCS)
+endif(FREECAD_USE_PCH)
 
 SET(ImageGuiIcon_SVG
     Resources/icons/ImageWorkbench.svg

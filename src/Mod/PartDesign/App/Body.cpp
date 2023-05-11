@@ -23,24 +23,17 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
-
-#include <stack>
-
-#include <boost_bind_bind.hpp>
 #include <Base/Console.h>
 #include <Base/Placement.h>
 #include <Base/Tools.h>
-
-#include <App/Application.h>
 #include <App/Document.h>
 #include <App/Origin.h>
 
-#include <Mod/Part/App/DatumFeature.h>
-#include <Mod/Part/App/PartFeature.h>
 
+#include "Body.h"
+#include "BodyPy.h"
 #include "Feature.h"
+#include "FeatureBase.h"
 #include "FeatureExtrusion.h"
 #include "FeatureSolid.h"
 #include "FeatureSketchBased.h"
@@ -54,12 +47,7 @@
 #include "AuxGroup.h"
 #include "ShapeBinder.h"
 
-#include "Body.h"
-#include "FeatureBase.h"
-#include "BodyPy.h"
 #include <Mod/Part/App/PartParams.h>
-
-namespace bp = boost::placeholders;
 
 FC_LOG_LEVEL_INIT("PartDesign", true, true);
 
@@ -195,46 +183,46 @@ bool Body::isAfterInsertPoint(App::DocumentObject* feature) {
     }
 }
 
-bool Body::isMemberOfMultiTransform(const App::DocumentObject* f)
+bool Body::isMemberOfMultiTransform(const App::DocumentObject* obj)
 {
-    if (!f || !f->isDerivedFrom(PartDesign::Transformed::getClassTypeId()))
+    if (!obj || !obj->isDerivedFrom(PartDesign::Transformed::getClassTypeId()))
         return false;
 
-    for (auto obj : f->getInList()) {
-        if (obj->isDerivedFrom(PartDesign::MultiTransform::getClassTypeId()))
+    for (auto o : obj->getInList()) {
+        if (o->isDerivedFrom(PartDesign::MultiTransform::getClassTypeId()))
             return true;
     }
     return false;
 }
 
-bool Body::isSolidFeature(const App::DocumentObject* f) const
+bool Body::isSolidFeature(const App::DocumentObject* obj) const
 {
-    if (f == NULL)
+    if (!obj)
         return false;
 
-    if (f == BaseFeature.getValue())
+    if (obj == BaseFeature.getValue())
         return true;
 
-    auto type = f->getTypeId();
+    auto type = obj->getTypeId();
     if (type.isDerivedFrom(PartDesign::Extrusion::getClassTypeId()))
-        return static_cast<const PartDesign::Extrusion*>(f)->NewSolid.getValue();
+        return static_cast<const PartDesign::Extrusion*>(obj)->NewSolid.getValue();
 
     if (type.isDerivedFrom(PartDesign::FeatureWrap::getClassTypeId()))
-        return static_cast<const PartDesign::FeatureWrap*>(f)->isSolidFeature();
+        return static_cast<const PartDesign::FeatureWrap*>(obj)->isSolidFeature();
 
     if (type.isDerivedFrom(PartDesign::Feature::getClassTypeId())
-            && !PartDesign::Feature::isDatum(f)) {
+            && !PartDesign::Feature::isDatum(obj)) {
         // Transformed Features inside a MultiTransform are not solid features
-        return !isMemberOfMultiTransform(f);
+        return !isMemberOfMultiTransform(obj);
     }
     return false;//DeepSOIC: work-in-progress?
 }
 
-bool Body::isAllowed(const App::DocumentObject* f)
+bool Body::isAllowed(const App::DocumentObject *obj)
 {
-    if (f == NULL)
+    if (!obj)
         return false;
-    return isAllowed(f->getTypeId());
+    return isAllowed(obj->getTypeId());
 }
 
 bool Body::isAllowed(const Base::Type &type)
@@ -506,7 +494,7 @@ std::vector<App::DocumentObject*> Body::removeObject(App::DocumentObject* featur
 }
 
 
-App::DocumentObjectExecReturn *Body::execute(void)
+App::DocumentObjectExecReturn *Body::execute()
 {
     Part::BodyBase::execute();
 
@@ -629,7 +617,7 @@ void Body::unsetupObject () {
     Part::BodyBase::unsetupObject ();
 }
 
-PyObject *Body::getPyObject(void)
+PyObject *Body::getPyObject()
 {
     if (PythonObject.is(Py::_None())){
         // ref counter is set to 1
@@ -708,6 +696,11 @@ void Body::onDocumentRestored()
         feature->_Body.setValue(this);
     }
     _GroupTouched.setStatus(App::Property::Output,true);
+
+    // trigger ViewProviderBody::copyColorsfromTip
+    if (Tip.getValue())
+        Tip.touch();
+
     DocumentObject::onDocumentRestored();
 }
 

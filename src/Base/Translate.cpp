@@ -72,10 +72,7 @@ Translate::Translate()
     initialize("This module is the Translate module"); // register with Python
 }
 
-Translate::~Translate()
-{
-
-}
+Translate::~Translate() = default;
 
 Py::Object Translate::translate(const Py::Tuple& args)
 {
@@ -83,7 +80,7 @@ Py::Object Translate::translate(const Py::Tuple& args)
     char *source;
     char *disambiguation = nullptr;
     int n=-1;
-    if (!PyArg_ParseTuple(args.ptr(), "ss|si", &context, &source, &disambiguation, &n))
+    if (!PyArg_ParseTuple(args.ptr(), "ss|zi", &context, &source, &disambiguation, &n))
         throw Py::Exception();
 
     QString str = QCoreApplication::translate(context, source, disambiguation, n);

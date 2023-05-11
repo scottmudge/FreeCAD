@@ -44,6 +44,7 @@ public:
     void setUnitTest(const QString& unit);
     void clearUnitTests();
     QString getUnitTest() const;
+    bool runCurrentTest();
     void setStatusText(const QString& text);
     void setProgressFraction(float fraction, const QString& = QString());
     void clearErrorList();
@@ -53,15 +54,15 @@ public:
     void setErrorCount(int);
     void setRemainCount(int);
     void reset();
-    void reject();
+    void reject() override;
 
     static UnitTestDialog* instance();
     static void destruct();
     static bool hasInstance();
 
 protected:
-    UnitTestDialog(QWidget* parent = 0, Qt::WindowFlags f = Qt::WindowFlags());
-    ~UnitTestDialog();
+    explicit UnitTestDialog(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
+    ~UnitTestDialog() override;
     void setProgressColor(const QColor& col);
 
 public Q_SLOTS:

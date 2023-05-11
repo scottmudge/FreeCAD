@@ -23,13 +23,9 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
-
 #include "Application.h"
 #include "DocumentObjectGroup.h"
 #include "DocumentObjectGroupPy.h"
-#include "Document.h"
 #include "FeaturePythonPyImp.h"
 #include "GroupParams.h"
 
@@ -37,7 +33,7 @@ using namespace App;
 
 PROPERTY_SOURCE_WITH_EXTENSIONS(App::DocumentObjectGroup, App::DocumentObject)
 
-DocumentObjectGroup::DocumentObjectGroup(void): DocumentObject(), GroupExtension() {
+DocumentObjectGroup::DocumentObjectGroup(): DocumentObject(), GroupExtension() {
 
     GroupExtension::initExtension(this);
 
@@ -47,9 +43,7 @@ DocumentObjectGroup::DocumentObjectGroup(void): DocumentObject(), GroupExtension
     }
 }
 
-DocumentObjectGroup::~DocumentObjectGroup() {
-
-}
+DocumentObjectGroup::~DocumentObjectGroup() = default;
 
 PyObject *DocumentObjectGroup::getPyObject()
 {
@@ -72,10 +66,11 @@ template<> void App::DocumentObjectGroupPython::setupObject() {
     ExportMode.setValue(ExportDisabled);
 }
 
-template<> const char* App::DocumentObjectGroupPython::getViewProviderName(void) const {
+template<> const char* App::DocumentObjectGroupPython::getViewProviderName() const {
     return "Gui::ViewProviderDocumentObjectGroupPython";
 }
-template<> PyObject* App::DocumentObjectGroupPython::getPyObject(void) {
+
+template<> PyObject* App::DocumentObjectGroupPython::getPyObject() {
     if (PythonObject.is(Py::_None())) {
         // ref counter is set to 1
         PythonObject = Py::Object(new FeaturePythonPyT<App::DocumentObjectGroupPy>(this),true);

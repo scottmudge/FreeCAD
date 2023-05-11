@@ -31,19 +31,20 @@
 #include <QAction>
 #include <QMenu>
 #include <QComboBox>
-#include <QKeySequence>
 #include <QCompleter>
+#include <QKeySequence>
 #include <QTimer>
 
 #include <boost_signals2.hpp>
-
-#include <Base/Parameter.h>
 
 class QLineEdit;
 class QWidgetAction;
 class QCheckBox;
 class QToolBar;
 class QSpinBox;
+
+#include <FCGlobal.h>
+#include <Base/Parameter.h>
 
 namespace Gui
 {
@@ -61,12 +62,12 @@ class GuiExport Action : public QObject
     Q_OBJECT
 
 public:
-    Action (Command* pcCmd, QObject * parent = 0);
+    explicit Action (Command* pcCmd, QObject * parent = nullptr);
     /// Action takes ownership of the 'action' object.
     Action (Command* pcCmd, QAction* action, QObject * parent);
-    virtual ~Action();
+    ~Action() override;
 
-    virtual void addTo (QWidget * w);
+    virtual void addTo (QWidget * widget);
     virtual void setEnabled(bool);
     virtual void setVisible(bool);
 
@@ -112,11 +113,11 @@ public:
                               QWidget *widget,
                               bool needLable = true);
 
-    static QString createToolTip(QString tooltip,
+    static QString createToolTip(QString helpText,
                                  const QString &title,
                                  const QFont &font,
                                  const QString &shortcut,
-                                 const Command *cmd = nullptr,
+                                 const Command *command = nullptr,
                                  QString iconPath = QString());
 
     /** Obtain tool tip of a given command
@@ -144,10 +145,16 @@ public Q_SLOTS:
     virtual void onToggled   (bool);
 
 protected:
+    QString _tooltip;
+
+private:
     QAction* _action;
     Command *_pcCmd;
-    QString _tooltip;
     QString _title;
+    QMetaObject::Connection _connection;
+
+private:
+    Q_DISABLE_COPY(Action)
 };
 
 // --------------------------------------------------------------------
@@ -164,36 +171,42 @@ class GuiExport ActionGroup : public Action
     Q_OBJECT
 
 public:
-    ActionGroup (Command* pcCmd, QObject * parent = 0);
-    virtual ~ActionGroup();
+    explicit ActionGroup (Command* pcCmd, QObject * parent = nullptr);
+    ~ActionGroup() override;
 
-    void addTo (QWidget * w);
-    void setEnabled (bool);
+    void addTo (QWidget * widget) override;
+    void setEnabled (bool) override;
     void setDisabled (bool);
     void setExclusive (bool);
     bool isExclusive() const;
-    void setVisible (bool);
-    void setIsMode(bool b) { _isMode = b; }
+    void setVisible (bool) override;
+    void setIsMode(bool check) { _isMode = check; }
 
-    void setDropDownMenu(bool b) { _dropDown = b; }
+    void setDropDownMenu(bool check) { _dropDown = check; }
     QAction* addAction(QAction*);
     QAction* addAction(const QString&);
     QList<QAction*> actions() const;
     int checkedAction() const;
     void setCheckedAction(int);
 
+protected:
+    QActionGroup* groupAction() const {
+        return _group;
+    }
+
 public Q_SLOTS:
-    void onActivated ();
-    void onToggled(bool);
+    void onActivated () override;
+    void onToggled(bool) override;
     void onActivated (QAction*);
 
-protected:
+private:
     QActionGroup* _group;
     bool _dropDown;
-    bool _external;
-    bool _toggle;
     bool _isMode;
     QList<QAction*> _actions;
+
+private:
+    Q_DISABLE_COPY(ActionGroup)
 };
 
 // --------------------------------------------------------------------
@@ -204,9 +217,8 @@ class GuiExport WorkbenchComboBox : public QComboBox
     Q_OBJECT
 
 public:
-    WorkbenchComboBox(WorkbenchGroup* wb, QWidget* parent=0);
-    virtual ~WorkbenchComboBox();
-    void showPopup();
+    explicit WorkbenchComboBox(WorkbenchGroup* wb, QWidget* parent=nullptr);
+    void showPopup() override;
     void setAction(QAction *act) {action = act;}
     QAction *getAction() {return action;}
 
@@ -221,6 +233,8 @@ protected Q_SLOTS:
 private:
     WorkbenchGroup* group;
     QAction *action = nullptr;
+
+    Q_DISABLE_COPY(WorkbenchComboBox)
 };
 
 // --------------------------------------------------------------------
@@ -230,13 +244,13 @@ class GuiExport WorkbenchTabWidget : public QTabWidget
     Q_OBJECT
 public:
     WorkbenchTabWidget(WorkbenchGroup* wb, QWidget* parent=0);
-    virtual ~WorkbenchTabWidget();
+    ~WorkbenchTabWidget() override;
     void setAction(QAction *act) {action = act;}
     QAction *getAction() {return action;}
     void setupVisibility();
 
 protected:
-    bool eventFilter(QObject *, QEvent *ev);
+    bool eventFilter(QObject *, QEvent *ev) override;
 
 protected Q_SLOTS:
     void onCurrentChanged();
@@ -270,8 +284,8 @@ public:
     void setTabSize(int size);
 
 protected:
-    QSize tabSizeHint(int index) const;
-    void changeEvent(QEvent*);
+    QSize tabSizeHint(int index) const override;
+    void changeEvent(QEvent*) override;
 
 private:
     int _tabSize = 0;
@@ -292,8 +306,8 @@ public:
      * when it gets activated.
      */
     WorkbenchGroup (Command* pcCmd, QObject * parent);
-    virtual ~WorkbenchGroup();
-    void addTo (QWidget * w);
+    ~WorkbenchGroup() override;
+    void addTo (QWidget * widget) override;
     void refreshWorkbenchList();
 
     void slotActivateWorkbench(const char*);
@@ -301,7 +315,7 @@ public:
     void slotRemoveWorkbench(const char*);
 
 protected:
-    void customEvent(QEvent* e);
+    void customEvent(QEvent* event) override;
 
 protected Q_SLOTS:
     void onShowMenu();
@@ -310,11 +324,12 @@ protected Q_SLOTS:
 Q_SIGNALS:
     void workbenchListUpdated();
 
-private:
-    void setWorkbenchData(int i, const QString& wb);
-
     friend class WorkbenchTabWidget;
     friend class WorkbenchComboBox;
+
+private:
+    void setWorkbenchData(int index, const QString& wb);
+    Q_DISABLE_COPY(WorkbenchGroup)
 
 private:
     QMenu* _menu = nullptr;
@@ -335,8 +350,8 @@ class GuiExport RecentFilesAction : public ActionGroup
     Q_OBJECT
 
 public:
-    RecentFilesAction (Command* pcCmd, QObject * parent = 0);
-    virtual ~RecentFilesAction();
+    explicit RecentFilesAction (Command* pcCmd, QObject * parent = nullptr);
+    ~RecentFilesAction() override;
 
     void appendFile(const QString&);
     void activateFile(int);
@@ -355,6 +370,8 @@ private:
     class Private;
     friend class Private;
     std::unique_ptr<Private> _pimpl;
+
+    Q_DISABLE_COPY(RecentFilesAction)
 };
 
 // --------------------------------------------------------------------
@@ -368,8 +385,7 @@ class GuiExport RecentMacrosAction : public ActionGroup
     Q_OBJECT
 
 public:
-    RecentMacrosAction (Command* pcCmd, QObject * parent = 0);
-    virtual ~RecentMacrosAction();
+    explicit RecentMacrosAction (Command* pcCmd, QObject * parent = nullptr);
 
     void appendFile(const QString&);
     void activateFile(int);
@@ -386,6 +402,8 @@ private:
     int maximumItems; /**< Number of maximum items */
     std::string shortcut_modifiers; /**< default = "Ctrl+Shift+" */
     int shortcut_count; /**< Number of dynamic shortcuts to create -- default = 3*/
+
+    Q_DISABLE_COPY(RecentMacrosAction)
 };
 
 
@@ -401,17 +419,19 @@ class GuiExport UndoAction : public Action
     Q_OBJECT
 
 public:
-    UndoAction (Command* pcCmd,QObject * parent = 0);
-    ~UndoAction();
-    void addTo (QWidget * w);
-    void setEnabled(bool);
-    void setVisible(bool);
+    explicit UndoAction (Command* pcCmd,QObject * parent = nullptr);
+    ~UndoAction() override;
+    void addTo (QWidget * widget) override;
+    void setEnabled(bool) override;
+    void setVisible(bool) override;
 
 private Q_SLOTS:
     void actionChanged();
 
 private:
     QAction* _toolAction;
+
+    Q_DISABLE_COPY(UndoAction)
 };
 
 // --------------------------------------------------------------------
@@ -426,17 +446,19 @@ class GuiExport RedoAction : public Action
     Q_OBJECT
 
 public:
-    RedoAction (Command* pcCmd,QObject * parent = 0);
-    ~RedoAction();
-    void addTo ( QWidget * w );
-    void setEnabled(bool);
-    void setVisible(bool);
+    explicit RedoAction (Command* pcCmd,QObject * parent = nullptr);
+    ~RedoAction() override;
+    void addTo ( QWidget * widget ) override;
+    void setEnabled(bool) override;
+    void setVisible(bool) override;
 
 private Q_SLOTS:
     void actionChanged();
 
 private:
     QAction* _toolAction;
+
+    Q_DISABLE_COPY(RedoAction)
 };
 
 // --------------------------------------------------------------------
@@ -450,12 +472,14 @@ class GuiExport DockWidgetAction : public Action
     Q_OBJECT
 
 public:
-    DockWidgetAction (Command* pcCmd, QObject * parent = 0);
-    virtual ~DockWidgetAction();
-    void addTo (QWidget * w);
+    explicit DockWidgetAction (Command* pcCmd, QObject * parent = nullptr);
+    ~DockWidgetAction() override;
+    void addTo (QWidget * widget) override;
 
 private:
     QMenu* _menu;
+
+    Q_DISABLE_COPY(DockWidgetAction)
 };
 
 // --------------------------------------------------------------------
@@ -469,12 +493,14 @@ class GuiExport ToolBarAction : public Action
     Q_OBJECT
 
 public:
-    ToolBarAction (Command* pcCmd, QObject * parent = 0);
-    virtual ~ToolBarAction();
-    void addTo (QWidget * w);
+    explicit ToolBarAction (Command* pcCmd, QObject * parent = nullptr);
+    ~ToolBarAction() override;
+    void addTo (QWidget * widget) override;
 
 private:
     QMenu* _menu;
+
+    Q_DISABLE_COPY(ToolBarAction)
 };
 
 // --------------------------------------------------------------------
@@ -487,12 +513,13 @@ class GuiExport WindowAction : public ActionGroup
     Q_OBJECT
 
 public:
-    WindowAction (Command* pcCmd, QObject * parent = 0);
-    virtual ~WindowAction();
-    void addTo (QWidget * w);
+    explicit WindowAction (Command* pcCmd, QObject * parent = nullptr);
+    void addTo (QWidget * widget) override;
 
 private:
     QMenu* _menu;
+
+    Q_DISABLE_COPY(WindowAction)
 };
 
 // --------------------------------------------------------------------

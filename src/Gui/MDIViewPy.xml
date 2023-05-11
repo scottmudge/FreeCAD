@@ -18,6 +18,41 @@
         <UserDocu>Send message to this view</UserDocu>
       </Documentation>
     </Methode>
+    <Methode Name="sendMessage">
+      <Documentation>
+        <UserDocu>Send message to this view</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="supportMessage">
+      <Documentation>
+        <UserDocu>Check if this view support a message</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="undoActions">
+      <Documentation>
+        <UserDocu>Undo actions </UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="redoActions">
+      <Documentation>
+        <UserDocu>Redo actions </UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="printView">
+      <Documentation>
+        <UserDocu>Print view </UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="printPdf">
+      <Documentation>
+        <UserDocu>Print as PDF </UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="printPreview">
+      <Documentation>
+        <UserDocu>Print preview </UserDocu>
+      </Documentation>
+    </Methode>
     <Methode Name="fitAll">
       <Documentation>
         <UserDocu>Fit all content to the current view</UserDocu>
@@ -39,6 +74,11 @@ getActiveObject(name,resolve=True)
 
 Returns the active object for the given type
         </UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="close">
+      <Documentation>
+        <UserDocu>close the view</UserDocu>
       </Documentation>
     </Methode>
     <Attribute Name="ID" ReadOnly="true">

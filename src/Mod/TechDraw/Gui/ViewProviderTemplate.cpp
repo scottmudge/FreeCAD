@@ -31,27 +31,19 @@
 # endif
 #endif
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-#include <Base/Console.h>
-#include <Base/Parameter.h>
-#include <Base/Exception.h>
-#include <Base/Sequencer.h>
-#include <App/Application.h>
-#include <App/Document.h>
 #include <App/DocumentObject.h>
-
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/MainWindow.h>
-#include <Gui/ViewProvider.h>
 
+#include <Mod/TechDraw/App/DrawPage.h>
 #include <Mod/TechDraw/App/DrawTemplate.h>
 #include <Mod/TechDraw/App/DrawSVGTemplate.h>
-#include <Mod/TechDraw/App/DrawPage.h>
 
 #include "QGITemplate.h"
 #include "QGISVGTemplate.h"
 #include "QGVPage.h"
+#include "QGSPage.h"
 #include "MDIViewPage.h"
 #include "TemplateTextField.h"
 #include "ViewProviderPage.h"
@@ -68,44 +60,35 @@ ViewProviderTemplate::ViewProviderTemplate()
 {
     sPixmap = "TechDraw_TreePageTemplate";
 
-    DisplayMode.setStatus(App::Property::Hidden,true);
+    DisplayMode.setStatus(App::Property::Hidden, true);
 }
 
 ViewProviderTemplate::~ViewProviderTemplate()
 {
 }
 
-void ViewProviderTemplate::attach(App::DocumentObject *pcFeat)
-{
-    // call parent attach method
-    ViewProviderDocumentObject::attach(pcFeat);
-}
-
-void ViewProviderTemplate::setDisplayMode(const char* ModeName)
-{
-    ViewProviderDocumentObject::setDisplayMode(ModeName);
-}
-
-std::vector<std::string> ViewProviderTemplate::getDisplayModes(void) const
-{
-    // get the modes of the father
-    std::vector<std::string> StrList = ViewProviderDocumentObject::getDisplayModes();
-
-    return StrList;
-}
-
 void ViewProviderTemplate::updateData(const App::Property* prop)
 {
+    //This doesn't belong here.  Should be in attach?
     if (getTemplate()->isDerivedFrom(TechDraw::DrawSVGTemplate::getClassTypeId())) {
         auto t = static_cast<TechDraw::DrawSVGTemplate*>(getTemplate());
         if (prop == &(t->Template)) {
-            MDIViewPage* mdi = getMDIViewPage();
-            if (mdi != nullptr) {
-                mdi->attachTemplate(t);
-                mdi->viewAll();
+            auto page = t->getParentPage();
+            Gui::ViewProvider* vp = Gui::Application::Instance->getDocument(t->getDocument())->getViewProvider(page);
+            TechDrawGui::ViewProviderPage* vpp = dynamic_cast<TechDrawGui::ViewProviderPage*>(vp);
+            if (vpp) {
+                vpp->getQGSPage()->attachTemplate(t);
             }
        }
     }
+
+    if (prop == &(getTemplate()->EditableTexts)) {
+        QGITemplate* qgiv = getQTemplate();
+        if (qgiv) {
+            qgiv->updateView(true);
+        }
+    }
+
     Gui::ViewProviderDocumentObject::updateData(prop);
 }
 
@@ -124,54 +107,54 @@ void ViewProviderTemplate::onChanged(const App::Property *prop)
             hide();
         }
     }
-    
+
     Gui::ViewProviderDocumentObject::onChanged(prop);
 }
 
-void ViewProviderTemplate::show(void)
+void ViewProviderTemplate::show()
 {
     QGITemplate* qTemplate = getQTemplate();
-    if (qTemplate != nullptr) {
+    if (qTemplate) {
         qTemplate->show();
     }
 
     ViewProviderDocumentObject::show();
 }
 
-void ViewProviderTemplate::hide(void)
+void ViewProviderTemplate::hide()
 {
     QGITemplate* qTemplate = getQTemplate();
-    if (qTemplate != nullptr) {
+    if (qTemplate) {
         qTemplate->hide();
     }
-    
+
     ViewProviderDocumentObject::hide();
 }
 
-bool ViewProviderTemplate::isShow(void) const
+bool ViewProviderTemplate::isShow() const
 {
     return Visibility.getValue();
 }
 
-QGITemplate* ViewProviderTemplate::getQTemplate(void)
+QGITemplate* ViewProviderTemplate::getQTemplate()
 {
-    QGITemplate *result = nullptr;
     TechDraw::DrawTemplate* dt = getTemplate();
     if (dt) {
-        MDIViewPage* mdi = getMDIViewPage();
-        if (mdi != nullptr) {
-            result = mdi->getQGVPage()->getTemplate();
-        }
+        auto page = dt->getParentPage();
+        Gui::ViewProvider* vp = Gui::Application::Instance->getDocument(dt->getDocument())->getViewProvider(page);
+        TechDrawGui::ViewProviderPage* vpp = dynamic_cast<TechDrawGui::ViewProviderPage*>(vp);
+        if (vpp)
+            return vpp->getQGSPage()->getTemplate();
     }
-    return result;
+    return nullptr;
 }
 
 void ViewProviderTemplate::setMarkers(bool state)
 {
-//    Base::Console().Message("VPT::setMarkers(%d)\n",state);
+//    Base::Console().Message("VPT::setMarkers(%d)\n", state);
     QGITemplate* qTemplate = getQTemplate();
     QGISVGTemplate* qSvgTemplate = dynamic_cast<QGISVGTemplate*> (qTemplate);
-    if (qSvgTemplate != nullptr) {
+    if (qSvgTemplate) {
         std::vector<TemplateTextField *> textFields = qSvgTemplate->getTextFields();
         for (auto& t:textFields) {
             if (state) {
@@ -213,17 +196,16 @@ bool ViewProviderTemplate::onDelete(const std::vector<std::string> &)
         return false;
 }
 
-MDIViewPage* ViewProviderTemplate::getMDIViewPage(void) const
+MDIViewPage* ViewProviderTemplate::getMDIViewPage() const
 {
-    MDIViewPage* myMdi = nullptr;
     auto t = getTemplate();
     auto page = t->getParentPage();
     Gui::ViewProvider* vp = Gui::Application::Instance->getDocument(t->getDocument())->getViewProvider(page);
     TechDrawGui::ViewProviderPage* dvp = dynamic_cast<TechDrawGui::ViewProviderPage*>(vp);
     if (dvp) {
-        myMdi = dvp->getMDIViewPage();
+        return dvp->getMDIViewPage();
     }
-    return myMdi;
+    return nullptr;
 }
 
 Gui::MDIView *ViewProviderTemplate::getMDIView() const

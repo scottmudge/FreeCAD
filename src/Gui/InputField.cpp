@@ -26,23 +26,23 @@
 # include <QContextMenuEvent>
 # include <QMenu>
 # include <QPixmapCache>
+# include <QRegularExpression>
+# include <QRegularExpressionMatch>
 #endif
 
-#include <Base/Console.h>
-#include <Base/Quantity.h>
-#include <Base/Exception.h>
-#include <Base/Tools.h>
 #include <App/Application.h>
-#include <App/PropertyUnits.h>
-#include <App/ExpressionParser.h>
 #include <App/DocumentObject.h>
-#include "App/ExpressionParser.h"
-#include "ExpressionCompleter.h"
-#include "Command.h"
+#include <App/ExpressionParser.h>
+#include <App/PropertyUnits.h>
+#include <Base/Exception.h>
+#include <Base/Quantity.h>
+#include <Base/Tools.h>
+
 #include "InputField.h"
 #include "BitmapFactory.h"
+#include "Command.h"
 #include "QuantitySpinBox_p.h"
-#include "propertyeditor/PropertyItem.h"
+
 
 using namespace Gui;
 using namespace App;
@@ -54,11 +54,11 @@ namespace Gui {
 class InputValidator : public QValidator
 {
 public:
-    InputValidator(InputField* parent);
-    ~InputValidator();
+    explicit InputValidator(InputField* parent);
+    ~InputValidator() override;
 
-    void fixup(QString& input) const;
-    State validate(QString& input, int& pos) const;
+    void fixup(QString& input) const override;
+    State validate(QString& input, int& pos) const override;
 
 private:
     InputField* dptr;
@@ -79,7 +79,12 @@ InputField::InputField(QWidget * parent)
     SaveSize(5)
 {
     setValidator(new InputValidator(this));
-    setFocusPolicy(Qt::WheelFocus);
+    if (!App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/General")->GetBool("ComboBoxWheelEventFilter",false)) {
+        setFocusPolicy(Qt::WheelFocus);
+    }
+    else {
+        setFocusPolicy(Qt::StrongFocus);
+    }
     iconLabel = new ExpressionLabel(this);
     iconLabel->setCursor(Qt::ArrowCursor);
     QPixmap pixmap = getValidationIcon(":/icons/button_valid.svg", QSize(sizeHint().height(),sizeHint().height()));
@@ -107,7 +112,7 @@ void InputField::bind(const App::ObjectIdentifier &_path)
 {
     ExpressionBinding::bind(_path);
 
-    PropertyQuantity * prop = freecad_dynamic_cast<PropertyQuantity>(getPath().getProperty());
+    auto * prop = freecad_dynamic_cast<PropertyQuantity>(getPath().getProperty());
 
     if (prop)
         actQuantity = Base::Quantity(prop->getValue());
@@ -191,7 +196,7 @@ void InputField::contextMenuEvent(QContextMenuEvent *event)
 {
     QMenu *editMenu = createStandardContextMenu();
     editMenu->setTitle(tr("Edit"));
-    QMenu* menu = new QMenu(QStringLiteral("InputFieldContextmenu"));
+    auto menu = new QMenu(QStringLiteral("InputFieldContextmenu"));
 
     menu->addMenu(editMenu);
     menu->addSeparator();
@@ -203,9 +208,9 @@ void InputField::contextMenuEvent(QContextMenuEvent *event)
     // add the history menu part...
     std::vector<QString> history = getHistory();
 
-    for(std::vector<QString>::const_iterator it = history.begin();it!= history.end();++it){
-        actions.push_back(menu->addAction(*it));
-        values.push_back(*it);
+    for(const auto & it : history){
+        actions.push_back(menu->addAction(it));
+        values.push_back(it);
     }
 
     // add the save value portion of the menu
@@ -213,9 +218,9 @@ void InputField::contextMenuEvent(QContextMenuEvent *event)
     QAction *SaveValueAction = menu->addAction(tr("Save value"));
     std::vector<QString> savedValues = getSavedValues();
 
-    for(std::vector<QString>::const_iterator it = savedValues.begin();it!= savedValues.end();++it){
-        actions.push_back(menu->addAction(*it));
-        values.push_back(*it);
+    for(const auto & savedValue : savedValues){
+        actions.push_back(menu->addAction(savedValue));
+        values.push_back(savedValue);
     }
 
     // call the menu and wait until its back
@@ -226,7 +231,7 @@ void InputField::contextMenuEvent(QContextMenuEvent *event)
         pushToSavedValues();
     else{
         int i=0;
-        for(std::vector<QAction *>::const_iterator it = actions.begin();it!=actions.end();++it,i++)
+        for(auto it = actions.begin();it!=actions.end();++it,i++)
             if(*it == saveAction)
                 this->setText(values[i]);
     }
@@ -248,7 +253,7 @@ void InputField::newInput(const QString & text)
 
             std::unique_ptr<Expression> evalRes(getExpression()->eval());
 
-            NumberExpression * value = freecad_dynamic_cast<NumberExpression>(evalRes.get());
+            auto * value = freecad_dynamic_cast<NumberExpression>(evalRes.get());
             if (value) {
                 res.setValue(value->getValue());
                 res.setUnit(value->getUnit());
@@ -261,7 +266,7 @@ void InputField::newInput(const QString & text)
         QString errorText = QString::fromUtf8(e.what());
         QPixmap pixmap = getValidationIcon(":/icons/button_invalid.svg", QSize(sizeHint().height(),sizeHint().height()));
         iconLabel->setPixmap(pixmap);
-        parseError(errorText);
+        Q_EMIT parseError(errorText);
         validInput = false;
         return;
     }
@@ -273,7 +278,7 @@ void InputField::newInput(const QString & text)
     if(!actUnit.isEmpty() && !res.getUnit().isEmpty() && actUnit != res.getUnit()){
         QPixmap pixmap = getValidationIcon(":/icons/button_invalid.svg", QSize(sizeHint().height(),sizeHint().height()));
         iconLabel->setPixmap(pixmap);
-        parseError(QStringLiteral("Wrong unit"));
+        Q_EMIT parseError(QStringLiteral("Wrong unit"));
         validInput = false;
         return;
     }
@@ -299,8 +304,8 @@ void InputField::newInput(const QString & text)
     actQuantity = res;
 
     // signaling
-    valueChanged(res);
-    valueChanged(res.getValue());
+    Q_EMIT valueChanged(res);
+    Q_EMIT valueChanged(res.getValue());
 }
 
 void InputField::pushToHistory(const QString &valueq)
@@ -313,8 +318,8 @@ void InputField::pushToHistory(const QString &valueq)
 
     // check if already in:
     std::vector<QString> hist = InputField::getHistory();
-    for(std::vector<QString>::const_iterator it = hist.begin();it!=hist.end();++it)
-        if( *it == val)
+    for(const auto & it : hist)
+        if( it == val)
             return;
 
     std::string value(val.toUtf8());
@@ -325,14 +330,14 @@ void InputField::pushToHistory(const QString &valueq)
             snprintf(hist1,20,"Hist%i",i+1);
             snprintf(hist0,20,"Hist%i",i);
             std::string tHist = _handle->GetASCII(hist0,"");
-            if(tHist != "")
+            if(!tHist.empty())
                 _handle->SetASCII(hist1,tHist.c_str());
         }
         _handle->SetASCII("Hist0",value.c_str());
     }
 }
 
-std::vector<QString> InputField::getHistory(void)
+std::vector<QString> InputField::getHistory()
 {
     std::vector<QString> res;
 
@@ -342,7 +347,7 @@ std::vector<QString> InputField::getHistory(void)
         for(int i = 0 ; i< HistorySize ;i++){
             snprintf(hist,20,"Hist%i",i);
             tmp = _handle->GetASCII(hist,"");
-            if( tmp != "")
+            if( !tmp.empty())
                 res.push_back(QString::fromUtf8(tmp.c_str()));
             else
                 break; // end of history reached
@@ -351,7 +356,7 @@ std::vector<QString> InputField::getHistory(void)
     return res;
 }
 
-void InputField::setToLastUsedValue(void)
+void InputField::setToLastUsedValue()
 {
     std::vector<QString> hist = getHistory();
     if(!hist.empty())
@@ -373,14 +378,14 @@ void InputField::pushToSavedValues(const QString &valueq)
             snprintf(hist1,20,"Save%i",i+1);
             snprintf(hist0,20,"Save%i",i);
             std::string tHist = _handle->GetASCII(hist0,"");
-            if(tHist != "")
+            if(!tHist.empty())
                 _handle->SetASCII(hist1,tHist.c_str());
         }
         _handle->SetASCII("Save0",value.c_str());
     }
 }
 
-std::vector<QString> InputField::getSavedValues(void)
+std::vector<QString> InputField::getSavedValues()
 {
     std::vector<QString> res;
 
@@ -390,7 +395,7 @@ std::vector<QString> InputField::getSavedValues(void)
         for(int i = 0 ; i< SaveSize ;i++){
             snprintf(hist,20,"Save%i",i);
             tmp = _handle->GetASCII(hist,"");
-            if( tmp != "")
+            if( !tmp.empty())
                 res.push_back(QString::fromUtf8(tmp.c_str()));
             else
                 break; // end of history reached
@@ -453,7 +458,7 @@ const Base::Unit& InputField::getUnit() const
 }
 
 /// get stored, valid quantity as a string
-QString InputField::getQuantityString(void) const
+QString InputField::getQuantityString() const
 {
     return actQuantity.getUserString();
 }
@@ -467,7 +472,7 @@ void InputField::setQuantityString(const QString& text)
 }
 
 /// return the quantity in C locale, i.e. decimal separator is a dot.
-QString InputField::rawText(void) const
+QString InputField::rawText() const
 {
     double  factor;
     QString unit;
@@ -486,7 +491,7 @@ void InputField::setRawText(const QString& text)
 }
 
 /// get the value of the singleStep property
-double InputField::singleStep(void)const
+double InputField::singleStep()const
 {
     return StepSize;
 }
@@ -498,7 +503,7 @@ void InputField::setSingleStep(double s)
 }
 
 /// get the value of the maximum property
-double InputField::maximum(void)const
+double InputField::maximum()const
 {
     return Maximum;
 }
@@ -514,7 +519,7 @@ void InputField::setMaximum(double m)
 }
 
 /// get the value of the minimum property
-double InputField::minimum(void)const
+double InputField::minimum()const
 {
     return Minimum;
 }
@@ -540,7 +545,7 @@ void InputField::setUnitText(const QString& str)
     }
 }
 
-QString InputField::getUnitText(void)
+QString InputField::getUnitText()
 {
     double dFactor;
     QString unitStr;
@@ -578,7 +583,7 @@ void InputField::setFormat(const QString& format)
 }
 
 // get the value of the minimum property
-int InputField::historySize(void)const
+int InputField::historySize()const
 {
     return HistorySize;
 }
@@ -592,32 +597,18 @@ void InputField::setHistorySize(int i)
     HistorySize = i;
 }
 
-void InputField::selectNumber(void)
+void InputField::selectNumber()
 {
-    QString str = text();
-    unsigned int i = 0;
-
-    QChar d = locale().decimalPoint();
-    QChar g = locale().groupSeparator();
-    QChar n = locale().negativeSign();
-    QChar e = locale().exponential();
-
-    for (QString::iterator it = str.begin(); it != str.end(); ++it) {
-        if (it->isDigit())
-            i++;
-        else if (*it == d)
-            i++;
-        else if (*it == g)
-            i++;
-        else if (*it == n)
-            i++;
-        else if (*it == e && actQuantity.getFormat().format != Base::QuantityFormat::Fixed)
-            i++;
-        else // any non-number character
-            break;
+    QString expr = QStringLiteral("^([%1%2]?[0-9\\%3]*)\\%4?([0-9]+(%5[%1%2]?[0-9]+)?)")
+                   .arg(locale().negativeSign())
+                   .arg(locale().positiveSign())
+                   .arg(locale().groupSeparator())
+                   .arg(locale().decimalPoint())
+                   .arg(locale().exponential());
+    auto rmatch = QRegularExpression(expr).match(text());
+    if (rmatch.hasMatch()) {
+        setSelection(0, rmatch.capturedLength());
     }
-
-    setSelection(0, i);
 }
 
 void InputField::showEvent(QShowEvent * event)
@@ -644,6 +635,19 @@ void InputField::focusInEvent(QFocusEvent *event)
 
 void InputField::focusOutEvent(QFocusEvent *event)
 {
+    try {
+        if (Quantity::parse(this->text()).getUnit().isEmpty()) {
+            // if user didn't enter a unit, we virtually compensate
+            // the multiplication factor induced by user unit system
+            double factor;
+            QString unitStr;
+            actQuantity.getUserString(factor, unitStr);
+            actQuantity = actQuantity * factor;
+        }
+    }
+    catch (const Base::ParserError&) {
+        // do nothing, let apply the last known good value
+    }
     this->setText(actQuantity.getUserString());
     QLineEdit::focusOutEvent(event);
 }
@@ -688,6 +692,9 @@ void InputField::keyPressEvent(QKeyEvent *event)
 
 void InputField::wheelEvent (QWheelEvent * event)
 {
+    if (!hasFocus())
+        return;
+
     if (isReadOnly()) {
         QLineEdit::wheelEvent(event);
         return;
@@ -713,10 +720,18 @@ void InputField::wheelEvent (QWheelEvent * event)
 void InputField::fixup(QString& input) const
 {
     input.remove(locale().groupSeparator());
-    if (locale().negativeSign() != QLatin1Char('-'))
-        input.replace(locale().negativeSign(), QLatin1Char('-'));
-    if (locale().positiveSign() != QLatin1Char('+'))
-        input.replace(locale().positiveSign(), QLatin1Char('+'));
+
+    QString asciiMinus(QStringLiteral("-"));
+    QString localeMinus(locale().negativeSign());
+    if (localeMinus != asciiMinus) {
+        input.replace(localeMinus, asciiMinus);
+    }
+
+    QString asciiPlus(QStringLiteral("+"));
+    QString localePlus(locale().positiveSign());
+    if (localePlus != asciiPlus) {
+        input.replace(localePlus, asciiPlus);
+    }
 }
 
 QValidator::State InputField::validate(QString& input, int& pos) const

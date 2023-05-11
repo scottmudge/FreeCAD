@@ -26,15 +26,16 @@
 # include <QDialogButtonBox>
 #endif
 
+#include <Gui/Command.h>
+#include <Gui/Selection.h>
+#include <Gui/WaitCursor.h>
+#include <Mod/Mesh/App/MeshFeature.h>
+#include <Mod/Mesh/App/Core/Smoothing.h>
+
 #include "DlgSmoothing.h"
 #include "ui_DlgSmoothing.h"
 #include "Selection.h"
 
-#include <Gui/WaitCursor.h>
-#include <Gui/Command.h>
-#include <Gui/Selection.h>
-#include <Mod/Mesh/App/MeshFeature.h>
-#include <Mod/Mesh/App/Core/Smoothing.h>
 
 using namespace MeshGui;
 
@@ -107,7 +108,7 @@ bool DlgSmoothing::smoothSelection() const
 
 void DlgSmoothing::on_checkBoxSelection_toggled(bool on)
 {
-    /*emit*/ toggledSelection(on);
+    Q_EMIT toggledSelection(on);
 }
 
 // ------------------------------------------------
@@ -121,7 +122,7 @@ SmoothingDialog::SmoothingDialog(QWidget* parent, Qt::WindowFlags fl)
     QVBoxLayout* hboxLayout = new QVBoxLayout(this);
     QDialogButtonBox* buttonBox = new QDialogButtonBox(this);
     buttonBox->setStandardButtons(QDialogButtonBox::Cancel|QDialogButtonBox::Ok);
-    
+
     connect(buttonBox, SIGNAL(accepted()),
             this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()),
@@ -143,18 +144,14 @@ TaskSmoothing::TaskSmoothing()
 {
     widget = new DlgSmoothing();
     Gui::TaskView::TaskBox* taskbox = new Gui::TaskView::TaskBox(
-        QPixmap(), widget->windowTitle(), false, 0);
+        QPixmap(), widget->windowTitle(), false, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 
     selection = new Selection();
-    selection->setObjects(Gui::Selection().getSelectionEx(0, Mesh::Feature::getClassTypeId()));
+    selection->setObjects(Gui::Selection().getSelectionEx(nullptr, Mesh::Feature::getClassTypeId()));
     Gui::Selection().clearSelection();
-#if !defined (QSINT_ACTIONPANEL)
-    Gui::TaskView::TaskGroup* tasksel = new Gui::TaskView::TaskGroup();
-#else
     Gui::TaskView::TaskBox* tasksel = new Gui::TaskView::TaskBox();
-#endif
     tasksel->groupLayout()->addWidget(selection);
     tasksel->hide();
     Content.push_back(tasksel);
@@ -209,6 +206,16 @@ bool TaskSmoothing::accept()
                 {
                     MeshCore::LaplaceSmoothing s(mm->getKernel());
                     s.SetLambda(widget->lambdaStep());
+                    if (widget->smoothSelection()) {
+                        s.SmoothPoints(widget->iterations(), selection);
+                    }
+                    else {
+                        s.Smooth(widget->iterations());
+                    }
+                }   break;
+            case MeshGui::DlgSmoothing::MedianFilter:
+                {
+                    MeshCore::MedianFilterSmoothing s(mm->getKernel());
                     if (widget->smoothSelection()) {
                         s.SmoothPoints(widget->iterations(), selection);
                     }

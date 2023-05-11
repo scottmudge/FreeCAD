@@ -29,15 +29,16 @@
 # include <QApplication>
 # include <QMenu>
 # include <QMouseEvent>
-# include <Inventor/nodes/SoSwitch.h>
 # include <Inventor/details/SoFaceDetail.h>
 #endif
 
+#include <Base/Exception.h>
+#include <App/Document.h>
 #include <Gui/ActionFunction.h>
-#include <Gui/Command.h>
-#include <Gui/MDIView.h>
-#include <Gui/Control.h>
 #include <Gui/Application.h>
+#include <Gui/BitmapFactory.h>
+#include <Gui/Command.h>
+#include <Gui/Control.h>
 #include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
 #include <Gui/SoFCUnifiedSelection.h>
@@ -55,19 +56,19 @@
 #include <Mod/PartDesign/App/FeatureExtrusion.h>
 #include <Mod/Sketcher/App/SketchObject.h>
 
-#include "Utils.h"
 #include "TaskFeatureParameters.h"
 
 #include "ViewProvider.h"
 #include "ViewProviderPy.h"
 #include "ViewProviderBody.h"
+#include "Utils.h"
 
 using namespace PartDesignGui;
 
 PROPERTY_SOURCE_WITH_EXTENSIONS(PartDesignGui::ViewProvider, PartGui::ViewProviderPart)
 
 ViewProvider::ViewProvider()
-:oldWb(""), isSetTipIcon(false)
+: oldWb(""), isSetTipIcon(false)
 {
     PartGui::ViewProviderAttachExtension::initExtension(this);
     ADD_PROPERTY(IconColor,((long)0));
@@ -84,7 +85,7 @@ ViewProvider::~ViewProvider()
 {
 }
 
-bool ViewProvider::doubleClicked(void)
+bool ViewProvider::doubleClicked()
 {
     std::string Msg("Edit ");
     Msg += this->pcObject->Label.getValue();
@@ -208,7 +209,7 @@ bool ViewProvider::setEdit(int ModNum)
         TaskDlgFeatureParameters *featureDlg = qobject_cast<TaskDlgFeatureParameters *>(dlg);
         // NOTE: if the dialog is not partDesigan dialog the featureDlg will be NULL
         if (featureDlg && featureDlg->viewProvider() != this) {
-            featureDlg = 0; // another feature left open its task panel
+            featureDlg = nullptr; // another feature left open its task panel
         }
         if (dlg && !featureDlg && !dlg->tryClose())
             return false;
@@ -552,7 +553,7 @@ void ViewProvider::onChanged(const App::Property* prop) {
                     }
                     if (otherGroup) {
                         if (sels.empty())
-                            sels = Gui::Selection().getSelectionT("*", 0);
+                            sels = Gui::Selection().getSelectionT("*", Gui::ResolveMode::NoResolve);
                         App::SubObjectT ref;
                         for (auto &sel : sels) {
                             if (sel.getSubObject() == v.first) {
@@ -741,7 +742,7 @@ bool ViewProvider::onDelete(const std::vector<std::string> &)
     // find surrounding features in the tree
     Part::BodyBase* body = PartDesign::Body::findBodyOf(getObject());
 
-    if (body != NULL) {
+    if (body) {
         // Deletion from the tree of a feature is handled by Document.removeObject, which has no clue
         // about what a body is. Therefore, Bodies, although an "activable" container, know nothing
         // about what happens at Document level with the features they contain.

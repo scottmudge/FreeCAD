@@ -59,10 +59,10 @@ class TaskChamferParameters : public TaskDressUpParameters
     friend class ChamferInfoDelegate;
 
 public:
-    TaskChamferParameters(ViewProviderDressUp *DressUpView, QWidget *parent=0);
-    ~TaskChamferParameters();
+    explicit TaskChamferParameters(ViewProviderDressUp *DressUpView, QWidget *parent=nullptr);
+    ~TaskChamferParameters() override;
 
-    virtual void apply();
+    void apply() override;
     void setBinding(Gui::ExpressionBinding *binding, const QModelIndex &index);
 
 private Q_SLOTS:
@@ -73,8 +73,8 @@ private Q_SLOTS:
     void onFlipDirection(bool);
 
 protected:
-    void changeEvent(QEvent *e);
-    virtual void refresh();
+    void changeEvent(QEvent *e) override;
+    void refresh() override;
 
     void removeItems();
     void clearItems();
@@ -85,6 +85,9 @@ protected:
 
     Part::TopoShape::ChamferInfo getChamferInfo(QTreeWidgetItem *);
 
+    void onAddAllEdges(void);
+    void onCheckBoxUseAllEdgesToggled(bool checked);
+
     int getType(void) const;
     double getSize(void) const;
     double getSize2(void) const;
@@ -92,7 +95,6 @@ protected:
     bool getFlipDirection(void) const;
     void onNewItem(QTreeWidgetItem *item);
     
-
 private:
     void setUpUI(PartDesign::Chamfer* pcChamfer);
 
@@ -105,12 +107,12 @@ class TaskDlgChamferParameters : public TaskDlgDressUpParameters
     Q_OBJECT
 
 public:
-    TaskDlgChamferParameters(ViewProviderChamfer *DressUpView);
-    ~TaskDlgChamferParameters();
+    explicit TaskDlgChamferParameters(ViewProviderChamfer *DressUpView);
+    ~TaskDlgChamferParameters() override;
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
+    bool accept() override;
 };
 
 } //namespace PartDesignGui

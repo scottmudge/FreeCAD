@@ -20,15 +20,10 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskPipeParameters_H
 #define GUI_TASKVIEW_TaskPipeParameters_H
 
 #include <boost_signals2.hpp>
-
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
-#include <Gui/TaskView/TaskDialog.h>
 
 #include "TaskSketchBasedParameters.h"
 #include "ViewProviderPipe.h"
@@ -46,7 +41,7 @@ namespace Gui {
 class ViewProvider;
 }
 
-namespace PartDesignGui { 
+namespace PartDesignGui {
 
 class Ui_TaskPipeParameters;
 class Ui_TaskPipeOrientation;
@@ -57,16 +52,17 @@ class TaskPipeParameters : public TaskSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskPipeParameters(ViewProviderPipe *PipeView,bool newObj=false,QWidget *parent = 0);
-    ~TaskPipeParameters();
+    explicit TaskPipeParameters(ViewProviderPipe *PipeView, bool newObj=false, QWidget *parent = nullptr);
+    ~TaskPipeParameters() override;
 
-private Q_SLOTS:
+private:
     void onTangentChanged(bool checked);
     void onTransitionChanged(int);
     void updateUI();
 
 protected:
-    void refresh();
+    void refresh() override;
+    void onProfileOptionChanged();
 
 public:
     ViewProviderPipe* getPipeView() const
@@ -83,17 +79,18 @@ class TaskPipeOrientation : public TaskSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskPipeOrientation(ViewProviderPipe *PipeView,bool newObj=false,QWidget *parent = 0);
-    virtual ~TaskPipeOrientation();
+    explicit TaskPipeOrientation(ViewProviderPipe *PipeView, bool newObj=false, QWidget *parent = nullptr);
+    ~TaskPipeOrientation() override;
 
-private Q_SLOTS:
+
+private:
     void onOrientationChanged(int);
     void updateUI(int idx);
     void onCurvelinearChanged(bool checked);
     void onBinormalChanged(double);
   
 protected:
-    void refresh();
+    void refresh() override;
 
 private:
     QWidget* proxy;
@@ -107,20 +104,19 @@ class TaskPipeScaling : public TaskSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskPipeScaling(ViewProviderPipe *PipeView,bool newObj=false,QWidget *parent = 0);
-    virtual ~TaskPipeScaling();
+    explicit TaskPipeScaling(ViewProviderPipe *PipeView,bool newObj=false,QWidget *parent = nullptr);
+    ~TaskPipeScaling() override;
 
-private Q_SLOTS:
+private:
     void onScalingChanged(int);
     void updateUI(int idx);
-    void refresh();
+    void refresh() override;
 
 private:
     QWidget* proxy;
     std::unique_ptr<Ui_TaskPipeScaling> ui;
-    LinkSubListWidget *sectionWidget;
+    LinkSubListWidget *sectionWidget = nullptr;
 };
-
 
 /// simulation dialog for the TaskView
 class TaskDlgPipeParameters : public TaskDlgSketchBasedParameters
@@ -128,8 +124,8 @@ class TaskDlgPipeParameters : public TaskDlgSketchBasedParameters
     Q_OBJECT
 
 public:
-    TaskDlgPipeParameters(ViewProviderPipe *PipeView,bool newObj=false);
-    ~TaskDlgPipeParameters();
+    explicit TaskDlgPipeParameters(ViewProviderPipe *PipeView,bool newObj=false);
+    ~TaskDlgPipeParameters() override;
 
     ViewProviderPipe* getPipeView() const
     { return static_cast<ViewProviderPipe*>(vp); }
@@ -137,7 +133,7 @@ public:
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
+    bool accept() override;
     /// is called by the framework if the dialog is rejected (Cancel)
 
     void onSelectionModeChanged(TaskSketchBasedParameters *);

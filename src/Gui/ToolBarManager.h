@@ -29,6 +29,8 @@
 #include <QStringList>
 #include <QPointer>
 #include <QTimer>
+
+#include <FCGlobal.h>
 #include <Base/Parameter.h>
 
 class QAction;
@@ -43,12 +45,17 @@ class Workbench;
 class GuiExport ToolBarItem
 {
 public:
+    enum class HideStyle {
+        VISIBLE,
+        FORCE_HIDE // Force a toolbar to be hidden. For when all elements are disabled at some point in a workbench.
+    };
+
     ToolBarItem();
-    ToolBarItem(ToolBarItem* item);
+    explicit ToolBarItem(ToolBarItem* item, HideStyle forceHide = HideStyle::VISIBLE);
     ~ToolBarItem();
 
     void setCommand(const std::string&);
-    const std::string & command() const;
+    const std::string &command() const;
 
     void setID(const QString&);
     const QString & id() const;
@@ -66,6 +73,8 @@ public:
     ToolBarItem& operator << (ToolBarItem* item);
     ToolBarItem& operator << (const std::string& command);
     QList<ToolBarItem*> getItems() const;
+
+    HideStyle forceHide;
 
 private:
     std::string _name;

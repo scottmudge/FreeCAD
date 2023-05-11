@@ -23,39 +23,29 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <deque>
+# include <memory>
+# include <sstream>
+# include <boost/tokenizer.hpp>
 #endif
 
-#include <boost/regex.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost/range/adaptor/map.hpp>
-#include <boost/range/algorithm/copy.hpp>
-#include <boost/assign.hpp>
-#include <boost/graph/topological_sort.hpp>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DynamicProperty.h>
-#include <App/FeaturePythonPyImp.h>
 #include <App/ExpressionParser.h>
+#include <App/FeaturePythonPyImp.h>
 #include <Base/Exception.h>
 #include <Base/FileInfo.h>
-#include <Base/Placement.h>
 #include <Base/Reader.h>
 #include <Base/Stream.h>
-#include <Base/Writer.h>
 #include <Base/Tools.h>
-#include <Base/Console.h>
+
 #include "Sheet.h"
 #include "SheetObserver.h"
-#include "Utils.h"
 #include "SheetPy.h"
-#include <ostream>
-#include <fstream>
-#include <string>
-#include <iomanip>
-#include <boost/regex.hpp>
-#include <deque>
 
-FC_LOG_LEVEL_INIT("Spreadsheet",true,true)
+
+FC_LOG_LEVEL_INIT("Spreadsheet", true, true)
 
 using namespace Base;
 using namespace App;
@@ -63,7 +53,7 @@ using namespace Spreadsheet;
 
 PROPERTY_SOURCE(Spreadsheet::Sheet, App::DocumentObject)
 
-typedef boost::adjacency_list <
+using DependencyList = boost::adjacency_list <
 boost::vecS,           // class OutEdgeListS  : a Sequence or an AssociativeContainer
 boost::vecS,           // class VertexListS   : a Sequence or a RandomAccessContainer
 boost::directedS,      // class DirectedS     : This is a directed graph
@@ -71,10 +61,10 @@ boost::no_property,    // class VertexProperty:
 boost::no_property,    // class EdgeProperty:
 boost::no_property,    // class GraphProperty:
 boost::listS           // class EdgeListS:
-> DependencyList;
-typedef boost::graph_traits<DependencyList> Traits;
-typedef Traits::vertex_descriptor Vertex;
-typedef Traits::edge_descriptor Edge;
+>;
+using Traits = boost::graph_traits<DependencyList>;
+using Vertex = Traits::vertex_descriptor;
+using Edge = Traits::edge_descriptor;
 
 static const char *ShowCellEnumText[] = {
     "None",
@@ -229,7 +219,7 @@ bool Sheet::importFromFile(const std::string &filename, char delimiter, char quo
                 tokenizer<escaped_list_separator<char> > tok(line, e);
 
                 for(tokenizer<escaped_list_separator<char> >::iterator i = tok.begin(); i != tok.end();++i) {
-                    if ((*i).size() > 0)
+                    if (!i->empty())
                         setCell(CellAddress(row, col), (*i).c_str());
                     col++;
                 }
@@ -287,16 +277,17 @@ static void writeEscaped(std::string const& s, char quoteChar, char escapeChar, 
 
 bool Sheet::exportToFile(const std::string &filename, char delimiter, char quoteChar, char escapeChar) const
 {
-    std::ofstream file;
+    Base::ofstream file;
     int prevRow = -1, prevCol = -1;
 
-    file.open(filename.c_str(), std::ios::out | std::ios::ate | std::ios::binary);
+    Base::FileInfo fi(filename);
+    file.open(fi, std::ios::out | std::ios::ate | std::ios::binary);
 
     if (!file.is_open())
         return false;
 
-    std::set<CellAddress> usedCells = cells.getUsedCells();
-    std::set<CellAddress>::const_iterator i = usedCells.begin();
+    auto usedCells = cells.getNonEmptyCells();
+    auto i = usedCells.begin();
 
     while (i != usedCells.end()) {
         Property * prop = getProperty(*i);
@@ -393,7 +384,7 @@ Cell *Sheet::getNewCell(CellAddress address)
 {
      Cell * cell = getCell(address);
 
-    if (cell == 0)
+    if (!cell)
         cell = cells.createCell(address);
 
     return cell;
@@ -409,7 +400,7 @@ Cell *Sheet::getNewCell(CellAddress address)
 
 void Sheet::setCell(const char * address, const char * contents)
 {
-    assert(address != 0 &&  contents != 0);
+    assert(address && contents);
 
     setCell(CellAddress(address), contents);
 }
@@ -425,7 +416,7 @@ void Sheet::setCell(const char * address, const char * contents)
 
 void Sheet::setCell(CellAddress address, const char * value)
 {
-    assert(value != 0);
+    assert(value);
 
 
     if (*value == '\0') {
@@ -460,7 +451,7 @@ PyObject *Sheet::getPyObject(void)
 
 Property * Sheet::getProperty(CellAddress key) const
 {
-    return props.getDynamicPropertyByName(key.toString(true).c_str());
+    return props.getDynamicPropertyByName(key.toString(CellAddress::Cell::ShowRowColumn).c_str());
 }
 
 /**
@@ -548,7 +539,7 @@ void Sheet::setPropertyVisibility(App::Property *prop, App::CellAddress addr)
 
 Property * Sheet::setFloatProperty(CellAddress key, double value)
 {
-    std::string name = key.toString(true);
+    std::string name = key.toString(CellAddress::Cell::ShowRowColumn);
     Property * prop = props.getDynamicPropertyByName(name.c_str());
     PropertyFloat * floatProp;
 
@@ -564,8 +555,8 @@ Property * Sheet::setFloatProperty(CellAddress key, double value)
             this->removeDynamicProperty(name.c_str());
             propAddress.erase(prop);
         }
-        prop = addDynamicProperty("App::PropertyFloat", name.c_str(), "Cells", 0,
-                                  (isReadOnly ? Prop_ReadOnly : 0) | Prop_NoPersist);
+        prop = addDynamicProperty("App::PropertyFloat", name.c_str(), "Cells", nullptr,
+                                  (isReadOnly ? Prop_ReadOnly : Prop_None) | Prop_NoPersist);
 
         setPropertyVisibility(prop, key);
     }
@@ -581,7 +572,7 @@ Property * Sheet::setFloatProperty(CellAddress key, double value)
 
 Property * Sheet::setIntegerProperty(CellAddress key, long value)
 {
-    std::string name = key.toString(true);
+    std::string name = key.toString(CellAddress::Cell::ShowRowColumn);
     Property * prop = props.getDynamicPropertyByName(name.c_str());
     PropertyInteger * intProp;
 
@@ -597,8 +588,8 @@ Property * Sheet::setIntegerProperty(CellAddress key, long value)
             this->removeDynamicProperty(name.c_str());
             propAddress.erase(prop);
         }
-        prop = addDynamicProperty("App::PropertyInteger", name.c_str(), "Cells", 0, 
-                                  (isReadOnly ? Prop_ReadOnly : 0) | Prop_NoPersist);
+        prop = addDynamicProperty("App::PropertyInteger", name.c_str(), "Cells", nullptr, 
+                                  (isReadOnly ? Prop_ReadOnly : Prop_None) | Prop_NoPersist);
         setPropertyVisibility(prop, key);
     }
     intProp = static_cast<PropertyInteger*>(prop);
@@ -623,7 +614,7 @@ Property * Sheet::setIntegerProperty(CellAddress key, long value)
 
 Property * Sheet::setQuantityProperty(CellAddress key, double value, const Base::Unit & unit)
 {
-    std::string name = key.toString(true);
+    std::string name = key.toString(CellAddress::Cell::ShowRowColumn);
     Property * prop = props.getDynamicPropertyByName(name.c_str());
     PropertySpreadsheetQuantity * quantityProp;
 
@@ -637,8 +628,8 @@ Property * Sheet::setQuantityProperty(CellAddress key, double value, const Base:
             this->removeDynamicProperty(name.c_str());
             propAddress.erase(prop);
         }
-        prop = addDynamicProperty("Spreadsheet::PropertySpreadsheetQuantity", name.c_str(), "Cells", 0,
-                                  (isReadOnly ? Prop_ReadOnly : 0) | Prop_NoPersist);
+        prop = addDynamicProperty("Spreadsheet::PropertySpreadsheetQuantity", name.c_str(), "Cells", nullptr,
+                                  (isReadOnly ? Prop_ReadOnly : Prop_None) | Prop_NoPersist);
         setPropertyVisibility(prop, key);
     }
     quantityProp = static_cast<PropertySpreadsheetQuantity*>(prop);
@@ -664,7 +655,7 @@ Property * Sheet::setQuantityProperty(CellAddress key, double value, const Base:
 
 Property * Sheet::setStringProperty(CellAddress key, const std::string & value)
 {
-    std::string name = key.toString(true);
+    std::string name = key.toString(CellAddress::Cell::ShowRowColumn);
     Property * prop = props.getDynamicPropertyByName(name.c_str());
 
     bool isReadOnly = true;
@@ -679,8 +670,8 @@ Property * Sheet::setStringProperty(CellAddress key, const std::string & value)
             this->removeDynamicProperty(name.c_str());
             propAddress.erase(prop);
         }
-        prop = addDynamicProperty("App::PropertyString", name.c_str(), "Cells", 0,
-                                  (isReadOnly ? Prop_ReadOnly : 0) | Prop_NoPersist);
+        prop = addDynamicProperty("App::PropertyString", name.c_str(), "Cells", nullptr,
+                                  (isReadOnly ? Prop_ReadOnly : Prop_None) | Prop_NoPersist);
         setPropertyVisibility(prop, key);
     }
     PropertyString * stringProp = static_cast<PropertyString*>(prop);
@@ -694,7 +685,7 @@ Property * Sheet::setStringProperty(CellAddress key, const std::string & value)
 
 Property * Sheet::setBooleanProperty(CellAddress key, bool value)
 {
-    std::string name = key.toString(true);
+    std::string name = key.toString(CellAddress::Cell::ShowRowColumn);
     Property * prop = props.getDynamicPropertyByName(name.c_str());
 
     bool isReadOnly = true;
@@ -709,8 +700,8 @@ Property * Sheet::setBooleanProperty(CellAddress key, bool value)
             this->removeDynamicProperty(name.c_str());
             propAddress.erase(prop);
         }
-        prop = addDynamicProperty("App::PropertyBool", name.c_str(), "Cells", 0,
-                                  (isReadOnly ? Prop_ReadOnly : 0) | Prop_NoPersist);
+        prop = addDynamicProperty("App::PropertyBool", name.c_str(), "Cells", nullptr,
+                                  (isReadOnly ? Prop_ReadOnly : Prop_None) | Prop_NoPersist);
         setPropertyVisibility(prop, key);
     }
     PropertyBool * bprop = static_cast<PropertyBool*>(prop);
@@ -724,7 +715,7 @@ Property * Sheet::setBooleanProperty(CellAddress key, bool value)
 
 Property * Sheet::setObjectProperty(CellAddress key, Py::Object object)
 {
-    std::string name = key.toString(true);
+    std::string name = key.toString(CellAddress::Cell::ShowRowColumn);
     Property * prop = props.getDynamicPropertyByName(name.c_str());
     PropertyPythonObject * pyProp = freecad_dynamic_cast<PropertyPythonObject>(prop);
 
@@ -734,7 +725,7 @@ Property * Sheet::setObjectProperty(CellAddress key, Py::Object object)
             propAddress.erase(prop);
         }
         pyProp = freecad_dynamic_cast<PropertyPythonObject>(
-                addDynamicProperty("App::PropertyPythonObject", name.c_str(), "Cells", 0,
+                addDynamicProperty("App::PropertyPythonObject", name.c_str(), "Cells", nullptr,
                                    Prop_ReadOnly | Prop_Hidden | Prop_NoPersist));
         // setPropertyVisibility(pyProp, key);
     }
@@ -772,7 +763,7 @@ void Sheet::updateProperty(CellAddress key)
 {
     Cell * cell = getCell(key);
 
-    if (cell != 0) {
+    if (cell) {
         std::unique_ptr<Expression> output;
         const Expression * input = cell->getExpression();
 
@@ -843,7 +834,7 @@ void Sheet::updateProperty(CellAddress key)
 Property *Sheet::getPropertyByName(const char* name) const
 {
     CellAddress addr = getCellAddress(name,true);
-    Property *prop = 0;
+    Property *prop = nullptr;
     if(addr.isValid())
         prop = getProperty(addr);
     if (prop)
@@ -854,7 +845,7 @@ Property *Sheet::getPropertyByName(const char* name) const
 
 Property *Sheet::getDynamicPropertyByName(const char* name) const {
     CellAddress addr = getCellAddress(name,true);
-    Property *prop = 0;
+    Property *prop = nullptr;
     if(addr.isValid())
         prop = getProperty(addr);
     if (prop)
@@ -940,9 +931,6 @@ void Sheet::recomputeCell(CellAddress p)
         if(e.isDerivedFrom(Base::AbortException::getClassTypeId()))
             throw;
     }
-
-    if (!cell || cell->spansChanged())
-        cellSpanChanged(p);
 }
 
 PropertySheet::BindingType
@@ -1060,7 +1048,7 @@ DocumentObjectExecReturn *Sheet::execute(void)
     std::map<CellAddress, Vertex> VertexList;
     std::map<Vertex, CellAddress> VertexIndexList;
     std::deque<CellAddress> workQueue(dirtyCells.begin(),dirtyCells.end());
-    while(workQueue.size()) {
+    while(!workQueue.empty()) {
         CellAddress currPos = workQueue.front();
         workQueue.pop_front();
 
@@ -1108,7 +1096,7 @@ DocumentObjectExecReturn *Sheet::execute(void)
         }
 
         // Try to be more user friendly by finding individual loops
-        while(dirtyCells.size()) {
+        while(!dirtyCells.empty()) {
 
             std::deque<CellAddress> workQueue;
             DependencyList graph;
@@ -1119,7 +1107,7 @@ DocumentObjectExecReturn *Sheet::execute(void)
             workQueue.push_back(currentAddr);
             dirtyCells.erase(dirtyCells.begin());
 
-            while (workQueue.size() > 0) {
+            while (!workQueue.empty()) {
                 CellAddress currPos = workQueue.front();
                 workQueue.pop_front();
 
@@ -1187,7 +1175,7 @@ DocumentObjectExecReturn *Sheet::execute(void)
     rowHeights.clearDirty();
     columnWidths.clearDirty();
 
-    if (cellErrors.size() == 0)
+    if (cellErrors.empty())
         return DocumentObject::StdReturn;
     else
         return new DocumentObjectExecReturn("One or more cells failed contains errors.", this);
@@ -1200,7 +1188,7 @@ DocumentObjectExecReturn *Sheet::execute(void)
 
 short Sheet::mustExecute(void) const
 {
-    if (cellErrors.size() > 0 || cells.isDirty())
+    if (!cellErrors.empty() || cells.isDirty())
         return 1;
     return DocumentObject::mustExecute();
 }
@@ -1321,12 +1309,8 @@ int Sheet::getRowHeight(int row) const
 std::vector<std::string> Sheet::getUsedCells() const
 {
     std::vector<std::string> usedCells;
-
-    // Insert int usedSet
-    std::set<CellAddress> usedSet = cells.getUsedCells();
-
-    for (std::set<CellAddress>::const_iterator i = usedSet.begin(); i != usedSet.end(); ++i)
-        usedCells.push_back(i->toString());
+    for (const auto &addr : cells.getUsedCells())
+        usedCells.push_back(addr.toString());
 
     return usedCells;
 }
@@ -1410,7 +1394,7 @@ void Sheet::removeColumns(int col, int count)
 }
 
 /**
-  * Inser \a count rows at row \a row.
+  * Insert \a count rows at row \a row.
   *
   * @param row   Address of row where the rows are inserted.
   * @param count Number of rows to insert.
@@ -1533,13 +1517,13 @@ void Sheet::setAlias(CellAddress address, const std::string &alias)
 {
     std::string existingAlias = getAddressFromAlias(alias);
 
-    if (existingAlias.size() > 0) {
+    if (!existingAlias.empty()) {
         if (existingAlias == address.toString()) // Same as old?
             return;
         else
             throw Base::ValueError("Alias already defined");
     }
-    else if (alias.size() == 0) // Empty?
+    else if (alias.empty()) // Empty?
         cells.setAlias(address, "");
     else if (isValidAlias(alias)) // Valid?
         cells.setAlias(address, alias);
@@ -1579,7 +1563,7 @@ bool Sheet::isValidAlias(const std::string & candidate)
         return false;
 
     // Existing alias? Then it's ok
-    if (getAddressFromAlias(candidate).size() > 0 )
+    if (!getAddressFromAlias(candidate).empty() )
         return true;
 
     // Check to see that is does not crash with any other property in the Sheet object.
@@ -1827,10 +1811,10 @@ void PropertySpreadsheetQuantity::Paste(const Property &from)
 namespace App {
 /// @cond DOXERR
 PROPERTY_SOURCE_TEMPLATE(Spreadsheet::SheetPython, Spreadsheet::Sheet)
-template<> const char* Spreadsheet::SheetPython::getViewProviderName(void) const {
+template<> const char* Spreadsheet::SheetPython::getViewProviderName() const {
     return "SpreadsheetGui::ViewProviderSheet";
 }
-template<> PyObject* Spreadsheet::SheetPython::getPyObject(void) {
+template<> PyObject* Spreadsheet::SheetPython::getPyObject() {
     if (PythonObject.is(Py::_None())) {
         // ref counter is set to 1
         PythonObject = Py::Object(new FeaturePythonPyT<Spreadsheet::SheetPy>(this),true);

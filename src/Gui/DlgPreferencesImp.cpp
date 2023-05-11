@@ -20,16 +20,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <cstring>
 # include <algorithm>
+# include <cstring>
+# include <QAbstractButton>
 # include <QApplication>
 # include <QDebug>
-# include <QDesktopWidget>
 # include <QGenericReturnArgument>
 # include <QMessageBox>
+# include <QScreen>
 # include <QScrollArea>
 # include <QScrollBar>
 # include <QMoveEvent>
@@ -37,21 +37,23 @@
 # include <QSpinBox>
 #endif
 
-#include <QScreen>
-
-#include <Base/Exception.h>
-#include <Base/Console.h>
 #include <App/Application.h>
+#include <Base/Console.h>
+#include <Base/Exception.h>
+#include <Base/Tools.h>
+
 #include "DlgPreferencesImp.h"
 #include "ui_DlgPreferences.h"
+
 #include "Action.h"
-#include "PropertyPage.h"
-#include "WidgetFactory.h"
 #include "BitmapFactory.h"
 #include "MainWindow.h"
-#include "Widgets.h"
-#include "ViewParams.h"
 #include "PrefWidgets.h"
+#include "PropertyPage.h"
+#include "Tools.h"
+#include "ViewParams.h"
+#include "WidgetFactory.h"
+#include "Widgets.h"
 
 using namespace Gui::Dialog;
 
@@ -60,6 +62,8 @@ const int DlgPreferencesImp::GroupNameRole = Qt::UserRole;
 /* TRANSLATOR Gui::Dialog::DlgPreferencesImp */
 
 std::list<DlgPreferencesImp::TGroupPages> DlgPreferencesImp::_pages;
+std::map<std::string, DlgPreferencesImp::Group> DlgPreferencesImp::_groupMap;
+
 DlgPreferencesImp* DlgPreferencesImp::_activeDialog = nullptr;
 
 /**
@@ -77,10 +81,12 @@ DlgPreferencesImp::DlgPreferencesImp(QWidget* parent, Qt::WindowFlags fl)
 
     widgetStates.reset(new Gui::PrefWidgetStates(this));
 
-    connect(ui->buttonBox,  SIGNAL (helpRequested()),
-            getMainWindow(), SLOT (whatsThis()));
-    connect(ui->listBox, SIGNAL(currentItemChanged(QListWidgetItem *, QListWidgetItem *)),
-            this, SLOT(changeGroup(QListWidgetItem *, QListWidgetItem*)));
+    connect(ui->buttonBox, &QDialogButtonBox::clicked,
+            this, &DlgPreferencesImp::onButtonBoxClicked);
+    connect(ui->buttonBox,  &QDialogButtonBox::helpRequested,
+            getMainWindow(), &MainWindow::whatsThis);
+    connect(ui->listBox, &QListWidget::currentItemChanged,
+            this, &DlgPreferencesImp::changeGroup);
 
     setupPages();
 
@@ -142,6 +148,17 @@ void DlgPreferencesImp::setupPages()
     }
 }
 
+QString DlgPreferencesImp::longestGroupName() const
+{
+    std::string name;
+    for (const auto &group : _pages) {
+        if (group.first.size() > name.size())
+            name = group.first;
+    }
+
+    return QString::fromStdString(name);
+}
+
 /**
  * Create the necessary widgets for a new group named \a groupName. Returns a 
  * pointer to the group's QTabWidget: that widget's lifetime is managed by the 
@@ -151,18 +168,23 @@ QTabWidget* DlgPreferencesImp::createTabForGroup(const std::string &groupName)
 {
     QString groupNameQString = QString::fromStdString(groupName);
 
-    QTabWidget* tabWidget = new QTabWidget;
+    std::string fileName = groupName;
+    QString tooltip;
+    getGroupData(groupName, fileName, tooltip);
+
+    auto tabWidget = new QTabWidget;
     ui->tabWidgetStack->addWidget(tabWidget);
     tabWidget->setProperty("GroupName", QVariant(groupNameQString));
 
-    QListWidgetItem* item = new QListWidgetItem(ui->listBox);
+    auto item = new QListWidgetItem(ui->listBox);
     item->setData(GroupNameRole, QVariant(groupNameQString));
     item->setText(QObject::tr(groupNameQString.toUtf8()));
-    item->setToolTip(QObject::tr(groupNameQString.toUtf8()));
-    std::string fileName = groupName;
-    for (auto & ch : fileName) {
-        if (ch == ' ') ch = '_';
-        else ch = tolower(ch);
+    item->setToolTip(tooltip);
+    for (auto &ch : fileName) {
+        if (ch == ' ')
+            ch = '_';
+        else
+            ch = tolower(ch);
     }
     fileName = std::string("preferences-") + fileName;
     QPixmap icon = Gui::BitmapFactory().pixmapFromSvg(fileName.c_str(), QSize(48, 48));
@@ -188,20 +210,29 @@ QTabWidget* DlgPreferencesImp::createTabForGroup(const std::string &groupName)
  */
 void DlgPreferencesImp::createPageInGroup(QTabWidget *tabWidget, const std::string &pageName)
 {
-    PreferencePage* page = WidgetFactory().createPreferencePage(pageName.c_str());
-    if (page) {
-        LineEditStyle::setupChildren(this);
-        QScrollArea* scrollArea = new QScrollArea(this);
-        scrollArea->setFrameShape(QFrame::NoFrame);
-        scrollArea->setWidgetResizable(true);
-        scrollArea->setWidget(page);
-        tabWidget->addTab(scrollArea, page->windowTitle());
-        page->loadSettings();
-        page->setProperty("GroupName", tabWidget->property("GroupName"));
-        page->setProperty("PageName", QVariant(QString::fromStdString(pageName)));
+    try {
+        PreferencePage* page = WidgetFactory().createPreferencePage(pageName.c_str());
+        if (page) {
+            LineEditStyle::setupChildren(this);
+            QScrollArea* scrollArea = new QScrollArea(this);
+            scrollArea->setFrameShape(QFrame::NoFrame);
+            scrollArea->setWidgetResizable(true);
+            scrollArea->setWidget(page);
+            tabWidget->addTab(scrollArea, page->windowTitle());
+            page->loadSettings();
+            page->setProperty("GroupName", tabWidget->property("GroupName"));
+            page->setProperty("PageName", QVariant(QString::fromStdString(pageName)));
+        }
+        else {
+            Base::Console().Warning("%s is not a preference page\n", pageName.c_str());
+        }
     }
-    else {
-       Base::Console().Warning("%s is not a preference page\n", pageName.c_str());
+    catch (const Base::Exception& e) {
+        Base::Console().Error("Base exception thrown for '%s'\n", pageName.c_str());
+        e.ReportException();
+    }
+    catch (const std::exception& e) {
+        Base::Console().Error("C++ exception thrown for '%s' (%s)\n", pageName.c_str(), e.what());
     }
 }
 
@@ -222,7 +253,7 @@ void DlgPreferencesImp::changeGroup(QListWidgetItem *current, QListWidgetItem *p
 void DlgPreferencesImp::addPage(const std::string& className, const std::string& group)
 {
     std::list<TGroupPages>::iterator groupToAddTo = _pages.end();
-    for (std::list<TGroupPages>::iterator it = _pages.begin(); it != _pages.end(); ++it) {
+    for (auto it = _pages.begin(); it != _pages.end(); ++it) {
         if (it->first == group) {
             groupToAddTo = it;
             break;
@@ -237,10 +268,10 @@ void DlgPreferencesImp::addPage(const std::string& className, const std::string&
         // This is a new group: create it, with its one page
         std::list<std::string> pages;
         pages.push_back(className);
-        _pages.push_back(std::make_pair(group, pages));
+        _pages.emplace_back(group, pages);
     }
 
-    if (DlgPreferencesImp::_activeDialog != nullptr) {
+    if (DlgPreferencesImp::_activeDialog) {
         // If the dialog is currently showing, tell it to insert the new page
         _activeDialog->reloadPages();
     }
@@ -256,7 +287,7 @@ void DlgPreferencesImp::removePage(const std::string& className, const std::stri
             }
             else {
                 std::list<std::string>& p = it->second;
-                for (std::list<std::string>::iterator jt = p.begin(); jt != p.end(); ++jt) {
+                for (auto jt = p.begin(); jt != p.end(); ++jt) {
                     if (*jt == className) {
                         p.erase(jt);
                         if (p.empty())
@@ -270,6 +301,36 @@ void DlgPreferencesImp::removePage(const std::string& className, const std::stri
 }
 
 /**
+ * Sets a custom icon name or tool tip for a given group.
+ */
+void DlgPreferencesImp::setGroupData(const std::string& name, const std::string& icon, const QString& tip)
+{
+    Group group;
+    group.iconName = icon;
+    group.tooltip = tip;
+    _groupMap[name] = group;
+}
+
+/**
+ * Gets the icon name or tool tip for a given group. If no custom name or tool tip is given
+ * they are determined from the group name.
+ */
+void DlgPreferencesImp::getGroupData(const std::string& group, std::string& icon, QString& tip)
+{
+    auto it = _groupMap.find(group);
+    if (it != _groupMap.end()) {
+        icon = it->second.iconName;
+        tip = it->second.tooltip;
+    }
+
+    if (icon.empty())
+        icon = group;
+
+    if (tip.isEmpty())
+        tip = QObject::tr(group.c_str());
+}
+
+/**
  * Activates the page at position \a index of the group with name \a group.
  */
 void DlgPreferencesImp::activateGroupPage(const QString& group, int index)
@@ -279,7 +340,7 @@ void DlgPreferencesImp::activateGroupPage(const QString& group, int index)
         QListWidgetItem* item = ui->listBox->item(i);
         if (item->data(GroupNameRole).toString() == group) {
             ui->listBox->setCurrentItem(item);
-            QTabWidget* tabWidget = (QTabWidget*)ui->tabWidgetStack->widget(i);
+            auto tabWidget = static_cast<QTabWidget*>(ui->tabWidgetStack->widget(i));
             tabWidget->setCurrentIndex(index);
             break;
         }
@@ -314,7 +375,7 @@ void DlgPreferencesImp::accept()
         QDialog::accept();
 }
 
-void DlgPreferencesImp::on_buttonBox_clicked(QAbstractButton* btn)
+void DlgPreferencesImp::onButtonBoxClicked(QAbstractButton* btn)
 {
     if (ui->buttonBox->standardButton(btn) == QDialogButtonBox::Apply)
         applyChanges();
@@ -347,14 +408,7 @@ void DlgPreferencesImp::restoreDefaults()
         App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/General")->
                               SetBool("SaveUserParameter", saveParameter);
 
-#if 0
-        QList<PreferencePage*> pages = this->findChildren<PreferencePage*>();
-        for (QList<PreferencePage*>::iterator it = pages.begin(); it != pages.end(); ++it) {
-            (*it)->loadSettings();
-        }
-#else
-        QDialog::reject();
-#endif
+        reject();
     }
 }
 
@@ -397,7 +451,7 @@ void DlgPreferencesImp::reloadPages()
                 QWidget* widget = tabWidget->widget(pageNumber);
                 if (auto scrollarea = qobject_cast<QScrollArea*>(widget))
                     widget = scrollarea->widget();
-                PreferencePage* prefPage = qobject_cast<PreferencePage*>(widget);
+                auto prefPage = qobject_cast<PreferencePage*>(widget);
                 if (prefPage && prefPage->property("PageName").toString() == pageName) {
                     pageExists = true;
                     break;
@@ -421,7 +475,7 @@ void DlgPreferencesImp::applyChanges()
     // cancel further operation in other methods (like in accept()).
     try {
         for (int i=0; i<ui->tabWidgetStack->count(); i++) {
-            QTabWidget* tabWidget = (QTabWidget*)ui->tabWidgetStack->widget(i);
+            auto tabWidget = static_cast<QTabWidget*>(ui->tabWidgetStack->widget(i));
             for (int j=0; j<tabWidget->count(); j++) {
                 QWidget* page = tabWidget->widget(j);
                 if (auto scrollarea = qobject_cast<QScrollArea*>(page)) {
@@ -432,7 +486,7 @@ void DlgPreferencesImp::applyChanges()
                 int index = page->metaObject()->indexOfMethod("checkSettings()");
                 try {
                     if (index >= 0) {
-                        page->qt_metacall(QMetaObject::InvokeMetaMethod, index, 0);
+                        page->qt_metacall(QMetaObject::InvokeMetaMethod, index, nullptr);
                     }
                 }
                 catch (const Base::Exception& e) {
@@ -451,12 +505,12 @@ void DlgPreferencesImp::applyChanges()
     // If everything is ok (i.e., no validation problem), call method
     // saveSettings() in every subpage (DlgSetting*) object.
     for (int i=0; i<ui->tabWidgetStack->count(); i++) {
-        QTabWidget* tabWidget = (QTabWidget*)ui->tabWidgetStack->widget(i);
+        auto tabWidget = static_cast<QTabWidget*>(ui->tabWidgetStack->widget(i));
         for (int j=0; j<tabWidget->count(); j++) {
             QWidget* widget = tabWidget->widget(j);
             if (auto scrollarea = qobject_cast<QScrollArea*>(widget))
                 widget = scrollarea->widget();
-            PreferencePage* page = qobject_cast<PreferencePage*>(widget);
+            auto page = qobject_cast<PreferencePage*>(widget);
             if (page)
                 page->saveSettings();
         }
@@ -528,7 +582,7 @@ void DlgPreferencesImp::changeEvent(QEvent *e)
         ui->retranslateUi(this);
         // update the widgets' tabs
         for (int i=0; i<ui->tabWidgetStack->count(); i++) {
-            QTabWidget* tabWidget = (QTabWidget*)ui->tabWidgetStack->widget(i);
+            auto tabWidget = static_cast<QTabWidget*>(ui->tabWidgetStack->widget(i));
             for (int j=0; j<tabWidget->count(); j++) {
                 QWidget* page = tabWidget->widget(j);
                 if (auto scrollarea = qobject_cast<QScrollArea*>(page))
@@ -554,12 +608,12 @@ void DlgPreferencesImp::changeEvent(QEvent *e)
 void DlgPreferencesImp::reload()
 {
     for (int i = 0; i < ui->tabWidgetStack->count(); i++) {
-        QTabWidget* tabWidget = (QTabWidget*)ui->tabWidgetStack->widget(i);
+        auto tabWidget = static_cast<QTabWidget*>(ui->tabWidgetStack->widget(i));
         for (int j = 0; j < tabWidget->count(); j++) {
             QWidget* widget = tabWidget->widget(j);
             if (auto scrollarea = qobject_cast<QScrollArea*>(widget))
                 widget = scrollarea->widget();
-            PreferencePage* page = qobject_cast<PreferencePage*>(widget);
+            auto page = qobject_cast<PreferencePage*>(widget);
             if (page)
                 page->loadSettings();
         }

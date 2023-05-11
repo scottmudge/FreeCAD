@@ -22,13 +22,17 @@
 
 
 #include "PreCompiled.h"
+#ifndef _PreComp_
+#endif
 
 #include <App/DocumentObject.h>
-
 #include "Application.h"
 #include "CommandT.h"
+#include "DockWindowManager.h"
 #include "Document.h"
+#include "PythonConsole.h"
 #include "Selection.h"
+#include "SelectionObject.h"
 #include "ViewProvider.h"
 #include "ViewProviderDocumentObject.h"
 #include "ViewProviderLink.h"
@@ -122,7 +126,7 @@ void StdCmdRandomColor::activated(int iMsg)
     setRandomColor(getName(), false);
 }
 
-bool StdCmdRandomColor::isActive(void)
+bool StdCmdRandomColor::isActive()
 {
     return (Gui::Selection().size() != 0);
 }
@@ -198,35 +202,71 @@ StdCmdSendToPythonConsole::StdCmdSendToPythonConsole()
     sAccel        = "Ctrl+Shift+P";
 }
 
-bool StdCmdSendToPythonConsole::isActive(void)
+bool StdCmdSendToPythonConsole::isActive()
 {
-    return (Gui::Selection().size() == 1);
+    //active only if either 1 object is selected or multiple subobjects from the same object
+    return Gui::Selection().getSelectionEx().size() == 1;
 }
 
 void StdCmdSendToPythonConsole::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
-
-    const std::vector<Gui::SelectionObject> &sels = Gui::Selection().getSelectionEx("*",App::DocumentObject::getClassTypeId(),true,true);
+    const std::vector<Gui::SelectionObject> &sels = Gui::Selection().getSelectionEx("*", App::DocumentObject::getClassTypeId(),
+                                                                                    ResolveMode::OldStyleElement, false);
     if (sels.empty())
         return;
     const App::DocumentObject *obj = sels[0].getObject();
+
+    if (!obj)
+        return;
     QString docname = QString::fromUtf8(obj->getDocument()->getName());
     QString objname = QString::fromUtf8(obj->getNameInDocument());
     try {
-        QString cmd = QStringLiteral("obj = App.getDocument(\"%1\").getObject(\"%2\")").arg(docname,objname);
+        // clear variables from previous run, if any
+        Gui::Command::runCommand(Gui::Command::Gui, "try:\n    del(doc,lnk,obj,shp,sub,subs)\nexcept Exception:\n    pass\n");
+        QString cmd = QStringLiteral("doc = App.getDocument(\"%1\")").arg(docname);
         Gui::Command::runCommand(Gui::Command::Gui,cmd.toUtf8());
-        if (sels[0].hasSubNames()) {
-            std::vector<std::string> subnames = sels[0].getSubNames();
-            if (obj->getPropertyByName("Shape")) {
-                QString subname = QString::fromUtf8(subnames[0].c_str());
-                cmd = QStringLiteral("shp = App.getDocument(\"%1\").getObject(\"%2\").Shape")
-                    .arg(docname, objname);
-                Gui::Command::runCommand(Gui::Command::Gui,cmd.toUtf8());
-                cmd = QStringLiteral("elt = App.getDocument(\"%1\").getObject(\"%2\").Shape.%4")
-                    .arg(docname,objname,subname);
-                Gui::Command::runCommand(Gui::Command::Gui,cmd.toUtf8());
+        //support links
+        if (obj->getLinkedObject() != obj) {
+            cmd = QStringLiteral("lnk = doc.getObject(\"%1\")").arg(objname);
+            Gui::Command::runCommand(Gui::Command::Gui,cmd.toUtf8());
+            cmd = QStringLiteral("obj = lnk.getLinkedObject()");
+            Gui::Command::runCommand(Gui::Command::Gui,cmd.toUtf8());
+            const auto link = static_cast<const App::Link*>(obj);
+            obj = link->getLinkedObject();
+        } else {
+            cmd = QStringLiteral("obj = doc.getObject(\"%1\")").arg(objname);
+            Gui::Command::runCommand(Gui::Command::Gui,cmd.toUtf8());
+        }
+        if (obj->getTypeId().isDerivedFrom(App::GeoFeature::getClassTypeId())) {
+            const auto geoObj = static_cast<const App::GeoFeature*>(obj);
+            const App::PropertyGeometry* geo = geoObj->getPropertyOfGeometry();
+            if (geo){
+                cmd = QStringLiteral("shp = obj.") + QString::fromUtf8(geo->getName()); //"Shape", "Mesh", "Points", etc.
+                Gui::Command::runCommand(Gui::Command::Gui, cmd.toUtf8());
+                if (sels[0].hasSubNames()) {
+                    std::vector<std::string> subnames = sels[0].getSubNames();
+                    QString subname = QString::fromUtf8(subnames[0].c_str());
+                    cmd = QStringLiteral("sub = obj.getSubObject(\"%1\")").arg(subname);
+                    Gui::Command::runCommand(Gui::Command::Gui,cmd.toUtf8());
+                    if (subnames.size() > 1) {
+                        std::ostringstream strm;
+                        strm << "subs = [";
+                        for (const auto & subname : subnames) {
+                            strm << "obj.getSubObject(\"" << subname << "\"),";
+                        }
+                        strm << "]";
+                        Gui::Command::runCommand(Gui::Command::Gui, strm.str().c_str());
+                    }
+                }
             }
+        }
+        //show the python console if it's not already visible, and set the keyboard focus to it
+        QWidget* pc = DockWindowManager::instance()->getDockWindow("Python console");
+        auto pcPython = qobject_cast<PythonConsole*>(pc);
+        if (pcPython) {
+            DockWindowManager::instance()->activate(pcPython);
+            pcPython->setFocus();
         }
     }
     catch (const Base::Exception& e) {
@@ -281,7 +321,7 @@ void StdCmdRenameActiveObject::activated(int iMsg)
 
 namespace Gui {
 
-void CreateFeatCommands(void)
+void CreateFeatCommands()
 {
     CommandManager &rcCmdMgr = Application::Instance->commandManager();
 

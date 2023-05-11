@@ -26,20 +26,21 @@
 # include <QPixmapCache>
 # include <QStyle>
 #endif
-#include "ExpressionBinding.h"
-#include "QuantitySpinBox_p.h"
+
+#include <App/Application.h>
+#include <App/Document.h>
+#include <App/DocumentObject.h>
+#include <App/ExpressionParser.h>
+#include <App/ObjectIdentifier.h>
+#include <App/PropertyGeo.h>
+#include <Base/Tools.h>
+
 #include "BitmapFactory.h"
 #include "Command.h"
-#include "Command.h"
+#include "ExpressionBinding.h"
 #include "QuantitySpinBox_p.h"
-#include <App/ExpressionParser.h>
-#include <App/DocumentObject.h>
-#include <Base/Tools.h>
-#include <Base/Console.h>
-#include <App/ObjectIdentifier.h>
-#include <App/Document.h>
-#include <App/Application.h>
-#include <boost_bind_bind.hpp>
+
+
 
 FC_LOG_LEVEL_INIT("Expression",true,true)
 
@@ -48,7 +49,7 @@ using namespace App;
 namespace bp = boost::placeholders;
 
 ExpressionBinding::ExpressionBinding()
-    : iconLabel(0)
+    : iconLabel(nullptr)
     , iconHeight(-1)
     , m_autoApply(false)
 {
@@ -61,7 +62,7 @@ ExpressionBinding::~ExpressionBinding()
 
 bool ExpressionBinding::isBound() const
 {
-    return path.getDocumentObject() != 0;
+    return path.getDocumentObject() != nullptr;
 }
 
 void ExpressionBinding::unbind()
@@ -81,7 +82,7 @@ void Gui::ExpressionBinding::setExpression(std::shared_ptr<Expression> expr)
         if (expr) {
             const std::string error = docObj->ExpressionEngine.validateExpression(path, expr);
 
-            if (error.size())
+            if (!error.empty())
                 throw Base::RuntimeError(error.c_str());
 
         }
@@ -125,7 +126,7 @@ void ExpressionBinding::bind(const App::ObjectIdentifier &_path)
 {
     const Property * prop = _path.getProperty();
 
-    Q_ASSERT(prop != 0);
+    Q_ASSERT(prop != nullptr);
 
     path = _path.canonicalPath();
 
@@ -166,7 +167,7 @@ std::shared_ptr<App::Expression> ExpressionBinding::getExpression() const
 {
     DocumentObject * docObj = path.getDocumentObject();
 
-    Q_ASSERT(isBound() && docObj != 0);
+    Q_ASSERT(isBound() && docObj != nullptr);
 
     return docObj->getExpression(path).expression;
 }
@@ -201,6 +202,28 @@ std::string ExpressionBinding::getEscapedExpressionString() const
     return Base::Tools::escapeEncodeString(getExpressionString(false));
 }
 
+bool ExpressionBinding::assignToProperty(const std::string & propName, double value)
+{
+    if (isBound()) {
+        const App::ObjectIdentifier & path = getPath();
+        const Property * prop = path.getProperty();
+
+        /* Skip update if property is bound and we know it is read-only */
+        if (prop && prop->isReadOnly())
+            return true;
+
+        if (prop && prop->getTypeId().isDerivedFrom(App::PropertyPlacement::getClassTypeId())) {
+            std::string p = path.getSubPathStr();
+            if (p == ".Rotation.Angle") {
+                value = Base::toRadians(value);
+            }
+        }
+    }
+
+    Gui::Command::doCommand(Gui::Command::Doc, "%s = %f", propName.c_str(), value);
+    return true;
+}
+
 QPixmap ExpressionBinding::getIcon(const char* name, const QSize& size) const
 {
     QString key = QStringLiteral("%1_%2x%3")
@@ -230,7 +253,7 @@ bool ExpressionBinding::apply()
 {
     Property * prop(path.getProperty());
 
-    assert(prop != 0);
+    assert(prop);
     Q_UNUSED(prop);
 
     DocumentObject * docObj(path.getDocumentObject());

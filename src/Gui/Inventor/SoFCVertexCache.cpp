@@ -1102,19 +1102,19 @@ SoFCVertexCacheP::render(SoState * state,
   int vnum = this->vertexarray.getLength();
   if (SoFCVBO::shouldCreateVBO(state, contextid, vnum)) {
     this->enableVBOs(state, glue, contextid, color, normal, texture, enabled, lastenabled);
-    indexer->render(state, glue, TRUE, contextid, offsets, counts, drawcount);
+    indexer->render(state, glue, true, contextid, offsets, counts, drawcount);
     this->disableVBOs(glue, color, normal, texture, enabled, lastenabled);
   } else if (SoFCVBO::shouldRenderAsVertexArrays(state, contextid, vnum)) {
     this->enableArrays(glue, color, normal, texture, enabled, lastenabled);
     if (!drawcount)
-      indexer->render(state, glue, FALSE, contextid);
+      indexer->render(state, glue, false, contextid);
     else {
       int typeshift = indexer->useShorts() ? 1 : 2;
       for (int i=0; i<drawcount; ++i) {
         int32_t count = counts[i];
         intptr_t offset = offsets[i] >> typeshift;
         offset = (intptr_t)(indexer->getIndices() + offset);
-        indexer->render(state, glue, FALSE, contextid, &offset, &count, 1);
+        indexer->render(state, glue, false, contextid, &offset, &count, 1);
       }
     }
     this->disableArrays(glue, color, normal, texture, enabled, lastenabled);

@@ -56,8 +56,8 @@ class DlgCustomKeyboardImp : public CustomizeActionPage
     Q_OBJECT
 
 public:
-    DlgCustomKeyboardImp( QWidget* parent = 0 );
-    ~DlgCustomKeyboardImp();
+    explicit DlgCustomKeyboardImp( QWidget* parent = nullptr );
+    ~DlgCustomKeyboardImp() override;
 
     /** Public helper function for handling command widgets
      *
@@ -86,8 +86,6 @@ public:
                            AccelLineEdit *currentShortcut = nullptr);
 
 protected:
-    void showEvent(QShowEvent* e);
-
     /** @name Internal helper function for handling command list widgets
      */
     //@{
@@ -111,12 +109,13 @@ protected Q_SLOTS:
     void on_buttonReset_clicked();
     void on_buttonResetAll_clicked();
     void on_editShortcut_textChanged(const QString&);
-    void onAddMacroAction(const QByteArray&);
-    void onRemoveMacroAction(const QByteArray&);
-    void onModifyMacroAction(const QByteArray&);
+    void onAddMacroAction(const QByteArray&) override;
+    void onRemoveMacroAction(const QByteArray&) override;
+    void onModifyMacroAction(const QByteArray&) override;
 
 protected:
-    void changeEvent(QEvent *e);
+    void showEvent(QShowEvent* e) override;
+    void changeEvent(QEvent *e) override;
     void setShortcutOfCurrentAction(const QString&);
 
 private:

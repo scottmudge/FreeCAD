@@ -27,19 +27,6 @@
 #include <FCConfig.h>
 #include <limits>
 
-// Exporting of App classes
-#ifdef FC_OS_WIN32
-# define AppFemExport   __declspec(dllexport)
-# define FemExport      __declspec(dllexport)
-# define PartExport     __declspec(dllimport)
-# define MeshExport     __declspec(dllimport)
-#else // for Linux
-# define AppFemExport
-# define FemExport
-# define PartExport
-# define MeshExport
-#endif
-
 #ifdef _MSC_VER
 # pragma warning(disable : 4290)
 # pragma warning(disable : 4275)
@@ -50,8 +37,8 @@
 // standard
 #include <iostream>
 #include <sstream>
-#include <stdio.h>
-#include <assert.h>
+#include <cstdio>
+#include <cassert>
 #include <string>
 #include <map>
 #include <vector>
@@ -61,16 +48,14 @@
 #include <memory>
 #include <cmath>
 
-#include <math.h>
-
 #include <algorithm>
 #include <stdexcept>
-// Python
-#include <Python.h>
 
 // Boost
 #include <boost/assign/list_of.hpp>
 #include <boost/tokenizer.hpp>
+
+#include <Python.h>
 
 // Salomesh
 #include <SMESH_Version.h>
@@ -136,9 +121,6 @@
 #include <Bnd_Box.hxx>
 #include <BRep_Tool.hxx>
 #include <BRepAdaptor_Curve.hxx>
-# if OCC_VERSION_HEX < 0x070600
-#include <BRepAdaptor_HSurface.hxx>
-#endif
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepBndLib.hxx>
 #include <BRepBuilderAPI_Copy.hxx>
@@ -162,6 +144,7 @@
 #include <GProp_GProps.hxx>
 #include <Precision.hxx>
 #include <Standard_Real.hxx>
+#include <Standard_Version.hxx>
 #include <ShapeAnalysis_ShapeTolerance.hxx>
 #include <TColgp_Array2OfPnt.hxx>
 #include <TopoDS.hxx>
@@ -170,6 +153,9 @@
 #include <TopoDS_Solid.hxx>
 #include <TopoDS_Shape.hxx>
 #include <TopoDS_Vertex.hxx>
+#if OCC_VERSION_HEX < 0x070600
+#include <BRepAdaptor_HSurface.hxx>
+#endif
 
 // VTK
 #include <vtkFieldData.h>
@@ -218,6 +204,7 @@
 #include <vtkXMLPolyDataReader.h>
 #include <vtkXMLStructuredGridReader.h>
 #include <vtkXMLUnstructuredGridReader.h>
+#include <vtkXMLPUnstructuredGridReader.h>
 #include <vtkXMLRectilinearGridReader.h>
 #include <vtkXMLImageDataReader.h>
 

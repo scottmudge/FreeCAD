@@ -24,19 +24,19 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <QAction>
 # include <QApplication>
 # include <QMessageBox>
 # include <QMenu>
-# include <QPainter>
-# include <QMouseEvent>
-# include <Inventor/nodes/SoSeparator.h>
 # include <TopExp.hxx>
 # include <TopTools_IndexedMapOfShape.hxx>
 #endif
 
-#include <Base/Console.h>
-#include <Base/Tools.h>
+#include <boost/algorithm/string/predicate.hpp>
+#include <App/Document.h>
+#include <Gui/ActionFunction.h>
 #include <Gui/Application.h>
+#include <Gui/Command.h>
 #include <Gui/Control.h>
 #include <Gui/Document.h>
 
@@ -110,7 +110,7 @@ bool ViewProviderShapeBinder::setEdit(int ModNum) {
         if (sbDlg)
             Gui::Control().showDialog(sbDlg);
         else
-            Gui::Control().showDialog(new TaskDlgShapeBinder(this,ModNum == 1));
+            Gui::Control().showDialog(new TaskDlgShapeBinder(this, ModNum == 1));
 
         return true;
     }
@@ -124,7 +124,7 @@ void ViewProviderShapeBinder::unsetEdit(int ModNum) {
     PartGui::ViewProviderPart::unsetEdit(ModNum);
 }
 
-void ViewProviderShapeBinder::highlightReferences(const bool on, bool /*auxiliary*/)
+void ViewProviderShapeBinder::highlightReferences(bool on)
 {
     App::GeoFeature* obj = nullptr;
     std::vector<std::string> subs;
@@ -139,11 +139,12 @@ void ViewProviderShapeBinder::highlightReferences(const bool on, bool /*auxiliar
         return;
 
     PartGui::ViewProviderPart* svp = dynamic_cast<PartGui::ViewProviderPart*>(
-                Gui::Application::Instance->getViewProvider(obj));
-    if (svp == NULL) return;
+        Gui::Application::Instance->getViewProvider(obj));
+    if (!svp)
+        return;
 
     if (on) {
-         if (!subs.empty() && originalLineColors.empty()) {
+        if (!subs.empty() && originalLineColors.empty()) {
             TopTools_IndexedMapOfShape eMap;
             TopExp::MapShapes(static_cast<Part::Feature*>(obj)->Shape.getValue(), TopAbs_EDGE, eMap);
             originalLineColors = svp->LineColorArray.getValues();
@@ -155,25 +156,26 @@ void ViewProviderShapeBinder::highlightReferences(const bool on, bool /*auxiliar
             std::vector<App::Color> fcolors = originalFaceColors;
             fcolors.resize(eMap.Extent(), svp->ShapeColor.getValue());
 
-            for (std::string e : subs) {
+            for (const std::string& e : subs) {
                 // Note: stoi may throw, but it strictly shouldn't happen
-                if(e.substr(4) == "Edge") {
+                if (e.compare(0, 4, "Edge") == 0) {
                     int idx = std::stoi(e.substr(4)) - 1;
-                    assert ( idx>=0 );
-                    if ( idx < (int) lcolors.size() )
-                        lcolors[idx] = App::Color(1.0,0.0,1.0); // magenta
+                    assert(idx >= 0);
+                    if (idx < static_cast<int>(lcolors.size()))
+                        lcolors[idx] = App::Color(1.0, 0.0, 1.0); // magenta
                 }
-                else if(e.substr(4) == "Face")  {
+                else if (e.compare(0, 4, "Face") == 0) {
                     int idx = std::stoi(e.substr(4)) - 1;
-                    assert ( idx>=0 );
-                    if ( idx < (int) fcolors.size() )
-                        fcolors[idx] = App::Color(1.0,0.0,1.0); // magenta
+                    assert(idx >= 0);
+                    if (idx < static_cast<int>(fcolors.size()))
+                        fcolors[idx] = App::Color(1.0, 0.0, 1.0); // magenta
                 }
             }
             svp->LineColorArray.setValues(lcolors);
             svp->DiffuseColor.setValues(fcolors);
         }
-    } else {
+    }
+    else {
         if (!subs.empty() && !originalLineColors.empty()) {
             svp->LineColorArray.setValues(originalLineColors);
             originalLineColors.clear();
@@ -186,9 +188,23 @@ void ViewProviderShapeBinder::highlightReferences(const bool on, bool /*auxiliar
 
 void ViewProviderShapeBinder::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
 {
-    QAction* act;
-    act = menu->addAction(QObject::tr("Edit shape binder"), receiver, member);
+    Q_UNUSED(receiver)
+    Q_UNUSED(member)
+
+        QAction* act;
+    act = menu->addAction(QObject::tr("Edit shape binder"));
     act->setData(QVariant((int)ViewProvider::Default));
+
+    Gui::ActionFunction* func = new Gui::ActionFunction(menu);
+    func->trigger(act, [this]() {
+        QString text = QObject::tr("Edit %1").arg(QString::fromUtf8(getObject()->Label.getValue()));
+        Gui::Command::openCommand(text.toUtf8());
+
+        Gui::Document* document = this->getDocument();
+        if (document) {
+            document->setEdit(this, ViewProvider::Default);
+        }
+    });
 }
 
 //=====================================================================================
@@ -205,3 +221,4 @@ PROPERTY_SOURCE_TEMPLATE(PartDesignGui::ViewProviderSubShapeBinderPython,
                          PartDesignGui::ViewProviderSubShapeBinder)
 template class PartDesignGuiExport ViewProviderPythonFeatureT<ViewProviderSubShapeBinder>;
 }
+

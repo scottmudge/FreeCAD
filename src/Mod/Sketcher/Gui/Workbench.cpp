@@ -20,21 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-# include <qobject.h>
-#endif
-
 #include "Workbench.h"
-#include <Gui/MenuManager.h>
-#include <Gui/ToolBarManager.h>
+
 
 using namespace SketcherGui;
 
 #if 0 // needed for Qt's lupdate utility
     qApp->translate("CommandGroup", "Sketcher");
+    qApp->translate("Workbench","P&rofiles");
+    qApp->translate("Workbench","S&ketch");
     qApp->translate("Workbench", "Sketcher");
     qApp->translate("Workbench", "Sketcher geometries");
     qApp->translate("Workbench", "Sketcher constraints");
@@ -94,6 +90,7 @@ Gui::MenuItem* Workbench::setupMenuBar() const
     root->insertItem(item, sketch);
     sketch->setCommand("S&ketch");
     addSketcherWorkbenchSketchActions(*sketch);
+    addSketcherWorkbenchSketchEditModeActions(*sketch);
     *sketch << geom
             << cons
             << consaccel
@@ -111,23 +108,27 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
     sketcher->setCommand("Sketcher");
     addSketcherWorkbenchSketchActions(*sketcher);
 
-    Gui::ToolBarItem* geom = new Gui::ToolBarItem(root);
+    Gui::ToolBarItem* sketcherEditMode = new Gui::ToolBarItem(root, Gui::ToolBarItem::HideStyle::FORCE_HIDE);
+    sketcherEditMode->setCommand("Sketcher Edit Mode");
+    addSketcherWorkbenchSketchEditModeActions(*sketcherEditMode);
+
+    Gui::ToolBarItem* geom = new Gui::ToolBarItem(root, Gui::ToolBarItem::HideStyle::FORCE_HIDE);
     geom->setCommand("Sketcher geometries");
     addSketcherWorkbenchGeometries(*geom);
 
-    Gui::ToolBarItem* cons = new Gui::ToolBarItem(root);
+    Gui::ToolBarItem* cons = new Gui::ToolBarItem(root, Gui::ToolBarItem::HideStyle::FORCE_HIDE);
     cons->setCommand("Sketcher constraints");
     addSketcherWorkbenchConstraints(*cons);
 
-    Gui::ToolBarItem* consaccel = new Gui::ToolBarItem(root);
+    Gui::ToolBarItem* consaccel = new Gui::ToolBarItem(root, Gui::ToolBarItem::HideStyle::FORCE_HIDE);
     consaccel->setCommand("Sketcher tools");
     addSketcherWorkbenchTools(*consaccel);
 
-    Gui::ToolBarItem* bspline = new Gui::ToolBarItem(root);
+    Gui::ToolBarItem* bspline = new Gui::ToolBarItem(root, Gui::ToolBarItem::HideStyle::FORCE_HIDE);
     bspline->setCommand("Sketcher B-spline tools");
     addSketcherWorkbenchBSplines(*bspline);
 
-    Gui::ToolBarItem* virtualspace = new Gui::ToolBarItem(root);
+    Gui::ToolBarItem* virtualspace = new Gui::ToolBarItem(root, Gui::ToolBarItem::HideStyle::FORCE_HIDE);
     virtualspace->setCommand("Sketcher virtual space");
     addSketcherWorkbenchVirtualSpace(*virtualspace);
 
@@ -145,41 +146,48 @@ Gui::ToolBarItem* Workbench::setupCommandBars() const
 namespace SketcherGui {
 
 template <typename T>
-inline void SketcherAddWorkspaceSketchExtra(T& /*sketch*/) { }
-
-template <>
-inline void SketcherAddWorkspaceSketchExtra<Gui::MenuItem>(Gui::MenuItem& sketch)
-{
-    sketch  << "Sketcher_ReorientSketch"
-            << "Sketcher_ValidateSketch"
-            << "Sketcher_MergeSketches"
-            << "Sketcher_MirrorSketch"
-            << "Sketcher_StopOperation";
-}
-
-template <>
-inline void SketcherAddWorkspaceSketchExtra<Gui::ToolBarItem>(Gui::ToolBarItem& sketch)
-{
-    sketch  << "Sketcher_ReorientSketch"
-            << "Sketcher_ValidateSketch"
-            << "Sketcher_MergeSketches"
-            << "Sketcher_MirrorSketch"
-            << "Sketcher_StopOperation";
-}
-
-template <typename T>
 void SketcherAddWorkbenchSketchActions(T& sketch);
 
-template <typename T>
-inline void SketcherAddWorkbenchSketchActions(T& sketch)
+template <>
+inline void SketcherAddWorkbenchSketchActions(Gui::MenuItem& sketch)
 {
     sketch  << "Sketcher_NewSketch"
             << "Sketcher_EditSketch"
-            << "Sketcher_LeaveSketch"
+            << "Sketcher_MapSketch"
+            << "Sketcher_ReorientSketch"
+            << "Sketcher_ValidateSketch"
+            << "Sketcher_MergeSketches"
+            << "Sketcher_MirrorSketch";
+}
+template <>
+inline void SketcherAddWorkbenchSketchActions(Gui::ToolBarItem& sketch)
+{
+    sketch  << "Sketcher_NewSketch"
+            << "Sketcher_EditSketch"
+            << "Sketcher_MapSketch"
+            << "Sketcher_ReorientSketch"
+            << "Sketcher_ValidateSketch"
+            << "Sketcher_MergeSketches"
+            << "Sketcher_MirrorSketch";
+}
+
+template <typename T>
+void SketcherAddWorkbenchSketchEditModeActions(T& sketch);
+
+template <>
+inline void SketcherAddWorkbenchSketchEditModeActions(Gui::MenuItem& sketch)
+{
+    sketch  << "Sketcher_LeaveSketch"
             << "Sketcher_ViewSketchGroup"
             << "Sketcher_ViewSection"
-            << "Sketcher_MapSketch";
-    SketcherAddWorkspaceSketchExtra(sketch);
+            << "Sketcher_StopOperation";
+}
+template <>
+inline void SketcherAddWorkbenchSketchEditModeActions(Gui::ToolBarItem& sketch)
+{
+    sketch  << "Sketcher_LeaveSketch"
+            << "Sketcher_ViewSketch"
+            << "Sketcher_ViewSection";
 }
 
 template <typename T>
@@ -346,7 +354,7 @@ inline void SketcherAddWorkbenchConstraints<Gui::ToolBarItem>(Gui::ToolBarItem& 
             << "Sketcher_ConstrainDistance"
             << "Sketcher_CompConstrainRadDia"
             << "Sketcher_ConstrainAngle"
-            << "Sketcher_ConstrainSnellsLaw"
+            // << "Sketcher_ConstrainSnellsLaw" // Rarely used, show only in menu
             // << "Sketcher_ConstrainInternalAlignment" // This constrain is never used by the user - Do not use precious toolbar space
             << "Separator"
             << "Sketcher_ToggleDrivingConstraint"
@@ -360,8 +368,6 @@ template <>
 inline void SketcherAddWorkbenchTools<Gui::MenuItem>(Gui::MenuItem& consaccel)
 {
     consaccel   << "Sketcher_SelectElementsWithDoFs"
-                << "Sketcher_CloseShape"
-                << "Sketcher_ConnectLines"
                 << "Sketcher_SelectConstraints"
                 << "Sketcher_SelectElementsAssociatedWithConstraints"
                 << "Sketcher_SelectRedundantConstraints"
@@ -386,13 +392,11 @@ inline void SketcherAddWorkbenchTools<Gui::MenuItem>(Gui::MenuItem& consaccel)
 template <>
 inline void SketcherAddWorkbenchTools<Gui::ToolBarItem>(Gui::ToolBarItem& consaccel)
 {
-    consaccel   << "Sketcher_SelectElementsWithDoFs"
-                << "Sketcher_CloseShape"
-                << "Sketcher_ConnectLines"
+    consaccel   //<< "Sketcher_SelectElementsWithDoFs" //rarely used, it is usually accessed by solver message.
                 << "Sketcher_SelectConstraints"
                 << "Sketcher_SelectElementsAssociatedWithConstraints"
-                << "Sketcher_SelectRedundantConstraints"
-                << "Sketcher_SelectConflictingConstraints"
+                //<< "Sketcher_SelectRedundantConstraints" //rarely used, it is usually accessed by solver message.
+                //<< "Sketcher_SelectConflictingConstraints"
                 << "Sketcher_RestoreInternalAlignmentGeometry"
                 << "Sketcher_Symmetry"
                 << "Sketcher_CompCopy"
@@ -412,21 +416,25 @@ inline void SketcherAddWorkbenchBSplines<Gui::MenuItem>(Gui::MenuItem& bspline)
             << "Sketcher_BSplineComb"
             << "Sketcher_BSplineKnotMultiplicity"
             << "Sketcher_BSplinePoleWeight"
-            << "Sketcher_BSplineConvertToNURB"
+            << "Sketcher_BSplineConvertToNURBS"
             << "Sketcher_BSplineIncreaseDegree"
             << "Sketcher_BSplineDecreaseDegree"
             << "Sketcher_BSplineIncreaseKnotMultiplicity"
-            << "Sketcher_BSplineDecreaseKnotMultiplicity";
+            << "Sketcher_BSplineDecreaseKnotMultiplicity"
+            << "Sketcher_BSplineInsertKnot"
+            << "Sketcher_JoinCurves";
 }
 
 template <>
 inline void SketcherAddWorkbenchBSplines<Gui::ToolBarItem>(Gui::ToolBarItem& bspline)
 {
     bspline << "Sketcher_CompBSplineShowHideGeometryInformation"
-            << "Sketcher_BSplineConvertToNURB"
+            << "Sketcher_BSplineConvertToNURBS"
             << "Sketcher_BSplineIncreaseDegree"
             << "Sketcher_BSplineDecreaseDegree"
-            << "Sketcher_CompModifyKnotMultiplicity";
+            << "Sketcher_CompModifyKnotMultiplicity"
+            << "Sketcher_BSplineInsertKnot"
+            << "Sketcher_JoinCurves";
 }
 
 template <typename T>
@@ -447,6 +455,11 @@ inline void SketcherAddWorkbenchVirtualSpace<Gui::ToolBarItem>(Gui::ToolBarItem&
 void addSketcherWorkbenchSketchActions(Gui::MenuItem& sketch)
 {
     SketcherAddWorkbenchSketchActions(sketch);
+}
+
+void addSketcherWorkbenchSketchEditModeActions(Gui::MenuItem& sketch)
+{
+    SketcherAddWorkbenchSketchEditModeActions(sketch);
 }
 
 void addSketcherWorkbenchGeometries(Gui::MenuItem& geom)
@@ -477,6 +490,11 @@ void addSketcherWorkbenchVirtualSpace(Gui::MenuItem& virtualspace)
 void addSketcherWorkbenchSketchActions(Gui::ToolBarItem& sketch)
 {
     SketcherAddWorkbenchSketchActions(sketch);
+}
+
+void addSketcherWorkbenchSketchEditModeActions(Gui::ToolBarItem& sketch)
+{
+    SketcherAddWorkbenchSketchEditModeActions(sketch);
 }
 
 void addSketcherWorkbenchGeometries(Gui::ToolBarItem& geom)

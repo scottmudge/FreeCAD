@@ -20,44 +20,31 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <Bnd_Box.hxx>
-# include <BRepBndLib.hxx>
 # include <BRep_Builder.hxx>
 # include <BRep_Tool.hxx>
 # include <BRepAdaptor_Surface.hxx>
+# include <BRepBndLib.hxx>
+# include <BRepBuilderAPI_Copy.hxx>
 # include <BRepBuilderAPI_MakeFace.hxx>
-# include <BRepCheck_Analyzer.hxx>
 # include <BRepClass_FaceClassifier.hxx>
 # include <BRepLib_FindSurface.hxx>
 # include <Geom_Plane.hxx>
 # include <GeomAPI_ProjectPointOnSurf.hxx>
-# include <IntTools_FClass2d.hxx>
 # include <Precision.hxx>
-# include <ShapeAnalysis.hxx>
-# include <ShapeAnalysis_Surface.hxx>
-# include <ShapeExtend_Explorer.hxx>
-# include <ShapeFix_Shape.hxx>
-# include <ShapeFix_Wire.hxx>
 # include <Standard_Failure.hxx>
 # include <TopoDS.hxx>
 # include <TopExp.hxx>
 # include <TopExp_Explorer.hxx>
-# include <TopTools_IndexedMapOfShape.hxx>
-# include <TopTools_HSequenceOfShape.hxx>
-# include <BRepBuilderAPI_Copy.hxx>
 # include <QtGlobal>
 #endif
 
 #include "FaceMakerBullseye.h"
 #include "FaceMakerCheese.h"
 
-#include "PartFeature.h"
 #include "TopoShape.h"
 #include "WireJoiner.h"
-
 
 
 using namespace Part;
@@ -87,11 +74,11 @@ bool FaceMakerBullseye::WireInfo::operator<(const WireInfo &other) const
 
 void FaceMakerBullseye::Build_Essence()
 {
-    if(myWires.empty())
+    if (myWires.empty())
         return;
 
     //validity check
-    for(TopoDS_Wire &w : myWires){
+    for (TopoDS_Wire& w : myWires) {
         if (!BRep_Tool::IsClosed(w))
             throw Base::ValueError("Wire is not closed.");
     }
@@ -99,16 +86,17 @@ void FaceMakerBullseye::Build_Essence()
 
     //find plane (at the same time, test that all wires are on the same plane)
     gp_Pln plane;
-    if(this->planeSupplied){
+    if (this->planeSupplied) {
         plane = this->myPlane;
-    } else {
+    }
+    else {
         TopoDS_Builder builder;
         TopoDS_Compound comp;
         builder.MakeCompound(comp);
-        for(TopoDS_Wire &w : myWires){
+        for (TopoDS_Wire& w : myWires) {
             builder.Add(comp, BRepBuilderAPI_Copy(w).Shape());
         }
-        BRepLib_FindSurface planeFinder(comp,-1, /*OnlyPlane=*/Standard_True);
+        BRepLib_FindSurface planeFinder(comp, -1, /*OnlyPlane=*/Standard_True);
         if (!planeFinder.Found())
             throw Base::ValueError("Wires are not coplanar.");
         plane = GeomAdaptor_Surface(planeFinder.Surface()).Plane();

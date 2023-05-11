@@ -68,7 +68,7 @@ namespace Base {
             Scientific = 2
         };
 
-        typedef int NumberOptions;
+        using NumberOptions = int;
         NumberOptions option;
         NumberFormat format;
         int precision;
@@ -158,7 +158,7 @@ class UrlLabel : public QLabel
     Q_PROPERTY( QString  url    READ url   WRITE setUrl)
 
 public:
-    UrlLabel ( QWidget * parent = 0, Qt::WindowFlags f = 0 );
+    UrlLabel ( QWidget * parent = 0, Qt::WindowFlags f = Qt::WindowFlags());
     virtual ~UrlLabel();
 
     QString url() const;
@@ -204,22 +204,24 @@ private:
 
 /**
  * There is a bug in QtDesigner of Qt version 4.0, 4.1 and 4.2. If a class declaration
- * is inside a namespace and it uses the Q_ENUMS macro then QtDesigner doesn't handle
+ * is inside a namespace and it uses the Q_ENUM macro then QtDesigner doesn't handle
  * the enum(s) correctly in its property editor. This bug is fixed since Qt 4.3.0.
  */
 class FileChooser : public QWidget
 {
     Q_OBJECT
 
-    Q_ENUMS( Mode )
+public:
+    enum Mode { File, Directory };
+
+private:
+    Q_ENUM( Mode )
     Q_PROPERTY( Mode mode READ mode WRITE setMode )
     Q_PROPERTY( QString  fileName  READ fileName      WRITE setFileName      )
     Q_PROPERTY( QString  filter    READ filter        WRITE setFilter        )
     Q_PROPERTY( QString  buttonText  READ buttonText  WRITE setButtonText    )
 
 public:
-    enum Mode { File, Directory };
-
     FileChooser (QWidget *parent = 0);
     virtual ~FileChooser();
 
@@ -231,7 +233,7 @@ public:
 
 public Q_SLOTS:
     void setFileName( const QString &fn );
-    void setMode( Mode m );
+    void setMode( FileChooser::Mode m );
     void setFilter ( const QString & );
     void setButtonText ( const QString & );
 

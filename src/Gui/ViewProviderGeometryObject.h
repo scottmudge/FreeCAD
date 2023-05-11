@@ -46,7 +46,7 @@ class View3DInventorViewer;
  */
 class GuiExport ViewProviderGeometryObject : public ViewProviderDragger
 {
-    PROPERTY_HEADER(Gui::ViewProviderGeometryObject);
+    PROPERTY_HEADER_WITH_OVERRIDE(Gui::ViewProviderGeometryObject);
 
     typedef ViewProviderDragger inherited;
 
@@ -55,7 +55,7 @@ public:
     ViewProviderGeometryObject();
 
     /// destructor.
-    virtual ~ViewProviderGeometryObject();
+    ~ViewProviderGeometryObject() override;
 
     // Display properties
     App::PropertyColor ShapeColor;
@@ -66,8 +66,8 @@ public:
     /**
      * Attaches the document object to this view provider.
      */
-    void attach(App::DocumentObject *pcObject);
-    void updateData(const App::Property*);
+    void attach(App::DocumentObject *pcObject) override;
+    void updateData(const App::Property*) override;
 
     /**
      * Returns a list of picked points from the geometry under \a getRoot().
@@ -89,7 +89,7 @@ public:
 
 protected:
     /// get called by the container whenever a property has been changed
-    void onChanged(const App::Property* prop);
+    void onChanged(const App::Property* prop) override;
 
     virtual unsigned long getBoundColor() const;
     void updateBoundingBox();

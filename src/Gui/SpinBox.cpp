@@ -26,20 +26,17 @@
 #ifndef _PreComp_
 # include <QDebug>
 # include <climits>
-# include <QStyle>
-# include <QLineEdit>
 # include <QKeyEvent>
 # include <QStyle>
 # include <QStyleOptionSpinBox>
 # include <QStylePainter>
 #endif
 
+#include <boost/math/special_functions/round.hpp>
 #include "SpinBox.h"
 #include "DlgExpressionInput.h"
 #include "Command.h"
-#include <Base/Tools.h>
-#include <App/ExpressionParser.h>
-#include <boost/math/special_functions/round.hpp>
+#include "DlgExpressionInput.h"
 #include "QuantitySpinBox_p.h"
 #include <App/PropertyUnits.h>
 #include "Widgets.h"
@@ -67,6 +64,60 @@ void ExpressionSpinBox::setUnit(const Base::Unit &unit)
     this->unit = unit;
 }
 
+void ExpressionSpinBox::showInvalidExpression(const QString& tip)
+{
+    (void)tip;
+    spinbox->setReadOnly(true);
+    QPalette p(lineedit->palette());
+    p.setColor(QPalette::Active, QPalette::Text, Qt::red);
+    lineedit->setPalette(p);
+}
+
+void ExpressionSpinBox::showValidExpression(ExpressionSpinBox::Number number)
+{
+    std::unique_ptr<Expression> result(getExpression()->eval());
+    auto * value = freecad_dynamic_cast<NumberExpression>(result.get());
+
+    if (value) {
+        switch (number) {
+        case Number::SetIfNumber:
+            setNumberExpression(value);
+            break;
+        case Number::KeepCurrent:
+            break;
+        }
+
+        spinbox->setReadOnly(true);
+
+        QPalette p(lineedit->palette());
+        p.setColor(QPalette::Text, Qt::lightGray);
+        lineedit->setPalette(p);
+    }
+}
+
+void ExpressionSpinBox::clearExpression()
+{
+    spinbox->setReadOnly(false);
+    QPalette p(lineedit->palette());
+    p.setColor(QPalette::Active, QPalette::Text, defaultPalette.color(QPalette::Text));
+    lineedit->setPalette(p);
+}
+
+void ExpressionSpinBox::updateExpression()
+{
+    try {
+        if (hasExpression()) {
+            showValidExpression(Number::KeepCurrent);
+        }
+        else {
+            clearExpression();
+        }
+    }
+    catch (const Base::Exception & e) {
+        showInvalidExpression(QString::fromUtf8(e.what()));
+    }
+}
+
 void ExpressionSpinBox::setExpression(std::shared_ptr<Expression> expr)
 {
     Q_ASSERT(isBound());
@@ -75,10 +126,7 @@ void ExpressionSpinBox::setExpression(std::shared_ptr<Expression> expr)
         ExpressionBinding::setExpression(expr);
     }
     catch (const Base::Exception & e) {
-        spinbox->setReadOnly(true);
-        QPalette p(lineedit->palette());
-        p.setColor(QPalette::Active, QPalette::Text, Qt::red);
-        lineedit->setPalette(p);
+        showInvalidExpression(QString::fromUtf8(e.what()));
     }
 }
 
@@ -86,23 +134,10 @@ void ExpressionSpinBox::onChange()
 {
     Q_ASSERT(isBound());
     if (hasExpression()) {
-        std::unique_ptr<Expression> result(getExpression()->eval());
-        NumberExpression * value = freecad_dynamic_cast<NumberExpression>(result.get());
-
-        if (value) {
-            setNumberExpression(value);
-            spinbox->setReadOnly(true);
-
-            QPalette p(lineedit->palette());
-            p.setColor(QPalette::Text, Qt::lightGray);
-            lineedit->setPalette(p);
-        }
+        showValidExpression(Number::SetIfNumber);
     }
     else {
-        spinbox->setReadOnly(false);
-        QPalette p(lineedit->palette());
-        p.setColor(QPalette::Active, QPalette::Text, defaultPalette.color(QPalette::Text));
-        lineedit->setPalette(p);
+        clearExpression();
     }
 }
 
@@ -135,7 +170,7 @@ void ExpressionSpinBox::resizeWidget()
     }
 }
 
-void ExpressionSpinBox::openFormulaDialog()
+Gui::Dialog::DlgExpressionInput *ExpressionSpinBox::openFormulaDialog()
 {
     Q_ASSERT(isBound());
 
@@ -153,6 +188,7 @@ void ExpressionSpinBox::openFormulaDialog()
 
     box->show();
     box->setExpressionInputSize(box->width(), box->height());
+    return box;
 }
 
 void ExpressionSpinBox::finishFormulaDialog(Gui::Dialog::DlgExpressionInput *box)

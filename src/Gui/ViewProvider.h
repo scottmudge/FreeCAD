@@ -20,23 +20,22 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_VIEWPROVIDER_H
 #define GUI_VIEWPROVIDER_H
 
-#include <map>
-#include <vector>
-#include <string>
-#include <memory>
 #include <bitset>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 #include <QIcon>
 #include <QPixmap>
 #include <boost/signals2.hpp>
 
-#include <App/TransactionalObject.h>
 #include <App/Material.h>
-#include <Base/Vector3D.h>
+#include <App/TransactionalObject.h>
 #include <Base/BoundBox.h>
+#include <Base/Vector3D.h>
 #include "InventorBase.h"
 
 class QMouseEvent;
@@ -98,28 +97,28 @@ enum ViewStatus {
   */
 class GuiExport ViewProvider : public App::TransactionalObject
 {
-    PROPERTY_HEADER(Gui::ViewProvider);
+    PROPERTY_HEADER_WITH_OVERRIDE(Gui::ViewProvider);
 
 public:
     /// constructor.
     ViewProvider();
 
     /// destructor.
-    virtual ~ViewProvider();
+    ~ViewProvider() override;
 
     // returns the root node of the Provider (3D)
-    virtual SoSeparator* getRoot(void) const {return pcRoot;}
+    virtual SoSeparator* getRoot() const {return pcRoot;}
     // return the mode switch node of the Provider (3D)
-    SoSwitch *getModeSwitch(void) const {return pcModeSwitch;}
+    SoSwitch *getModeSwitch() const {return pcModeSwitch;}
     SoTransform *getTransformNode() const {return pcTransform;}
     // returns the root for the Annotations.
-    SoSeparator* getAnnotation(void);
+    SoSeparator* getAnnotation();
     // returns the root node of the Provider (3D)
-    virtual SoSeparator* getFrontRoot(void) const;
+    virtual SoSeparator* getFrontRoot() const;
     // returns the root node where the children gets collected(3D)
-    virtual SoGroup* getChildRoot(void) const;
+    virtual SoGroup* getChildRoot() const;
     // returns the root node of the Provider (3D)
-    virtual SoSeparator* getBackRoot(void) const;
+    virtual SoSeparator* getBackRoot() const;
     ///Indicate whether to be added to scene graph or not
     virtual bool canAddToSceneGraph() const {return true;}
 
@@ -129,7 +128,7 @@ public:
       * scene graph. This affects the visibility and the 3D
       * position of the object.
       */
-    virtual std::vector<App::DocumentObject*> claimChildren3D(void) const;
+    virtual std::vector<App::DocumentObject*> claimChildren3D() const;
 
     /// Called by Gui::Document to update the scene graph of the calimed children 3D
     virtual bool handleChildren3D(const std::vector<App::DocumentObject*> &children);
@@ -142,14 +141,14 @@ public:
     //@{
 
     /// indicates if the ViewProvider use the new Selection model
-    virtual bool useNewSelectionModel(void) const;
-    virtual bool isSelectable(void) const {return true;}
+    virtual bool useNewSelectionModel() const;
+    virtual bool isSelectable() const {return true;}
     /// return a hit element given the picked point which contains the full node path
     virtual bool getElementPicked(const SoPickedPoint *, std::string &subname) const;
     /// return a hit element to the selection path or 0
     virtual std::string getElement(const SoDetail *) const { return std::string(); }
     /// return the coin node detail of the subelement
-    virtual SoDetail* getDetail(const char *) const { return 0; }
+    virtual SoDetail* getDetail(const char *) const { return nullptr; }
 
     /** return the coin node detail and path to the node of the subelement
      *
@@ -170,7 +169,7 @@ public:
     /** partial rendering setup
      *
      * @param subelements: a list of dot separated string refer to the sub element
-     * @param clear: if true, remove the the subelement from partial rendering.
+     * @param clear: if true, remove the subelement from partial rendering.
      * If else, add the subelement for rendering.
      *
      * @return Return the number of subelement found
@@ -198,9 +197,9 @@ public:
      * This method shall work regardless whether the current view object is
      * visible or not.
      */
-    Base::BoundBox3d getBoundingBox(const char *subname=0,
-            const Base::Matrix4D *mat=0, bool transform=true,
-            const View3DInventorViewer *view=0, int depth=0) const;
+    Base::BoundBox3d getBoundingBox(const char *subname=nullptr,
+            const Base::Matrix4D *mat=nullptr, bool transform=true,
+            const View3DInventorViewer *view=nullptr, int depth=0) const;
 
     /** Convenience function to obtain the current active viewer
      */
@@ -236,7 +235,7 @@ public:
      */
     //@{
     /// deliver the icon shown in the tree view
-    virtual QIcon getIcon(void) const;
+    virtual QIcon getIcon() const;
 
     /** Deliver extra icons shown in the tree view
      *
@@ -255,7 +254,7 @@ public:
       * be used for any kind of grouping needed for a special
       * purpose.
       */
-    virtual std::vector<App::DocumentObject*> claimChildren(void) const;
+    virtual std::vector<App::DocumentObject*> claimChildren() const;
     //@}
 
     /** @name Drag and drop
@@ -399,24 +398,24 @@ public:
     void setStatus(ViewStatus pos, bool on) {StatusBits.set((size_t)pos, on);}
 
     std::string toString() const;
-    PyObject* getPyObject();
+    PyObject* getPyObject() override;
 
     /** @name Display mode methods
      */
     //@{
-    std::string getActiveDisplayMode(void) const;
+    std::string getActiveDisplayMode() const;
     /// set the display mode
     virtual void setDisplayMode(const char* ModeName);
     /// get the default display mode
     virtual const char* getDefaultDisplayMode() const;
     /// returns a list of all possible display modes
-    virtual std::vector<std::string> getDisplayModes(void) const;
+    virtual std::vector<std::string> getDisplayModes() const;
     /// Hides the view provider
-    virtual void hide(void);
+    virtual void hide();
     /// Shows the view provider
-    virtual void show(void);
+    virtual void show();
     /// checks whether the view provider is visible or not
-    virtual bool isShow(void) const;
+    virtual bool isShow() const;
     void setVisible(bool);
     bool isVisible() const;
     void setLinkVisible(bool);
@@ -429,7 +428,7 @@ public:
     /** @name Color management methods
      */
     //@{
-    virtual std::map<std::string, App::Color> getElementColors(const char *element=0) const {
+    virtual std::map<std::string, App::Color> getElementColors(const char *element=nullptr) const {
         (void)element;
         return {};
     }
@@ -496,12 +495,14 @@ public:
     /// If null is returned then no transaction will be opened.
     virtual const char* getTransactionText() const { return nullptr; }
     /// is called by the tree if the user double clicks on the object
-    virtual bool doubleClicked(void) { return false; }
+    virtual bool doubleClicked() { return false; }
     /// is called when the provider is in edit and the mouse is moved
     virtual bool mouseMove(const SbVec2s &cursorPos, View3DInventorViewer* viewer);
     /// is called when the Provider is in edit and the mouse is clicked
     virtual bool mouseButtonPressed(int button, bool pressed, const SbVec2s &cursorPos,
                                     const View3DInventorViewer* viewer);
+
+    virtual bool mouseWheelEvent(int delta, const SbVec2s &cursorPos, const View3DInventorViewer* viewer);
     /// set up the context-menu with the supported edit modes
     virtual void setupContextMenu(QMenu*, QObject*, const char*);
     /** Called by tree on mouse event in a specific icon
@@ -534,7 +535,7 @@ public:
 
     //restoring the object from document:
     //this may be of interest to extensions, hence call them
-    virtual void Restore(Base::XMLReader& reader);
+    void Restore(Base::XMLReader& reader) override;
     bool isRestoring() {return testStatus(Gui::isRestoring);}
 
 
@@ -579,9 +580,9 @@ protected:
     SoPickedPoint* getPointOnRay(const SbVec3f& pos, const SbVec3f& dir,
                                  const View3DInventorViewer* viewer) const;
     /// Reimplemented from subclass
-    void onBeforeChange(const App::Property* prop);
+    void onBeforeChange(const App::Property* prop) override;
     /// Reimplemented from subclass
-    void onChanged(const App::Property* prop);
+    void onChanged(const App::Property* prop) override;
 
     /** @name Methods used by the Tree
      * If you want to take control over the

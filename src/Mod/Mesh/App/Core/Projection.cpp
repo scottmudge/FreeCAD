@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <algorithm>
@@ -28,18 +27,12 @@
 #endif
 
 #include "Projection.h"
-#include "MeshKernel.h"
-#include "Iterator.h"
-#include "Algorithm.h"
 #include "Grid.h"
-
-#include <Base/Exception.h>
-#include <Base/Console.h>
-#include <Base/Sequencer.h>
+#include "Iterator.h"
+#include "MeshKernel.h"
 
 
 using namespace MeshCore;
-
 
 // ------------------------------------------------------------------------
 
@@ -59,7 +52,7 @@ bool MeshProjection::bboxInsideRectangle(const Base::BoundBox3f& bbox,
 {
     Base::Vector3f dir(p2 - p1);
     Base::Vector3f base(p1), normal(view % dir);
-    normal.Normalize(); 
+    normal.Normalize();
 
     if (bbox.IsCutPlane(base, normal)) {
         dir.Normalize();
@@ -132,7 +125,7 @@ bool MeshProjection::connectLines(std::list< std::pair<Base::Vector3f, Base::Vec
             return false;  // abort because no line was found
         }
 
-        cutLines.erase(pCurr); 
+        cutLines.erase(pCurr);
     }
 
     return true;
@@ -179,8 +172,8 @@ bool MeshProjection::projectLineOnMesh(const MeshFacetGrid& grid,
             if (tria.IntersectWithPlane(base, normal, e1, e2)) {
                 if ((*it != f1) && (*it != f2)) {
                     // inside cut line
-                    if ((isPointInsideDistance(v1, v2, e1) == false) ||
-                        (isPointInsideDistance(v1, v2, e2) == false)) {
+                    if (!isPointInsideDistance(v1, v2, e1) ||
+                        !isPointInsideDistance(v1, v2, e2)) {
                         continue;
                     }
 

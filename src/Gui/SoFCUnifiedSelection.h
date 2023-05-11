@@ -23,31 +23,27 @@
 #ifndef GUI_SOFCUNIFIEDSELECTION_H
 #define GUI_SOFCUNIFIEDSELECTION_H
 
-#include <Inventor/lists/SoNodeList.h>
-#include <Inventor/nodes/SoSubNode.h>
-#include <Inventor/nodes/SoSeparator.h>
+#include <array>
+#include <list>
+#include <unordered_map>
+#include <unordered_set>
+
+#include <Inventor/elements/SoLazyElement.h>
 #include <Inventor/fields/SoSFBool.h>
 #include <Inventor/fields/SoSFColor.h>
 #include <Inventor/fields/SoSFEnum.h>
-#include <Inventor/fields/SoSFName.h>
 #include <Inventor/fields/SoSFFloat.h>
+#include <Inventor/fields/SoSFName.h>
 #include <Inventor/fields/SoMFName.h>
-#include <Inventor/fields/SoSFString.h>
-#include <Inventor/nodes/SoLightModel.h>
-#include <Inventor/SbTime.h>
-#include <Inventor/sensors/SoTimerSensor.h>
-#include <Inventor/SbViewportRegion.h>
-#include <Inventor/elements/SoReplacedElement.h>
+#include <Inventor/lists/SoNodeList.h>
+#include <Inventor/nodes/SoSeparator.h>
+
 #include "InventorBase.h"
-#include "View3DInventorViewer.h"
-#include "SoFCSelectionContext.h"
 #include "Inventor/SoFCDetail.h"
 #include "Inventor/SoFCSwitch.h"
-#include "Inventor/SoFCDisplayModeElement.h"
-#include <array>
-#include <list>
-#include <unordered_set>
-#include <unordered_map>
+
+#include "SoFCSelectionContext.h"
+#include "View3DInventorViewer.h"
 
 class SoFullPath;
 class SoPickedPoint;
@@ -76,24 +72,24 @@ class SoFCRayPickAction;
  *  \author Jürgen Riegel
  */
 class GuiExport SoFCUnifiedSelection : public SoSeparator {
-    typedef SoSeparator inherited;
+    using inherited = SoSeparator;
 
     SO_NODE_HEADER(Gui::SoFCUnifiedSelection);
 
 public:
-    static void initClass(void);
-    static void finish(void);
-    SoFCUnifiedSelection(void);
+    static void initClass();
+    static void finish();
+    SoFCUnifiedSelection();
     void applySettings();
 
     enum HighlightModes {
         AUTO, ON, OFF
     };
 
-    const char* getFileFormatName(void) const;
-    void write(SoWriteAction * action);
+    const char* getFileFormatName() const override;
+    void write(SoWriteAction * action) override;
 
-    virtual void notify(SoNotList * l);
+    void notify(SoNotList * l) override;
 
     SoSFColor colorHighlight;
     SoSFColor colorSelection;
@@ -111,17 +107,17 @@ public:
     static SbName DisplayModeAsIs;
     static SbName DisplayModeNoShading;
 
-    virtual void doAction(SoAction *action);
-    //virtual void GLRender(SoGLRenderAction * action);
+    void doAction(SoAction *action) override;
+    //void GLRender(SoGLRenderAction * action) override;
 
-    virtual void handleEvent(SoHandleEventAction * action);
-    virtual void GLRenderBelowPath(SoGLRenderAction * action);
-    virtual void GLRenderInPath(SoGLRenderAction * action);
+    void handleEvent(SoHandleEventAction * action) override;
+    void GLRenderBelowPath(SoGLRenderAction * action) override;
+    void GLRenderInPath(SoGLRenderAction * action) override;
     //static  void turnOffCurrentHighlight(SoGLRenderAction * action);
 
-    virtual void callback(SoCallbackAction *action);
+    void callback(SoCallbackAction *action) override;
 
-    virtual void getBoundingBox(SoGetBoundingBoxAction * action);
+    void getBoundingBox(SoGetBoundingBoxAction * action) override;
 
     bool hasHighlight();
 
@@ -142,7 +138,7 @@ public:
     SoFCRenderCacheManager * getRenderManager();
 
 protected:
-    virtual ~SoFCUnifiedSelection();
+    ~SoFCUnifiedSelection() override;
     //virtual void redrawHighlighted(SoAction * act, SbBool flag);
     //virtual SbBool readInstance(SoInput *  in, unsigned short  flags);
 
@@ -196,32 +192,33 @@ struct GuiExport FCDepthFunc {
 
 /// For rendering a given path on top
 class GuiExport SoFCPathAnnotation : public SoSeparator {
-    typedef SoSeparator inherited;
+    using inherited = SoSeparator;
 
     SO_NODE_HEADER(Gui::SoFCPathAnnotation);
 public:
     SoSFInt32 priority;
 
-    static void initClass(void);
-    static void finish(void);
-    SoFCPathAnnotation(ViewProvider *vp=0, const char *subname=0, View3DInventorViewer *viewer=0);
+    static void initClass();
+    static void finish();
+
+    SoFCPathAnnotation(ViewProvider *vp=nullptr, const char *subname=nullptr, View3DInventorViewer *viewer=nullptr);
 
     void setPath(SoPath *);
     SoPath *getPath() const;
     void setDetail(bool det);
     bool hasDetail() {return det;}
 
-    virtual void GLRenderBelowPath(SoGLRenderAction * action);
-    virtual void GLRender(SoGLRenderAction * action);
-    virtual void GLRenderInPath(SoGLRenderAction * action);
+    void GLRenderBelowPath(SoGLRenderAction * action) override;
+    void GLRender(SoGLRenderAction * action) override;
+    void GLRenderInPath(SoGLRenderAction * action) override;
 
-    virtual void getBoundingBox(SoGetBoundingBoxAction * action);
+    void getBoundingBox(SoGetBoundingBoxAction * action) override;
+    void doAction(SoAction *action) override;
+
     void doPick(SoPath *path, SoRayPickAction *action);
 
-    virtual void doAction(SoAction *action);
-
 protected:
-    virtual ~SoFCPathAnnotation();
+    ~SoFCPathAnnotation() override;
 
 protected:
     ViewProvider *viewProvider;
@@ -234,17 +231,17 @@ protected:
 
 /// Separator node that tracks render caching setting
 class GuiExport SoFCSeparator : public SoSeparator {
-    typedef SoSeparator inherited;
+    using inherited = SoSeparator;
 
     SO_NODE_HEADER(Gui::SoFCSeparator);
 
 public:
-    static void initClass(void);
-    static void finish(void);
-    SoFCSeparator(bool trackCacheMode=true);
+    static void initClass();
+    static void finish();
+    explicit SoFCSeparator(bool trackCacheMode=true);
 
-    virtual void GLRenderBelowPath(SoGLRenderAction * action);
-    virtual void GLRenderInPath(SoGLRenderAction * action);
+    void GLRenderBelowPath(SoGLRenderAction * action) override;
+    void GLRenderInPath(SoGLRenderAction * action) override;
     static void _GLRenderInPath(SoNode *node, SoGLRenderAction *);
 
     static void setCacheMode(CacheEnabled mode) {
@@ -260,7 +257,7 @@ private:
 };
 
 class GuiExport SoFCSelectionRoot : public SoFCSeparator {
-    typedef SoFCSeparator inherited;
+    using inherited = SoFCSeparator;
 
     SO_NODE_HEADER(Gui::SoFCSelectionRoot);
 
@@ -275,9 +272,9 @@ public:
     SoSFFloat overrideTransparency;
     SoSFInt32 cacheHint;
 
-    static void initClass(void);
-    static void finish(void);
-    SoFCSelectionRoot(bool trackCacheMode=false, ViewProvider *vp=0);
+    static void initClass();
+    static void finish();
+    SoFCSelectionRoot(bool trackCacheMode=false, ViewProvider *vp=nullptr);
 
     uint32_t getSelNodeId() const {
         return selnodeid;
@@ -286,18 +283,18 @@ public:
     ViewProvider *getViewProvider() const {return viewProvider;}
     void setViewProvider(ViewProvider *vp);
 
-    virtual void GLRenderBelowPath(SoGLRenderAction * action);
-    virtual void GLRenderInPath(SoGLRenderAction * action);
+    void GLRenderBelowPath(SoGLRenderAction * action) override;
+    void GLRenderInPath(SoGLRenderAction * action) override;
 
-    virtual void doAction(SoAction *action);
-    virtual void pick(SoPickAction * action);
-    virtual void rayPick(SoRayPickAction * action);
-    virtual void handleEvent(SoHandleEventAction * action);
-    virtual void search(SoSearchAction * action);
-    virtual void getPrimitiveCount(SoGetPrimitiveCountAction * action);
-    virtual void getBoundingBox(SoGetBoundingBoxAction * action);
-    virtual void getMatrix(SoGetMatrixAction * action);
-    virtual void callback(SoCallbackAction *action);
+    void doAction(SoAction *action) override;
+    void pick(SoPickAction * action) override;
+    void rayPick(SoRayPickAction * action) override;
+    void handleEvent(SoHandleEventAction * action) override;
+    void search(SoSearchAction * action) override;
+    void getPrimitiveCount(SoGetPrimitiveCountAction * action) override;
+    void getBoundingBox(SoGetBoundingBoxAction * action) override;
+    void getMatrix(SoGetMatrixAction * action) override;
+    void callback(SoCallbackAction *action) override;
 
     static bool handleSelectionAction(SoAction *action, SoNode *node,
                                       SoFCDetail::Type detailType,
@@ -439,7 +436,7 @@ public:
     friend class ::SoFCRenderCacheP;
 
 protected:
-    virtual ~SoFCSelectionRoot();
+    ~SoFCSelectionRoot() override;
 
     void renderPrivate(SoGLRenderAction *, bool inPath);
     bool _renderPrivate(SoGLRenderAction *, bool inPath, bool &pushed);
@@ -578,7 +575,7 @@ protected:
         bool operator()(const Stack &a, const Stack &b) const;
     };
 
-    typedef std::map<Stack,SoFCSelectionContextBasePtr,StackComp> ContextMap;
+    using ContextMap = std::map<Stack,SoFCSelectionContextBasePtr,StackComp>;
     ContextMap contextMap;
     ContextMap contextMap2;//holding secondary context
 
@@ -591,10 +588,12 @@ protected:
         bool hideAll = false;
         static MergeFunc merge;
 
-        virtual bool isCounted() const {return selAll || hideAll;}
+        bool isCounted() const override {
+            return selAll || hideAll;
+        }
     };
-    typedef std::shared_ptr<SelContext> SelContextPtr;
-    typedef std::vector<SbColor> ColorStack;
+    using SelContextPtr = std::shared_ptr<SelContext>;
+    using ColorStack = std::vector<SbColor>;
     static ColorStack SelColorStack;
     static ColorStack HlColorStack;
     static SoFCSelectionRoot *ShapeColorNode;
@@ -618,7 +617,7 @@ class GuiExport SoHighlightElementAction : public SoAction
 
 public:
     SoHighlightElementAction ();
-    ~SoHighlightElementAction();
+    ~SoHighlightElementAction() override;
 
     void setHighlighted(SbBool);
     SbBool isHighlighted() const;
@@ -630,7 +629,7 @@ public:
     static void initClass();
 
 protected:
-    virtual void beginTraversal(SoNode *node);
+    void beginTraversal(SoNode *node) override;
 
 private:
     static void callDoAction(SoAction *action,SoNode *node);
@@ -652,7 +651,7 @@ public:
     enum Type {None, Append, Remove, All, Color, Hide, Show, Retrieve, RetrieveAll};
 
     SoSelectionElementAction (Type=None, bool secondary = false, bool noTouch = false);
-    ~SoSelectionElementAction();
+    ~SoSelectionElementAction() override;
 
     Type getType() const;
     void setType(Type type) {
@@ -691,7 +690,7 @@ public:
     static void initClass();
 
 protected:
-    virtual void beginTraversal(SoNode *node);
+    void beginTraversal(SoNode *node) override;
 
 private:
     static void callDoAction(SoAction *action,SoNode *node);
@@ -716,7 +715,7 @@ class GuiExport SoVRMLAction : public SoAction
 
 public:
     SoVRMLAction();
-    ~SoVRMLAction();
+    ~SoVRMLAction() override;
     void setOverrideMode(SbBool);
     SbBool isOverrideMode() const;
 

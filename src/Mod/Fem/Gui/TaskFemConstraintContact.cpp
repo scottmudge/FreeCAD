@@ -26,31 +26,18 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <BRepAdaptor_Curve.hxx>
-# include <BRepAdaptor_Surface.hxx>
-# include <Geom_Line.hxx>
-# include <Geom_Plane.hxx>
-# include <Precision.hxx>
-# include <QMessageBox>
 # include <QAction>
-# include <QRegExp>
-# include <QTextStream>
-# include <TopoDS.hxx>
-# include <gp_Ax1.hxx>
-# include <gp_Lin.hxx>
-# include <gp_Pln.hxx>
+# include <QMessageBox>
 # include <sstream>
 #endif
 
+#include <Gui/Command.h>
+#include <Gui/SelectionObject.h>
 #include "Mod/Fem/App/FemConstraintContact.h"
+#include <Mod/Part/App/PartFeature.h>
+
 #include "TaskFemConstraintContact.h"
 #include "ui_TaskFemConstraintContact.h"
-#include <App/Application.h>
-#include <Base/Tools.h>
-#include <Gui/Command.h>
-#include <Gui/Selection.h>
-#include <Gui/SelectionFilter.h>
-#include <Mod/Part/App/PartFeature.h>
 
 
 using namespace FemGui;
@@ -92,13 +79,13 @@ TaskFemConstraintContact::TaskFemConstraintContact(ViewProviderFemConstraintCont
 
     std::vector<App::DocumentObject*> Objects = pcConstraint->References.getValues();
     std::vector<std::string> SubElements = pcConstraint->References.getSubValues();
-    double S = pcConstraint->Slope.getValue();
-    double F = pcConstraint->Friction.getValue();
+    double slope = pcConstraint->Slope.getValue();
+    double friction = pcConstraint->Friction.getValue();
 
     // Fill data into dialog elements
     ui->spSlope->setMinimum(1.0);
-    ui->spSlope->setValue(S);
-    ui->spFriction->setValue(F);
+    ui->spSlope->setValue(slope);
+    ui->spFriction->setValue(friction);
 
 /* */
 
@@ -107,12 +94,12 @@ TaskFemConstraintContact::TaskFemConstraintContact(ViewProviderFemConstraintCont
 
     // QMessageBox::warning(this, tr("Objects.size"), QString::number(Objects.size()));
     if (Objects.size() == 1) {
-        QMessageBox::warning(this, tr("Selection error"), tr("Only one face in object! - moved to master face")); 
+        QMessageBox::warning(this, tr("Selection error"), tr("Only one face in object! - moved to master face"));
         ui->lw_referencesMaster->addItem(makeRefText(Objects[0], SubElements[0]));
     }
 
     if (Objects.size() == 2 ) {
-        ui->lw_referencesMaster->addItem(makeRefText(Objects[1], SubElements[1]));		
+        ui->lw_referencesMaster->addItem(makeRefText(Objects[1], SubElements[1]));
         ui->lw_referencesSlave->addItem(makeRefText(Objects[0], SubElements[0]));
     }
 
@@ -154,7 +141,7 @@ void TaskFemConstraintContact::addToSelectionSlave()
         Gui::Selection().clearSelection();
         return;
     }
-    if (selection.size() == 0){
+    if (selection.empty()){
         QMessageBox::warning(this, tr("Selection error"), tr("Nothing selected!"));
         return;
     }
@@ -210,7 +197,7 @@ void TaskFemConstraintContact::addToSelectionSlave()
 void TaskFemConstraintContact::removeFromSelectionSlave()
 {
     std::vector<Gui::SelectionObject> selection = Gui::Selection().getSelectionEx(); //gets vector of selected objects of active document
-    if (selection.size() == 0){
+    if (selection.empty()){
         QMessageBox::warning(this, tr("Selection error"), tr("Nothing selected!"));
         return;
     }
@@ -238,7 +225,7 @@ void TaskFemConstraintContact::removeFromSelectionSlave()
         }
     }
     std::sort(itemsToDel.begin(), itemsToDel.end());
-    while (itemsToDel.size() > 0){
+    while (!itemsToDel.empty()){
         Objects.erase(Objects.begin() + itemsToDel.back());
         SubElements.erase(SubElements.begin() + itemsToDel.back());
         itemsToDel.pop_back();
@@ -261,7 +248,7 @@ void TaskFemConstraintContact::addToSelectionMaster()
         Gui::Selection().clearSelection();
         return;
     }
-    if (selection.size() == 0){
+    if (selection.empty()){
         QMessageBox::warning(this, tr("Selection error"), tr("Nothing selected!"));
         return;
     }
@@ -316,7 +303,7 @@ void TaskFemConstraintContact::addToSelectionMaster()
 void TaskFemConstraintContact::removeFromSelectionMaster()
 {
     std::vector<Gui::SelectionObject> selection = Gui::Selection().getSelectionEx(); //gets vector of selected objects of active document
-    if (selection.size() == 0){
+    if (selection.empty()){
         QMessageBox::warning(this, tr("Selection error"), tr("Nothing selected!"));
         return;
     }
@@ -344,7 +331,7 @@ void TaskFemConstraintContact::removeFromSelectionMaster()
         }
     }
     std::sort(itemsToDel.begin(), itemsToDel.end());
-    while (itemsToDel.size() > 0){
+    while (!itemsToDel.empty()){
         Objects.erase(Objects.begin() + itemsToDel.back());
         SubElements.erase(SubElements.begin() + itemsToDel.back());
         itemsToDel.pop_back();

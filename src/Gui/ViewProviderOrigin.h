@@ -21,7 +21,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_VIEWPROVIDER_ViewProviderOrigin_H
 #define GUI_VIEWPROVIDER_ViewProviderOrigin_H
 
@@ -29,13 +28,14 @@
 
 #include "ViewProviderDocumentObject.h"
 
+
 namespace Gui {
 
 class Document;
 
 class GuiExport ViewProviderOrigin : public ViewProviderDocumentObject
 {
-    PROPERTY_HEADER(Gui::ViewProviderOrigin);
+    PROPERTY_HEADER_WITH_OVERRIDE(Gui::ViewProviderOrigin);
 
 public:
     /// Size of the origin as set by the part.
@@ -46,18 +46,18 @@ public:
     /// constructor.
     ViewProviderOrigin();
     /// destructor.
-    virtual ~ViewProviderOrigin();
+    ~ViewProviderOrigin() override;
 
     /// @name Override methods
     ///@{
-    virtual std::vector<App::DocumentObject*> claimChildren(void) const;
-    virtual std::vector<App::DocumentObject*> claimChildren3D(void) const;
+    std::vector<App::DocumentObject*> claimChildren() const override;
+    std::vector<App::DocumentObject*> claimChildren3D() const override;
 
-    virtual SoGroup* getChildRoot(void) const {return pcGroupChildren;};
+    SoGroup* getChildRoot() const override {return pcGroupChildren;}
 
-    virtual void attach(App::DocumentObject* pcObject);
-    virtual std::vector<std::string> getDisplayModes(void) const;
-    virtual void setDisplayMode(const char* ModeName);
+    void attach(App::DocumentObject* pcObject) override;
+    std::vector<std::string> getDisplayModes() const override;
+    void setDisplayMode(const char* ModeName) override;
     ///@}
 
     /** @name Temporary visibility mode
@@ -72,13 +72,13 @@ public:
     void resetTemporaryVisibility ();
     ///@}
 
-    virtual bool canDragObjects() const {
+    bool canDragObjects() const override {
         return false;
     }
 
-    virtual bool doubleClicked();
+    bool doubleClicked() override;
 
-    virtual void setupContextMenu(QMenu* menu, QObject* receiver, const char* member);
+    void setupContextMenu(QMenu* menu, QObject* receiver, const char* member) override;
 
     /// Returns default size. Use this if it is not possible to determine appropriate size by other means
     static double defaultSize();
@@ -87,10 +87,10 @@ public:
     static double baseSize();
 
 protected:
-    virtual void onChanged(const App::Property* prop);
-    virtual bool onDelete(const std::vector<std::string> &);
-    virtual void updateData(const App::Property *prop);
-    virtual bool setEdit(int);
+    void onChanged(const App::Property* prop) override;
+    bool onDelete(const std::vector<std::string> &) override;
+    void updateData(const App::Property *prop) override;
+    bool setEdit(int) override;
 
 private:
     SoGroup *pcGroupChildren;

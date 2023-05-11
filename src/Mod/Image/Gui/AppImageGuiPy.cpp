@@ -22,22 +22,17 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <QIcon>
 # include <QImage>
 # include <QFileInfo>
 #endif
 
-#include <CXX/Extensions.hxx>
-#include <CXX/Objects.hxx>
+#include <Base/Exception.h>
+#include <Base/Interpreter.h>
+#include <Gui/BitmapFactory.h>
+#include <Gui/MainWindow.h>
 
 #include "ImageView.h"
 
-#include <Base/Console.h>
-#include <Base/Exception.h>
-#include <Base/FileInfo.h>
-#include <App/Application.h>
-#include <Gui/MainWindow.h>
-#include <Gui/BitmapFactory.h>
 
 namespace ImageGui {
 class Module : public Py::ExtensionModule<Module>
@@ -52,13 +47,13 @@ public:
         initialize("This module is the ImageGui module."); // register with Python
     }
 
-    virtual ~Module() {}
+    ~Module() override {}
 
 private:
     Py::Object open(const Py::Tuple& args)
     {
         char* Name;
-        const char* DocName=0;
+        const char* DocName=nullptr;
         if (!PyArg_ParseTuple(args.ptr(), "et|s","utf-8",&Name,&DocName))
             throw Py::Exception();
 
@@ -73,8 +68,8 @@ private:
 
         // Extract image into a general RGB format recognised by the ImageView class
         int format = IB_CF_RGB24;
-        unsigned char *pPixelData = NULL;
-        if (imageq.isNull() == false) {
+        unsigned char *pPixelData = nullptr;
+        if (!imageq.isNull()) {
             pPixelData = new unsigned char[3 * (unsigned long)imageq.width() * (unsigned long)imageq.height()];
             unsigned char *pPix = pPixelData;
             for (int r = 0; r < imageq.height(); r++) {
@@ -106,7 +101,7 @@ private:
 
 PyObject* initModule()
 {
-    return (new Module)->module().ptr();
+    return Base::Interpreter().addModule(new Module);
 }
 
 } // namespace ImageGui

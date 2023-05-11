@@ -23,40 +23,36 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_TASKVIEW_TaskFemConstraintDisplacement_H
 #define GUI_TASKVIEW_TaskFemConstraintDisplacement_H
 
-#include <Gui/TaskView/TaskView.h>
+#include <QObject>
+
 #include <Gui/Selection.h>
-#include <Gui/TaskView/TaskDialog.h>
-#include <Base/Quantity.h>
+#include <Gui/TaskView/TaskView.h>
 
 #include "TaskFemConstraint.h"
+#include "TaskFemConstraintOnBoundary.h"
 #include "ViewProviderFemConstraintDisplacement.h"
 
-#include <QObject>
-#include <Base/Console.h>
-#include <App/DocumentObject.h>
-#include <QKeyEvent>
 
 class Ui_TaskFemConstraintDisplacement;
 
 namespace FemGui {
-class TaskFemConstraintDisplacement : public TaskFemConstraint
+class TaskFemConstraintDisplacement : public TaskFemConstraintOnBoundary
 {
     Q_OBJECT
 
 public:
-    TaskFemConstraintDisplacement(ViewProviderFemConstraintDisplacement *ConstraintView, QWidget *parent = 0);
-    ~TaskFemConstraintDisplacement();
-    const std::string getReferences() const;
+    explicit TaskFemConstraintDisplacement(ViewProviderFemConstraintDisplacement *ConstraintView, QWidget *parent = nullptr);
+    ~TaskFemConstraintDisplacement() override;
+    const std::string getReferences() const override;
     double get_spinxDisplacement()const;
     double get_spinyDisplacement()const;
     double get_spinzDisplacement()const;
-    double get_rotxv()const;
-    double get_rotyv()const;
-    double get_rotzv()const;
+    double get_spinxRotation()const;
+    double get_spinyRotation()const;
+    double get_spinzRotation()const;
     bool get_dispxfix()const;
     bool get_dispxfree()const;
     bool get_dispyfix()const;
@@ -71,7 +67,7 @@ public:
     bool get_rotzfree()const;
 
 private Q_SLOTS:
-    void onReferenceDeleted(void);
+    void onReferenceDeleted();
     void x_changed(double);
     void y_changed(double);
     void z_changed(double);
@@ -91,12 +87,13 @@ private Q_SLOTS:
     void rotfixz(int);
     void rotfreez(int);
 
-    void addToSelection();
-    void removeFromSelection();
+    void addToSelection() override;
+    void removeFromSelection() override;
 
 protected:
-    bool event(QEvent *e); 
-    void changeEvent(QEvent *e);
+    bool event(QEvent *e) override;
+    void changeEvent(QEvent *e) override;
+    void clearButtons(const SelectionChangeModes notThis) override;
 
 private:
     void updateUI();
@@ -109,10 +106,10 @@ class TaskDlgFemConstraintDisplacement : public TaskDlgFemConstraint
     Q_OBJECT
 
 public:
-    TaskDlgFemConstraintDisplacement(ViewProviderFemConstraintDisplacement *ConstraintView);
-    void open();
-    bool accept();
-    bool reject();
+    explicit TaskDlgFemConstraintDisplacement(ViewProviderFemConstraintDisplacement *ConstraintView);
+    void open() override;
+    bool accept() override;
+    bool reject() override;
 };
 
 } //namespace FemGui

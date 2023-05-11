@@ -25,10 +25,9 @@
 #ifndef BASE_FACTORY_H
 #define BASE_FACTORY_H
 
-#include <typeinfo>
-#include <string>
-#include <map>
 #include <list>
+#include <map>
+#include <string>
 #ifndef FC_GLOBAL_H
 #include <FCGlobal.h>
 #endif
@@ -41,10 +40,10 @@ namespace Base
 class BaseExport AbstractProducer
 {
 public:
-    AbstractProducer() {}
-    virtual ~AbstractProducer() {}
+    AbstractProducer() = default;
+    virtual ~AbstractProducer() = default;
     /// overwritten by a concrete producer to produce the needed object
-    virtual void* Produce (void) const = 0;
+    virtual void* Produce () const = 0;
 };
 
 
@@ -70,7 +69,7 @@ protected:
     void* Produce (const char* sClassName) const;
     std::map<const std::string, AbstractProducer*> _mpcProducers;
     /// construction
-    Factory (void){}
+    Factory () = default;
     /// destruction
     virtual ~Factory ();
 };
@@ -82,19 +81,19 @@ protected:
 class BaseExport ScriptFactorySingleton : public Factory
 {
 public:
-    static ScriptFactorySingleton& Instance(void);
-    static void Destruct (void);
+    static ScriptFactorySingleton& Instance();
+    static void Destruct ();
 
     const char* ProduceScript (const char* sScriptName) const;
 
 private:
     static ScriptFactorySingleton* _pcSingleton;
 
-    ScriptFactorySingleton(){}
-    ~ScriptFactorySingleton(){}
+    ScriptFactorySingleton() = default;
+    ~ScriptFactorySingleton() override = default;
 };
 
-inline ScriptFactorySingleton& ScriptFactory(void)
+inline ScriptFactorySingleton& ScriptFactory()
 {
     return ScriptFactorySingleton::Instance();
 }
@@ -114,12 +113,12 @@ public:
         ScriptFactorySingleton::Instance().AddProducer(name, this);
     }
 
-    virtual ~ScriptProducer (void){}
+    ~ScriptProducer () override = default;
 
     /// Produce an instance
-    virtual void* Produce (void) const
+    void* Produce () const override
     {
-        return (void*)mScript;
+        return const_cast<char*>(mScript);
     }
 
 private:

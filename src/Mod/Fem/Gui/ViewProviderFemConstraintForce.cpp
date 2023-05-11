@@ -21,31 +21,27 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <Standard_math.hxx>
-# include <Precision.hxx>
-
-# include <Inventor/nodes/SoSeparator.h>
-# include <Inventor/nodes/SoTranslation.h>
-# include <Inventor/nodes/SoRotation.h>
-# include <Inventor/nodes/SoMultipleCopy.h>
-
 # include <QMessageBox>
+# include <Precision.hxx>
+# include <Inventor/SbRotation.h>
+# include <Inventor/SbVec3f.h>
+# include <Inventor/nodes/SoMultipleCopy.h>
+# include <Inventor/nodes/SoSeparator.h>
 #endif
 
-#include "ViewProviderFemConstraintForce.h"
 #include <Mod/Fem/App/FemConstraintForce.h>
-#include "TaskFemConstraintForce.h"
 #include "Gui/Control.h"
 
-#include <Base/Console.h>
+#include "ViewProviderFemConstraintForce.h"
+#include "TaskFemConstraintForce.h"
+
 
 using namespace FemGui;
 
-PROPERTY_SOURCE(FemGui::ViewProviderFemConstraintForce, FemGui::ViewProviderFemConstraint)
+PROPERTY_SOURCE(FemGui::ViewProviderFemConstraintForce, FemGui::ViewProviderFemConstraintOnBoundary)
 
 
 ViewProviderFemConstraintForce::ViewProviderFemConstraintForce()
@@ -66,15 +62,15 @@ bool ViewProviderFemConstraintForce::setEdit(int ModNum)
         Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
         TaskDlgFemConstraintForce *constrDlg = qobject_cast<TaskDlgFemConstraintForce *>(dlg);
         if (constrDlg && constrDlg->getConstraintView() != this)
-            constrDlg = 0; // another constraint left open its task panel
+            constrDlg = nullptr; // another constraint left open its task panel
         if (dlg && !constrDlg) {
             // This case will occur in the ShaftWizard application
             checkForWizard();
-            if ((wizardWidget == NULL) || (wizardSubLayout == NULL)) {
+            if (!wizardWidget || !wizardSubLayout) {
                 // No shaft wizard is running
                 if (!dlg->tryClose())
                     return false;
-            } else if (constraintDialog != NULL) {
+            } else if (constraintDialog) {
                 // Another FemConstraint* dialog is already open inside the Shaft Wizard
                 // Ignore the request to open another dialog
                 return false;
@@ -96,12 +92,12 @@ bool ViewProviderFemConstraintForce::setEdit(int ModNum)
         return true;
     }
     else {
-        return ViewProviderDocumentObject::setEdit(ModNum);
+        return ViewProviderDocumentObject::setEdit(ModNum); // clazy:exclude=skipped-base-method
     }
 }
 
 #define ARROWLENGTH (4)
-#define ARROWHEADRADIUS (ARROWLENGTH/3.0f)
+#define ARROWHEADRADIUS (ARROWLENGTH / 3.0f)
 //#define USE_MULTIPLE_COPY  //OvG: MULTICOPY fails to update scaled arrows on initial drawing - so disable
 
 void ViewProviderFemConstraintForce::updateData(const App::Property* prop)
@@ -145,13 +141,15 @@ void ViewProviderFemConstraintForce::updateData(const App::Property* prop)
         SbVec3f dir(forceDirection.x, forceDirection.y, forceDirection.z);
         SbRotation rot(SbVec3f(0,1,0), dir);
 
-        for (std::vector<Base::Vector3d>::const_iterator p = points.begin(); p != points.end(); p++) {
+        for (std::vector<Base::Vector3d>::const_iterator p = points.begin(); p != points.end();
+             p++) {
             SbVec3f base(p->x, p->y, p->z);
-            if (forceDirection.GetAngle(normal) < M_PI_2) // Move arrow so it doesn't disappear inside the solid
+            if (forceDirection.GetAngle(normal)
+                < M_PI_2)// Move arrow so it doesn't disappear inside the solid
                 base = base + dir * scaledlength; //OvG: Scaling
 #ifdef USE_MULTIPLE_COPY
             SbMatrix m;
-            m.setTransform(base, rot, SbVec3f(1,1,1));
+            m.setTransform(base, rot, SbVec3f(1, 1, 1));
             matrices[idx] = m;
             idx++;
 #else
@@ -173,7 +171,7 @@ void ViewProviderFemConstraintForce::updateData(const App::Property* prop)
             forceDirection = normal;
 
         SbVec3f dir(forceDirection.x, forceDirection.y, forceDirection.z);
-        SbRotation rot(SbVec3f(0,1,0), dir);
+        SbRotation rot(SbVec3f(0, 1, 0), dir);
 
         const std::vector<Base::Vector3d>& points = pcConstraint->Points.getValues();
 
@@ -184,13 +182,14 @@ void ViewProviderFemConstraintForce::updateData(const App::Property* prop)
 #endif
         int idx = 0;
 
-        for (std::vector<Base::Vector3d>::const_iterator p = points.begin(); p != points.end(); p++) {
+        for (std::vector<Base::Vector3d>::const_iterator p = points.begin(); p != points.end();
+             p++) {
             SbVec3f base(p->x, p->y, p->z);
             if (forceDirection.GetAngle(normal) < M_PI_2)
                 base = base + dir * scaledlength; //OvG: Scaling
 #ifdef USE_MULTIPLE_COPY
             SbMatrix m;
-            m.setTransform(base, rot, SbVec3f(1,1,1));
+            m.setTransform(base, rot, SbVec3f(1, 1, 1));
             matrices[idx] = m;
 #else
             SoSeparator* sep = static_cast<SoSeparator*>(pShapeSep->getChild(idx));

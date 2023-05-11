@@ -26,7 +26,7 @@
 
 #include <FCConfig.h>
 
-// here get the warnings of too long specifiers disabled
+// point at which warnings of overly long specifiers disabled
 #ifdef _MSC_VER
 #pragma warning( disable : 4251 )
 #pragma warning( disable : 4273 )
@@ -51,6 +51,7 @@
 #include <cassert>
 #include <ctime>
 #include <csignal>
+#include <cctype>
 
 #ifdef FC_OS_WIN32
 #include <direct.h>
@@ -88,6 +89,7 @@
 // Boost
 #include <boost_signals2.hpp>
 #include <boost/bind/bind.hpp>
+#include <boost/core/ignore_unused.hpp>
 #include <boost/regex.hpp>
 
 #include <boost/utility.hpp>

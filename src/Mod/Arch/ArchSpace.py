@@ -145,11 +145,11 @@ ConditioningTypes = [
 "NaturallyVentedOnly"
 ]
 
-import FreeCAD,ArchComponent,ArchCommands,Draft,sys
+import FreeCAD,ArchComponent,ArchCommands,Draft
 if FreeCAD.GuiUp:
     import FreeCADGui
     from PySide import QtCore, QtGui
-    from DraftTools import translate
+    from draftutils.translate import translate
     from PySide.QtCore import QT_TRANSLATE_NOOP
 else:
     # \cond
@@ -650,8 +650,6 @@ class _ViewProviderSpace(ArchComponent.ViewProviderComponent):
                             t = t.replace("$walls",vobj.Object.FinishWalls)
                         if hasattr(vobj.Object,"FinishCeiling"):
                             t = t.replace("$ceiling",vobj.Object.FinishCeiling)
-                        if sys.version_info.major < 3:
-                            t = t.encode("utf8")
                         if first:
                             text1.append(t)
                         else:
@@ -672,11 +670,13 @@ class _ViewProviderSpace(ArchComponent.ViewProviderComponent):
                 if hasattr(vobj,"FirstLine"):
                     scale = vobj.FirstLine.Value/vobj.FontSize.Value
                     self.header.scaleFactor.setValue([scale,scale,scale])
+                    self.onChanged(vobj, "TextPosition")
 
         elif (prop == "FirstLine"):
             if hasattr(self,"header") and hasattr(vobj,"FontSize") and hasattr(vobj,"FirstLine"):
                 scale = vobj.FirstLine.Value/vobj.FontSize.Value
                 self.header.scaleFactor.setValue([scale,scale,scale])
+                self.onChanged(vobj, "TextPosition")
 
         elif prop == "TextColor":
             if hasattr(self,"color") and hasattr(vobj,"TextColor"):

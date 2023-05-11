@@ -20,8 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
-
 #ifndef GUI_DOCKWND_SELECTIONVIEW_H
 #define GUI_DOCKWND_SELECTIONVIEW_H
 
@@ -29,11 +27,13 @@
 #include <QMenu>
 #include <QTimer>
 #include <QPointer>
-#include "DockWindow.h"
-#include "Selection.h"
 
 class QTreeWidget;
 class QTreeWidgetItem;
+
+#include "DockWindow.h"
+#include "Selection.h"
+
 class QCheckBox;
 class QLabel;
 
@@ -57,25 +57,25 @@ public:
      * A constructor.
      * A more elaborate description of the constructor.
      */
-    SelectionView(Gui::Document* pcDocument, QWidget *parent=0);
+    explicit SelectionView(Gui::Document* pcDocument, QWidget *parent=nullptr);
 
     /**
      * A destructor.
      * A more elaborate description of the destructor.
     */
-    virtual ~SelectionView();
+    ~SelectionView() override;
 
     /// Observer message from the Selection
-    virtual void onSelectionChanged(const SelectionChanges& msg) override;
+    void onSelectionChanged(const SelectionChanges& msg) override;
 
-    virtual void leaveEvent(QEvent*) override;
+    void leaveEvent(QEvent*) override;
 
     bool onMsg(const char* pMsg,const char** ppReturn) override;
 
-    virtual const char *getName(void) const override {return "SelectionView";}
+    const char *getName() const override {return "SelectionView";}
 
     /// get called when the document is changed or updated
-    virtual void onUpdate(void) override;
+    void onUpdate() override;
 
     QTreeWidget* selectionView;
     QLabel*      countLabel;
@@ -87,20 +87,20 @@ public Q_SLOTS:
     /// get called when text is entered in the search box
     void search(const QString& text);
     /// get called when enter is pressed in the search box
-    void validateSearch(void);
+    void validateSearch();
     /// get called when the list is right-clicked
     void onItemContextMenu(const QPoint& point);
     /// different actions
-    void select(QTreeWidgetItem* item=0);
-    void deselect(void);
-    void zoom(void);
-    void treeSelect(void);
-    void toPython(void);
-    void touch(void);
-    void showPart(void);
+    void select(QTreeWidgetItem* item=nullptr);
+    void deselect();
+    void zoom();
+    void treeSelect();
+    void toPython();
+    void touch();
+    void showPart();
     void onEnablePickList();
-    void toggleSelect(QTreeWidgetItem* item=0);
-    void preselect(QTreeWidgetItem* item=0);
+    void toggleSelect(QTreeWidgetItem* item=nullptr);
+    void preselect(QTreeWidgetItem* item=nullptr);
 
 protected:
     void showEvent(QShowEvent *) override;
@@ -117,7 +117,7 @@ private:
 class GuiExport SelectionMenu : public QMenu {
     Q_OBJECT
 public:
-    SelectionMenu(QWidget *parent=0);
+    SelectionMenu(QWidget *parent=nullptr);
 
     /** Populate and show the menu for picking geometry elements.
      *
@@ -142,12 +142,12 @@ public:
 public Q_SLOTS:
     void onHover(QAction *);
     void onSubMenu();
-    void leaveEvent(QEvent *e);
     void beforeShow();
     void onSelUpMenu();
 
 protected:
-    bool eventFilter(QObject *, QEvent *);
+    bool eventFilter(QObject *, QEvent *) override;
+    void leaveEvent(QEvent *e) override;
     App::SubObjectT onPicked(QAction *);
 
 private:
@@ -163,9 +163,9 @@ public:
     SelUpMenu(QWidget *parent, bool trigger=true);
 
 protected:
-    void mouseReleaseEvent(QMouseEvent *e);
-    void mousePressEvent(QMouseEvent *e);
-    bool event(QEvent *);
+    void mouseReleaseEvent(QMouseEvent *e) override;
+    void mousePressEvent(QMouseEvent *e) override;
+    bool event(QEvent *) override;
 
 public Q_SLOTS:
     void onTriggered(QAction *action);

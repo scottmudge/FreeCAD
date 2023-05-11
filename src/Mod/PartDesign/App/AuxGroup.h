@@ -26,6 +26,7 @@
 #include <boost/signals2.hpp>
 #include <App/DocumentObject.h>
 #include <App/PropertyLinks.h>
+#include <Mod/PartDesign/PartDesignGlobal.h>
 
 namespace PartDesign
 {

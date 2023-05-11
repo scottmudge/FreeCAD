@@ -26,6 +26,7 @@
 
 #include <App/DocumentObserver.h>
 #include <Mod/Part/Gui/ViewProvider.h>
+#include <Mod/PartDesign/PartDesignGlobal.h>
 #include <Gui/ViewProviderOriginGroupExtension.h>
 #include <QCoreApplication>
 
@@ -60,25 +61,25 @@ public:
     /// constructor
     ViewProviderBody();
     /// destructor
-    virtual ~ViewProviderBody();
+    ~ViewProviderBody() override;
 
     App::PropertyEnumeration DisplayModeBody;
-    
-    virtual void attach(App::DocumentObject *) override;
 
-    virtual bool doubleClicked(void) override;
-    virtual void setupContextMenu(QMenu* menu, QObject* receiver, const char* member) override;
+    void attach(App::DocumentObject *) override;
 
-    virtual std::vector< std::string > getDisplayModes(void) const override;
-    virtual void setDisplayMode(const char* ModeName) override;
-    virtual void setOverrideMode(const std::string& mode) override;
+    bool doubleClicked(void) override;
+    void setupContextMenu(QMenu* menu, QObject* receiver, const char* member) override;
 
-    virtual bool onDelete(const std::vector<std::string> &) override;
+    std::vector< std::string > getDisplayModes(void) const override;
+    void setDisplayMode(const char* ModeName) override;
+    void setOverrideMode(const std::string& mode) override;
+
+    bool onDelete(const std::vector<std::string> &) override;
 
     /// Update the children's highlighting when triggered
-    virtual void updateData(const App::Property* prop) override;
+    void updateData(const App::Property* prop) override;
     ///unify children visuals
-    virtual void onChanged(const App::Property* prop) override;
+    void onChanged(const App::Property* prop) override;
 
     /**
      * Return the bounding box of visible features
@@ -87,21 +88,21 @@ public:
     SbBox3f getBoundBox ();
 
     /** Return false to force drop only operation for a given object*/
-    virtual bool canDragAndDropObject(App::DocumentObject*) const override;
+    bool canDragAndDropObject(App::DocumentObject*) const override;
     /** Check whether the object can be removed from the view provider by drag and drop */
-    virtual bool canDragObject(App::DocumentObject*) const override;
+    bool canDragObject(App::DocumentObject*) const override;
     /** Check whether the object can be dropped to the view provider by drag and drop */
-    virtual bool canDropObject(App::DocumentObject*) const override;
+    bool canDropObject(App::DocumentObject*) const override;
     /** Add an object to the view provider by drag and drop */
-    virtual std::string dropObjectEx(App::DocumentObject *obj, App::DocumentObject *owner, 
+    std::string dropObjectEx(App::DocumentObject *obj, App::DocumentObject *owner,
             const char *subname, const std::vector<std::string> &elements) override;
 
-    virtual int replaceObject(App::DocumentObject *oldObj, App::DocumentObject *newObj) override;
-    virtual bool canReplaceObject(App::DocumentObject *, App::DocumentObject *) override;
-    virtual bool reorderObjects(const std::vector<App::DocumentObject*> &objs, App::DocumentObject* before) override;
-    virtual bool canReorderObject(App::DocumentObject* obj, App::DocumentObject* before) override;
+    int replaceObject(App::DocumentObject *oldObj, App::DocumentObject *newObj) override;
+    bool canReplaceObject(App::DocumentObject *, App::DocumentObject *) override;
+    bool reorderObjects(const std::vector<App::DocumentObject*> &objs, App::DocumentObject* before) override;
+    bool canReorderObject(App::DocumentObject* obj, App::DocumentObject* before) override;
 
-    virtual std::vector<App::DocumentObject*> claimChildren3D(void) const override;
+    std::vector<App::DocumentObject*> claimChildren3D(void) const override;
 
     unsigned long generateIconColor(App::DocumentObject * feat = nullptr) const;
 
@@ -118,13 +119,16 @@ protected:
     void unifyVisualProperty(const App::Property* prop);
     /// Set Feature viewprovider into visual body mode
     void setVisualBodyMode(bool bodymode);
-    virtual bool shouldCheckExport(App::DocumentObject *) const override;
+    bool shouldCheckExport(App::DocumentObject *) const override;
 
     bool _reorderObject(PartDesign::Body *body,
                         App::DocumentObject *obj,
                         App::DocumentObject *before,
                         bool canSwap,
                         bool &needCheckSiblings);
+
+private:
+    void copyColorsfromTip(App::DocumentObject* tip);
 
 private:
     static const char* BodyModeEnum[];

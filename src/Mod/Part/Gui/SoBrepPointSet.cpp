@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -32,29 +31,16 @@
 # else
 #  include <GL/gl.h>
 # endif
-# include <float.h>
 # include <algorithm>
-# include <Python.h>
+# include <cfloat>
 # include <Inventor/SoPickedPoint.h>
-# include <Inventor/SoPrimitiveVertex.h>
-# include <Inventor/actions/SoCallbackAction.h>
 # include <Inventor/actions/SoGetBoundingBoxAction.h>
-# include <Inventor/actions/SoGetPrimitiveCountAction.h>
 # include <Inventor/actions/SoGLRenderAction.h>
-# include <Inventor/actions/SoPickAction.h>
-# include <Inventor/actions/SoWriteAction.h>
 # include <Inventor/bundles/SoMaterialBundle.h>
-# include <Inventor/bundles/SoTextureCoordinateBundle.h>
-# include <Inventor/elements/SoOverrideElement.h>
+# include <Inventor/details/SoPointDetail.h>
 # include <Inventor/elements/SoCoordinateElement.h>
-# include <Inventor/elements/SoGLCoordinateElement.h>
-# include <Inventor/elements/SoGLCacheContextElement.h>
-# include <Inventor/elements/SoLineWidthElement.h>
 # include <Inventor/elements/SoPointSizeElement.h>
 # include <Inventor/errors/SoDebugError.h>
-# include <Inventor/errors/SoReadError.h>
-# include <Inventor/details/SoFaceDetail.h>
-# include <Inventor/details/SoLineDetail.h>
 # include <Inventor/misc/SoState.h>
 #endif
 
@@ -72,6 +58,7 @@
 #include <Gui/SoFCUnifiedSelection.h>
 #include <Gui/SoFCSelectionAction.h>
 #include <Gui/ViewParams.h>
+#include "SoBrepPointSet.h"
 
 using namespace Gui;
 using namespace PartGui;
@@ -213,7 +200,7 @@ void SoBrepPointSet::glRender(SoGLRenderAction *action, bool inpath)
         {
             if(ctx2 && ctx2->selectionIndex.size()) {
                 ctx2->selectionColor = ctx->selectionColor;
-                renderSelection(action,ctx2); 
+                renderSelection(action,ctx2);
             }else
                 renderSelection(action,ctx); 
 

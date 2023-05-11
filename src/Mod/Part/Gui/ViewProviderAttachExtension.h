@@ -20,12 +20,12 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_VIEWPROVIDERATTACHEXTENSION_H
 #define GUI_VIEWPROVIDERATTACHEXTENSION_H
 
-#include <App/Extension.h>
-#include <Gui/ViewProviderExtension.h>
+#include <Gui/ViewProviderExtensionPython.h>
+#include <Mod/Part/PartGlobal.h>
+
 
 namespace PartGui
 {
@@ -36,21 +36,21 @@ class PartGuiExport ViewProviderAttachExtension : public Gui::ViewProviderExtens
 
 public:
     /// Constructor
-    ViewProviderAttachExtension(void);
-    virtual ~ViewProviderAttachExtension() = default;
+    ViewProviderAttachExtension();
+    ~ViewProviderAttachExtension() override = default;
 
-    virtual void extensionGetExtraIcons(std::vector<std::pair<QByteArray, QPixmap> > &) const override;
-    virtual bool extensionGetToolTip(const QByteArray &tag, QString &tooltip) const override;
-    virtual bool extensionIconMouseEvent(QMouseEvent *, const QByteArray &) override;
+    void extensionGetExtraIcons(std::vector<std::pair<QByteArray, QPixmap> > &) const override;
+    bool extensionGetToolTip(const QByteArray &tag, QString &tooltip) const override;
+    bool extensionIconMouseEvent(QMouseEvent *, const QByteArray &) override;
 
-    virtual void extensionUpdateData(const App::Property*) override;
-    virtual void extensionSetupContextMenu(QMenu*, QObject*, const char*) override;
+    void extensionUpdateData(const App::Property*) override;
+    void extensionSetupContextMenu(QMenu*, QObject*, const char*) override;
 
 private:
     void showAttachmentEditor();
 };
 
-typedef Gui::ViewProviderExtensionPythonT<PartGui::ViewProviderAttachExtension> ViewProviderAttachExtensionPython;
+using ViewProviderAttachExtensionPython = Gui::ViewProviderExtensionPythonT<PartGui::ViewProviderAttachExtension>;
 
 } //namespace Part::Gui
 

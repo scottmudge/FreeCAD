@@ -30,15 +30,15 @@ namespace PartDesignGui {
 
 class PartDesignGuiExport ViewProviderBase : public ViewProvider
 {
-    PROPERTY_HEADER(PartDesignGui::ViewProviderBase);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderBase);
 
 public:
     /// constructor
     ViewProviderBase();
     /// destructor
-    virtual ~ViewProviderBase();
+    ~ViewProviderBase() override;
 
-    virtual bool doubleClicked(void);
+    bool doubleClicked() override;
 };
 
 } // namespace PartDesignGui

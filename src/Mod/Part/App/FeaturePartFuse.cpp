@@ -20,26 +20,24 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <BRepAlgoAPI_Fuse.hxx>
 # include <BRepCheck_Analyzer.hxx>
 # include <Standard_Failure.hxx>
 # include <TopoDS_Iterator.hxx>
-# include <TopTools_IndexedMapOfShape.hxx>
 # include <TopExp.hxx>
+# include <TopTools_IndexedMapOfShape.hxx>
 #endif
 
+#include <App/Application.h>
+#include <App/Document.h>
+#include <Base/Console.h>
+#include <Base/Parameter.h>
 
 #include "TopoShapeOpCode.h"
 #include "FeaturePartFuse.h"
 #include "modelRefine.h"
-#include <App/Application.h>
-#include <App/Document.h>
-#include <Base/Parameter.h>
-#include <Base/Exception.h>
-#include <Base/Console.h>
 
 FC_LOG_LEVEL_INIT("Part",true,true);
 
@@ -48,7 +46,7 @@ using namespace Part;
 PROPERTY_SOURCE(Part::Fuse, Part::Boolean)
 
 
-Fuse::Fuse(void)
+Fuse::Fuse()
 {
 }
 
@@ -67,9 +65,9 @@ const char *Fuse::opCode() const {
 PROPERTY_SOURCE(Part::MultiFuse, Part::Feature)
 
 
-MultiFuse::MultiFuse(void)
+MultiFuse::MultiFuse()
 {
-    ADD_PROPERTY(Shapes,(0));
+    ADD_PROPERTY(Shapes,(nullptr));
     Shapes.setSize(0);
     ADD_PROPERTY_TYPE(History,(ShapeHistory()), "Boolean", (App::PropertyType)
         (App::Prop_Output|App::Prop_Transient|App::Prop_Hidden), "Shape history");
@@ -91,7 +89,7 @@ short MultiFuse::mustExecute() const
     return 0;
 }
 
-App::DocumentObjectExecReturn *MultiFuse::execute(void)
+App::DocumentObjectExecReturn *MultiFuse::execute()
 {
 #ifdef FC_NO_ELEMENT_MAP
     std::vector<TopoDS_Shape> s;
@@ -124,30 +122,6 @@ App::DocumentObjectExecReturn *MultiFuse::execute(void)
     if (s.size() >= 2) {
         try {
             std::vector<ShapeHistory> history;
-#if OCC_VERSION_HEX <= 0x060800
-            TopoDS_Shape resShape = s.front();
-            for (std::vector<TopoDS_Shape>::iterator it = s.begin()+1; it != s.end(); ++it) {
-
-                // Let's call algorithm computing a fuse operation:
-                BRepAlgoAPI_Fuse mkFuse(resShape, *it);
-                // Let's check if the fusion has been successful
-                if (!mkFuse.IsDone()) 
-                    throw BooleanException("Fusion failed");
-                resShape = mkFuse.Shape();
-
-                ShapeHistory hist1(mkFuse, TopAbs_FACE, resShape, mkFuse.Shape1());
-                ShapeHistory hist2(mkFuse, TopAbs_FACE, resShape, mkFuse.Shape2());
-                if (history.empty()) {
-                    history.push_back(hist1);
-                    history.push_back(hist2);
-                }
-                else {
-                    for (std::vector<ShapeHistory>::iterator jt = history.begin(); jt != history.end(); ++jt)
-                        jt->join(hist1);
-                    history.push_back(hist2);
-                }
-            }
-#else
             BRepAlgoAPI_Fuse mkFuse;
             TopTools_ListOfShape shapeArguments,shapeTools;
             const TopoDS_Shape& shape = s.front();
@@ -171,7 +145,6 @@ App::DocumentObjectExecReturn *MultiFuse::execute(void)
             for (std::vector<TopoDS_Shape>::iterator it = s.begin(); it != s.end(); ++it) {
                 history.emplace_back(mkFuse, TopAbs_FACE, resShape, *it);
             }
-#endif
             if (resShape.IsNull())
                 throw Base::RuntimeError("Resulting shape is null");
 

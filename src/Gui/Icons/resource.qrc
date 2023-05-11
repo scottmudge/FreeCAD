@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/icons">
         <file>freecadsplash.png</file>
+        <file>freecadsplash2x.png</file>
         <file>freecadabout.png</file>
         <file>background.png</file>
         <file>section-hatch.png</file>
@@ -303,5 +304,8 @@
     </qresource>
     <qresource prefix="/icons/FreeCAD-default/scalable">
         <file>Std_ViewScreenShot.svg</file>
+    </qresource>
+    <qresource prefix="/doc">
+        <file alias="CONTRIBUTORS">../../Doc/CONTRIBUTORS</file>
     </qresource>
 </RCC>

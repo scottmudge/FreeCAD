@@ -21,13 +21,12 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_VIEWPROVIDERORIGINGROUPEXTENSION_H
 #define GUI_VIEWPROVIDERORIGINGROUPEXTENSION_H
 
 #include <memory>
-#include <App/Extension.h>
 #include "ViewProviderGeoFeatureGroup.h"
+
 
 namespace Gui
 {
@@ -38,14 +37,14 @@ class GuiExport ViewProviderOriginGroupExtension : public ViewProviderGeoFeature
 
 public:
     /// Constructor
-    ViewProviderOriginGroupExtension(void);
-    virtual ~ViewProviderOriginGroupExtension();
+    ViewProviderOriginGroupExtension();
+    ~ViewProviderOriginGroupExtension() override;
 
-    virtual void extensionClaimChildren(std::vector<App::DocumentObject*> &)const override;
-    virtual void extensionClaimChildren3D(std::vector<App::DocumentObject*> &)const override;
+    void extensionClaimChildren(std::vector<App::DocumentObject*> &)const override;
+    void extensionClaimChildren3D(std::vector<App::DocumentObject*> &)const override;
 
-    virtual void extensionAttach(App::DocumentObject *pcObject) override;
-    virtual void extensionUpdateData(const App::Property* prop) override;
+    void extensionAttach(App::DocumentObject *pcObject) override;
+    void extensionUpdateData(const App::Property* prop) override;
 
     virtual void updateOriginSize();
 
@@ -63,7 +62,7 @@ private:
     std::shared_ptr<Private> pimpl;
 };
 
-typedef ViewProviderExtensionPythonT<Gui::ViewProviderOriginGroupExtension> ViewProviderOriginGroupExtensionPython;
+using ViewProviderOriginGroupExtensionPython = ViewProviderExtensionPythonT<Gui::ViewProviderOriginGroupExtension>;
 
 } //namespace Gui
 

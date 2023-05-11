@@ -20,38 +20,35 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-#include <stdio.h>
-#include <cmath>
+#include <cstdio>
+#include <iostream>
 
 #include <QAuthenticator>
 #include <QContextMenuEvent>
+#include <QDebug>
+#include <QDesktopServices>
+#include <QFileDialog>
 #include <QFileInfo>
+#include <QKeyEvent>
 #include <QMenu>
+#include <QMetaObject>
 #include <QNetworkDiskCache>
 #include <QNetworkRequest>
 #include <QNetworkProxy>
 #include <QSettings>
-#include <QMetaObject>
-#include <QDesktopServices>
-#include <QFileDialog>
-#include <QHeaderView>
-#include <QDebug>
-#include <QKeyEvent>
 #include <QStandardPaths>
-#include <QTextDocument>
-
-#include <App/Document.h>
 
 #include "DownloadItem.h"
-#include "DownloadManager.h"
 #include "Application.h"
 #include "Document.h"
-#include "MainWindow.h"
+#include "DownloadManager.h"
 #include "FileDialog.h"
+#include "MainWindow.h"
 #include "ui_DlgAuthorization.h"
 #include "Tools.h"
+#include <App/Document.h>
+
 
 using namespace Gui::Dialog;
 
@@ -168,7 +165,7 @@ NetworkAccessManager::NetworkAccessManager(QObject *parent)
     connect(this, SIGNAL(proxyAuthenticationRequired(const QNetworkProxy&, QAuthenticator*)),
             SLOT(proxyAuthenticationRequired(const QNetworkProxy&, QAuthenticator*)));
 
-    QNetworkDiskCache *diskCache = new QNetworkDiskCache(this);
+    auto diskCache = new QNetworkDiskCache(this);
     QString location = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     diskCache->setCacheDirectory(location);
     setCache(diskCache);
@@ -273,7 +270,7 @@ void DownloadItem::init()
 
 QString DownloadItem::getDownloadDirectory() const
 {
-    QString exe = QString::fromUtf8(App::GetApplication().getExecutableName());
+    QString exe = QString::fromStdString(App::GetApplication().getExecutableName());
     QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
     QString dirPath = QDir(path).filePath(exe);
     Base::Reference<ParameterGrp> hPath = App::GetApplication().GetUserParameter().GetGroup("BaseApp")
@@ -409,7 +406,7 @@ void DownloadItem::tryAgain()
         m_output.remove();
     m_reply = r;
     init();
-    /*emit*/ statusChanged();
+    Q_EMIT statusChanged();
 }
 
 void DownloadItem::contextMenuEvent (QContextMenuEvent * e)
@@ -432,11 +429,11 @@ void DownloadItem::downloadReadyRead()
             downloadInfoLabel->setText(tr("Error opening saved file: %1")
                     .arg(m_output.errorString()));
             stopButton->click();
-            /*emit*/ statusChanged();
+            Q_EMIT statusChanged();
             return;
         }
         downloadInfoLabel->setToolTip(m_url.toString());
-        /*emit*/ statusChanged();
+        Q_EMIT statusChanged();
     }
     if (-1 == m_output.write(m_reply->readAll())) {
         downloadInfoLabel->setText(tr("Error saving: %1")
@@ -607,7 +604,7 @@ void DownloadItem::finished()
     stopButton->hide();
     m_output.close();
     updateInfoLabel();
-    /*emit*/ statusChanged();
+    Q_EMIT statusChanged();
 }
 
 #include "moc_DownloadItem.cpp"

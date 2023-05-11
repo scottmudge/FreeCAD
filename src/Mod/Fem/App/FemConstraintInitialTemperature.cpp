@@ -23,20 +23,10 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#include <BRepAdaptor_Curve.hxx>
-#include <BRepAdaptor_Surface.hxx>
-#include <Precision.hxx>
-#include <TopoDS.hxx>
-#include <gp_Lin.hxx>
-#include <gp_Pln.hxx>
-#include <gp_Pnt.hxx>
-#endif
-
 #include "FemConstraintInitialTemperature.h"
+
 
 using namespace Fem;
 
@@ -57,12 +47,12 @@ ConstraintInitialTemperature::ConstraintInitialTemperature()
     References.setStatus(App::Property::Hidden, true);
 }
 
-App::DocumentObjectExecReturn *ConstraintInitialTemperature::execute(void)
+App::DocumentObjectExecReturn *ConstraintInitialTemperature::execute()
 {
     return Constraint::execute();
 }
 
-const char* ConstraintInitialTemperature::getViewProviderName(void) const
+const char* ConstraintInitialTemperature::getViewProviderName() const
 {
     return "FemGui::ViewProviderFemConstraintInitialTemperature";
 }

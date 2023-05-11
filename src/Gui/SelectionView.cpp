@@ -20,18 +20,19 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <QCheckBox>
+# include <QLabel>
+# include <QLineEdit>
+# include <QListWidget>
+# include <QListWidgetItem>
+# include <QMenu>
+# include <QTextStream>
+# include <QToolButton>
 # include <QVBoxLayout>
 # include <QTreeWidget>
 # include <QTreeWidgetItem>
-# include <QLineEdit>
-# include <QTextStream>
-# include <QToolButton>
-# include <QCheckBox>
-# include <QMenu>
-# include <QLabel>
 # include <QApplication>
 # include <QHeaderView>
 # include <QFile>
@@ -40,24 +41,24 @@
 #include <QHelpEvent>
 #include <QToolTip>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-#include <Base/Console.h>
+#include <App/DocumentObserver.h>
+#include <App/ComplexGeoData.h>
 #include <App/Document.h>
 #include <App/GeoFeature.h>
-#include <App/DocumentObserver.h>
-#include "SelectionView.h"
-#include "CommandT.h"
+#include <Base/Console.h>
 #include "Application.h"
-#include "Document.h"
-#include "ViewProvider.h"
 #include "BitmapFactory.h"
+#include "CommandT.h"
+#include "Document.h"
 #include "MetaTypes.h"
 #include "MainWindow.h"
-#include "Widgets.h"
 #include "PieMenu.h"
+#include "SelectionView.h"
 #include "Tree.h"
+#include "ViewProvider.h"
+#include "Widgets.h"
 
-FC_LOG_LEVEL_INIT("Selection",true,true,true)
+FC_LOG_LEVEL_INIT("Selection", true, true, true)
 
 using namespace Gui;
 using namespace Gui::DockWnd;
@@ -73,7 +74,7 @@ enum ColumnIndex {
 
 SelectionView::SelectionView(Gui::Document* pcDocument, QWidget *parent)
   : DockWindow(pcDocument,parent)
-  , SelectionObserver(true,0)
+  , SelectionObserver(true, ResolveMode::NoResolve)
   , x(0.0f), y(0.0f), z(0.0f)
   , openedAutomatically(false)
 {
@@ -81,7 +82,7 @@ SelectionView::SelectionView(Gui::Document* pcDocument, QWidget *parent)
 
     QVBoxLayout* vLayout = new QVBoxLayout(this);
     vLayout->setSpacing(0);
-    vLayout->setMargin (0);
+    vLayout->setContentsMargins(0, 0, 0, 0);
 
     QLineEdit* searchBox = new QLineEdit(this);
     LineEditStyle::setup(searchBox);
@@ -228,7 +229,8 @@ void SelectionView::onSelectionChanged(const SelectionChanges &Reason)
             str << QString::fromUtf8(Reason.pDocName);
             str << "#";
             // remove all items
-            for(auto item : selectionView->findItems(selObject,Qt::MatchStartsWith,PathIndex))
+            const auto items = selectionView->findItems(selObject,Qt::MatchStartsWith,PathIndex);
+            for(auto item : items)
                 delete item;
         }
     }
@@ -245,7 +247,7 @@ void SelectionView::onSelectionChanged(const SelectionChanges &Reason)
     else if (Reason.Type == SelectionChanges::SetSelection) {
         // remove all items
         selectionView->clear();
-        for(auto &objT : Gui::Selection().getSelectionT("*",0))
+        for(auto &objT : Gui::Selection().getSelectionT("*",ResolveMode::NoResolve))
             addItem(selectionView, objT);
     }
     else if (Reason.Type == SelectionChanges::PickedListChanged) {
@@ -285,7 +287,7 @@ void SelectionView::search(const QString& text)
     }
 }
 
-void SelectionView::validateSearch(void)
+void SelectionView::validateSearch()
 {
     if (!searchList.empty()) {
         App::Document* doc = App::GetApplication().getActiveDocument();
@@ -317,7 +319,7 @@ void SelectionView::select(QTreeWidgetItem* item)
     }
 }
 
-void SelectionView::deselect(void)
+void SelectionView::deselect()
 {
     auto item = selectionView->currentItem();
     if (!item)
@@ -336,12 +338,12 @@ void SelectionView::deselect(void)
 
 void SelectionView::toggleSelect(QTreeWidgetItem* item)
 {
-    if (!item) return;
+    if (!item)
+        return;
 
     auto objT = qvariant_cast<App::SubObjectT>(item->data(0, Qt::UserRole));
     if(!objT.getSubObject())
         return;
-
     try {
         bool selected = Gui::Selection().isSelected(objT.getDocumentName().c_str(),
                                                     objT.getObjectName().c_str(),
@@ -364,10 +366,11 @@ void SelectionView::preselect(QTreeWidgetItem* item)
         return;
     Gui::Selection().setPreselect(objT.getDocumentName().c_str(),
                                   objT.getObjectName().c_str(),
-                                  objT.getSubName().c_str(),0,0,0,2,true);
+                                  objT.getSubName().c_str(),0,0,0,
+                                  SelectionChanges::MsgSource::TreeView,true);
 }
 
-void SelectionView::zoom(void)
+void SelectionView::zoom()
 {
     select();
     try {
@@ -377,7 +380,7 @@ void SelectionView::zoom(void)
     }
 }
 
-void SelectionView::treeSelect(void)
+void SelectionView::treeSelect()
 {
     select();
     try {
@@ -387,7 +390,7 @@ void SelectionView::treeSelect(void)
     }
 }
 
-void SelectionView::touch(void)
+void SelectionView::touch()
 {
     auto item = selectionView->currentItem();
     if (!item)
@@ -405,7 +408,7 @@ void SelectionView::touch(void)
     }
 }
 
-void SelectionView::toPython(void)
+void SelectionView::toPython()
 {
     auto item = selectionView->currentItem();
     if (!item)
@@ -506,7 +509,7 @@ void SelectionView::onItemContextMenu(const QPoint& point)
     menu.exec(selectionView->mapToGlobal(point));
 }
 
-void SelectionView::onUpdate(void)
+void SelectionView::onUpdate()
 {
 }
 
@@ -526,7 +529,7 @@ void SelectionView::showEvent(QShowEvent *ev) {
     this->attachSelection();
 
     selectionView->clear();
-    for(auto &objT : Gui::Selection().getSelectionT("*",0))
+    for(auto &objT : Gui::Selection().getSelectionT("*", ResolveMode::NoResolve))
         addItem(selectionView, objT);
 
     bool picking = Selection().needPickedList();
@@ -559,7 +562,6 @@ void setupMenuStyle(QWidget *menu)
 {
     LineEditStyle::setupChildren(menu);
 
-#if QT_VERSION  >= 0x050000
     auto hGrp = App::GetApplication().GetParameterGroupByPath(
                     "User parameter:BaseApp/Preferences/MainWindow");
     static QString _Name;
@@ -598,10 +600,6 @@ void setupMenuStyle(QWidget *menu)
         menu->setAttribute(Qt::WA_NoSystemBackground, true);
         menu->setAttribute(Qt::WA_TranslucentBackground, true);
     }
-#else
-    if (menu->styleSheet() != _DefaultStyle)
-        menu->setStyleSheet(_DefaultStyle);
-#endif
 }
 }
 
@@ -614,13 +612,11 @@ SelectionMenu::SelectionMenu(QWidget *parent)
 
 void SelectionMenu::beforeShow()
 {
-#if QT_VERSION  >= 0x050000
     for(auto child : findChildren<QMenu*>()) {
         child->setWindowFlags(child->windowFlags() | Qt::FramelessWindowHint);
         child->setAttribute(Qt::WA_NoSystemBackground, true);
         child->setAttribute(Qt::WA_TranslucentBackground, true);
     }
-#endif
 }
 
 struct ElementInfo {
@@ -859,7 +855,8 @@ static bool setPreselect(QMenu *menu,
         sel.setSubName(sel.getSubNameNoElement().c_str());
 
     Gui::Selection().setPreselect(sel.getDocumentName().c_str(),
-            sel.getObjectName().c_str(), sel.getSubName().c_str(),0,0,0,2);
+            sel.getObjectName().c_str(), sel.getSubName().c_str(),0,0,0,
+            SelectionChanges::MsgSource::TreeView);
 
     if(!needTooltip
             ||!(QApplication::queryKeyboardModifiers() 

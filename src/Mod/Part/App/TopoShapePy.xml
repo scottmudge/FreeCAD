@@ -515,7 +515,7 @@ structure follows that of source shape.</UserDocu>
             <UserDocu>Profile along the spine</UserDocu>
         </Documentation>
     </Methode>
-    <Methode Name="makeWires">
+    <Methode Name="makeWires" Const="true">
       <Documentation>
         <UserDocu>make wire(s) using the edges of this shape
 makeWires([op=None])

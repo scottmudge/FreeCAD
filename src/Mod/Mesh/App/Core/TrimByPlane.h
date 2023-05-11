@@ -23,19 +23,19 @@
 #ifndef MESHTRIM_BY_PLANE_H
 #define MESHTRIM_BY_PLANE_H
 
-#include <Mod/Mesh/App/Core/Elements.h>
-#include <Mod/Mesh/App/Core/MeshKernel.h>
+#include "MeshKernel.h"
+
 
 namespace MeshCore {
 
 /**
- * Trim the the facets in 3D with a plane
+ * Trim the facets in 3D with a plane
  * \author Werner Mayer
  */
 class MeshExport MeshTrimByPlane
 {
 public:
-    MeshTrimByPlane(MeshKernel& mesh);
+    explicit MeshTrimByPlane(MeshKernel& mesh);
     ~MeshTrimByPlane();
 
 public:

@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -31,29 +30,30 @@
 # include <Inventor/events/SoMouseButtonEvent.h>
 # include <Inventor/nodes/SoAnnotation.h>
 # include <Inventor/nodes/SoBaseColor.h>
+# include <Inventor/nodes/SoCoordinate3.h>
+# include <Inventor/nodes/SoDrawStyle.h>
 # include <Inventor/nodes/SoFontStyle.h>
+# include <Inventor/nodes/SoIndexedLineSet.h>
+# include <Inventor/nodes/SoMarkerSet.h>
 # include <Inventor/nodes/SoPickStyle.h>
 # include <Inventor/nodes/SoText2.h>
 # include <Inventor/nodes/SoTranslation.h>
-# include <Inventor/nodes/SoCoordinate3.h>
-# include <Inventor/nodes/SoIndexedLineSet.h>
-# include <Inventor/nodes/SoMarkerSet.h>
-# include <Inventor/nodes/SoDrawStyle.h>
 #endif
+
+#include <Inventor/MarkerBitmaps.h>
+
+#include <App/Document.h>
+#include <App/MeasureDistance.h>
+#include <Base/Console.h>
+#include <Base/Quantity.h>
 
 #include "ViewProviderMeasureDistance.h"
 #include "Application.h"
+#include <Command.h>
 #include "Document.h"
 #include "View3DInventorViewer.h"
 #include "ViewParams.h"
 
-#include <App/PropertyGeo.h>
-#include <App/PropertyStandard.h>
-#include <App/MeasureDistance.h>
-#include <Base/Console.h>
-#include <Base/Quantity.h>
-#include <Inventor/MarkerBitmaps.h>
-#include <Command.h>
 
 using namespace Gui;
 
@@ -141,11 +141,11 @@ void ViewProviderMeasureDistance::onChanged(const App::Property* prop)
     }
 }
 
-std::vector<std::string> ViewProviderMeasureDistance::getDisplayModes(void) const
+std::vector<std::string> ViewProviderMeasureDistance::getDisplayModes() const
 {
     // add modes
     std::vector<std::string> StrList;
-    StrList.push_back("Base");
+    StrList.emplace_back("Base");
     return StrList;
 }
 
@@ -160,32 +160,32 @@ void ViewProviderMeasureDistance::attach(App::DocumentObject* pcObject)
 {
     ViewProviderDocumentObject::attach(pcObject);
 
-    SoPickStyle* ps = new SoPickStyle();
+    auto ps = new SoPickStyle();
     ps->style = SoPickStyle::UNPICKABLE;
 
-    SoSeparator *lineSep = new SoSeparator();
+    auto lineSep = new SoSeparator();
     lineSep->renderCaching = SoSeparator::OFF;
-    SoDrawStyle* style = new SoDrawStyle();
+    auto style = new SoDrawStyle();
     style->lineWidth = 2.0f;
     lineSep->addChild(ps);
     lineSep->addChild(style);
     lineSep->addChild(pColor);
     lineSep->addChild(pCoords);
     lineSep->addChild(pLines);
-    SoMarkerSet* points = new SoMarkerSet();
+    auto points = new SoMarkerSet();
     points->markerIndex = Gui::Inventor::MarkerBitmaps::getMarkerIndex("CROSS",
             ViewParams::getMarkerSize());
     points->numPoints=2;
     lineSep->addChild(points);
 
-    SoSeparator* textsep = new SoSeparator();
+    auto textsep = new SoSeparator();
     textsep->renderCaching = SoSeparator::OFF;
     textsep->addChild(pTranslation);
     textsep->addChild(pTextColor);
     textsep->addChild(pFont);
     textsep->addChild(pLabel);
 
-    SoSeparator* sep = new SoAnnotation();
+    auto sep = new SoAnnotation();
     sep->addChild(lineSep);
     sep->addChild(textsep);
     addDisplayMaskMode(sep, "Base");
@@ -275,7 +275,7 @@ void PointMarker::customEvent(QEvent*)
     App::DocumentObject* obj = doc->getDocument()->addObject
         (App::MeasureDistance::getClassTypeId().getName(),"Distance");
 
-    App::MeasureDistance* md = static_cast<App::MeasureDistance*>(obj);
+    auto md = static_cast<App::MeasureDistance*>(obj);
     const SbVec3f& pt1 = vp->pCoords->point[0];
     const SbVec3f& pt2 = vp->pCoords->point[1];
     md->P1.setValue(Base::Vector3d(pt1[0],pt1[1],pt1[2]));
@@ -302,7 +302,7 @@ ViewProviderPointMarker::ViewProviderPointMarker()
     pMarker->numPoints=0;
     pMarker->ref();
 
-    SoGroup* grp = new SoGroup();
+    auto grp = new SoGroup();
     grp->addChild(pCoords);
     grp->addChild(pMarker);
     addDisplayMaskMode(grp, "Base");
@@ -317,11 +317,11 @@ ViewProviderPointMarker::~ViewProviderPointMarker()
 
 void ViewProviderMeasureDistance::measureDistanceCallback(void * ud, SoEventCallback * n)
 {
-    Gui::View3DInventorViewer* view  = reinterpret_cast<Gui::View3DInventorViewer*>(n->getUserData());
-    PointMarker *pm = reinterpret_cast<PointMarker*>(ud);
+    auto view  = static_cast<Gui::View3DInventorViewer*>(n->getUserData());
+    auto pm = static_cast<PointMarker*>(ud);
     const SoEvent* ev = n->getEvent();
     if (ev->isOfType(SoKeyboardEvent::getClassTypeId())) {
-        const SoKeyboardEvent * ke = static_cast<const SoKeyboardEvent*>(ev);
+        const auto ke = static_cast<const SoKeyboardEvent*>(ev);
         const SbBool press = ke->getState() == SoButtonEvent::DOWN ? true : false;
         if (ke->getKey() == SoKeyboardEvent::ESCAPE) {
             n->setHandled();
@@ -332,14 +332,14 @@ void ViewProviderMeasureDistance::measureDistanceCallback(void * ud, SoEventCall
         }
     }
     else if (ev->isOfType(SoMouseButtonEvent::getClassTypeId())) {
-        const SoMouseButtonEvent * mbe = static_cast<const SoMouseButtonEvent*>(ev);
+        const auto mbe = static_cast<const SoMouseButtonEvent*>(ev);
 
         // Mark all incoming mouse button events as handled, especially, to deactivate the selection node
         n->getAction()->setHandled();
 
         if (mbe->getButton() == SoMouseButtonEvent::BUTTON1 && mbe->getState() == SoButtonEvent::DOWN) {
             const SoPickedPoint * point = n->getPickedPoint();
-            if (point == NULL) {
+            if (!point) {
                 Base::Console().Message("No point picked.\n");
                 return;
             }
@@ -347,7 +347,7 @@ void ViewProviderMeasureDistance::measureDistanceCallback(void * ud, SoEventCall
             n->setHandled();
             pm->addPoint(point->getPoint());
             if (pm->countPoints() == 2) {
-                QEvent *e = new QEvent(QEvent::User);
+                auto e = new QEvent(QEvent::User);
                 QApplication::postEvent(pm, e);
                 // leave mode
                 view->setEditing(false);

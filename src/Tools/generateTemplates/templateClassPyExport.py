@@ -90,7 +90,7 @@ public:
     int finalization();
 -
 
-    typedef @self.export.TwinPointer@* PointerType ;
+    using PointerType = @self.export.TwinPointer@*;
 
     virtual PyObject *_repr();        // the representation
     std::string representation() const;
@@ -225,7 +225,7 @@ public:
 -
     //@}
 
-+ if(self.export.CustomAttributes != None):
++ if(self.export.CustomAttributes is not None):
     /// getter method for special attributes (e.g. dynamic ones)
     PyObject *getCustomAttributes(const char* attr) const;
     /// setter for special attributes (e.g. dynamic ones)
@@ -575,22 +575,17 @@ PyObject * @self.export.Name@::staticCallback_@i.Name@ (PyObject *self, PyObject
 -
         return ret;
     } // Please sync the following catch implementation with PY_CATCH
-    catch(Base::AbortException &e)
-    {
-        PyErr_SetObject(Base::BaseExceptionFreeCADAbort,e.getPyObject());
-        return nullptr;
-    }
     catch(Base::Exception &e)
     {
         auto pye = e.getPyExceptionType();
         if(!pye)
-            pye = Base::BaseExceptionFreeCADError;
-        PyErr_SetObject(pye,e.getPyObject());
+            pye = Base::PyExc_FC_GeneralError;
+        PyErr_SetObject(pye, e.getPyObject());
         return nullptr;
     }
-    catch(std::exception &e)
+    catch(const std::exception &e)
     {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,e.what());
+        PyErr_SetString(Base::PyExc_FC_GeneralError, e.what());
         return nullptr;
     }
     catch(const Py::Exception&)
@@ -598,15 +593,10 @@ PyObject * @self.export.Name@::staticCallback_@i.Name@ (PyObject *self, PyObject
         // The exception text is already set
         return nullptr;
     }
-    catch(const char *e)
-    {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,e);
-        return nullptr;
-    }
 #ifndef DONT_CATCH_CXX_EXCEPTIONS
     catch(...)
     {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,"Unknown C++ exception");
+        PyErr_SetString(Base::PyExc_FC_GeneralError, "Unknown C++ exception");
         return nullptr;
     }
 #endif
@@ -727,7 +717,7 @@ PyObject *@self.export.Name@::_repr()
     return Py_BuildValue("s", representation().c_str());
 }
 
-+ if(self.export.CustomAttributes != None):
++ if(self.export.CustomAttributes is not None):
 //--------------------------------------------------------------------------
 // @self.export.Name@ Attributes
 //--------------------------------------------------------------------------
@@ -738,22 +728,17 @@ PyObject *@self.export.Name@::_getattr(const char *attr)			// __getattr__ functi
         PyObject *r = getCustomAttributes(attr);
         if(r) return r;
     } // Please sync the following catch implementation with PY_CATCH
-    catch(Base::AbortException &e)
-    {
-        PyErr_SetObject(Base::BaseExceptionFreeCADAbort,e.getPyObject());
-        return nullptr;
-    }
     catch(Base::Exception &e)
     {
         auto pye = e.getPyExceptionType();
         if(!pye)
-            pye = Base::BaseExceptionFreeCADError;
-        PyErr_SetObject(pye,e.getPyObject());
+            pye = Base::PyExc_FC_GeneralError;
+        PyErr_SetObject(pye, e.getPyObject());
         return nullptr;
     }
-    catch(std::exception &e)
+    catch(const std::exception &e)
     {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,e.what());
+        PyErr_SetString(Base::PyExc_FC_GeneralError, e.what());
         return nullptr;
     }
     catch(const Py::Exception&)
@@ -761,15 +746,10 @@ PyObject *@self.export.Name@::_getattr(const char *attr)			// __getattr__ functi
         // The exception text is already set
         return nullptr;
     }
-    catch(const char *e)
-    {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,e);
-        return nullptr;
-    }
 #ifndef DONT_CATCH_CXX_EXCEPTIONS
     catch(...)
     {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,"Unknown C++ exception");
+        PyErr_SetString(Base::PyExc_FC_GeneralError,"Unknown C++ exception");
         return nullptr;
     }
 #endif
@@ -798,22 +778,17 @@ int @self.export.Name@::_setattr(const char *attr, PyObject *value) // __setattr
         else if (r == -1)
             return -1;
     } // Please sync the following catch implementation with PY_CATCH
-    catch(Base::AbortException &e)
-    {
-        PyErr_SetObject(Base::BaseExceptionFreeCADAbort,e.getPyObject());
-        return -1;
-    }
     catch(Base::Exception &e)
     {
         auto pye = e.getPyExceptionType();
         if(!pye)
-            pye = Base::BaseExceptionFreeCADError;
-        PyErr_SetObject(pye,e.getPyObject());
+            pye = Base::PyExc_FC_GeneralError;
+        PyErr_SetObject(pye, e.getPyObject());
         return -1;
     }
-    catch(std::exception &e)
+    catch(const std::exception &e)
     {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,e.what());
+        PyErr_SetString(Base::PyExc_FC_GeneralError, e.what());
         return -1;
     }
     catch(const Py::Exception&)
@@ -821,15 +796,10 @@ int @self.export.Name@::_setattr(const char *attr, PyObject *value) // __setattr
         // The exception text is already set
         return -1;
     }
-    catch(const char *e)
-    {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,e);
-        return -1;
-    }
 #ifndef DONT_CATCH_CXX_EXCEPTIONS
     catch(...)
     {
-        PyErr_SetString(Base::BaseExceptionFreeCADError,"Unknown C++ exception");
+        PyErr_SetString(Base::PyExc_FC_GeneralError, "Unknown C++ exception");
         return -1;
     }
 #endif
@@ -1141,7 +1111,7 @@ void  @self.export.Name@::set@i.Name@(Py::@i.Parameter.Type@ arg)
 }
 -
 -
-+ if(self.export.CustomAttributes != None):
++ if(self.export.CustomAttributes is not None):
 
 PyObject *@self.export.Name@::getCustomAttributes(const char* /*attr*/) const
 {
@@ -1468,7 +1438,7 @@ void @self.export.Name@::set@i.Name@(Py::@i.Parameter.Type@ /*arg*/)
 }
 -
 -
-+ if(self.export.CustomAttributes != None):
++ if(self.export.CustomAttributes is not None):
 
 PyObject *@self.export.Name@::getCustomAttributes(const char* /*attr*/) const
 {

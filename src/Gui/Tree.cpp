@@ -24,21 +24,18 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <boost_bind_bind.hpp>
 # include <QAction>
 # include <QActionGroup>
 # include <QApplication>
-# include <qcursor.h>
+# include <QCursor>
 # include <QVBoxLayout>
-# include <qlayout.h>
-# include <qstatusbar.h>
 # include <QContextMenuEvent>
 # include <QMenu>
 # include <QPixmap>
 # include <QTimer>
 # include <QToolTip>
 # include <QHeaderView>
-# include <qmessagebox.h>
+# include <QMessageBox>
 #endif
 
 #include <QWindow>
@@ -49,6 +46,7 @@
 #include <Base/Console.h>
 #include <Base/Sequencer.h>
 #include <Base/Tools.h>
+#include <Base/Reader.h>
 
 #include <App/Document.h>
 #include <App/DocumentObserver.h>
@@ -680,1419 +678,6 @@ public:
     QAction *reloadAllDocAction = nullptr;
 };
 
-//--------------------------------------------------------------------------
-
-/*[[[cog
-import TreeParams
-TreeParams.define()
-]]]*/
-
-// Auto generated code (Tools/params_utils.py:162)
-#include <unordered_map>
-#include <App/Application.h>
-#include <App/DynamicProperty.h>
-#include "TreeParams.h"
-using namespace Gui;
-
-// Auto generated code (Tools/params_utils.py:171)
-namespace {
-class TreeParamsP: public ParameterGrp::ObserverType {
-public:
-    ParameterGrp::handle handle;
-    std::unordered_map<const char *,void(*)(TreeParamsP*),App::CStringHasher,App::CStringHasher> funcs;
-
-    bool SyncSelection;
-    bool CheckBoxesSelection;
-    bool SyncView;
-    bool PreSelection;
-    bool SyncPlacement;
-    bool RecordSelection;
-    long DocumentMode;
-    long StatusTimeout;
-    long SelectionTimeout;
-    long PreSelectionTimeout;
-    long PreSelectionDelay;
-    long PreSelectionMinDelay;
-    bool RecomputeOnDrop;
-    bool KeepRootOrder;
-    bool TreeActiveAutoExpand;
-    unsigned long TreeActiveColor;
-    unsigned long TreeEditColor;
-    unsigned long SelectingGroupColor;
-    bool TreeActiveBold;
-    bool TreeActiveItalic;
-    bool TreeActiveUnderlined;
-    bool TreeActiveOverlined;
-    long Indentation;
-    bool LabelExpression;
-    long IconSize;
-    long FontSize;
-    long ItemSpacing;
-    unsigned long ItemBackground;
-    long ItemBackgroundPadding;
-    bool HideColumn;
-    bool HideScrollBar;
-    bool HideHeaderView;
-    bool ResizableColumn;
-    long ColumnSize1;
-    long ColumnSize2;
-    bool TreeToolTipIcon;
-
-    // Auto generated code (Tools/params_utils.py:199)
-    TreeParamsP() {
-        handle = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/TreeView");
-        handle->Attach(this);
-
-        SyncSelection = handle->GetBool("SyncSelection", true);
-        funcs["SyncSelection"] = &TreeParamsP::updateSyncSelection;
-        CheckBoxesSelection = handle->GetBool("CheckBoxesSelection", false);
-        funcs["CheckBoxesSelection"] = &TreeParamsP::updateCheckBoxesSelection;
-        SyncView = handle->GetBool("SyncView", true);
-        funcs["SyncView"] = &TreeParamsP::updateSyncView;
-        PreSelection = handle->GetBool("PreSelection", true);
-        funcs["PreSelection"] = &TreeParamsP::updatePreSelection;
-        SyncPlacement = handle->GetBool("SyncPlacement", false);
-        funcs["SyncPlacement"] = &TreeParamsP::updateSyncPlacement;
-        RecordSelection = handle->GetBool("RecordSelection", true);
-        funcs["RecordSelection"] = &TreeParamsP::updateRecordSelection;
-        DocumentMode = handle->GetInt("DocumentMode", 2);
-        funcs["DocumentMode"] = &TreeParamsP::updateDocumentMode;
-        StatusTimeout = handle->GetInt("StatusTimeout", 100);
-        funcs["StatusTimeout"] = &TreeParamsP::updateStatusTimeout;
-        SelectionTimeout = handle->GetInt("SelectionTimeout", 100);
-        funcs["SelectionTimeout"] = &TreeParamsP::updateSelectionTimeout;
-        PreSelectionTimeout = handle->GetInt("PreSelectionTimeout", 500);
-        funcs["PreSelectionTimeout"] = &TreeParamsP::updatePreSelectionTimeout;
-        PreSelectionDelay = handle->GetInt("PreSelectionDelay", 700);
-        funcs["PreSelectionDelay"] = &TreeParamsP::updatePreSelectionDelay;
-        PreSelectionMinDelay = handle->GetInt("PreSelectionMinDelay", 200);
-        funcs["PreSelectionMinDelay"] = &TreeParamsP::updatePreSelectionMinDelay;
-        RecomputeOnDrop = handle->GetBool("RecomputeOnDrop", true);
-        funcs["RecomputeOnDrop"] = &TreeParamsP::updateRecomputeOnDrop;
-        KeepRootOrder = handle->GetBool("KeepRootOrder", true);
-        funcs["KeepRootOrder"] = &TreeParamsP::updateKeepRootOrder;
-        TreeActiveAutoExpand = handle->GetBool("TreeActiveAutoExpand", true);
-        funcs["TreeActiveAutoExpand"] = &TreeParamsP::updateTreeActiveAutoExpand;
-        TreeActiveColor = handle->GetUnsigned("TreeActiveColor", 3873898495);
-        funcs["TreeActiveColor"] = &TreeParamsP::updateTreeActiveColor;
-        TreeEditColor = handle->GetUnsigned("TreeEditColor", 2459042047);
-        funcs["TreeEditColor"] = &TreeParamsP::updateTreeEditColor;
-        SelectingGroupColor = handle->GetUnsigned("SelectingGroupColor", 1082163711);
-        funcs["SelectingGroupColor"] = &TreeParamsP::updateSelectingGroupColor;
-        TreeActiveBold = handle->GetBool("TreeActiveBold", true);
-        funcs["TreeActiveBold"] = &TreeParamsP::updateTreeActiveBold;
-        TreeActiveItalic = handle->GetBool("TreeActiveItalic", false);
-        funcs["TreeActiveItalic"] = &TreeParamsP::updateTreeActiveItalic;
-        TreeActiveUnderlined = handle->GetBool("TreeActiveUnderlined", false);
-        funcs["TreeActiveUnderlined"] = &TreeParamsP::updateTreeActiveUnderlined;
-        TreeActiveOverlined = handle->GetBool("TreeActiveOverlined", false);
-        funcs["TreeActiveOverlined"] = &TreeParamsP::updateTreeActiveOverlined;
-        Indentation = handle->GetInt("Indentation", 0);
-        funcs["Indentation"] = &TreeParamsP::updateIndentation;
-        LabelExpression = handle->GetBool("LabelExpression", false);
-        funcs["LabelExpression"] = &TreeParamsP::updateLabelExpression;
-        IconSize = handle->GetInt("IconSize", 0);
-        funcs["IconSize"] = &TreeParamsP::updateIconSize;
-        FontSize = handle->GetInt("FontSize", 0);
-        funcs["FontSize"] = &TreeParamsP::updateFontSize;
-        ItemSpacing = handle->GetInt("ItemSpacing", 0);
-        funcs["ItemSpacing"] = &TreeParamsP::updateItemSpacing;
-        ItemBackground = handle->GetUnsigned("ItemBackground", 0x00000000);
-        funcs["ItemBackground"] = &TreeParamsP::updateItemBackground;
-        ItemBackgroundPadding = handle->GetInt("ItemBackgroundPadding", 10);
-        funcs["ItemBackgroundPadding"] = &TreeParamsP::updateItemBackgroundPadding;
-        HideColumn = handle->GetBool("HideColumn", false);
-        funcs["HideColumn"] = &TreeParamsP::updateHideColumn;
-        HideScrollBar = handle->GetBool("HideScrollBar", true);
-        funcs["HideScrollBar"] = &TreeParamsP::updateHideScrollBar;
-        HideHeaderView = handle->GetBool("HideHeaderView", true);
-        funcs["HideHeaderView"] = &TreeParamsP::updateHideHeaderView;
-        ResizableColumn = handle->GetBool("ResizableColumn", false);
-        funcs["ResizableColumn"] = &TreeParamsP::updateResizableColumn;
-        ColumnSize1 = handle->GetInt("ColumnSize1", 0);
-        funcs["ColumnSize1"] = &TreeParamsP::updateColumnSize1;
-        ColumnSize2 = handle->GetInt("ColumnSize2", 0);
-        funcs["ColumnSize2"] = &TreeParamsP::updateColumnSize2;
-        TreeToolTipIcon = handle->GetBool("TreeToolTipIcon", false);
-        funcs["TreeToolTipIcon"] = &TreeParamsP::updateTreeToolTipIcon;
-    }
-
-    // Auto generated code (Tools/params_utils.py:213)
-    ~TreeParamsP() {
-    }
-
-    // Auto generated code (Tools/params_utils.py:218)
-    void OnChange(Base::Subject<const char*> &, const char* sReason) {
-        if(!sReason)
-            return;
-        auto it = funcs.find(sReason);
-        if(it == funcs.end())
-            return;
-        it->second(this);
-        
-    }
-
-
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateSyncSelection(TreeParamsP *self) {
-        auto v = self->handle->GetBool("SyncSelection", true);
-        if (self->SyncSelection != v) {
-            self->SyncSelection = v;
-            TreeParams::onSyncSelectionChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateCheckBoxesSelection(TreeParamsP *self) {
-        auto v = self->handle->GetBool("CheckBoxesSelection", false);
-        if (self->CheckBoxesSelection != v) {
-            self->CheckBoxesSelection = v;
-            TreeParams::onCheckBoxesSelectionChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateSyncView(TreeParamsP *self) {
-        self->SyncView = self->handle->GetBool("SyncView", true);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updatePreSelection(TreeParamsP *self) {
-        self->PreSelection = self->handle->GetBool("PreSelection", true);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateSyncPlacement(TreeParamsP *self) {
-        self->SyncPlacement = self->handle->GetBool("SyncPlacement", false);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateRecordSelection(TreeParamsP *self) {
-        self->RecordSelection = self->handle->GetBool("RecordSelection", true);
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateDocumentMode(TreeParamsP *self) {
-        auto v = self->handle->GetInt("DocumentMode", 2);
-        if (self->DocumentMode != v) {
-            self->DocumentMode = v;
-            TreeParams::onDocumentModeChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateStatusTimeout(TreeParamsP *self) {
-        self->StatusTimeout = self->handle->GetInt("StatusTimeout", 100);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateSelectionTimeout(TreeParamsP *self) {
-        self->SelectionTimeout = self->handle->GetInt("SelectionTimeout", 100);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updatePreSelectionTimeout(TreeParamsP *self) {
-        self->PreSelectionTimeout = self->handle->GetInt("PreSelectionTimeout", 500);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updatePreSelectionDelay(TreeParamsP *self) {
-        self->PreSelectionDelay = self->handle->GetInt("PreSelectionDelay", 700);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updatePreSelectionMinDelay(TreeParamsP *self) {
-        self->PreSelectionMinDelay = self->handle->GetInt("PreSelectionMinDelay", 200);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateRecomputeOnDrop(TreeParamsP *self) {
-        self->RecomputeOnDrop = self->handle->GetBool("RecomputeOnDrop", true);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateKeepRootOrder(TreeParamsP *self) {
-        self->KeepRootOrder = self->handle->GetBool("KeepRootOrder", true);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateTreeActiveAutoExpand(TreeParamsP *self) {
-        self->TreeActiveAutoExpand = self->handle->GetBool("TreeActiveAutoExpand", true);
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateTreeActiveColor(TreeParamsP *self) {
-        auto v = self->handle->GetUnsigned("TreeActiveColor", 3873898495);
-        if (self->TreeActiveColor != v) {
-            self->TreeActiveColor = v;
-            TreeParams::onTreeActiveColorChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateTreeEditColor(TreeParamsP *self) {
-        auto v = self->handle->GetUnsigned("TreeEditColor", 2459042047);
-        if (self->TreeEditColor != v) {
-            self->TreeEditColor = v;
-            TreeParams::onTreeEditColorChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateSelectingGroupColor(TreeParamsP *self) {
-        auto v = self->handle->GetUnsigned("SelectingGroupColor", 1082163711);
-        if (self->SelectingGroupColor != v) {
-            self->SelectingGroupColor = v;
-            TreeParams::onSelectingGroupColorChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateTreeActiveBold(TreeParamsP *self) {
-        auto v = self->handle->GetBool("TreeActiveBold", true);
-        if (self->TreeActiveBold != v) {
-            self->TreeActiveBold = v;
-            TreeParams::onTreeActiveBoldChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateTreeActiveItalic(TreeParamsP *self) {
-        auto v = self->handle->GetBool("TreeActiveItalic", false);
-        if (self->TreeActiveItalic != v) {
-            self->TreeActiveItalic = v;
-            TreeParams::onTreeActiveItalicChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateTreeActiveUnderlined(TreeParamsP *self) {
-        auto v = self->handle->GetBool("TreeActiveUnderlined", false);
-        if (self->TreeActiveUnderlined != v) {
-            self->TreeActiveUnderlined = v;
-            TreeParams::onTreeActiveUnderlinedChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateTreeActiveOverlined(TreeParamsP *self) {
-        auto v = self->handle->GetBool("TreeActiveOverlined", false);
-        if (self->TreeActiveOverlined != v) {
-            self->TreeActiveOverlined = v;
-            TreeParams::onTreeActiveOverlinedChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateIndentation(TreeParamsP *self) {
-        auto v = self->handle->GetInt("Indentation", 0);
-        if (self->Indentation != v) {
-            self->Indentation = v;
-            TreeParams::onIndentationChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateLabelExpression(TreeParamsP *self) {
-        self->LabelExpression = self->handle->GetBool("LabelExpression", false);
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateIconSize(TreeParamsP *self) {
-        auto v = self->handle->GetInt("IconSize", 0);
-        if (self->IconSize != v) {
-            self->IconSize = v;
-            TreeParams::onIconSizeChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateFontSize(TreeParamsP *self) {
-        auto v = self->handle->GetInt("FontSize", 0);
-        if (self->FontSize != v) {
-            self->FontSize = v;
-            TreeParams::onFontSizeChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateItemSpacing(TreeParamsP *self) {
-        auto v = self->handle->GetInt("ItemSpacing", 0);
-        if (self->ItemSpacing != v) {
-            self->ItemSpacing = v;
-            TreeParams::onItemSpacingChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateItemBackground(TreeParamsP *self) {
-        auto v = self->handle->GetUnsigned("ItemBackground", 0x00000000);
-        if (self->ItemBackground != v) {
-            self->ItemBackground = v;
-            TreeParams::onItemBackgroundChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateItemBackgroundPadding(TreeParamsP *self) {
-        auto v = self->handle->GetInt("ItemBackgroundPadding", 10);
-        if (self->ItemBackgroundPadding != v) {
-            self->ItemBackgroundPadding = v;
-            TreeParams::onItemBackgroundPaddingChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateHideColumn(TreeParamsP *self) {
-        auto v = self->handle->GetBool("HideColumn", false);
-        if (self->HideColumn != v) {
-            self->HideColumn = v;
-            TreeParams::onHideColumnChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateHideScrollBar(TreeParamsP *self) {
-        self->HideScrollBar = self->handle->GetBool("HideScrollBar", true);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateHideHeaderView(TreeParamsP *self) {
-        self->HideHeaderView = self->handle->GetBool("HideHeaderView", true);
-    }
-    // Auto generated code (Tools/params_utils.py:240)
-    static void updateResizableColumn(TreeParamsP *self) {
-        auto v = self->handle->GetBool("ResizableColumn", false);
-        if (self->ResizableColumn != v) {
-            self->ResizableColumn = v;
-            TreeParams::onResizableColumnChanged();
-        }
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateColumnSize1(TreeParamsP *self) {
-        self->ColumnSize1 = self->handle->GetInt("ColumnSize1", 0);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateColumnSize2(TreeParamsP *self) {
-        self->ColumnSize2 = self->handle->GetInt("ColumnSize2", 0);
-    }
-    // Auto generated code (Tools/params_utils.py:234)
-    static void updateTreeToolTipIcon(TreeParamsP *self) {
-        self->TreeToolTipIcon = self->handle->GetBool("TreeToolTipIcon", false);
-    }
-};
-
-// Auto generated code (Tools/params_utils.py:252)
-TreeParamsP *instance() {
-    static TreeParamsP *inst = new TreeParamsP;
-    return inst;
-}
-
-} // Anonymous namespace
-
-// Auto generated code (Tools/params_utils.py:261)
-ParameterGrp::handle TreeParams::getHandle() {
-    return instance()->handle;
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docSyncSelection() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getSyncSelection() {
-    return instance()->SyncSelection;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultSyncSelection() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setSyncSelection(const bool &v) {
-    instance()->handle->SetBool("SyncSelection",v);
-    instance()->SyncSelection = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeSyncSelection() {
-    instance()->handle->RemoveBool("SyncSelection");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docCheckBoxesSelection() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getCheckBoxesSelection() {
-    return instance()->CheckBoxesSelection;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultCheckBoxesSelection() {
-    const static bool def = false;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setCheckBoxesSelection(const bool &v) {
-    instance()->handle->SetBool("CheckBoxesSelection",v);
-    instance()->CheckBoxesSelection = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeCheckBoxesSelection() {
-    instance()->handle->RemoveBool("CheckBoxesSelection");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docSyncView() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getSyncView() {
-    return instance()->SyncView;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultSyncView() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setSyncView(const bool &v) {
-    instance()->handle->SetBool("SyncView",v);
-    instance()->SyncView = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeSyncView() {
-    instance()->handle->RemoveBool("SyncView");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docPreSelection() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getPreSelection() {
-    return instance()->PreSelection;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultPreSelection() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setPreSelection(const bool &v) {
-    instance()->handle->SetBool("PreSelection",v);
-    instance()->PreSelection = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removePreSelection() {
-    instance()->handle->RemoveBool("PreSelection");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docSyncPlacement() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getSyncPlacement() {
-    return instance()->SyncPlacement;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultSyncPlacement() {
-    const static bool def = false;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setSyncPlacement(const bool &v) {
-    instance()->handle->SetBool("SyncPlacement",v);
-    instance()->SyncPlacement = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeSyncPlacement() {
-    instance()->handle->RemoveBool("SyncPlacement");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docRecordSelection() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getRecordSelection() {
-    return instance()->RecordSelection;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultRecordSelection() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setRecordSelection(const bool &v) {
-    instance()->handle->SetBool("RecordSelection",v);
-    instance()->RecordSelection = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeRecordSelection() {
-    instance()->handle->RemoveBool("RecordSelection");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docDocumentMode() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getDocumentMode() {
-    return instance()->DocumentMode;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultDocumentMode() {
-    const static long def = 2;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setDocumentMode(const long &v) {
-    instance()->handle->SetInt("DocumentMode",v);
-    instance()->DocumentMode = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeDocumentMode() {
-    instance()->handle->RemoveInt("DocumentMode");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docStatusTimeout() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getStatusTimeout() {
-    return instance()->StatusTimeout;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultStatusTimeout() {
-    const static long def = 100;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setStatusTimeout(const long &v) {
-    instance()->handle->SetInt("StatusTimeout",v);
-    instance()->StatusTimeout = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeStatusTimeout() {
-    instance()->handle->RemoveInt("StatusTimeout");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docSelectionTimeout() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getSelectionTimeout() {
-    return instance()->SelectionTimeout;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultSelectionTimeout() {
-    const static long def = 100;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setSelectionTimeout(const long &v) {
-    instance()->handle->SetInt("SelectionTimeout",v);
-    instance()->SelectionTimeout = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeSelectionTimeout() {
-    instance()->handle->RemoveInt("SelectionTimeout");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docPreSelectionTimeout() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getPreSelectionTimeout() {
-    return instance()->PreSelectionTimeout;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultPreSelectionTimeout() {
-    const static long def = 500;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setPreSelectionTimeout(const long &v) {
-    instance()->handle->SetInt("PreSelectionTimeout",v);
-    instance()->PreSelectionTimeout = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removePreSelectionTimeout() {
-    instance()->handle->RemoveInt("PreSelectionTimeout");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docPreSelectionDelay() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getPreSelectionDelay() {
-    return instance()->PreSelectionDelay;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultPreSelectionDelay() {
-    const static long def = 700;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setPreSelectionDelay(const long &v) {
-    instance()->handle->SetInt("PreSelectionDelay",v);
-    instance()->PreSelectionDelay = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removePreSelectionDelay() {
-    instance()->handle->RemoveInt("PreSelectionDelay");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docPreSelectionMinDelay() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getPreSelectionMinDelay() {
-    return instance()->PreSelectionMinDelay;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultPreSelectionMinDelay() {
-    const static long def = 200;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setPreSelectionMinDelay(const long &v) {
-    instance()->handle->SetInt("PreSelectionMinDelay",v);
-    instance()->PreSelectionMinDelay = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removePreSelectionMinDelay() {
-    instance()->handle->RemoveInt("PreSelectionMinDelay");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docRecomputeOnDrop() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getRecomputeOnDrop() {
-    return instance()->RecomputeOnDrop;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultRecomputeOnDrop() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setRecomputeOnDrop(const bool &v) {
-    instance()->handle->SetBool("RecomputeOnDrop",v);
-    instance()->RecomputeOnDrop = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeRecomputeOnDrop() {
-    instance()->handle->RemoveBool("RecomputeOnDrop");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docKeepRootOrder() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getKeepRootOrder() {
-    return instance()->KeepRootOrder;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultKeepRootOrder() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setKeepRootOrder(const bool &v) {
-    instance()->handle->SetBool("KeepRootOrder",v);
-    instance()->KeepRootOrder = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeKeepRootOrder() {
-    instance()->handle->RemoveBool("KeepRootOrder");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docTreeActiveAutoExpand() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getTreeActiveAutoExpand() {
-    return instance()->TreeActiveAutoExpand;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultTreeActiveAutoExpand() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setTreeActiveAutoExpand(const bool &v) {
-    instance()->handle->SetBool("TreeActiveAutoExpand",v);
-    instance()->TreeActiveAutoExpand = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeTreeActiveAutoExpand() {
-    instance()->handle->RemoveBool("TreeActiveAutoExpand");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docTreeActiveColor() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const unsigned long & TreeParams::getTreeActiveColor() {
-    return instance()->TreeActiveColor;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const unsigned long & TreeParams::defaultTreeActiveColor() {
-    const static unsigned long def = 3873898495;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setTreeActiveColor(const unsigned long &v) {
-    instance()->handle->SetUnsigned("TreeActiveColor",v);
-    instance()->TreeActiveColor = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeTreeActiveColor() {
-    instance()->handle->RemoveUnsigned("TreeActiveColor");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docTreeEditColor() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const unsigned long & TreeParams::getTreeEditColor() {
-    return instance()->TreeEditColor;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const unsigned long & TreeParams::defaultTreeEditColor() {
-    const static unsigned long def = 2459042047;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setTreeEditColor(const unsigned long &v) {
-    instance()->handle->SetUnsigned("TreeEditColor",v);
-    instance()->TreeEditColor = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeTreeEditColor() {
-    instance()->handle->RemoveUnsigned("TreeEditColor");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docSelectingGroupColor() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const unsigned long & TreeParams::getSelectingGroupColor() {
-    return instance()->SelectingGroupColor;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const unsigned long & TreeParams::defaultSelectingGroupColor() {
-    const static unsigned long def = 1082163711;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setSelectingGroupColor(const unsigned long &v) {
-    instance()->handle->SetUnsigned("SelectingGroupColor",v);
-    instance()->SelectingGroupColor = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeSelectingGroupColor() {
-    instance()->handle->RemoveUnsigned("SelectingGroupColor");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docTreeActiveBold() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getTreeActiveBold() {
-    return instance()->TreeActiveBold;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultTreeActiveBold() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setTreeActiveBold(const bool &v) {
-    instance()->handle->SetBool("TreeActiveBold",v);
-    instance()->TreeActiveBold = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeTreeActiveBold() {
-    instance()->handle->RemoveBool("TreeActiveBold");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docTreeActiveItalic() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getTreeActiveItalic() {
-    return instance()->TreeActiveItalic;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultTreeActiveItalic() {
-    const static bool def = false;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setTreeActiveItalic(const bool &v) {
-    instance()->handle->SetBool("TreeActiveItalic",v);
-    instance()->TreeActiveItalic = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeTreeActiveItalic() {
-    instance()->handle->RemoveBool("TreeActiveItalic");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docTreeActiveUnderlined() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getTreeActiveUnderlined() {
-    return instance()->TreeActiveUnderlined;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultTreeActiveUnderlined() {
-    const static bool def = false;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setTreeActiveUnderlined(const bool &v) {
-    instance()->handle->SetBool("TreeActiveUnderlined",v);
-    instance()->TreeActiveUnderlined = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeTreeActiveUnderlined() {
-    instance()->handle->RemoveBool("TreeActiveUnderlined");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docTreeActiveOverlined() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getTreeActiveOverlined() {
-    return instance()->TreeActiveOverlined;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultTreeActiveOverlined() {
-    const static bool def = false;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setTreeActiveOverlined(const bool &v) {
-    instance()->handle->SetBool("TreeActiveOverlined",v);
-    instance()->TreeActiveOverlined = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeTreeActiveOverlined() {
-    instance()->handle->RemoveBool("TreeActiveOverlined");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docIndentation() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getIndentation() {
-    return instance()->Indentation;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultIndentation() {
-    const static long def = 0;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setIndentation(const long &v) {
-    instance()->handle->SetInt("Indentation",v);
-    instance()->Indentation = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeIndentation() {
-    instance()->handle->RemoveInt("Indentation");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docLabelExpression() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getLabelExpression() {
-    return instance()->LabelExpression;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultLabelExpression() {
-    const static bool def = false;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setLabelExpression(const bool &v) {
-    instance()->handle->SetBool("LabelExpression",v);
-    instance()->LabelExpression = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeLabelExpression() {
-    instance()->handle->RemoveBool("LabelExpression");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docIconSize() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getIconSize() {
-    return instance()->IconSize;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultIconSize() {
-    const static long def = 0;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setIconSize(const long &v) {
-    instance()->handle->SetInt("IconSize",v);
-    instance()->IconSize = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeIconSize() {
-    instance()->handle->RemoveInt("IconSize");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docFontSize() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getFontSize() {
-    return instance()->FontSize;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultFontSize() {
-    const static long def = 0;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setFontSize(const long &v) {
-    instance()->handle->SetInt("FontSize",v);
-    instance()->FontSize = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeFontSize() {
-    instance()->handle->RemoveInt("FontSize");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docItemSpacing() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getItemSpacing() {
-    return instance()->ItemSpacing;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultItemSpacing() {
-    const static long def = 0;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setItemSpacing(const long &v) {
-    instance()->handle->SetInt("ItemSpacing",v);
-    instance()->ItemSpacing = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeItemSpacing() {
-    instance()->handle->RemoveInt("ItemSpacing");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docItemBackground() {
-    return QT_TRANSLATE_NOOP("TreeParams",
-"Tree view item background. Only effecitve in overlay.");
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const unsigned long & TreeParams::getItemBackground() {
-    return instance()->ItemBackground;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const unsigned long & TreeParams::defaultItemBackground() {
-    const static unsigned long def = 0x00000000;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setItemBackground(const unsigned long &v) {
-    instance()->handle->SetUnsigned("ItemBackground",v);
-    instance()->ItemBackground = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeItemBackground() {
-    instance()->handle->RemoveUnsigned("ItemBackground");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docItemBackgroundPadding() {
-    return QT_TRANSLATE_NOOP("TreeParams",
-"Tree view item background padding.");
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getItemBackgroundPadding() {
-    return instance()->ItemBackgroundPadding;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultItemBackgroundPadding() {
-    const static long def = 10;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setItemBackgroundPadding(const long &v) {
-    instance()->handle->SetInt("ItemBackgroundPadding",v);
-    instance()->ItemBackgroundPadding = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeItemBackgroundPadding() {
-    instance()->handle->RemoveInt("ItemBackgroundPadding");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docHideColumn() {
-    return QT_TRANSLATE_NOOP("TreeParams",
-"Hide extra tree view column for item description.");
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getHideColumn() {
-    return instance()->HideColumn;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultHideColumn() {
-    const static bool def = false;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setHideColumn(const bool &v) {
-    instance()->handle->SetBool("HideColumn",v);
-    instance()->HideColumn = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeHideColumn() {
-    instance()->handle->RemoveBool("HideColumn");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docHideScrollBar() {
-    return QT_TRANSLATE_NOOP("TreeParams",
-"Hide tree view scroll bar in dock overlay");
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getHideScrollBar() {
-    return instance()->HideScrollBar;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultHideScrollBar() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setHideScrollBar(const bool &v) {
-    instance()->handle->SetBool("HideScrollBar",v);
-    instance()->HideScrollBar = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeHideScrollBar() {
-    instance()->handle->RemoveBool("HideScrollBar");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docHideHeaderView() {
-    return QT_TRANSLATE_NOOP("TreeParams",
-"Hide tree view header view in dock overlay");
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getHideHeaderView() {
-    return instance()->HideHeaderView;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultHideHeaderView() {
-    const static bool def = true;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setHideHeaderView(const bool &v) {
-    instance()->handle->SetBool("HideHeaderView",v);
-    instance()->HideHeaderView = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeHideHeaderView() {
-    instance()->handle->RemoveBool("HideHeaderView");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docResizableColumn() {
-    return QT_TRANSLATE_NOOP("TreeParams",
-"Allow tree view columns to be manually resized");
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getResizableColumn() {
-    return instance()->ResizableColumn;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultResizableColumn() {
-    const static bool def = false;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setResizableColumn(const bool &v) {
-    instance()->handle->SetBool("ResizableColumn",v);
-    instance()->ResizableColumn = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeResizableColumn() {
-    instance()->handle->RemoveBool("ResizableColumn");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docColumnSize1() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getColumnSize1() {
-    return instance()->ColumnSize1;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultColumnSize1() {
-    const static long def = 0;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setColumnSize1(const long &v) {
-    instance()->handle->SetInt("ColumnSize1",v);
-    instance()->ColumnSize1 = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeColumnSize1() {
-    instance()->handle->RemoveInt("ColumnSize1");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docColumnSize2() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const long & TreeParams::getColumnSize2() {
-    return instance()->ColumnSize2;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const long & TreeParams::defaultColumnSize2() {
-    const static long def = 0;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setColumnSize2(const long &v) {
-    instance()->handle->SetInt("ColumnSize2",v);
-    instance()->ColumnSize2 = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeColumnSize2() {
-    instance()->handle->RemoveInt("ColumnSize2");
-}
-
-// Auto generated code (Tools/params_utils.py:284)
-const char *TreeParams::docTreeToolTipIcon() {
-    return "";
-}
-
-// Auto generated code (Tools/params_utils.py:290)
-const bool & TreeParams::getTreeToolTipIcon() {
-    return instance()->TreeToolTipIcon;
-}
-
-// Auto generated code (Tools/params_utils.py:296)
-const bool & TreeParams::defaultTreeToolTipIcon() {
-    const static bool def = false;
-    return def;
-}
-
-// Auto generated code (Tools/params_utils.py:303)
-void TreeParams::setTreeToolTipIcon(const bool &v) {
-    instance()->handle->SetBool("TreeToolTipIcon",v);
-    instance()->TreeToolTipIcon = v;
-}
-
-// Auto generated code (Tools/params_utils.py:310)
-void TreeParams::removeTreeToolTipIcon() {
-    instance()->handle->RemoveBool("TreeToolTipIcon");
-}
-//[[[end]]]
-
-void TreeParams::onSyncSelectionChanged() {
-    if(!TreeParams::getSyncSelection() || !Gui::Selection().hasSelection())
-        return;
-    TreeWidget::scrollItemToTop();
-}
-
-void TreeParams::onCheckBoxesSelectionChanged()
-{
-    TreeWidget::synchronizeSelectionCheckBoxes();
-}
-
-void TreeParams::onDocumentModeChanged() {
-    App::GetApplication().setActiveDocument(App::GetApplication().getActiveDocument());
-}
-
-void TreeParams::onResizableColumnChanged() {
-    TreeWidget::setupResizableColumn();
-}
-
-void TreeParams::onIconSizeChanged() {
-    auto tree = TreeWidget::instance();
-    if (tree)
-        tree->setIconHeight(TreeParams::getIconSize());
-}
-
-void TreeParams::onFontSizeChanged() {
-    int fontSize = TreeParams::getFontSize();
-    if (fontSize <= 0) {
-        fontSize = ViewParams::getDefaultFontSize();
-        if (fontSize <= 0)
-            fontSize = ViewParams::appDefaultFontSize();
-    }
-    for(auto tree : TreeWidget::Instances) {
-        QFont font = tree->font();
-        font.setPointSize(std::max(8,fontSize));
-        tree->setFont(font);
-    }
-}
-
-void TreeParams::onItemSpacingChanged()
-{
-    refreshTreeViews();
-}
-
-void TreeParams::refreshTreeViews()
-{
-    for(auto tree : TreeWidget::Instances) {
-        tree->scheduleDelayedItemsLayout();
-    }
-}
 
 void TreeParams::onItemBackgroundChanged()
 {
@@ -2108,58 +693,6 @@ void TreeParams::onItemBackgroundChanged()
     } else
         _TreeItemBackground = QBrush();
     refreshTreeViews();
-}
-
-void TreeParams::onTreeActiveColorChanged()
-{
-    refreshTreeViews();
-}
-
-void TreeParams::onTreeEditColorChanged()
-{
-    refreshTreeViews();
-}
-
-void TreeParams::onSelectingGroupColorChanged()
-{
-    refreshTreeViews();
-}
-
-void TreeParams::onTreeActiveBoldChanged()
-{
-    refreshTreeViews();
-}
-
-void TreeParams::onTreeActiveItalicChanged()
-{
-    refreshTreeViews();
-}
-
-void TreeParams::onTreeActiveUnderlinedChanged()
-{
-    refreshTreeViews();
-}
-
-void TreeParams::onTreeActiveOverlinedChanged()
-{
-    refreshTreeViews();
-}
-
-void TreeParams::onIndentationChanged()
-{
-    refreshTreeViews();
-}
-
-void TreeParams::onItemBackgroundPaddingChanged()
-{
-    if (getItemBackground())
-        refreshTreeViews();
-}
-
-void TreeParams::onHideColumnChanged()
-{
-    for(auto tree : TreeWidget::Instances)
-        tree->setColumnHidden(1, TreeParams::getHideColumn());
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -2209,7 +742,7 @@ struct TimingInfo {
     bool timed = false;
     FC_TIME_POINT t;
     FC_DURATION &d;
-    TimingInfo(FC_DURATION &d)
+    explicit TimingInfo(FC_DURATION &d)
         :d(d)
     {
         _FC_TIME_INIT(t);
@@ -2248,7 +781,7 @@ struct TimingInfo {
 
 // ---------------------------------------------------------------------------
 
-typedef std::set<DocumentObjectItem*> DocumentObjectItems;
+using DocumentObjectItems = std::set<DocumentObjectItem*>;
 
 class Gui::DocumentObjectData {
 public:
@@ -2265,14 +798,14 @@ public:
     std::vector<std::pair<QByteArray, int> > iconInfo;
     int iconStatus;
 
-    typedef boost::signals2::scoped_connection Connection;
+    using Connection = boost::signals2::scoped_connection;
 
     Connection connectIcon;
     Connection connectTool;
     Connection connectStat;
 
     DocumentObjectData(DocumentItem *docItem, ViewProviderDocumentObject* vpd)
-        : docItem(docItem), viewObject(vpd),rootItem(0)
+        : docItem(docItem), viewObject(vpd), rootItem(nullptr)
     {
         // Setup connections
         connectIcon = viewObject->signalChangeIcon.connect(
@@ -2441,8 +974,8 @@ QWidget* TreeWidgetItemDelegate::createEditor(
 {
     auto ti = static_cast<QTreeWidgetItem*>(index.internalPointer());
     if(ti->type()!=TreeWidget::ObjectType || index.column()>1)
-        return 0;
-    DocumentObjectItem *item = static_cast<DocumentObjectItem*>(ti);
+        return nullptr;
+    auto item = static_cast<DocumentObjectItem*>(ti);
     App::DocumentObject *obj = item->object()->getObject();
     auto &prop = index.column()?obj->Label2:obj->Label;
 
@@ -2453,7 +986,7 @@ QWidget* TreeWidgetItemDelegate::createEditor(
 
     QLineEdit *editor;
     if(TreeParams::getLabelExpression()) {
-        ExpLineEdit *le = new ExpLineEdit(parent);
+        auto le = new ExpLineEdit(parent);
         le->setAutoApply(true);
         le->setFrame(false);
         le->bind(App::ObjectIdentifier(prop));
@@ -2478,9 +1011,12 @@ QSize TreeWidgetItemDelegate::sizeHint(const QStyleOptionViewItem &option, const
 QTreeWidgetItem *TreeWidget::contextItem;
 
 TreeWidget::TreeWidget(const char *name, QWidget* parent)
-    : QTreeWidget(parent), SelectionObserver(true,0)
-    , searchObject(0), searchDoc(0), searchContextDoc(0)
-    , editingItem(0), hiddenItem(0)
+    : QTreeWidget(parent)
+    , SelectionObserver(true, ResolveMode::NoResolve)
+    , searchObject(nullptr)
+    , searchDoc(nullptr)
+    , searchContextDoc(nullptr)
+    , editingItem(nullptr)
     , myName(name)
 {
     if (TreeParams::getItemBackground() && _TreeItemBackground.style() == Qt::NoBrush) {
@@ -2622,7 +1158,6 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
     this->rootItem->setFlags(Qt::ItemIsEnabled);
     this->expandItem(this->rootItem);
     this->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    // causes unexpected drop events (possibly only with Qt4.1.x)
     this->setMouseTracking(true); // needed for itemEntered() to work
 
 
@@ -2693,7 +1228,7 @@ TreeWidget::~TreeWidget()
     connectFinishRestoreDocument.disconnect();
     Instances.erase(this);
     if(_LastSelectedTreeWidget == this)
-        _LastSelectedTreeWidget = 0;
+        _LastSelectedTreeWidget = nullptr;
 
     for(auto doc : App::GetApplication().getDocuments()) {
         auto gdoc = Application::Instance->getDocument(doc);
@@ -2811,9 +1346,9 @@ void TreeWidget::checkTopParent(App::DocumentObject *&obj, std::string &subname)
         auto it = tree->DocumentMap.find(Application::Instance->getDocument(obj->getDocument()));
         if(it != tree->DocumentMap.end()) {
             if(tree->statusTimer->isActive()) {
-                bool locked = tree->blockConnection(true);
+                bool locked = tree->blockSelection(true);
                 tree->_updateStatus(false);
-                tree->blockConnection(locked);
+                tree->blockSelection(locked);
             }
             auto parent = it->second->getTopParent(obj,subname);
             if(parent)
@@ -2834,7 +1369,7 @@ void TreeWidget::resetItemSearch() {
                 static_cast<DocumentObjectItem*>(item)->restoreBackground();
         }
     }
-    searchObject = 0;
+    searchObject = nullptr;
 }
 
 void TreeWidget::startItemSearch(QLineEdit *edit) {
@@ -2843,8 +1378,8 @@ void TreeWidget::startItemSearch(QLineEdit *edit) {
         Selection().selStackPush();
 
     resetItemSearch();
-    searchDoc = 0;
-    searchContextDoc = 0;
+    searchDoc = nullptr;
+    searchContextDoc = nullptr;
     auto sels = selectedItems();
     if(sels.size() == 1)  {
         if(sels.front()->type() == DocumentType) {
@@ -2857,7 +1392,7 @@ void TreeWidget::startItemSearch(QLineEdit *edit) {
     }else
         searchDoc = Application::Instance->activeDocument();
 
-    App::DocumentObject *obj = 0;
+    App::DocumentObject *obj = nullptr;
     if(searchContextDoc && searchContextDoc->getDocument()->getObjects().size())
         obj = searchContextDoc->getDocument()->getObjects().front();
     else if(searchDoc && searchDoc->getDocument()->getObjects().size())
@@ -2904,7 +1439,7 @@ void TreeWidget::itemSearch(const QString &text, bool select) {
             return;
         }
         std::string subname = path.getSubObjectName();
-        App::DocumentObject *parent = 0;
+        App::DocumentObject *parent = nullptr;
         if(searchContextDoc) {
             auto it = DocumentMap.find(searchContextDoc);
             if(it!=DocumentMap.end()) {
@@ -2945,7 +1480,8 @@ void TreeWidget::itemSearch(const QString &text, bool select) {
         SelectionNoTopParentCheck guard;
 
         Selection().setPreselect(obj->getDocument()->getName(),
-                obj->getNameInDocument(), subname.c_str(),0,0,0,2);
+                obj->getNameInDocument(), subname.c_str(),0,0,0,
+                SelectionChanges::MsgSource::TreeView);
 
         if(select || TreeParams::getSyncView()) {
             Gui::Selection().clearSelection();
@@ -2974,7 +1510,7 @@ Gui::Document *TreeWidget::selectedDocument() {
         if(sels.size()==1 && sels[0]->type()==DocumentType)
             return static_cast<DocumentItem*>(sels[0])->document();
     }
-    return 0;
+    return nullptr;
 }
 
 void TreeWidget::updateStatus(bool delay) {
@@ -2984,7 +1520,7 @@ void TreeWidget::updateStatus(bool delay) {
 
 void TreeWidget::_updateStatus(bool delay) {
     if(!delay) {
-        if(ChangedObjects.size() || NewObjects.size())
+        if(!ChangedObjects.empty() || !NewObjects.empty())
             onUpdateStatus();
         return;
     }
@@ -3086,7 +1622,7 @@ void TreeWidget::contextMenuEvent (QContextMenuEvent * e)
         contextMenu.addSeparator();
     }
     else if (this->contextItem && this->contextItem->type() == ObjectType) {
-        DocumentObjectItem* objitem = static_cast<DocumentObjectItem*>
+        auto objitem = static_cast<DocumentObjectItem*>
             (this->contextItem);
 
         Selection().setContext(objitem->getSubObjectT());
@@ -3137,8 +1673,8 @@ void TreeWidget::contextMenuEvent (QContextMenuEvent * e)
         App::Document* activeDoc = App::GetApplication().getActiveDocument();
         subMenu.setTitle(tr("Activate document"));
         contextMenu.addMenu(&subMenu);
-        QAction* active = 0;
-        for (std::vector<App::Document*>::iterator it = docs.begin(); it != docs.end(); ++it) {
+        QAction* active = nullptr;
+        for (auto it = docs.begin(); it != docs.end(); ++it) {
             QString label = QString::fromUtf8((*it)->Label.getValue());
             QAction* action = subMenuGroup.addAction(label);
             action->setCheckable(true);
@@ -3169,7 +1705,7 @@ void TreeWidget::contextMenuEvent (QContextMenuEvent * e)
         } catch (...) {
             FC_ERR("Unknown exception");
         }
-        contextItem = 0;
+        contextItem = nullptr;
     }
 }
 
@@ -3209,11 +1745,10 @@ void TreeWidget::onRelabelObject()
 
 void TreeWidget::onStartEditing()
 {
-    QAction* action = qobject_cast<QAction*>(sender());
+    auto action = qobject_cast<QAction*>(sender());
     if (action) {
         if (this->contextItem && this->contextItem->type() == ObjectType) {
-            DocumentObjectItem* objitem = static_cast<DocumentObjectItem*>
-                (this->contextItem);
+            auto objitem = static_cast<DocumentObjectItem*>(this->contextItem);
             int edit = action->data().toInt();
 
             App::DocumentObject* obj = objitem->object()->getObject();
@@ -3225,19 +1760,6 @@ void TreeWidget::onStartEditing()
             MDIView *view = doc->getActiveView();
             if (view) getMainWindow()->setActiveWindow(view);
 
-            // Always open a transaction here doesn't make much sense because:
-            // - many objects open transactions when really changing some properties
-            // - this leads to certain inconsistencies with the doubleClicked() method
-            // So, only the view provider class should decide what to do
-#if 0
-            // open a transaction before starting edit mode
-            std::string cmd("Edit ");
-            cmd += obj->Label.getValue();
-            doc->openCommand(cmd.c_str());
-            bool ok = doc->setEdit(objitem->object(), edit);
-            if (!ok) doc->abortCommand();
-#else
-
             // Not all editing action in object context menu will result in a
             // persistent editing task panel (which will trigger signalInEdit,
             // and in turn change item background). So we use nextEditingItem
@@ -3246,7 +1768,6 @@ void TreeWidget::onStartEditing()
             pimpl->nextEditingItem = objitem;
             doc->setEdit(objitem->object(), edit);
             pimpl->nextEditingItem = nullptr;
-#endif
         }
     }
 }
@@ -3265,7 +1786,7 @@ void TreeWidget::onSkipRecompute(bool on)
 {
     // if a document item is selected then touch all objects
     if (this->contextItem && this->contextItem->type() == DocumentType) {
-        DocumentItem* docitem = static_cast<DocumentItem*>(this->contextItem);
+        auto docitem = static_cast<DocumentItem*>(this->contextItem);
         App::Document* doc = docitem->document()->getDocument();
         doc->setStatus(App::Document::SkipRecompute, on);
     }
@@ -3275,7 +1796,7 @@ void TreeWidget::onAllowPartialRecompute(bool on)
 {
     // if a document item is selected then touch all objects
     if (this->contextItem && this->contextItem->type() == DocumentType) {
-        DocumentItem* docitem = static_cast<DocumentItem*>(this->contextItem);
+        auto docitem = static_cast<DocumentItem*>(this->contextItem);
         App::Document* doc = docitem->document()->getDocument();
         doc->setStatus(App::Document::AllowPartialRecompute, on);
     }
@@ -3285,18 +1806,18 @@ void TreeWidget::onMarkRecompute()
 {
     // if a document item is selected then touch all objects
     if (this->contextItem && this->contextItem->type() == DocumentType) {
-        DocumentItem* docitem = static_cast<DocumentItem*>(this->contextItem);
+        auto docitem = static_cast<DocumentItem*>(this->contextItem);
         App::Document* doc = docitem->document()->getDocument();
         std::vector<App::DocumentObject*> obj = doc->getObjects();
-        for (std::vector<App::DocumentObject*>::iterator it = obj.begin(); it != obj.end(); ++it)
+        for (auto it = obj.begin(); it != obj.end(); ++it)
             (*it)->enforceRecompute();
     }
     // mark all selected objects
     else {
         QList<QTreeWidgetItem*> items = this->selectedItems();
-        for (QList<QTreeWidgetItem*>::iterator it = items.begin(); it != items.end(); ++it) {
+        for (QList<QTreeWidgetItem*>::const_iterator it = items.cbegin(); it != items.cend(); ++it) {
             if ((*it)->type() == ObjectType) {
-                DocumentObjectItem* objitem = static_cast<DocumentObjectItem*>(*it);
+                auto objitem = static_cast<DocumentObjectItem*>(*it);
                 App::DocumentObject* obj = objitem->object()->getObject();
                 obj->enforceRecompute();
             }
@@ -3308,7 +1829,7 @@ void TreeWidget::onRecomputeObject() {
     std::vector<App::DocumentObject*> objs;
     for(auto ti : selectedItems()) {
         if (ti->type() == ObjectType) {
-            DocumentObjectItem* objitem = static_cast<DocumentObjectItem*>(ti);
+            auto objitem = static_cast<DocumentObjectItem*>(ti);
             objs.push_back(objitem->object()->getObject());
             objs.back()->enforceRecompute();
         }
@@ -3324,7 +1845,7 @@ DocumentItem *TreeWidget::getDocumentItem(const Gui::Document *doc) const {
     auto it = DocumentMap.find(doc);
     if(it != DocumentMap.end())
         return it->second;
-    return 0;
+    return nullptr;
 }
 
 void TreeWidget::selectAllInstances(const ViewProviderDocumentObject &vpd) {
@@ -3441,14 +1962,15 @@ std::vector<TreeWidget::SelInfo> TreeWidget::getSelection(App::Document *doc)
     std::vector<SelInfo> ret;
 
     TreeWidget *tree = instance();
-    if(!tree || !tree->isConnectionAttached()) {
+    if(!tree || !tree->isSelectionAttached()) {
         for(auto pTree : Instances)
-            if(pTree->isConnectionAttached()) {
+            if(pTree->isSelectionAttached()) {
                 tree = pTree;
                 break;
             }
     }
-    if(!tree) return ret;
+    if(!tree)
+        return ret;
 
     if(tree->selectTimer->isActive())
         tree->onSelectTimer();
@@ -3456,7 +1978,8 @@ std::vector<TreeWidget::SelInfo> TreeWidget::getSelection(App::Document *doc)
         tree->_updateStatus(false);
 
     for(auto ti : tree->selectedItems()) {
-        if(ti->type() != ObjectType) continue;
+        if(ti->type() != ObjectType)
+            continue;
         auto item = static_cast<DocumentObjectItem*>(ti);
         auto vp = item->object();
         auto obj = vp->getObject();
@@ -3468,7 +1991,7 @@ std::vector<TreeWidget::SelInfo> TreeWidget::getSelection(App::Document *doc)
             FC_LOG("skip objects not from current document");
             continue;
         }
-        ViewProviderDocumentObject *parentVp = 0;
+        ViewProviderDocumentObject *parentVp = nullptr;
         auto parent = item->getParentItem();
         if(parent) {
             parentVp = parent->object();
@@ -3479,7 +2002,7 @@ std::vector<TreeWidget::SelInfo> TreeWidget::getSelection(App::Document *doc)
         }
         ret.emplace_back();
         auto &sel = ret.back();
-        sel.topParent = 0;
+        sel.topParent = nullptr;
         std::ostringstream ss;
         item->getSubName(ss,sel.topParent);
         if(!sel.topParent)
@@ -3500,7 +2023,7 @@ void TreeWidget::selectAllLinks(App::DocumentObject *obj) {
 }
 
 void TreeWidget::_selectAllLinks(App::DocumentObject *obj) {
-    if(!isConnectionAttached())
+    if(!isSelectionAttached())
         return;
 
     if(!obj || !obj->getNameInDocument()) {
@@ -3559,7 +2082,7 @@ bool TreeWidget::setupObjectMenu(QMenu &menu,
         }
 
         if (sels.empty()) {
-            sels = Gui::Selection().getSelectionT(nullptr, 0, true);
+            sels = Gui::Selection().getSelectionT(nullptr, ResolveMode::NoResolve, true);
             if (sels.empty())
                 return false;
         }
@@ -3626,7 +2149,7 @@ bool TreeWidget::_setupObjectMenu(DocumentObjectItem *item, QMenu &menu)
 
 void TreeWidget::onSearchObjects()
 {
-    emitSearchObjects();
+    Q_EMIT emitSearchObjects();
 }
 
 void TreeWidget::onActivateDocument(QAction* active)
@@ -3635,7 +2158,7 @@ void TreeWidget::onActivateDocument(QAction* active)
     QByteArray docname = active->data().toByteArray();
     Gui::Document* doc = Application::Instance->getDocument((const char*)docname);
     if (doc && !doc->setActiveView())
-        doc->setActiveView(0,View3DInventor::getClassTypeId());
+        doc->setActiveView(nullptr, View3DInventor::getClassTypeId());
 }
 
 Qt::DropActions TreeWidget::supportedDropActions () const
@@ -3645,15 +2168,6 @@ Qt::DropActions TreeWidget::supportedDropActions () const
 
 bool TreeWidget::event(QEvent *e)
 {
-#if 0
-    if (e->type() == QEvent::ShortcutOverride) {
-        QKeyEvent* ke = static_cast<QKeyEvent *>(e);
-        switch (ke->key()) {
-            case Qt::Key_Delete:
-                ke->accept();
-        }
-    }
-#endif
     return QTreeWidget::event(e);
 }
 
@@ -3823,11 +2337,6 @@ void setTreeViewFocus()
 
 void TreeWidget::keyPressEvent(QKeyEvent *event)
 {
-#if 0
-    if (event && event->matches(QKeySequence::Delete)) {
-        event->ignore();
-    }
-#endif
     if(event->matches(QKeySequence::Find)) {
         event->accept();
         onSearchObjects();
@@ -3838,7 +2347,10 @@ void TreeWidget::keyPressEvent(QKeyEvent *event)
     int key = event->key();
     switch(key) {
     case Qt::Key_Left:
-        if (!isColumnHidden(1) && index.column()==1) {
+        if (event->modifiers() != Qt::AltModifier
+                && !isColumnHidden(1)
+                && index.column()==1)
+        {
             setCurrentIndex(model()->index(index.row(), 0, index.parent()));
             event->accept();
             return;
@@ -3846,7 +2358,10 @@ void TreeWidget::keyPressEvent(QKeyEvent *event)
             key = Qt::Key_Minus;
         break;
     case Qt::Key_Right:
-        if (!isColumnHidden(1) && index.column()==0) {
+        if (event->modifiers() != Qt::AltModifier
+                && !isColumnHidden(1)
+                && index.column()==0)
+        {
             setCurrentIndex(model()->index(index.row(), 1, index.parent()));
             event->accept();
             return;
@@ -3894,18 +2409,19 @@ bool TreeWidget::onDoubleClickItem(QTreeWidgetItem *item)
 {
     try {
         if (item->type() == TreeWidget::DocumentType) {
-            Gui::Document* doc = static_cast<DocumentItem*>(item)->document();
-            if (!doc) return false;
+            auto doc = static_cast<DocumentItem*>(item)->document();
+            if (!doc)
+                return false;
             if(doc->getDocument()->testStatus(App::Document::PartialDoc)) {
                 contextItem = item;
                 onReloadDoc();
                 return true;
             }
             if(!doc->setActiveView())
-                doc->setActiveView(0,View3DInventor::getClassTypeId());
+                doc->setActiveView(nullptr,View3DInventor::getClassTypeId());
         }
         else if (item->type() == TreeWidget::ObjectType) {
-            DocumentObjectItem* objitem = static_cast<DocumentObjectItem*>(item);
+            auto objitem = static_cast<DocumentObjectItem*>(item);
             ViewProviderDocumentObject* vp = objitem->object();
 
             objitem->getOwnerDocument()->document()->setActiveView(vp);
@@ -4440,24 +2956,6 @@ void TreeWidget::startDrag(Qt::DropActions supportedActions)
         tree->setAutoScroll(true);
 }
 
-QMimeData * TreeWidget::mimeData (const QList<QTreeWidgetItem *> items) const
-{
-#if 0
-    // all selected items must reference an object from the same document
-    App::Document* doc=0;
-    for (QList<QTreeWidgetItem *>::ConstIterator it = items.begin(); it != items.end(); ++it) {
-        if ((*it)->type() != TreeWidget::ObjectType)
-            return 0;
-        App::DocumentObject* obj = static_cast<DocumentObjectItem *>(*it)->object()->getObject();
-        if (!doc)
-            doc = obj->getDocument();
-        else if (doc != obj->getDocument())
-            return 0;
-    }
-#endif
-    return QTreeWidget::mimeData(items);
-}
-
 bool TreeWidget::dropMimeData(QTreeWidgetItem *parent, int index,
                               const QMimeData *data, Qt::DropAction action)
 {
@@ -4566,7 +3064,7 @@ void TreeWidget::Private::checkDropEvent(QDropEvent *event, bool *pReplace, int 
         if (!action)
             this->checkItemEntered(targetItem, tag);
 
-        DocumentObjectItem* targetItemObj = static_cast<DocumentObjectItem*>(targetItem);
+        auto targetItemObj = static_cast<DocumentObjectItem*>(targetItem);
         Gui::ViewProviderDocumentObject* vp = targetItemObj->object();
         SelectionContext sctx(targetItemObj->getSubObjectT());
 
@@ -4806,7 +3304,7 @@ void TreeWidget::dropEvent(QDropEvent *event)
 
     if (targetItem->type() == TreeWidget::ObjectType) {
         // add object to group
-        DocumentObjectItem* targetItemObj = static_cast<DocumentObjectItem*>(targetItem);
+        auto targetItemObj = static_cast<DocumentObjectItem*>(targetItem);
         thisDoc = targetItemObj->getOwnerDocument()->document()->getDocument();
         Gui::ViewProviderDocumentObject* vp = targetItemObj->object();
 
@@ -4820,9 +3318,9 @@ void TreeWidget::dropEvent(QDropEvent *event)
         }
 
         std::ostringstream targetSubname;
-        App::DocumentObject *targetParent = 0;
+        App::DocumentObject *targetParent = nullptr;
         targetItemObj->getSubName(targetSubname,targetParent);
-        auto sels = Selection().getSelectionT(nullptr, 0);
+        auto sels = Selection().getSelectionT(nullptr, ResolveMode::NoResolve);
         Selection().selStackPush();
         Selection().clearCompleteSelection();
 
@@ -4860,7 +3358,7 @@ void TreeWidget::dropEvent(QDropEvent *event)
             App::DocumentObject* obj = vpc->getObject();
 
             std::ostringstream str;
-            App::DocumentObject *topParent=0;
+            App::DocumentObject *topParent=nullptr;
             auto owner = item->getRelativeParent(str,targetItemObj,&topParent,&info.topSubname);
             if(syncPlacement && topParent) {
                 info.topDoc = topParent->getDocument()->getName();
@@ -4967,8 +3465,8 @@ void TreeWidget::dropEvent(QDropEvent *event)
 
                 SelectionContext sctx(App::SubObjectT(obj, subname.c_str()));
 
-                ViewProviderDocumentObject *vpp = 0;
-                if(da!=Qt::LinkAction && info.parentDoc.size()) {
+                ViewProviderDocumentObject *vpp = nullptr;
+                if(da!=Qt::LinkAction && !info.parentDoc.empty()) {
                     auto parentDoc = App::GetApplication().getDocument(info.parentDoc.c_str());
                     if(parentDoc) {
                         auto parent = parentDoc->getObject(info.parent.c_str());
@@ -4981,8 +3479,8 @@ void TreeWidget::dropEvent(QDropEvent *event)
                     }
                 }
 
-                App::DocumentObject *owner = 0;
-                if(info.ownerDoc.size()) {
+                App::DocumentObject *owner = nullptr;
+                if(!info.ownerDoc.empty()) {
                     auto ownerDoc = App::GetApplication().getDocument(info.ownerDoc.c_str());
                     if(ownerDoc)
                         owner = ownerDoc->getObject(info.owner.c_str());
@@ -4993,14 +3491,14 @@ void TreeWidget::dropEvent(QDropEvent *event)
                 }
 
                 Base::Matrix4D mat;
-                App::PropertyPlacement *propPlacement = 0;
+                App::PropertyPlacement *propPlacement = nullptr;
                 if(syncPlacement) {
-                    if(info.topObj.size()) {
+                    if(!info.topObj.empty()) {
                         auto doc = App::GetApplication().getDocument(info.topDoc.c_str());
                         if(doc) {
                             auto topObj = doc->getObject(info.topObj.c_str());
                             if(topObj) {
-                                auto sobj = topObj->getSubObject(info.topSubname.c_str(),0,&mat);
+                                auto sobj = topObj->getSubObject(info.topSubname.c_str(),nullptr,&mat);
                                 if(sobj == obj) {
                                     propPlacement = Base::freecad_dynamic_cast<App::PropertyPlacement>(
                                             obj->getPropertyByName("Placement"));
@@ -5025,7 +3523,7 @@ void TreeWidget::dropEvent(QDropEvent *event)
                     vpp->dragObject(obj);
                     if(manager->getLines() == lines)
                         manager->addLine(MacroManager::Gui,ss.str().c_str());
-                    owner = 0;
+                    owner = nullptr;
                     subname.clear();
                     ss.str("");
 
@@ -5051,7 +3549,7 @@ void TreeWidget::dropEvent(QDropEvent *event)
 
                         // TODO: link adjustment and placement adjustment does
                         // not work together at the moment.
-                        propPlacement = 0;
+                        propPlacement = nullptr;
                     }
                 }
 
@@ -5093,7 +3591,7 @@ void TreeWidget::dropEvent(QDropEvent *event)
                             << Command::getObjectCmd(obj) << ")";
 
                         std::ostringstream ss2;
-                        dropParent = 0;
+                        dropParent = nullptr;
                         parentItem->getSubName(ss2,dropParent);
                         if (dropParent)
                             dropParentT = App::DocumentObjectT(dropParent);
@@ -5251,7 +3749,7 @@ void TreeWidget::dropEvent(QDropEvent *event)
             auto parentItem = item->getParentItem();
             if (parentItem) {
                 if(dropOnly)
-                    parentItem = 0;
+                    parentItem = nullptr;
                 else if(!parentItem->object()->canDragObjects()
                         || !parentItem->object()->canDragObject(obj)) {
                     FC_ERR("'" << obj->getFullName() << "' cannot be dragged out of '" <<
@@ -5270,7 +3768,7 @@ void TreeWidget::dropEvent(QDropEvent *event)
             }
             if(syncPlacement) {
                 std::ostringstream ss;
-                App::DocumentObject *topParent=0;
+                App::DocumentObject *topParent=nullptr;
                 item->getSubName(ss,topParent);
                 if(topParent) {
                     info.topDoc = topParent->getDocument()->getName();
@@ -5304,14 +3802,14 @@ void TreeWidget::dropEvent(QDropEvent *event)
                 }
 
                 Base::Matrix4D mat;
-                App::PropertyPlacement *propPlacement = 0;
+                App::PropertyPlacement *propPlacement = nullptr;
                 if(syncPlacement) {
                     if(info.topObj.size()) {
                         auto doc = App::GetApplication().getDocument(info.topDoc.c_str());
                         if(doc) {
                             auto topObj = doc->getObject(info.topObj.c_str());
                             if(topObj) {
-                                auto sobj = topObj->getSubObject(info.topSubname.c_str(),0,&mat);
+                                auto sobj = topObj->getSubObject(info.topSubname.c_str(),nullptr,&mat);
                                 if(sobj == obj) {
                                     propPlacement = dynamic_cast<App::PropertyPlacement*>(
                                             obj->getPropertyByName("Placement"));
@@ -5381,7 +3879,7 @@ void TreeWidget::dropEvent(QDropEvent *event)
                     ss << "App.getDocument('" << thisDoc->getName() << "')."
                         << (da==Qt::CopyAction?"copyObject(":"moveObject(")
                         << Command::getObjectCmd(obj) << ", True)";
-                    App::DocumentObject *res = 0;
+                    App::DocumentObject *res = nullptr;
                     if(da == Qt::CopyAction) {
                         auto copied = thisDoc->copyObject({obj},true);
                         if(copied.size())
@@ -5437,7 +3935,7 @@ void TreeWidget::slotNewDocument(const Gui::Document& Doc, bool isMainDoc)
     if(!showTempDocAction->isChecked()
             && Doc.getDocument()->testStatus(App::Document::TempDoc))
         return;
-    DocumentItem* item = new DocumentItem(&Doc, this->rootItem);
+    auto item = new DocumentItem(&Doc, this->rootItem);
     if(isMainDoc)
         this->expandItem(item);
     if(Doc.getDocument()->testStatus(App::Document::TempDoc))
@@ -5462,7 +3960,7 @@ void TreeWidget::slotFinishOpenDocument() {
 void TreeWidget::onReloadDoc() {
     if (!this->contextItem || this->contextItem->type() != DocumentType)
         return;
-    DocumentItem* docitem = static_cast<DocumentItem*>(this->contextItem);
+    auto docitem = static_cast<DocumentItem*>(this->contextItem);
     App::Document* doc = docitem->document()->getDocument();
     std::string name = doc->FileName.getValue();
     Application::Instance->reopen(doc);
@@ -5480,7 +3978,7 @@ void TreeWidget::onCloseDoc()
     if (!this->contextItem || this->contextItem->type() != DocumentType)
         return;
     try {
-        DocumentItem* docitem = static_cast<DocumentItem*>(this->contextItem);
+        auto docitem = static_cast<DocumentItem*>(this->contextItem);
         Gui::Document* gui = docitem->document();
         App::Document* doc = gui->getDocument();
         if (gui->canClose(true, true))
@@ -5622,7 +4120,7 @@ struct UpdateDisabler {
     }
 };
 
-void TreeWidget::onUpdateStatus(void)
+void TreeWidget::onUpdateStatus()
 {
     if(updateBlocked || _DraggingActive
                      || this->state()==DraggingState
@@ -5775,14 +4273,14 @@ void TreeWidget::onUpdateStatus(void)
             clearTimer = false;
     }
 
-    if(Selection().hasSelection() && !selectTimer->isActive() && !this->isConnectionBlocked()) {
-        this->blockConnection(true);
+    if(Selection().hasSelection() && !selectTimer->isActive() && !this->isSelectionBlocked()) {
+        this->blockSelection(true);
         Base::StateLocker guard(pimpl->disableSyncView);
         for(auto &v : DocumentMap) {
             v.second->setSelected(false);
             v.second->selectItems();
         }
-        this->blockConnection(false);
+        this->blockSelection(false);
     }
 
     if (pimpl->checkHiddenItems) {
@@ -5810,7 +4308,7 @@ void TreeWidget::onUpdateStatus(void)
 
     auto activeDocItem = getDocumentItem(Application::Instance->activeDocument());
 
-    QTreeWidgetItem *errItem = 0;
+    QTreeWidgetItem *errItem = nullptr;
     for(auto obj : errors) {
         DocumentObjectDataPtr data;
         if(activeDocItem) {
@@ -5829,7 +4327,7 @@ void TreeWidget::onUpdateStatus(void)
         }
         if(data) {
             auto item = data->rootItem;
-            if(!item && data->items.size()) {
+            if(!item && !data->items.empty()) {
                 item = *data->items.begin();
                 data->docItem->showItem(item,false,true);
             }
@@ -5915,21 +4413,22 @@ void TreeWidget::onPreSelectTimer() {
     }
 
     preselectTime.restart();
-    DocumentObjectItem* objItem = static_cast<DocumentObjectItem*>(item);
+    auto objItem = static_cast<DocumentObjectItem*>(item);
     auto vp = objItem->object();
     auto obj = vp->getObject();
     std::ostringstream ss;
-    App::DocumentObject *parent = 0;
+    App::DocumentObject *parent = nullptr;
     objItem->getSubName(ss,parent);
     if(!parent)
         parent = obj;
-    else if(!obj->redirectSubName(ss,parent,0))
+    else if(!obj->redirectSubName(ss,parent,nullptr))
         ss << obj->getNameInDocument() << '.';
 
     int res = Selection().setPreselect(
             parent->getDocument()->getName(),
             parent->getNameInDocument(),
-            ss.str().c_str(),0,0,0,2);
+            ss.str().c_str(), 0, 0, 0,
+            SelectionChanges::MsgSource::TreeView);
     if (!_DraggingActive) {
         if (res == -2)
             pimpl->setForbidCursor();
@@ -5950,7 +4449,7 @@ void TreeWidget::onItemExpanded(QTreeWidgetItem * item)
 {
     // object item expanded
     if (item && item->type() == TreeWidget::ObjectType) {
-        DocumentObjectItem* objItem = static_cast<DocumentObjectItem*>(item);
+        auto objItem = static_cast<DocumentObjectItem*>(item);
         objItem->setExpandedStatus(true);
         objItem->getOwnerDocument()->populateItem(objItem,false,false);
     }
@@ -5960,19 +4459,19 @@ void TreeWidget::scrollItemToTop()
 {
     auto doc = Application::Instance->activeDocument();
     auto tree = instance();
-    if (tree && tree->isConnectionAttached() && !tree->isConnectionBlocked()) {
+    if (tree && tree->isSelectionAttached() && !tree->isSelectionBlocked()) {
 
         tree->_updateStatus(false);
 
-        if(doc && Gui::Selection().hasSelection(doc->getDocument()->getName(),false)) {
+        if(doc && Gui::Selection().hasSelection(doc->getDocument()->getName(), ResolveMode::NoResolve)) {
             auto it = tree->DocumentMap.find(doc);
             if (it != tree->DocumentMap.end()) {
-                bool lock = tree->blockConnection(true);
+                bool lock = tree->blockSelection(true);
                 it->second->selectItems(DocumentItem::SR_FORCE_EXPAND);
-                tree->blockConnection(lock);
+                tree->blockSelection(lock);
             }
         } else {
-            tree->blockConnection(true);
+            tree->blockSelection(true);
             for (int i=0; i<tree->rootItem->childCount(); i++) {
                 auto docItem = dynamic_cast<DocumentItem*>(tree->rootItem->child(i));
                 if(!docItem)
@@ -5983,7 +4482,7 @@ void TreeWidget::scrollItemToTop()
                     break;
                 }
             }
-            tree->blockConnection(false);
+            tree->blockSelection(false);
         }
     }
 }
@@ -6021,7 +4520,7 @@ void TreeWidget::expandSelectedItems(TreeItemMode mode)
 }
 
 void TreeWidget::_expandSelectedItems(TreeItemMode mode) {
-    if(!isConnectionAttached())
+    if(!isSelectionAttached())
         return;
 
     for(auto item : selectedItems()) {
@@ -6097,7 +4596,8 @@ void TreeWidget::setupText()
 
 void TreeWidget::onShowHidden()
 {
-    if (!this->contextItem) return;
+    if (!this->contextItem)
+        return;
     DocumentItem *docItem = nullptr;
     if(this->contextItem->type() == DocumentType)
         docItem = static_cast<DocumentItem*>(contextItem);
@@ -6170,8 +4670,8 @@ void TreeWidget::changeEvent(QEvent *e)
 
 void TreeWidget::onItemSelectionChanged ()
 {
-    if (!this->isConnectionAttached()
-            || this->isConnectionBlocked()
+    if (!this->isSelectionAttached()
+            || this->isSelectionBlocked()
             || updateBlocked)
         return;
 
@@ -6183,7 +4683,7 @@ void TreeWidget::onItemSelectionChanged ()
     preselectTimer->stop();
 
     // block tmp. the connection to avoid to notify us ourself
-    bool lock = this->blockConnection(true);
+    bool lock = this->blockSelection(true);
 
     if(selectTimer->isActive())
         onSelectTimer();
@@ -6218,19 +4718,19 @@ void TreeWidget::onItemSelectionChanged ()
         // Gui.Selection and Tree view selection because of newly added
         // DocumentObject::redirectSubName()
         Selection().clearCompleteSelection();
-        DocumentObjectItem *item=0;
-        App::DocumentObject *preselObj=0;
+        DocumentObjectItem *item=nullptr;
+        App::DocumentObject *preselObj=nullptr;
         std::string preselSub;
         if(selItems.size()) {
             if(selItems.front()->type() == ObjectType) {
                 item = static_cast<DocumentObjectItem*>(selItems.front());
                 if(!ViewParams::getShowSelectionOnTop()) {
                     std::ostringstream ss;
-                    App::DocumentObject *topParent = 0;
+                    App::DocumentObject *topParent = nullptr;
                     App::DocumentObject *obj = item->object()->getObject();
                     item->getSubName(ss,topParent);
                     if(topParent) {
-                        if(!obj->redirectSubName(ss,topParent,0))
+                        if(!obj->redirectSubName(ss,topParent,nullptr))
                             ss << obj->getNameInDocument() << '.';
                         obj = topParent;
                     }
@@ -6263,7 +4763,8 @@ void TreeWidget::onItemSelectionChanged ()
         if(preselObj) {
             SelectionNoTopParentCheck guard;
             Selection().setPreselect(preselObj->getDocument()->getName(),
-                    preselObj->getNameInDocument(),preselSub.c_str(),0,0,0,2);
+                    preselObj->getNameInDocument(),preselSub.c_str(),0,0,0,
+                    SelectionChanges::MsgSource::TreeView);
         }
     }else{
         for (auto pos = DocumentMap.begin();pos!=DocumentMap.end();++pos)
@@ -6278,7 +4779,7 @@ void TreeWidget::onItemSelectionChanged ()
         pimpl->firstSyncItem = nullptr;
     }
 
-    this->blockConnection(lock);
+    this->blockSelection(lock);
 }
 
 static bool isSelectionCheckBoxesEnabled() {
@@ -6318,7 +4819,7 @@ void TreeWidget::onItemChanged(QTreeWidgetItem *item, int column) {
 void TreeWidget::onSelectTimer() {
 
     bool syncSelect = instance()==this && TreeParams::getSyncSelection();
-    bool locked = this->blockConnection(true);
+    bool locked = this->blockSelection(true);
 
     _updateStatus(false);
 
@@ -6331,7 +4832,7 @@ void TreeWidget::onSelectTimer() {
         for(auto &v : DocumentMap)
             v.second->clearSelection();
     }
-    this->blockConnection(locked);
+    this->blockSelection(locked);
     selectTimer->stop();
     return;
 }
@@ -6461,7 +4962,7 @@ void TreePanel::hideEditor()
     this->searchBox->hide();
     this->treeWidget->resetItemSearch();
     auto sels = this->treeWidget->selectedItems();
-    if(sels.size())
+    if(!sels.empty())
         this->treeWidget->scrollToItem(sels.front());
 }
 
@@ -6898,7 +5399,7 @@ void TreeWidget::selectLinkedObject(App::DocumentObject *linked) {
 }
 
 void TreeWidget::_selectLinkedObject(App::DocumentObject *linked) {
-    if(!isConnectionAttached() || isConnectionBlocked())
+    if(!isSelectionAttached() || isSelectionBlocked())
         return;
 
     auto linkedVp = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(
@@ -7068,7 +5569,7 @@ void DocumentItem::slotInEdit(const Gui::ViewProviderDocumentObject& v)
     if(getTree()->pimpl->nextEditingItem)
         getTree()->editingItem = getTree()->pimpl->nextEditingItem;
     else {
-        ViewProviderDocumentObject *parentVp=0;
+        ViewProviderDocumentObject *parentVp=nullptr;
         std::string subname;
         auto vp = doc->getInEdit(&parentVp,&subname);
         if(!parentVp)
@@ -7223,14 +5724,14 @@ bool DocumentItem::createNewItem(const Gui::ViewProviderDocumentObject& obj,
                 pdata->label2 = QString::fromUtf8(obj.getObject()->Label2.getValue());
             }
             entry.insert(pdata);
-        }else if(pdata->rootItem && parent==NULL) {
+        }else if(pdata->rootItem && !parent) {
             Base::Console().Warning("DocumentItem::slotNewObject: Cannot add view provider twice.\n");
             return false;
         }
         data = pdata;
     }
 
-    DocumentObjectItem* item = new DocumentObjectItem(this,data);
+    auto item = new DocumentObjectItem(this,data);
     if(!parent || parent==this) {
         parent = this;
         data->rootItem = item;
@@ -7287,7 +5788,7 @@ void TreeWidget::slotDeleteDocument(const Gui::Document& Doc)
 }
 
 void TreeWidget::slotDeleteObject(const Gui::ViewProviderDocumentObject& view) {
-    _slotDeleteObject(view, 0);
+    _slotDeleteObject(view, nullptr);
 }
 
 void TreeWidget::_slotDeleteObject(const Gui::ViewProviderDocumentObject& view, DocumentItem *deletingDoc)
@@ -7315,7 +5816,7 @@ void TreeWidget::_slotDeleteObject(const Gui::ViewProviderDocumentObject& view, 
         docItem->ObjectMap.erase(obj);
 
         bool checkChildren = true;
-        bool lock = blockConnection(true);
+        bool lock = blockSelection(true);
         for(auto item : items) {
             if(!checkChildren && item->populated) {
                 checkChildren = false;
@@ -7328,7 +5829,7 @@ void TreeWidget::_slotDeleteObject(const Gui::ViewProviderDocumentObject& view, 
             item->detachOwner();
             delete item;
         }
-        blockConnection(lock);
+        blockSelection(lock);
     }
     ObjectTable.erase(itEntry);
 }
@@ -7431,7 +5932,7 @@ void DocumentItem::populateItem(DocumentObjectItem *item, bool refresh, bool del
             if (ci->type() != TreeWidget::ObjectType)
                 continue;
 
-            DocumentObjectItem *childItem = static_cast<DocumentObjectItem*>(ci);
+            auto childItem = static_cast<DocumentObjectItem*>(ci);
             if (childItem->object()->getObject() != child)
                 continue;
 
@@ -7452,9 +5953,9 @@ void DocumentItem::populateItem(DocumentObjectItem *item, bool refresh, bool del
             if(item->myData->removeChildrenFromRoot) {
                 if(childItem->myData->rootItem) {
                     assert(childItem != childItem->myData->rootItem);
-                    bool lock = getTree()->blockConnection(true);
+                    bool lock = getTree()->blockSelection(true);
                     delete childItem->myData->rootItem;
-                    getTree()->blockConnection(lock);
+                    getTree()->blockSelection(lock);
                 }
             }else if(childItem->requiredAtRoot()) {
                 createNewItem(*childItem->object(),this,-1,childItem->myData);
@@ -7494,7 +5995,7 @@ void DocumentItem::populateItem(DocumentObjectItem *item, bool refresh, bool del
                 --i;
                 continue;
             }
-            it->second->rootItem = 0;
+            it->second->rootItem = nullptr;
             childItem->setHighlight(false);
             this->removeChild(childItem);
             childItem->selected = 0;
@@ -7509,7 +6010,7 @@ void DocumentItem::populateItem(DocumentObjectItem *item, bool refresh, bool del
     for (++i;item->childCount()>i;) {
         QTreeWidgetItem *ci = item->child(i);
         if (ci->type() == TreeWidget::ObjectType) {
-            DocumentObjectItem* childItem = static_cast<DocumentObjectItem*>(ci);
+            auto childItem = static_cast<DocumentObjectItem*>(ci);
             if(childItem->requiredAtRoot()) {
                 childItem->setHighlight(false);
                 item->removeChild(childItem);
@@ -7529,9 +6030,9 @@ void DocumentItem::populateItem(DocumentObjectItem *item, bool refresh, bool del
             }
         }
 
-        bool lock = getTree()->blockConnection(true);
+        bool lock = getTree()->blockSelection(true);
         delete ci;
-        getTree()->blockConnection(lock);
+        getTree()->blockSelection(lock);
     }
     if(updated)
         getTree()->_updateStatus();
@@ -7839,7 +6340,7 @@ void DocumentItem::slotExpandObject (const Gui::ViewProviderDocumentObject& obj,
                 if(item->parent()->isExpanded())
                     item->setExpanded(true);
             }else{
-                App::DocumentObject *topParent = 0;
+                App::DocumentObject *topParent = nullptr;
                 std::ostringstream ss;
                 item->getSubName(ss,topParent);
                 if(!topParent) {
@@ -8091,7 +6592,7 @@ void DocumentItem::clearSelection(DocumentObjectItem *exclude)
 {
     // Block signals here otherwise we get a recursion and quadratic runtime
     QSignalBlocker blocker(treeWidget());
-    bool lock = getTree()->blockConnection(true);
+    bool lock = getTree()->blockSelection(true);
     {
         SelectionPauseNotification guard;
         FOREACH_ITEM_ALL(item);
@@ -8105,7 +6606,7 @@ void DocumentItem::clearSelection(DocumentObjectItem *exclude)
                 item->unselect();
         END_FOREACH_ITEM;
     }
-    getTree()->blockConnection(lock);
+    getTree()->blockSelection(lock);
 }
 
 void DocumentItem::updateSelection(QTreeWidgetItem *ti, bool unselect) {
@@ -8126,7 +6627,8 @@ void DocumentItem::updateSelection(QTreeWidgetItem *ti, bool unselect) {
         }
     }
 
-    if(unselect) return;
+    if(unselect)
+        return;
     for(int i=0,count=ti->childCount();i<count;++i)
         updateSelection(ti->child(i));
 }
@@ -8153,7 +6655,7 @@ void DocumentItem::updateItemSelection(DocumentObjectItem *item) {
         return;
 
     std::ostringstream str;
-    App::DocumentObject *topParent = 0;
+    App::DocumentObject *topParent = nullptr;
     item->getSubName(str,topParent);
     if(topParent) {
         // No need correction now, it is now handled by SelectionSingleton
@@ -8164,7 +6666,7 @@ void DocumentItem::updateItemSelection(DocumentObjectItem *item) {
         //     Gui::Selection().rmvSelection(obj->getDocument()->getName(),
         //             obj->getNameInDocument(),0);
         // }
-        if(!obj->redirectSubName(str,topParent,0))
+        if(!obj->redirectSubName(str,topParent,nullptr))
             str << obj->getNameInDocument() << '.';
         obj = topParent;
     }
@@ -8197,7 +6699,7 @@ App::DocumentObject *DocumentItem::getTopParent(
         App::DocumentObject *obj, std::string &subname, DocumentObjectItem **ppitem) {
     auto it = ObjectMap.find(obj);
     if(it == ObjectMap.end() || it->second->items.empty())
-        return 0;
+        return nullptr;
 
     // already a top parent
     if(it->second->rootItem) {
@@ -8358,8 +6860,8 @@ DocumentObjectItem *DocumentItem::findItem(
     TREE_TRACE("find next " << subname);
 
     // try to find the next level object name
-    const char *nextsub = 0;
-    const char *dot = 0;
+    const char *nextsub = nullptr;
+    const char *dot = nullptr;
     if(!Data::ComplexGeoData::isElementName(subname) && (dot=strchr(subname,'.')))
         nextsub = dot+1;
     else {
@@ -8399,7 +6901,8 @@ DocumentObjectItem *DocumentItem::findItem(
 
     for(int i=0,count=item->childCount();i<count;++i) {
         auto ti = item->child(i);
-        if(!ti || ti->type()!=TreeWidget::ObjectType) continue;
+        if(!ti || ti->type()!=TreeWidget::ObjectType)
+            continue;
         auto child = static_cast<DocumentObjectItem*>(ti);
 
         if(child->object()->getObject() == subObj)
@@ -8432,7 +6935,7 @@ DocumentObjectItem *DocumentItem::findItem(
 }
 
 void DocumentItem::selectItems(SelectionReason reason) {
-    const auto &sels = Selection().getSelection(pDocument->getDocument()->getName(),0);
+    const auto &sels = Selection().getSelection(pDocument->getDocument()->getName(), ResolveMode::NoResolve);
 
     bool sync;
     if (ViewParams::getMaxOnTopSelections()<(int)sels.size() || reason==SR_SELECT)
@@ -8443,9 +6946,9 @@ void DocumentItem::selectItems(SelectionReason reason) {
     for(const auto &sel : sels)
         findItemByObject(sync,sel.pObject,sel.SubName,true);
 
-    DocumentObjectItem *newSelect = 0;
-    DocumentObjectItem *oldSelect = 0;
-    DocumentObjectItem *newCurrent = 0;
+    DocumentObjectItem *newSelect = nullptr;
+    DocumentObjectItem *oldSelect = nullptr;
+    DocumentObjectItem *newCurrent = nullptr;
 
     FOREACH_ITEM_ALL(item)
         if(item->selected == 1) {
@@ -8527,7 +7030,7 @@ void DocumentItem::selectAllInstances(const ViewProviderDocumentObject &vpd) {
     if(ObjectMap.find(pObject) == ObjectMap.end())
         return;
 
-    bool lock = getTree()->blockConnection(true);
+    bool lock = getTree()->blockSelection(true);
 
     // We are trying to select all items corresponding to a given view
     // provider, i.e. all appearance of the object inside all its parent items
@@ -8537,13 +7040,13 @@ void DocumentItem::selectAllInstances(const ViewProviderDocumentObject &vpd) {
     // need to populate the oldest parent first
     populateParents(&vpd);
 
-    DocumentObjectItem *first = 0;
+    DocumentObjectItem *first = nullptr;
     FOREACH_ITEM(item,vpd);
         if(showItem(item,true) && !first)
             first = item;
     END_FOREACH_ITEM;
 
-    getTree()->blockConnection(lock);
+    getTree()->blockSelection(lock);
     if(first) {
         treeWidget()->scrollToItem(first);
         updateSelection();
@@ -8599,9 +7102,9 @@ void DocumentItem::updateItemsVisibility(QTreeWidgetItem *item, bool show) {
 }
 
 void DocumentItem::updateSelection() {
-    bool lock = getTree()->blockConnection(true);
+    bool lock = getTree()->blockSelection(true);
     updateSelection(this,false);
-    getTree()->blockConnection(lock);
+    getTree()->blockSelection(lock);
 }
 
 // ----------------------------------------------------------------------------
@@ -8634,7 +7137,7 @@ DocumentObjectItem::~DocumentObjectItem()
     myData->items.erase(this);
 
     if(myData->rootItem == this)
-        myData->rootItem = 0;
+        myData->rootItem = nullptr;
 
     if(myOwner) {
         if(myData->items.empty())
@@ -8676,11 +7179,11 @@ App::SubObjectT DocumentObjectItem::getSubObjectT() const
 {
     auto obj = object()->getObject();
     std::ostringstream ss;
-    App::DocumentObject *parent = 0;
+    App::DocumentObject *parent = nullptr;
     this->getSubName(ss,parent);
     if(!parent)
         parent = obj;
-    else if(!obj->redirectSubName(ss,parent,0))
+    else if(!obj->redirectSubName(ss,parent,nullptr))
         ss << obj->getNameInDocument() << '.';
     return App::SubObjectT(parent, ss.str().c_str());
 }
@@ -8981,9 +7484,11 @@ void DocumentObjectItem::setData (int column, int role, const QVariant & value)
 
 bool DocumentObjectItem::isChildOfItem(const DocumentObjectItem* item) const
 {
-    for(auto pitem=parent();pitem;pitem=pitem->parent())
-        if(pitem == item)
+    for(auto pitem=parent();pitem;pitem=pitem->parent()) {
+        if(pitem == item) {
             return true;
+        }
+    }
     return false;
 }
 
@@ -8993,7 +7498,8 @@ bool DocumentObjectItem::requiredAtRoot(bool excludeSelf, bool delay) const
         return false;
     bool checkMap = true;
     for(auto item : myData->items) {
-        if(excludeSelf && item == this) continue;
+        if(excludeSelf && item == this)
+            continue;
         auto pi = item->getParentItem();
         if(!pi || pi->myData->removeChildrenFromRoot)
             return false;
@@ -9013,8 +7519,9 @@ bool DocumentObjectItem::requiredAtRoot(bool excludeSelf, bool delay) const
             // expand its parent item. It only causes minor problems, such as,
             // tree scroll to object command won't work properly.
 
-            if(getOwnerDocument()->populateObject(parent, delay))
+            if(getOwnerDocument()->populateObject(parent, delay)) {
                 return false;
+            }
         }
     }
     return true;
@@ -9083,7 +7590,7 @@ int DocumentObjectItem::isParentGroup() const {
 
 DocumentObjectItem *DocumentObjectItem::getParentItem() const{
     if(parent()->type()!=TreeWidget::ObjectType)
-        return 0;
+        return nullptr;
     return static_cast<DocumentObjectItem*>(parent());
 }
 
@@ -9135,7 +7642,7 @@ int DocumentObjectItem::_getSubName(std::ostringstream &str, App::DocumentObject
                 // This function traverse from top down, so, when seeing a
                 // non-group object 'PartExtrude', its following children should
                 // not be grouped, so must reset any previous parents here.
-                topParent = 0;
+                topParent = nullptr;
                 str.str(""); //reset the current subname
                 return NotGroup;
             }
@@ -9146,7 +7653,7 @@ int DocumentObjectItem::_getSubName(std::ostringstream &str, App::DocumentObject
 
     auto obj = parent->object()->getObject();
     if(!obj || !obj->getNameInDocument()) {
-        topParent = 0;
+        topParent = nullptr;
         str.str("");
         return NotGroup;
     }
@@ -9174,12 +7681,12 @@ App::DocumentObject *DocumentObjectItem::getRelativeParent(
         App::DocumentObject **topParent, std::string *topSubname) const
 {
     std::ostringstream str2;
-    App::DocumentObject *top=0,*top2=0;
+    App::DocumentObject *top=nullptr,*top2=nullptr;
     getSubName(str,top);
     if(topParent)
         *topParent = top;
     if(!top)
-        return 0;
+        return nullptr;
     if(topSubname)
         *topSubname = str.str() + getName() + '.';
     cousin->getSubName(str2,top2);
@@ -9196,7 +7703,7 @@ App::DocumentObject *DocumentObjectItem::getRelativeParent(
         const char *dot = strchr(sub,'.');
         if(!dot) {
             str.str("");
-            return 0;
+            return nullptr;
         }
         const char *dot2 = strchr(sub2,'.');
         if(!dot2 || dot-sub!=dot2-sub2 || strncmp(sub,sub2,dot-sub)!=0) {
@@ -9205,7 +7712,7 @@ App::DocumentObject *DocumentObjectItem::getRelativeParent(
             if(!top) {
                 FC_ERR("invalid subname " << top->getFullName() << '.' << substr);
                 str.str("");
-                return 0;
+                return nullptr;
             }
             str.str("");
             str << dot+1 << getName() << '.';
@@ -9215,7 +7722,7 @@ App::DocumentObject *DocumentObjectItem::getRelativeParent(
         sub2 = dot2+1;
     }
     str.str("");
-    return 0;
+    return nullptr;
 }
 
 void DocumentObjectItem::setCheckState(bool checked) {

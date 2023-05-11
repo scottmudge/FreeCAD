@@ -31,29 +31,25 @@ if(MSVC)
     )
 endif(MSVC)
 
-if (BUILD_QT5)
-    include_directories(
-        ${Qt5Concurrent_INCLUDE_DIRS}
-    )
-    list(APPEND PartGui_LIBS
-        ${Qt5Concurrent_LIBRARIES}
-    )
-endif()
+include_directories(
+    ${QtConcurrent_INCLUDE_DIRS}
+)
+list(APPEND PartGui_LIBS
+    ${QtConcurrent_LIBRARIES}
+)
 
-if (BUILD_QT5)
-    qt5_add_resources(PartGui_QRC_SRCS Resources/Part.qrc)
-else()
-    qt4_add_resources(PartGui_QRC_SRCS Resources/Part.qrc)
-endif()
+qt_add_resources(PartGui_QRC_SRCS Resources/Part.qrc)
 
 set(PartGui_UIC_SRCS
     CrossSections.ui
     Mirroring.ui
     DlgBooleanOperation.ui
+    DlgExportStep.ui
+    DlgExportHeaderStep.ui
     DlgExtrusion.ui
+    DlgImportStep.ui
     DlgFilletEdges.ui
     DlgImportExportIges.ui
-    DlgImportExportStep.ui
     DlgPartBox.ui
     DlgPartCylinder.ui
     DlgPartImportIges.ui
@@ -63,8 +59,10 @@ set(PartGui_UIC_SRCS
     DlgRevolution.ui
     DlgSettings3DViewPart.ui
     DlgSettingsGeneral.ui
+    DlgSettingsMeasure.ui
     DlgSettingsObjectColor.ui
     DlgProjectionOnSurface.ui
+    SectionCutting.ui
     ShapeFromMesh.ui
     # TaskFaceColors.ui
     TaskShapeBuilder.ui
@@ -73,12 +71,6 @@ set(PartGui_UIC_SRCS
     TaskSweep.ui
     TaskAttacher.ui
 )
-
-if (BUILD_QT5)
-    qt5_wrap_ui(PartGui_UIC_HDRS ${PartGui_UIC_SRCS})
-else()
-    qt4_wrap_ui(PartGui_UIC_HDRS ${PartGui_UIC_SRCS})
-endif()
 
 SET(PartGui_SRCS
     ${PartGui_QRC_SRCS}
@@ -100,14 +92,20 @@ SET(PartGui_SRCS
     DlgBooleanOperation.cpp
     DlgBooleanOperation.h
     DlgBooleanOperation.ui
+    DlgExportStep.cpp
+    DlgExportStep.h
+    DlgExportStep.ui
+    DlgExportHeaderStep.ui
     DlgExtrusion.cpp
     DlgExtrusion.h
     DlgExtrusion.ui
     DlgFilletEdges.cpp
     DlgFilletEdges.h
     DlgFilletEdges.ui
+    DlgImportStep.cpp
+    DlgImportStep.h
+    DlgImportStep.ui
     DlgImportExportIges.ui
-    DlgImportExportStep.ui
     DlgPartBox.ui
     DlgPartBoxImp.cpp
     DlgPartBoxImp.h
@@ -133,9 +131,15 @@ SET(PartGui_SRCS
     DlgSettingsGeneral.cpp
     DlgSettingsGeneral.h
     DlgSettingsGeneral.ui
+    DlgSettingsMeasure.cpp
+    DlgSettingsMeasure.h
+    DlgSettingsMeasure.ui
     DlgSettingsObjectColor.cpp
     DlgSettingsObjectColor.h
     DlgSettingsObjectColor.ui
+    DlgSettingsMeasure.cpp
+    DlgSettingsMeasure.h
+    DlgSettingsMeasure.ui
     DlgProjectionOnSurface.cpp
     DlgProjectionOnSurface.h
     DlgProjectionOnSurface.ui
@@ -144,6 +148,8 @@ SET(PartGui_SRCS
     PreCompiled.h
     PropertyEnumAttacherItem.cpp
     PropertyEnumAttacherItem.h
+    ShapeObserver.cpp
+    ShapeObserver.h
     SoFCShapeObject.cpp
     SoFCShapeObject.h
     SoBrepEdgeSet.cpp
@@ -214,6 +220,11 @@ SET(PartGui_SRCS
     ViewProviderSubShapeBinder.h
     Workbench.cpp
     Workbench.h
+    ReferenceHighlighter.cpp
+    ReferenceHighlighter.h
+    SectionCutting.cpp
+    SectionCutting.h
+    SectionCutting.ui
     ShapeFromMesh.cpp
     ShapeFromMesh.h
     # TaskFaceColors.cpp
@@ -237,8 +248,8 @@ SET(PartGui_SRCS
     TaskDimension.h
     TaskCheckGeometry.cpp
     TaskCheckGeometry.h
-    TaskAttacher.h 
-    TaskAttacher.cpp 
+    TaskAttacher.h
+    TaskAttacher.cpp
     ViewProviderPartExtPy.xml
     ViewProviderPartExtPyImp.cpp
     PartParams.h 

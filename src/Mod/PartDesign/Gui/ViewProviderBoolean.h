@@ -40,20 +40,20 @@ public:
     /// constructor
     ViewProviderBoolean();
     /// destructor
-    virtual ~ViewProviderBoolean();
+    ~ViewProviderBoolean() override;
 
     App::PropertyEnumeration Display;
-    
+
     /// grouping handling
     void setupContextMenu(QMenu*, QObject*, const char*) override;
 
-    virtual void attach(App::DocumentObject*) override;
-    virtual void onChanged(const App::Property* prop) override;
+    void attach(App::DocumentObject*) override;
+    void onChanged(const App::Property* prop) override;
 
     void extensionModeSwitchChange() override;
 
 protected:
-    virtual TaskDlgFeatureParameters *getEditDialog() override;
+    TaskDlgFeatureParameters *getEditDialog() override;
     
     static const char* DisplayEnum[];
 

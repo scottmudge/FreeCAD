@@ -26,19 +26,15 @@
 # include <BRepAlgo.hxx>
 # include <BRepFilletAPI_MakeChamfer.hxx>
 # include <TopExp.hxx>
-# include <TopExp_Explorer.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Edge.hxx>
-# include <TopTools_IndexedMapOfShape.hxx>
 # include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
 # include <TopTools_ListOfShape.hxx>
-# include <BRep_Tool.hxx>
 # include <ShapeFix_Shape.hxx>
 # include <ShapeFix_ShapeTolerance.hxx>
 # include <Standard_Version.hxx>
 #endif
 
-#include <Base/Console.h>
 #include <Base/Exception.h>
 #include <Base/Reader.h>
 #include <App/Document.h>
@@ -53,7 +49,7 @@ using namespace PartDesign;
 
 PROPERTY_SOURCE(PartDesign::Chamfer, PartDesign::DressUp)
 
-const char* ChamferTypeEnums[] = {"Equal distance", "Two distances", "Distance and Angle", NULL};
+const char* ChamferTypeEnums[] = {"Equal distance", "Two distances", "Distance and Angle", nullptr};
 const App::PropertyQuantityConstraint::Constraints Chamfer::floatSize = {0.0, FLT_MAX, 0.1};
 const App::PropertyAngle::Constraints Chamfer::floatAngle = {0.0, 180.0, 1.0};
 
@@ -77,6 +73,9 @@ Chamfer::Chamfer()
     Angle.setConstraints(&floatAngle);
 
     ADD_PROPERTY_TYPE(FlipDirection, (false), "Chamfer", App::Prop_None, "Flip direction");
+    ADD_PROPERTY_TYPE(UseAllEdges, (false), "Chamfer", App::Prop_None,
+             "Chamfer all edges if true, else use only those edges in Base property.\n"
+             "If true, then this overrides any edge changes made to the Base property or in the dialog.\n");
 
     ADD_PROPERTY(ChamferInfo,());
     ChamferInfo.connectLinkProperty(Base);
@@ -107,7 +106,7 @@ short Chamfer::mustExecute() const
     return DressUp::mustExecute();
 }
 
-App::DocumentObjectExecReturn *Chamfer::execute(void)
+App::DocumentObjectExecReturn *Chamfer::execute()
 {
     // NOTE: Normally the Base property and the BaseFeature property should point to the same object.
     // The only difference is that the Base property also stores the edges that are to be chamfered
@@ -119,9 +118,10 @@ App::DocumentObjectExecReturn *Chamfer::execute(void)
     }
     baseShape.setTransform(Base::Matrix4D());
 
-    auto edges = getContinuousEdges(baseShape);
+    auto edges = UseAllEdges.getValue() ? baseShape.getSubTopoShapes(TopAbs_EDGE)
+                                        : getContinuousEdges(baseShape);
 
-    if (edges.size() == 0)
+    if (edges.empty())
         return new App::DocumentObjectExecReturn("No edges specified");
 
     const int chamferType = ChamferType.getValue();

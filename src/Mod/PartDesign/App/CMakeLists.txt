@@ -89,6 +89,8 @@ SET(FeaturesDressUp_SRCS
 SOURCE_GROUP("DressUpFeatures" FILES ${FeaturesDressUp_SRCS})
 
 SET(FeaturesSketchBased_SRCS
+    FeatureExtrude.cpp
+    FeatureExtrude.h
     FeatureSketchBased.cpp
     FeatureSketchBased.h
     FeaturePad.cpp

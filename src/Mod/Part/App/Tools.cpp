@@ -23,30 +23,39 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <cassert>
-# include <gp_Pln.hxx>
-# include <gp_Lin.hxx>
 # include <BRep_Tool.hxx>
+# include <BRepAdaptor_Curve.hxx>
+# include <BRepAdaptor_Surface.hxx>
+# include <BRepBuilderAPI_MakeEdge.hxx>
+# include <BRepBuilderAPI_MakeFace.hxx>
+# include <BRepLProp_SLProps.hxx>
+# include <BRepMesh_IncrementalMesh.hxx>
+# include <CSLib.hxx>
 # include <Geom_BSplineSurface.hxx>
+# include <Geom_Line.hxx>
 # include <Geom_Plane.hxx>
+# include <Geom_Point.hxx>
 # include <GeomAPI_IntSS.hxx>
 # include <GeomAPI_ProjectPointOnSurf.hxx>
-# include <Geom_Line.hxx>
-# include <Geom_Point.hxx>
 # include <GeomAdaptor_Curve.hxx>
 # include <GeomLib.hxx>
+# include <GeomLProp_SLProps.hxx>
 # include <GeomPlate_BuildPlateSurface.hxx>
 # include <GeomPlate_CurveConstraint.hxx>
 # include <GeomPlate_MakeApprox.hxx>
 # include <GeomPlate_PlateG0Criterion.hxx>
 # include <GeomPlate_PointConstraint.hxx>
+# include <gp_Lin.hxx>
+# include <gp_Pln.hxx>
+# include <gp_Quaternion.hxx>
 # include <Poly_Connect.hxx>
 # include <Poly_Triangulation.hxx>
 # include <Precision.hxx>
 # include <Standard_Mutex.hxx>
 # include <Standard_TypeMismatch.hxx>
 # include <Standard_Version.hxx>
-# include <TColStd_ListOfTransient.hxx>
 # include <TColStd_ListIteratorOfListOfTransient.hxx>
+# include <TColStd_ListOfTransient.hxx>
 # include <TColgp_SequenceOfXY.hxx>
 # include <TColgp_SequenceOfXYZ.hxx>
 # include <TopoDS.hxx>
@@ -57,7 +66,9 @@
 #endif
 
 #include <Base/Vector3D.h>
+
 #include "Tools.h"
+
 
 void Part::closestPointsOnLines(const gp_Lin& lin1, const gp_Lin& lin2, gp_Pnt& p1, gp_Pnt& p2)
 {
@@ -589,4 +600,139 @@ void Part::Tools::applyTransformationOnNormals(const TopLoc_Location& loc, std::
             it.Transform(myTransf);
         }
     }
+}
+
+Handle (Poly_Triangulation) Part::Tools::triangulationOfFace(const TopoDS_Face& face)
+{
+    TopLoc_Location loc;
+    Handle (Poly_Triangulation) mesh = BRep_Tool::Triangulation(face, loc);
+    if (!mesh.IsNull())
+        return mesh;
+
+    // If no triangulation exists then the shape is probably infinite
+    BRepAdaptor_Surface adapt(face);
+    double u1 = adapt.FirstUParameter();
+    double u2 = adapt.LastUParameter();
+    double v1 = adapt.FirstVParameter();
+    double v2 = adapt.LastVParameter();
+
+    auto selectRange = [](double& p1, double& p2) {
+        if (Precision::IsInfinite(p1) && Precision::IsInfinite(p2)) {
+            p1 = -50.0;
+            p2 =  50.0;
+        }
+        else if (Precision::IsInfinite(p1)) {
+            p1 = p2 - 100.0;
+        }
+        else if (Precision::IsInfinite(p2)) {
+            p2 = p1 + 100.0;
+        }
+    };
+
+    // recreate a face with a clear boundary in case it's infinite
+    selectRange(u1, u2);
+    selectRange(v1, v2);
+
+    Handle(Geom_Surface) surface = BRep_Tool::Surface(face);
+    BRepBuilderAPI_MakeFace mkBuilder(surface, u1, u2, v1, v2, Precision::Confusion() );
+
+    TopoDS_Shape shape = mkBuilder.Shape();
+    shape.Location(loc);
+
+    BRepMesh_IncrementalMesh(shape, 0.1);
+    return BRep_Tool::Triangulation(TopoDS::Face(shape), loc);
+}
+
+Handle(Poly_Polygon3D) Part::Tools::polygonOfEdge(const TopoDS_Edge& edge, TopLoc_Location& loc)
+{
+    BRepAdaptor_Curve adapt(edge);
+    double u = adapt.FirstParameter();
+    double v = adapt.LastParameter();
+    Handle(Poly_Polygon3D) aPoly = BRep_Tool::Polygon3D(edge, loc);
+    if (!aPoly.IsNull() && !Precision::IsInfinite(u) && !Precision::IsInfinite(v))
+        return aPoly;
+
+    // recreate an edge with a clear range
+    u = std::max(-50.0, u);
+    v = std::min( 50.0, v);
+
+    double uv;
+    Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, uv, uv);
+
+    BRepBuilderAPI_MakeEdge mkBuilder(curve, u, v);
+    TopoDS_Shape shape = mkBuilder.Shape();
+    // why do we have to set the inverted location here?
+    TopLoc_Location inv = loc.Inverted();
+    shape.Location(inv);
+
+    BRepMesh_IncrementalMesh(shape, 0.1);
+    TopLoc_Location tmp;
+    return BRep_Tool::Polygon3D(TopoDS::Edge(shape), tmp);
+}
+
+// helper function to use in getNormal, here we pass the local properties
+// of the surface given by the #LProp_SLProps objects
+template <typename T>
+void getNormalBySLProp(T& prop, double u, double v, Standard_Real lastU, Standard_Real lastV,
+                     const Standard_Real tol, gp_Dir& dir, Standard_Boolean& done)
+{
+    if (prop.D1U().Magnitude() > tol &&
+        prop.D1V().Magnitude() > tol &&
+        prop.IsNormalDefined()) {
+        dir = prop.Normal();
+        done = Standard_True;
+    }
+    // use an alternative method in case of a null normal
+    else {
+        CSLib_NormalStatus stat;
+        CSLib::Normal(prop.D1U(), prop.D1V(), prop.D2U(), prop.D2V(), prop.DUV(),
+            tol, done, stat, dir);
+        // at the right boundary, the normal is flipped with respect to the
+        // normal on surrounding points.
+        if (stat == CSLib_D1NuIsNull) {
+            if (Abs(lastV - v) < tol)
+                dir.Reverse();
+        }
+        else if (stat == CSLib_D1NvIsNull || stat == CSLib_D1NuIsParallelD1Nv) {
+            if (Abs(lastU - u) < tol)
+                dir.Reverse();
+        }
+    }
+}
+
+void Part::Tools::getNormal(const Handle(Geom_Surface)& surf, double u, double v,
+                            const Standard_Real tol, gp_Dir& dir, Standard_Boolean& done)
+{
+    GeomLProp_SLProps prop(surf, u, v, 1, tol);
+    Standard_Real u1,u2,v1,v2;
+    surf->Bounds(u1,u2,v1,v2);
+
+    getNormalBySLProp<GeomLProp_SLProps>(prop, u, v, u2, v2, tol, dir, done);
+}
+
+void Part::Tools::getNormal(const TopoDS_Face& face, double u, double v,
+                            const Standard_Real tol, gp_Dir& dir, Standard_Boolean& done)
+{
+    BRepAdaptor_Surface adapt(face);
+    BRepLProp_SLProps prop(adapt, u, v, 1, tol);
+    Standard_Real u2 = adapt.LastUParameter();
+    Standard_Real v2 = adapt.LastVParameter();
+
+    getNormalBySLProp<BRepLProp_SLProps>(prop, u, v, u2, v2, tol, dir, done);
+
+    if (face.Orientation() == TopAbs_REVERSED)
+        dir.Reverse();
+}
+
+TopLoc_Location Part::Tools::fromPlacement(const Base::Placement& plm)
+{
+    Base::Rotation r = plm.getRotation();
+    double q1, q2, q3, q4;
+    r.getValue(q1, q2, q3, q4);
+    Base::Vector3d t = plm.getPosition();
+
+    gp_Trsf trf;
+    trf.SetTranslation(gp_Vec(t.x, t.y, t.z));
+    trf.SetRotation(gp_Quaternion(q1, q2, q3, q4));
+    return {trf};
 }

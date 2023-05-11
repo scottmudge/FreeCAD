@@ -20,12 +20,11 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_DIALOG_DLGSETTINGSIMAGE_IMP_H
 #define GUI_DIALOG_DLGSETTINGSIMAGE_IMP_H
 
-#include <Inventor/SoOffscreenRenderer.h>
 #include <Inventor/SbMatrix.h>
+#include <Inventor/SoOffscreenRenderer.h>
 
 #include <QWidget>
 #include <memory>
@@ -44,8 +43,8 @@ class DlgSettingsImageImp : public QWidget
     Q_OBJECT
 
 public:
-    DlgSettingsImageImp( QWidget* parent = 0 );
-    ~DlgSettingsImageImp();
+    explicit DlgSettingsImageImp( QWidget* parent = nullptr );
+    ~DlgSettingsImageImp() override;
 
     /** @name Image dimensions */
     //@{
@@ -80,7 +79,7 @@ protected Q_SLOTS:
 protected:
     // helper to force an aspect ratio
     void adjustImageSize(float fRatio);
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
 
 
 private:

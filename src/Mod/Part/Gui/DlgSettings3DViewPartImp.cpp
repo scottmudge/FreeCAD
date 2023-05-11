@@ -20,28 +20,28 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
+#ifndef _PreComp_
+# include <QMessageBox>
+#endif
 
-#include <Python.h>
-#include <QMessageBox>
-#include "ViewProvider.h"
-#include "DlgSettings3DViewPartImp.h"
-#include "ui_DlgSettings3DViewPart.h"
-
-#include <Gui/PrefWidgets.h>
-#include <Gui/Application.h>
-#include <Gui/Document.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <Base/Console.h>
+#include <Gui/Application.h>
+#include <Gui/Document.h>
+#include <Gui/PrefWidgets.h>
+
+#include "DlgSettings3DViewPartImp.h"
+#include "ui_DlgSettings3DViewPart.h"
 #include "PartParams.h"
+#include "ViewProvider.h"
 
 using namespace PartGui;
 
 /**
- *  Constructs a DlgSettings3DViewPart which is a child of 'parent', with the 
- *  name 'name' and widget flags set to 'f' 
+ *  Constructs a DlgSettings3DViewPart which is a child of 'parent', with the
+ *  name 'name' and widget flags set to 'f'
  */
 DlgSettings3DViewPart::DlgSettings3DViewPart(QWidget* parent)
   : PreferencePage(parent), ui(new Ui_DlgSettings3DViewPart), checkValue(false)
@@ -63,7 +63,7 @@ DlgSettings3DViewPart::DlgSettings3DViewPart(QWidget* parent)
     connect(ui->angularDeflectionLowerBound, SIGNAL(valueChanged(double)), this, SLOT(onLowerBoundChanged()));
 }
 
-/** 
+/**
  *  Destroys the object and frees any allocated resources
  */
 DlgSettings3DViewPart::~DlgSettings3DViewPart()

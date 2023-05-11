@@ -20,48 +20,42 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <sstream>
 # include <QApplication>
 # include <QMessageBox>
+
 # include <BRep_Builder.hxx>
 # include <BRepBuilderAPI_MakePolygon.hxx>
 # include <TopoDS_Compound.hxx>
 #endif
 
-#include <sstream>
-
-#include <Mod/Part/App/TopoShape.h>
-#include <Mod/Part/App/PartFeature.h>
-#include <Mod/Part/App/FaceMakerCheese.h>
-#include <Mod/Part/App/Geometry.h>
-#include <Mod/Part/App/Tools.h>
-#include <Mod/Points/App/Structured.h>
-#include <Mod/Mesh/App/Mesh.h>
-#include <Mod/Mesh/App/MeshFeature.h>
-#include <Mod/Mesh/App/Core/Approximation.h>
-#include <Mod/Mesh/App/Core/Algorithm.h>
-
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DocumentObjectGroup.h>
+#include <Base/CoordinateSystem.h>
+#include <Base/Tools.h>
 #include <Gui/Application.h>
 #include <Gui/Command.h>
 #include <Gui/Control.h>
 #include <Gui/MainWindow.h>
-#include <Gui/FileDialog.h>
 #include <Gui/Selection.h>
-#include <Base/Builder3D.h>
-#include <Base/CoordinateSystem.h>
-#include <Base/Converter.h>
-#include <Base/Tools.h>
+#include <Mod/Part/App/FaceMakerCheese.h>
+#include <Mod/Part/App/Geometry.h>
+#include <Mod/Part/App/PartFeature.h>
+#include <Mod/Part/App/Tools.h>
+#include <Mod/Points/App/Structured.h>
+#include <Mod/ReverseEngineering/App/ApproxSurface.h>
+#include <Mod/Mesh/App/Core/Approximation.h>
+#include <Mod/Mesh/App/Core/Algorithm.h>
+#include <Mod/Mesh/App/MeshFeature.h>
 
-#include "../App/ApproxSurface.h"
 #include "FitBSplineSurface.h"
 #include "Poisson.h"
 #include "Segmentation.h"
 #include "SegmentationManual.h"
+
 
 using namespace std;
 
@@ -461,7 +455,7 @@ void CmdSegmentationFromComponents::activated(int)
 
         const Mesh::MeshObject& mesh = it->Mesh.getValue();
         std::vector<std::vector<MeshCore::FacetIndex> > comps = mesh.getComponents();
-        for (auto jt : comps) {
+        for (const auto& jt : comps) {
             std::unique_ptr<Mesh::MeshObject> segment(mesh.meshFromSegment(jt));
             Mesh::Feature* feaSegm = static_cast<Mesh::Feature*>(group->addObject("Mesh::Feature", "Segment"));
             Mesh::MeshObject* feaMesh = feaSegm->Mesh.startEditing();
@@ -610,10 +604,8 @@ void CmdViewTriangulation::activated(int)
                 "Width=%2.Width,"
                 "Height=%2.Height)"
             )
-            .arg(document)
-            .arg(object)
-            ;
-            runCommand(Doc, command.toLatin1());
+            .arg(document, object);
+            runCommand(Doc, command.toUtf8());
         }
 
         commitCommand();

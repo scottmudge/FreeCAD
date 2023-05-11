@@ -23,27 +23,23 @@
 #ifndef EXPRESSION_H
 #define EXPRESSION_H
 
+#include <deque>
+#include <list>
+#include <set>
 #include <string>
 #include <boost/pool/pool_alloc.hpp>
 #include <boost/tuple/tuple.hpp>
-#include <Base/Exception.h>
-#include <Base/Unit.h>
 #include <App/PropertyLinks.h>
 #include <App/ObjectIdentifier.h>
-#include <Base/BaseClass.h>
-#include <Base/Quantity.h>
-#include <set>
-#include <list>
 #include <App/Range.h>
+#include <Base/Exception.h>
+#include <Base/BaseClass.h>
+#include <Base/Unit.h>
 
 namespace Base {
 class XMLReader;
+class Quantity;
 }
-
-#if defined(__clang__)
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Woverloaded-virtual"
-#endif
 
 namespace App  {
 
@@ -51,22 +47,22 @@ class DocumentObject;
 class Expression;
 class Document;
 
-typedef std::unique_ptr<Expression> ExpressionPtr;
+using ExpressionPtr = std::unique_ptr<Expression>;
 
 AppExport bool isAnyEqual(const App::any &v1, const App::any &v2);
-AppExport Base::Quantity anyToQuantity(const App::any &value, const char *errmsg = 0);
+AppExport Base::Quantity anyToQuantity(const App::any &value, const char *errmsg = nullptr);
 
 // Map of depending objects to a map of depending property name to the full referencing object identifier
-typedef std::map<App::DocumentObject*, std::map<std::string, std::vector<ObjectIdentifier> > > ExpressionDeps;
+using ExpressionDeps = std::map<App::DocumentObject*, std::map<std::string, std::vector<ObjectIdentifier> > >;
 
 class AppExport ExpressionVisitor {
 public:
-    virtual ~ExpressionVisitor() {}
+    virtual ~ExpressionVisitor() = default;
     virtual void visit(Expression &e) = 0;
     virtual void aboutToChange() {}
     virtual int changed() const { return 0;}
     virtual void reset() {}
-    virtual App::PropertyLinkBase* getPropertyLink() {return 0;}
+    virtual App::PropertyLinkBase* getPropertyLink() {return nullptr;}
 
 protected:
     void getIdentifiers(Expression &e, std::map<App::ObjectIdentifier, bool> &); 
@@ -74,11 +70,11 @@ protected:
     bool relabeledDocument(Expression &e, const std::string &oldName, const std::string &newName);
     bool renameObjectIdentifier(Expression &e,
             const std::map<ObjectIdentifier,ObjectIdentifier> &, const ObjectIdentifier &);
-    void collectReplacement(Expression &e, std::map<ObjectIdentifier,ObjectIdentifier> &, 
+    void collectReplacement(Expression &e, std::map<ObjectIdentifier,ObjectIdentifier> &,
             const App::DocumentObject *parent, App::DocumentObject *oldObj, App::DocumentObject *newObj) const;
     bool updateElementReference(Expression &e, App::DocumentObject *feature,bool reverse);
     void importSubNames(Expression &e, const ObjectIdentifier::SubNameMap &subNameMap);
-    void updateLabelReference(Expression &e, App::DocumentObject *obj, 
+    void updateLabelReference(Expression &e, App::DocumentObject *obj,
             const std::string &ref, const char *newLabel);
     void moveCells(Expression &e, const CellAddress &address, int rowCount, int colCount);
     void offsetCells(Expression &e, int rowOffset, int colOffset);
@@ -86,25 +82,25 @@ protected:
 
 template<class P> class ExpressionModifier : public ExpressionVisitor {
 public:
-    ExpressionModifier(P & _prop)
+    explicit ExpressionModifier(P & _prop)
         : prop(_prop)
         , propLink(Base::freecad_dynamic_cast<App::PropertyLinkBase>(&prop))
         , signaller(_prop,false)
-        , _changed(0) 
+        , _changed(0)
     {}
 
-    virtual ~ExpressionModifier() { }
+    ~ExpressionModifier() override = default;
 
-    virtual void aboutToChange() override{
+    void aboutToChange() override{
         ++_changed;
         signaller.aboutToChange();
     }
 
-    virtual int changed() const override { return _changed; }
+    int changed() const override { return _changed; }
 
-    virtual void reset() override {_changed = 0;}
+    void reset() override {_changed = 0;}
 
-    virtual App::PropertyLinkBase* getPropertyLink() override {return propLink;}
+    App::PropertyLinkBase* getPropertyLink() override {return propLink;}
 
 protected:
     P & prop;
@@ -154,15 +150,16 @@ _ExpressionAllocDefine(_ExpressionAllocator,boost::pool_allocator);
   */
 
 class AppExport Expression : public Base::BaseClass {
-    TYPESYSTEM_HEADER();
+    TYPESYSTEM_HEADER_WITH_OVERRIDE();
 
 public:
-    virtual ~Expression();
-
-    Expression(const App::DocumentObject *_owner);
 
     Expression(const Expression&) = delete;
     void operator=(const Expression &)=delete;
+
+    explicit Expression(const App::DocumentObject * _owner);
+
+    ~Expression() override;
 
     virtual bool isTouched() const { return false; }
 
@@ -231,12 +228,12 @@ public:
     void getDeps(ExpressionDeps &deps, int option=DepNormal) const;
     ExpressionDeps getDeps(int option=DepNormal) const;
 
-    std::map<App::DocumentObject*,bool> getDepObjects(std::vector<std::string> *labels=0) const;
-    void getDepObjects(std::map<App::DocumentObject*,bool> &, std::vector<std::string> *labels=0) const;
+    std::map<App::DocumentObject*,bool> getDepObjects(std::vector<std::string> *labels=nullptr) const;
+    void getDepObjects(std::map<App::DocumentObject*,bool> &, std::vector<std::string> *labels=nullptr) const;
 
     ExpressionPtr importSubNames(const std::map<std::string,std::string> &nameMap) const;
 
-    ExpressionPtr updateLabelReference(App::DocumentObject *obj, 
+    ExpressionPtr updateLabelReference(App::DocumentObject *obj,
             const std::string &ref, const char *newLabel) const;
 
     ExpressionPtr replaceObject(const App::DocumentObject *parent,
@@ -250,7 +247,7 @@ public:
 
     class Exception : public Base::Exception {
     public:
-        Exception(const char *sMessage) : Base::Exception(sMessage) { }
+        explicit Exception(const char *sMessage) : Base::Exception(sMessage) { }
     };
 
     App::DocumentObject *getOwner() const { return owner; }
@@ -260,9 +257,9 @@ public:
 
     virtual void addComponent(ComponentPtr &&component);
 
-    typedef std::vector<ComponentPtr, ExpressionAllocator(ComponentPtr) > ComponentList;
-    typedef std::vector<std::string, ExpressionAllocator(std::string) > StringList;
-    typedef std::vector<ExpressionPtr, ExpressionAllocator(ExpressionPtr) > ExpressionList;
+    using ComponentList = std::vector<ComponentPtr, ExpressionAllocator(ComponentPtr) >;
+    using StringList = std::vector<std::string, ExpressionAllocator(std::string) >;
+    using ExpressionList = std::vector<ExpressionPtr, ExpressionAllocator(ExpressionPtr) >;
 
     static ComponentPtr createComponent(const std::string &n);
     static ComponentPtr createComponent(ExpressionPtr &&e1, ExpressionPtr &&e2=ExpressionPtr(), 
@@ -282,10 +279,10 @@ protected:
     virtual bool _relabeledDocument(const std::string &, const std::string &, ExpressionVisitor &) {return false;}
     virtual void _importSubNames(const ObjectIdentifier::SubNameMap &) {}
     virtual void _updateLabelReference(App::DocumentObject *, const std::string &, const char *) {}
-    virtual bool _renameObjectIdentifier(const std::map<ObjectIdentifier,ObjectIdentifier> &, 
+    virtual bool _renameObjectIdentifier(const std::map<ObjectIdentifier,ObjectIdentifier> &,
                                          const ObjectIdentifier &, ExpressionVisitor &) {return false;}
     virtual void _collectReplacement(std::map<ObjectIdentifier,ObjectIdentifier> &,
-        const App::DocumentObject *parent, App::DocumentObject *oldObj, App::DocumentObject *newObj) const 
+        const App::DocumentObject *parent, App::DocumentObject *oldObj, App::DocumentObject *newObj) const
     {
         (void)parent;
         (void)oldObj;
@@ -293,7 +290,7 @@ protected:
     }
     virtual void _moveCells(const CellAddress &, int, int, ExpressionVisitor &) {}
     virtual void _offsetCells(int, int, ExpressionVisitor &) {}
-    virtual Py::Object _getPyValue(int *jumpCode=0) const = 0;
+    virtual Py::Object _getPyValue(int *jumpCode=nullptr) const = 0;
     virtual void _visit(ExpressionVisitor &) {}
 
     void swapComponents(Expression &other) {components.swap(other.components);}

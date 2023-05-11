@@ -23,35 +23,36 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+# include <sstream>
+# include <QLocale>
+# include <QStringList>
+# include <boost/tokenizer.hpp>
+# include <boost/algorithm/string/predicate.hpp>
 #endif
 
-#include <QLocale>
-#include <QStringList>
-
-#include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-#include "Cell.h"
-#include "Utils.h"
 #include <boost/tokenizer.hpp>
 #include <Base/Reader.h>
+#include <App/Application.h>
+#include <App/ExpressionParser.h>
+#include <App/Material.h>
+#include <Base/Console.h>
+#include <Base/Parameter.h>
 #include <Base/Quantity.h>
+#include <Base/Reader.h>
 #include <Base/Tools.h>
 #include <Base/UnitsApi.h>
 #include <Base/Writer.h>
-#include <Base/Console.h>
-#include <Base/Parameter.h>
-#include <App/ExpressionParser.h>
-#include <App/Application.h>
-#include <App/Material.h>
+
 #include "Sheet.h"
-#include <iomanip>
-#include <cctype>
+#include "Cell.h"
+#include "Utils.h"
 
 Q_DECLARE_METATYPE(Base::Quantity)
 
-FC_LOG_LEVEL_INIT("Spreadsheet",true,true)
+FC_LOG_LEVEL_INIT("Spreadsheet", true, true)
 
 #ifdef _MSC_VER
 #define __func__ __FUNCTION__
@@ -76,7 +77,6 @@ const int Cell::MARK_SET             = 0x40000000;
 const int Cell::EXCEPTION_SET        = 0x20000000;
 const int Cell::PARSE_EXCEPTION_SET  = 0x80000000;
 const int Cell::RESOLVE_EXCEPTION_SET= 0x01000000;
-const int Cell::SPANS_UPDATED        = 0x10000000;
 
 /* Alignment */
 const int Cell::ALIGNMENT_LEFT       = 0x01;
@@ -189,7 +189,7 @@ void Cell::setExpression(App::ExpressionPtr &&expr, int type)
     if(func)
         setAlias(func->getName(), true);
 
-    if((type & PasteFormat) && expr && expr->comment.size()) {
+    if((type & PasteFormat) && expr && !expr->comment.empty()) {
         if(!boost::starts_with(expr->comment,"<Cell "))
             FC_WARN("Unknown style of cell "
                 << owner->sheet()->getFullName() << '.' << address.toString());
@@ -306,9 +306,9 @@ void Cell::setContent(const char * value, bool eval)
     ExpressionPtr newExpr;
 
     clearException();
-    if (value != 0) {
+    if (value) {
         if(owner->sheet()->isRestoring()) {
-            if (value[0] == '\'' && value[1] == '\0')
+            if (value[0] == '\0' || (value[0] == '\'' && value[1] == '\0'))
                 return;
             expression = StringExpression::create(owner->sheet(),value);
             setUsed(EXPRESSION_SET, true);
@@ -427,7 +427,7 @@ void Cell::setStyle(const std::set<std::string> & _style)
         PropertySheet::AtomicPropertyChange signaller(*owner);
 
         style = _style;
-        setUsed(STYLE_SET, style.size() > 0);
+        setUsed(STYLE_SET, !style.empty());
         setDirty();
 
         signaller.tryInvoke();
@@ -513,7 +513,7 @@ bool Cell::getBackground(App::Color &color) const
 void Cell::setDisplayUnit(const std::string &unit)
 {
     DisplayUnit newDisplayUnit;
-    if (unit.size() > 0) {
+    if (!unit.empty()) {
         auto e = Expression::parseUnit(owner->sheet(), unit.c_str());
 
         if (!e)
@@ -692,7 +692,6 @@ void Cell::setSpans(int rows, int columns)
         rowSpan = (rows == -1 ? 1 : rows);
         colSpan = (columns == -1 ? 1 : columns);
         setUsed(SPANS_SET, (rowSpan != 1 || colSpan != 1) );
-        setUsed(SPANS_UPDATED);
         setDirty();
         signaller.tryInvoke();
     }
@@ -712,7 +711,7 @@ bool Cell::getSpans(int &rows, int &columns) const
 
 void Cell::setException(const std::string &e, bool silent)
 {
-    if(!silent && e.size() && owner && owner->sheet()) {
+    if(!silent && !e.empty() && owner && owner->sheet()) {
         FC_ERR(owner->sheet()->getFullName() << '.' 
                 << address.toString() << ": " << e);
     }
@@ -723,7 +722,7 @@ void Cell::setException(const std::string &e, bool silent)
 
 void Cell::setParseException(const std::string &e)
 {
-    if(e.size() && owner && owner->sheet()) {
+    if(!e.empty() && owner && owner->sheet()) {
         FC_ERR(owner->sheet()->getFullName() << '.' 
                 << address.toString() << ": " << e);
     }
@@ -733,7 +732,7 @@ void Cell::setParseException(const std::string &e)
 
 void Cell::setResolveException(const std::string &e)
 {
-    if(e.size() && owner && owner->sheet()) {
+    if(!e.empty() && owner && owner->sheet()) {
         FC_LOG(owner->sheet()->getFullName() << '.' 
                 << address.toString() << ": " << e);
     }
@@ -808,14 +807,14 @@ void Cell::restore(Base::XMLReader &reader, bool checkAlias, int restoreType)
 
 void Cell::restoreFormat(Base::XMLReader &reader, bool checkAlias)
 {
-    const char* style = reader.hasAttribute("style") ? reader.getAttribute("style") : 0;
-    const char* alignment = reader.hasAttribute("alignment") ? reader.getAttribute("alignment") : 0;
-    const char* foregroundColor = reader.hasAttribute("foregroundColor") ? reader.getAttribute("foregroundColor") : 0;
-    const char* backgroundColor = reader.hasAttribute("backgroundColor") ? reader.getAttribute("backgroundColor") : 0;
-    const char* displayUnit = reader.hasAttribute("displayUnit") ? reader.getAttribute("displayUnit") : 0;
-    const char* alias = reader.hasAttribute("alias") ? reader.getAttribute("alias") : 0;
-    const char* rowSpan = reader.hasAttribute("rowSpan") ? reader.getAttribute("rowSpan") : 0;
-    const char* colSpan = reader.hasAttribute("colSpan") ? reader.getAttribute("colSpan") : 0;
+    const char* style = reader.hasAttribute("style") ? reader.getAttribute("style") : nullptr;
+    const char* alignment = reader.hasAttribute("alignment") ? reader.getAttribute("alignment") : nullptr;
+    const char* foregroundColor = reader.hasAttribute("foregroundColor") ? reader.getAttribute("foregroundColor") : nullptr;
+    const char* backgroundColor = reader.hasAttribute("backgroundColor") ? reader.getAttribute("backgroundColor") : nullptr;
+    const char* displayUnit = reader.hasAttribute("displayUnit") ? reader.getAttribute("displayUnit") : nullptr;
+    const char* alias = reader.hasAttribute("alias") ? reader.getAttribute("alias") : nullptr;
+    const char* rowSpan = reader.hasAttribute("rowSpan") ? reader.getAttribute("rowSpan") : nullptr;
+    const char* colSpan = reader.hasAttribute("colSpan") ? reader.getAttribute("colSpan") : nullptr;
 
     // Don't trigger multiple updates below; wait until everything is loaded by calling unfreeze() below.
     PropertySheet::AtomicPropertyChange signaller(*owner);
@@ -1020,7 +1019,7 @@ int Cell::decodeAlignment(const std::string & itemStr, int alignment)
         alignment = (alignment & ~Cell::ALIGNMENT_VERTICAL) | Cell::ALIGNMENT_VCENTER;
     else if (itemStr == "bottom")
         alignment = (alignment & ~Cell::ALIGNMENT_VERTICAL) | Cell::ALIGNMENT_BOTTOM;
-    else if(itemStr.size())
+    else if(!itemStr.empty())
         throw Base::ValueError("Invalid alignment.");
 
     return alignment;
@@ -1127,7 +1126,7 @@ App::Color Cell::decodeColor(const std::string & color, const App::Color & defau
 
         if (color[0] != '#')
             return defaultColor;
-        unsigned int value = strtoul(color.c_str() + 1, 0, 16);
+        unsigned int value = strtoul(color.c_str() + 1, nullptr, 16);
 
         if (color.size() == 7)
             value = (value << 8) | 0xff;

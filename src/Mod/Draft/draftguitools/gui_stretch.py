@@ -118,7 +118,6 @@ class Stretch(gui_base_original.Modifier):
             self.step = 1
             self.refpoint = None
             self.ui.pointUi(title=translate("draft", self.featureName), icon="Draft_Stretch")
-            self.ui.extUi()
             self.call = self.view.addEventCallback("SoEvent", self.action)
             self.rectracker = trackers.rectangleTracker(dotted=True,
                                                         scolor=(0.0, 0.0, 1.0),
@@ -255,7 +254,7 @@ class Stretch(gui_base_original.Modifier):
         point = App.Vector(numx, numy, numz)
         self.addPoint(point)
 
-    def finish(self, closed=False):
+    def finish(self, cont=False):
         """Terminate the operation of the command. and clean up."""
         if self.rectracker:
             self.rectracker.finalize()

@@ -24,70 +24,29 @@
 #ifndef PARTDESIGN_Pad_H
 #define PARTDESIGN_Pad_H
 
-#include <App/PropertyUnits.h>
-#include <App/PropertyStandard.h>
-#include <App/PropertyUnits.h>
-
-#include "FeatureSketchBased.h"
+#include "FeatureExtrude.h"
 
 namespace PartDesign
 {
 
-class PartDesignExport Pad : public ProfileBased
+class PartDesignExport Pad : public FeatureExtrude
 {
-    PROPERTY_HEADER(PartDesign::Pad);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::Pad);
 
 public:
-    Pad();
+    Pad(const char *propertyGroupName="Pad");
 
-    App::PropertyEnumeration Type;
-    App::PropertyLength      Length;
-    App::PropertyLength      Length2;
-    App::PropertyBool        UseCustomVector;
-    App::PropertyVector      Direction;
-    App::PropertyBool        AlongSketchNormal;
-    App::PropertyLength      Offset;
-    App::PropertyLinkSub     ReferenceAxis;
-    App::PropertyAngle       TaperAngle;
-    App::PropertyAngle       TaperAngleRev;
-    App::PropertyAngle       TaperInnerAngle;
-    App::PropertyAngle       TaperInnerAngleRev;
-    App::PropertyBool        AutoTaperInnerAngle;
-    App::PropertyBool        UsePipeForDraft;
-    App::PropertyBool        CheckUpToFaceLimits;
-
-    /** @name methods override feature */
-    //@{
-    /** Recalculate the feature
-      * Extrudes the Sketch in the direction of the sketch face normal
-      * If Type is "Length" then Length gives the extrusion length, the direction will be away from the support
-      * If Type is "UpToLast" then the extrusion will stop at the last face of the support
-      *  that is cut by a line through the centre of gravite of the sketch
-      * If Type is "UpToFirst" then extrusion will stop at the first face of the support
-      * If Type is "UpToFace" then the extrusion will stop at FaceName in the support
-      * If Type is "TwoLengths" then the extrusion will extend Length in the direction away from the support
-      *  and Length2 in the opposite direction
-      * If Midplane is true, then the extrusion will extend for half of the length on both sides of the sketch plane
-      * If Reversed is true then the direction of revolution will be reversed.
-      * The created material will be fused with the sketch support (if there is one)
-      */
-    App::DocumentObjectExecReturn *execute(void);
-    short mustExecute() const;
-    void setupObject();
+    App::DocumentObjectExecReturn *execute() override;
     /// returns the type name of the view provider
-    const char* getViewProviderName(void) const {
+    const char* getViewProviderName() const override {
         return "PartDesignGui::ViewProviderPad";
     }
-    void handleChangedPropertyName(Base::XMLReader &reader, const char * TypeName, const char *Name);
-    void onChanged(const App::Property *);
-    //@}
 
 protected:
     App::DocumentObjectExecReturn * _execute(bool makesface, bool fuse);
 
 protected:
     static const char* TypeEnums[];
-    //static const char* SideEnums[];
 };
 
 } //namespace PartDesign

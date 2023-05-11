@@ -21,33 +21,30 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <Standard_math.hxx>
-# include <Precision.hxx>
-
-# include <Inventor/nodes/SoSeparator.h>
-# include <Inventor/nodes/SoTranslation.h>
-# include <Inventor/nodes/SoRotation.h>
+# include <Inventor/SbRotation.h>
+# include <Inventor/SbVec3f.h>
 # include <Inventor/nodes/SoMultipleCopy.h>
+# include <Inventor/nodes/SoSeparator.h>
 #endif
 
-#include "Mod/Fem/App/FemConstraintSpring.h"
-#include "TaskFemConstraintSpring.h" //TODO  do next
-#include "ViewProviderFemConstraintSpring.h"
-#include <Base/Console.h>
 #include <Gui/Control.h>
+#include "Mod/Fem/App/FemConstraintSpring.h"
+
+#include "ViewProviderFemConstraintSpring.h"
+#include "TaskFemConstraintSpring.h" //TODO  do next
+
 
 using namespace FemGui;
 
-PROPERTY_SOURCE(FemGui::ViewProviderFemConstraintSpring, FemGui::ViewProviderFemConstraint)
+PROPERTY_SOURCE(FemGui::ViewProviderFemConstraintSpring, FemGui::ViewProviderFemConstraintOnBoundary)
 
 ViewProviderFemConstraintSpring::ViewProviderFemConstraintSpring()
 {
     sPixmap = "FEM_ConstraintSpring";
-    ADD_PROPERTY(FaceColor,(0.0f,0.2f,0.8f));
+    ADD_PROPERTY(FaceColor, (0.0f, 0.2f, 0.8f));
 }
 
 ViewProviderFemConstraintSpring::~ViewProviderFemConstraintSpring()
@@ -62,11 +59,12 @@ bool ViewProviderFemConstraintSpring::setEdit(int ModNum)
         // object unsets and sets its edit mode without closing
         // the task panel
         Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
-        TaskDlgFemConstraintSpring *constrDlg = qobject_cast<TaskDlgFemConstraintSpring *>(dlg); // check this out too
+        TaskDlgFemConstraintSpring *constrDlg =
+            qobject_cast<TaskDlgFemConstraintSpring *>(dlg);// check this out too
         if (constrDlg && constrDlg->getConstraintView() != this)
-            constrDlg = 0; // another constraint left open its task panel
+            constrDlg = nullptr; // another constraint left open its task panel
         if (dlg && !constrDlg) {
-            if (constraintDialog != NULL) {
+            if (constraintDialog) {
                 // Ignore the request to open another dialog
                 return false;
             } else {
@@ -86,7 +84,7 @@ bool ViewProviderFemConstraintSpring::setEdit(int ModNum)
         return true;
     }
     else {
-        return ViewProviderDocumentObject::setEdit(ModNum);
+        return ViewProviderDocumentObject::setEdit(ModNum); // clazy:exclude=skipped-base-method
     }
 }
 
@@ -97,7 +95,7 @@ bool ViewProviderFemConstraintSpring::setEdit(int ModNum)
 void ViewProviderFemConstraintSpring::updateData(const App::Property* prop)
 {
     // Gets called whenever a property of the attached object changes
-    Fem::ConstraintSpring* pcConstraint = static_cast<Fem::ConstraintSpring*>(this->getObject());
+    Fem::ConstraintSpring *pcConstraint = static_cast<Fem::ConstraintSpring *>(this->getObject());
     float scaledwidth = WIDTH * pcConstraint->Scale.getValue(); //OvG: Calculate scaled values once only
     float scaledlength = LENGTH * pcConstraint->Scale.getValue();
 

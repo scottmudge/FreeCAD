@@ -23,14 +23,14 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <sstream>
-# include <stdlib.h>
 #endif
 
 #include <unordered_map>
 
 #include "Unit.h"
-#include "Quantity.h"
 #include "Exception.h"
+#include "Quantity.h"
+
 
 using namespace Base;
 
@@ -67,14 +67,14 @@ Unit::Unit(int8_t Length,
            int8_t Angle)
 {
     checkRange("unit",
-               (int32_t)Length,
-               (int32_t)Mass,
-               (int32_t)Time,
-               (int32_t)ElectricCurrent,
-               (int32_t)ThermodynamicTemperature,
-               (int32_t)AmountOfSubstance,
-               (int32_t)LuminousIntensity,
-               (int32_t)Angle);
+               Length,
+               Mass,
+               Time,
+               ElectricCurrent,
+               ThermodynamicTemperature,
+               AmountOfSubstance,
+               LuminousIntensity,
+               Angle);
 
     Sig.Length                   = Length;
     Sig.Mass                     = Mass;
@@ -109,7 +109,7 @@ Unit::Unit(const QString& expr)
     try {
         *this = Quantity::parse(expr).getUnit();
     }
-    catch (...) {
+    catch (const Base::ParserError&) {
         Sig.Length                   = 0;
         Sig.Mass                     = 0;
         Sig.Time                     = 0;
@@ -124,14 +124,14 @@ Unit::Unit(const QString& expr)
 Unit Unit::pow(signed char exp) const
 {
     checkRange("pow()",
-               (int32_t)Sig.Length * (int32_t)exp,
-               (int32_t)Sig.Mass * (int32_t)exp,
-               (int32_t)Sig.Time * (int32_t)exp,
-               (int32_t)Sig.ElectricCurrent * (int32_t)exp,
-               (int32_t)Sig.ThermodynamicTemperature * (int32_t)exp,
-               (int32_t)Sig.AmountOfSubstance * (int32_t)exp,
-               (int32_t)Sig.LuminousIntensity * (int32_t)exp,
-               (int32_t)Sig.Angle * (int32_t)exp);
+               Sig.Length * exp,
+               Sig.Mass * exp,
+               Sig.Time * exp,
+               Sig.ElectricCurrent * exp,
+               Sig.ThermodynamicTemperature * exp,
+               Sig.AmountOfSubstance * exp,
+               Sig.LuminousIntensity * exp,
+               Sig.Angle * exp);
 
     Unit result;
     result.Sig.Length                   = Sig.Length                    * exp;
@@ -146,7 +146,7 @@ Unit Unit::pow(signed char exp) const
     return result;
 }
 
-bool Unit::isEmpty(void)const
+bool Unit::isEmpty()const
 {
     return (this->Sig.Length == 0)
         && (this->Sig.Mass == 0)
@@ -174,14 +174,14 @@ bool Unit::operator ==(const Unit& that) const
 Unit Unit::operator *(const Unit &right) const
 {
     checkRange("* operator",
-               (int32_t)Sig.Length + (int32_t)right.Sig.Length,
-               (int32_t)Sig.Mass + (int32_t)right.Sig.Mass,
-               (int32_t)Sig.Time + (int32_t)right.Sig.Time,
-               (int32_t)Sig.ElectricCurrent + (int32_t)right.Sig.ElectricCurrent,
-               (int32_t)Sig.ThermodynamicTemperature + (int32_t)right.Sig.ThermodynamicTemperature,
-               (int32_t)Sig.AmountOfSubstance + (int32_t)right.Sig.AmountOfSubstance,
-               (int32_t)Sig.LuminousIntensity + (int32_t)right.Sig.LuminousIntensity,
-               (int32_t)Sig.Angle + (int32_t)right.Sig.Angle);
+               Sig.Length +right.Sig.Length,
+               Sig.Mass + right.Sig.Mass,
+               Sig.Time + right.Sig.Time,
+               Sig.ElectricCurrent + right.Sig.ElectricCurrent,
+               Sig.ThermodynamicTemperature + right.Sig.ThermodynamicTemperature,
+               Sig.AmountOfSubstance + right.Sig.AmountOfSubstance,
+               Sig.LuminousIntensity + right.Sig.LuminousIntensity,
+               Sig.Angle + right.Sig.Angle);
 
     Unit result;
     result.Sig.Length                   = Sig.Length                    + right.Sig.Length;
@@ -199,14 +199,14 @@ Unit Unit::operator *(const Unit &right) const
 Unit Unit::operator /(const Unit &right) const
 {
     checkRange("/ operator",
-               (int32_t)Sig.Length - (int32_t)right.Sig.Length,
-               (int32_t)Sig.Mass - (int32_t)right.Sig.Mass,
-               (int32_t)Sig.Time - (int32_t)right.Sig.Time,
-               (int32_t)Sig.ElectricCurrent - (int32_t)right.Sig.ElectricCurrent,
-               (int32_t)Sig.ThermodynamicTemperature - (int32_t)right.Sig.ThermodynamicTemperature,
-               (int32_t)Sig.AmountOfSubstance - (int32_t)right.Sig.AmountOfSubstance,
-               (int32_t)Sig.LuminousIntensity - (int32_t)right.Sig.LuminousIntensity,
-               (int32_t)Sig.Angle - (int32_t)right.Sig.Angle);
+               Sig.Length - right.Sig.Length,
+               Sig.Mass - right.Sig.Mass,
+               Sig.Time - right.Sig.Time,
+               Sig.ElectricCurrent - right.Sig.ElectricCurrent,
+               Sig.ThermodynamicTemperature - right.Sig.ThermodynamicTemperature,
+               Sig.AmountOfSubstance - right.Sig.AmountOfSubstance,
+               Sig.LuminousIntensity - right.Sig.LuminousIntensity,
+               Sig.Angle - right.Sig.Angle);
 
     Unit result;
     result.Sig.Length                   = Sig.Length                    - right.Sig.Length;
@@ -235,11 +235,11 @@ Unit& Unit::operator = (const Unit &New)
     return *this;
 }
 
-QString Unit::getString(void) const {
+QString Unit::getString() const {
     return QString::fromUtf8(getStdString().c_str());
 }
 
-std::string Unit::getStdString(void) const
+std::string Unit::getStdString() const
 {
     std::stringstream ret;
 
@@ -448,55 +448,54 @@ QString Unit::getTypeString(void) const {
 }
 
 const std::vector<std::pair<Unit, const char *> > &Unit::unitTypes() {
-    static std::vector<std::pair<Unit, const char*> > units;
-    if(units.empty()) {
-        units.emplace_back(Unit::Length,"Length");
-        units.emplace_back(Unit::Area,"Area");
-        units.emplace_back(Unit::Volume,"Volume");
-        units.emplace_back(Unit::Mass,"Mass");
-        units.emplace_back(Unit::Angle,"Angle");
-        units.emplace_back(Unit::AngleOfFriction,"AngleOfFriction");
-        units.emplace_back(Unit::Density,"Density");
-        units.emplace_back(Unit::TimeSpan,"TimeSpan");
-        units.emplace_back(Unit::Frequency,"Frequency");
-        units.emplace_back(Unit::Velocity,"Velocity");
-        units.emplace_back(Unit::Acceleration,"Acceleration");
-        units.emplace_back(Unit::Temperature,"Temperature");
-        units.emplace_back(Unit::ElectricCurrent,"ElectricCurrent");
-        units.emplace_back(Unit::ElectricPotential,"ElectricPotential");
-        units.emplace_back(Unit::ElectricCharge,"ElectricCharge");
-        units.emplace_back(Unit::MagneticFieldStrength,"MagneticFieldStrength");
-        units.emplace_back(Unit::MagneticFlux,"MagneticFlux");
-        units.emplace_back(Unit::MagneticFluxDensity,"MagneticFluxDensity");
-        units.emplace_back(Unit::ElectricalCapacitance,"ElectricalCapacitance");
-        units.emplace_back(Unit::ElectricalInductance,"ElectricalInductance");
-        units.emplace_back(Unit::ElectricalConductance,"ElectricalConductance");
-        units.emplace_back(Unit::ElectricalResistance,"ElectricalResistance");
-        units.emplace_back(Unit::ElectricalConductivity,"ElectricalConductivity");
-        units.emplace_back(Unit::AmountOfSubstance,"AmountOfSubstance");
-        units.emplace_back(Unit::LuminousIntensity,"LuminousIntensity");
-        units.emplace_back(Unit::Pressure,"Pressure");
-        units.emplace_back(Unit::CompressiveStrength,"CompressiveStrength");
-        units.emplace_back(Unit::ShearModulus,"ShearModulus");
-        units.emplace_back(Unit::Stress,"Stress");
-        units.emplace_back(Unit::UltimateTensileStrength,"UltimateTensileStrength");
-        units.emplace_back(Unit::YieldStrength,"YieldStrength");
-        units.emplace_back(Unit::YoungsModulus,"YoungsModulus");
-        units.emplace_back(Unit::Stiffness,"Stiffness");
-        units.emplace_back(Unit::Force,"Force");
-        units.emplace_back(Unit::Work,"Work");
-        units.emplace_back(Unit::Power,"Power");
-        units.emplace_back(Unit::SpecificEnergy,"SpecificEnergy");
-        units.emplace_back(Unit::ThermalConductivity,"ThermalConductivity");
-        units.emplace_back(Unit::ThermalExpansionCoefficient,"ThermalExpansionCoefficient");
-        units.emplace_back(Unit::VolumetricThermalExpansionCoefficient,"VolumetricThermalExpansionCoefficient");
-        units.emplace_back(Unit::SpecificHeat,"SpecificHeat");
-        units.emplace_back(Unit::ThermalTransferCoefficient,"ThermalTransferCoefficient");
-        units.emplace_back(Unit::HeatFlux,"HeatFlux");
-        units.emplace_back(Unit::DynamicViscosity,"DynamicViscosity");
-        units.emplace_back(Unit::KinematicViscosity,"KinematicViscosity");
-        units.emplace_back(Unit::VacuumPermittivity,"VacuumPermittivity");
-    }
+    static std::vector<std::pair<Unit, const char*> > units = {
+        {Unit::Length,"Length"},
+        {Unit::Area,"Area"},
+        {Unit::Volume,"Volume"},
+        {Unit::Mass,"Mass"},
+        {Unit::Angle,"Angle"},
+        {Unit::AngleOfFriction,"AngleOfFriction"},
+        {Unit::Density,"Density"},
+        {Unit::TimeSpan,"TimeSpan"},
+        {Unit::Frequency,"Frequency"},
+        {Unit::Velocity,"Velocity"},
+        {Unit::Acceleration,"Acceleration"},
+        {Unit::Temperature,"Temperature"},
+        {Unit::ElectricCurrent,"ElectricCurrent"},
+        {Unit::ElectricPotential,"ElectricPotential"},
+        {Unit::ElectricCharge,"ElectricCharge"},
+        {Unit::MagneticFieldStrength,"MagneticFieldStrength"},
+        {Unit::MagneticFlux,"MagneticFlux"},
+        {Unit::MagneticFluxDensity,"MagneticFluxDensity"},
+        {Unit::ElectricalCapacitance,"ElectricalCapacitance"},
+        {Unit::ElectricalInductance,"ElectricalInductance"},
+        {Unit::ElectricalConductance,"ElectricalConductance"},
+        {Unit::ElectricalResistance,"ElectricalResistance"},
+        {Unit::ElectricalConductivity,"ElectricalConductivity"},
+        {Unit::AmountOfSubstance,"AmountOfSubstance"},
+        {Unit::LuminousIntensity,"LuminousIntensity"},
+        {Unit::Pressure,"Pressure"},
+        {Unit::CompressiveStrength,"CompressiveStrength"},
+        {Unit::ShearModulus,"ShearModulus"},
+        {Unit::Stress,"Stress"},
+        {Unit::UltimateTensileStrength,"UltimateTensileStrength"},
+        {Unit::YieldStrength,"YieldStrength"},
+        {Unit::YoungsModulus,"YoungsModulus"},
+        {Unit::Stiffness,"Stiffness"},
+        {Unit::Force,"Force"},
+        {Unit::Work,"Work"},
+        {Unit::Power,"Power"},
+        {Unit::SpecificEnergy,"SpecificEnergy"},
+        {Unit::ThermalConductivity,"ThermalConductivity"},
+        {Unit::ThermalExpansionCoefficient,"ThermalExpansionCoefficient"},
+        {Unit::VolumetricThermalExpansionCoefficient,"VolumetricThermalExpansionCoefficient"},
+        {Unit::SpecificHeat,"SpecificHeat"},
+        {Unit::ThermalTransferCoefficient,"ThermalTransferCoefficient"},
+        {Unit::HeatFlux,"HeatFlux"},
+        {Unit::DynamicViscosity,"DynamicViscosity"},
+        {Unit::KinematicViscosity,"KinematicViscosity"},
+        {Unit::VacuumPermittivity,"VacuumPermittivity"},
+    };
     return units;
 }
 

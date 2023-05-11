@@ -20,44 +20,36 @@
  *                                                                            *
  ******************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <BRepBuilderAPI_Transform.hxx>
-# include <BRepAlgoAPI_Fuse.hxx>
-# include <BRepAlgoAPI_Cut.hxx>
-# include <BRep_Builder.hxx>
-# include <TopExp.hxx>
-# include <TopExp_Explorer.hxx>
-# include <TopTools_IndexedMapOfShape.hxx>
-# include <Precision.hxx>
-# include <BRepBuilderAPI_Copy.hxx>
-# include <BRepBndLib.hxx>
 # include <Bnd_Box.hxx>
+# include <BRep_Builder.hxx>
+# include <BRepAlgoAPI_Cut.hxx>
+# include <BRepAlgoAPI_Fuse.hxx>
+# include <BRepBndLib.hxx>
+# include <BRepBuilderAPI_Copy.hxx>
+# include <BRepBuilderAPI_Transform.hxx>
+# include <Precision.hxx>
+# include <TopExp_Explorer.hxx>
 #endif
 
-#ifndef FC_DEBUG
-#include <ctime>
-#endif
+#include <App/Application.h>
+#include <App/Document.h>
+#include <App/MappedElement.h>
+#include <Base/Console.h>
+#include <Base/Exception.h>
+#include <Base/Parameter.h>
+#include <Base/Reader.h>
+#include <Mod/Part/App/modelRefine.h>
 
 #include <Mod/Part/App/TopoShapeOpCode.h>
 #include "FeatureTransformed.h"
-#include "FeatureMultiTransform.h"
+#include "Body.h"
 #include "FeatureAddSub.h"
 #include "FeatureMirrored.h"
 #include "FeatureLinearPattern.h"
 #include "FeaturePolarPattern.h"
 #include "FeatureSketchBased.h"
-#include "Body.h"
-
-#include <Base/Console.h>
-#include <Base/Exception.h>
-#include <Base/Parameter.h>
-#include <Base/Reader.h>
-#include <App/Application.h>
-#include <App/Document.h>
-#include <App/MappedElement.h>
-#include <Mod/Part/App/modelRefine.h>
 
 FC_LOG_LEVEL_INIT("PartDesign",true,true)
 
@@ -70,7 +62,7 @@ PROPERTY_SOURCE(PartDesign::Transformed, PartDesign::FeatureAddSub)
 
 Transformed::Transformed()
 {
-    ADD_PROPERTY(Originals,(0));
+    ADD_PROPERTY(Originals,(nullptr));
     Originals.setSize(0);
     Originals.setStatus(App::Property::Hidden, true);
 
@@ -101,7 +93,7 @@ Transformed::Transformed()
     AddSubType.setStatus(App::Property::ReadOnly, true);
 }
 
-void Transformed::positionBySupport(void)
+void Transformed::positionBySupport()
 {
     // TODO May be here better to throw exception (silent=false) (2015-07-27, Fat-Zer)
     Part::Feature *support = getBaseObject(/* silent =*/ true);
@@ -119,9 +111,9 @@ Part::Feature* Transformed::getBaseObject(bool silent) const {
     }
 
     const char* err = nullptr;
-    const std::vector<App::DocumentObject*> & originals = OriginalSubs.getValues();
-    // NOTE: may be here supposed to be last origin but in order to keep the old behaviour keep here first 
-    App::DocumentObject* firstOriginal = originals.empty() ? NULL : originals.front();
+    const std::vector<App::DocumentObject*> & originals = Originals.getValues();
+    // NOTE: may be here supposed to be last origin but in order to keep the old behaviour keep here first
+    App::DocumentObject* firstOriginal = originals.empty() ? nullptr : originals.front();
     if (firstOriginal) {
         if(firstOriginal->isDerivedFrom(Part::Feature::getClassTypeId())) {
             rv = static_cast<Part::Feature*>(firstOriginal);
@@ -146,7 +138,7 @@ App::DocumentObject* Transformed::getSketchObject() const
         return (static_cast<PartDesign::ProfileBased*>(originals.front()))->getVerifiedSketch(true);
     }
     else if (!originals.empty() && originals.front()->getTypeId().isDerivedFrom(PartDesign::FeatureAddSub::getClassTypeId())) {
-        return NULL;
+        return nullptr;
     }
     else if (this->getTypeId().isDerivedFrom(LinearPattern::getClassTypeId())) {
         // if Originals is empty then try the linear pattern's Direction property
@@ -164,7 +156,7 @@ App::DocumentObject* Transformed::getSketchObject() const
         return pattern->MirrorPlane.getValue();
     }
     else {
-        return 0;
+        return nullptr;
     }
 }
 
@@ -193,7 +185,7 @@ short Transformed::mustExecute() const
     return PartDesign::Feature::mustExecute();
 }
 
-App::DocumentObjectExecReturn *Transformed::execute(void)
+App::DocumentObjectExecReturn *Transformed::execute()
 {
     rejected.clear();
 
@@ -820,9 +812,9 @@ TopoShape Transformed::refineShapeIfActive(const TopoShape& oldShape) const
 void Transformed::divideTools(const std::vector<TopoDS_Shape> &toolsIn, std::vector<TopoDS_Shape> &individualsOut,
                               TopoDS_Compound &compoundOut) const
 {
-    typedef std::pair<TopoDS_Shape, Bnd_Box> ShapeBoundPair;
-    typedef std::list<ShapeBoundPair> PairList;
-    typedef std::vector<ShapeBoundPair> PairVector;
+    using ShapeBoundPair = std::pair<TopoDS_Shape, Bnd_Box>;
+    using PairList = std::list<ShapeBoundPair>;
+    using PairVector = std::vector<ShapeBoundPair>;
 
     PairList pairList;
 

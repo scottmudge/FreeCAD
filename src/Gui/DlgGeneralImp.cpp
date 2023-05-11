@@ -168,6 +168,9 @@ void DlgGeneralImp::saveSettings()
     ui->treeItemSpacing->onSave();
     ui->appFontSize->onSave();
     ui->RecentFiles->onSave();
+    ui->SubstituteDecimal->onSave();
+    ui->UseLocaleFormatting->onSave();
+    ui->EnableCursorBlinking->onSave();
     ui->SplashScreen->onSave();
     ui->PythonWordWrap->onSave();
     ui->CmdHistorySize->onSave();
@@ -353,6 +356,9 @@ void DlgGeneralImp::loadSettings()
     ui->checkboxTaskList->onRestore();
 
     ui->appFontSize->onRestore();
+    ui->SubstituteDecimal->onRestore();
+    ui->UseLocaleFormatting->onRestore();
+    ui->EnableCursorBlinking->onRestore();
     ui->RecentFiles->onRestore();
     ui->SplashScreen->onRestore();
     ui->PythonWordWrap->onRestore();
@@ -418,6 +424,33 @@ void applyLanguage(const ParamKey *paramKey)
     Translator::instance()->activateLanguage(language.c_str());
 }
 
+void applyNumberLocale(ParameterGrp *hGrp)
+{
+    int localeFormat = hGrp->GetInt("UseLocaleFormatting", 0);
+    if (localeFormat == 0) {
+        Translator::instance()->setLocale(); // Defaults to system locale
+    }
+    else if (localeFormat == 1) {
+        QString lang = QLocale::languageToString(QLocale().language());
+        std::string language = hGrp->GetASCII("Language", (const char*)lang.toUtf8());
+        Translator::instance()->setLocale(language.c_str());
+    }
+    else if (localeFormat == 2) {
+        Translator::instance()->setLocale("C");
+    }
+}
+
+void applyCursorBlinking(const ParamKey *paramKey)
+{
+    int blinkTime = paramKey->hGrp->GetBool(paramKey->key, true) ? -1 : 0;
+    qApp->setCursorFlashTime(blinkTime);
+}
+
+void applyDecimalPointConversion(const ParamKey *paramKey)
+{
+    Translator::instance()->enableDecimalPointConversion(paramKey->hGrp->GetBool(paramKey->key, false));
+}
+
 void applyPythonWordWrap(const ParamKey *paramKey)
 {
     QWidget* pc = DockWindowManager::instance()->getDockWindow("Python console");
@@ -469,7 +502,10 @@ void DlgGeneralImp::attachObserver()
     handlers.addDelayedHandler("BaseApp/Preferences/View", "ToolTipIconSize", applyToolTipIconSize);
 
     auto hGeneral = App::GetApplication().GetUserParameter().GetGroup("BaseApp/Preferences/General");
+    handlers.addDelayedHandler(hGeneral, {"Language", "UseLocaleFormatting"}, applyNumberLocale);
     handlers.addHandler(hGeneral, "Language", applyLanguage);
+    handlers.addHandler(hGeneral, "SubstituteDecimal", applyDecimalPointConversion);
+    handlers.addHandler(hGeneral, "EnableCursorBlinking", applyCursorBlinking);
     handlers.addHandler(hGeneral, "ToolbarIconSize", applyToolbarIconSize);
     handlers.addHandler(hGeneral, "PythonWordWrap", applyPythonWordWrap);
 

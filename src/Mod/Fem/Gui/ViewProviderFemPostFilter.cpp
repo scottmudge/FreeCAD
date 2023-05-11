@@ -20,15 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
+
+#include <Mod/Fem/App/FemPostFilter.h>
+
 #include "ViewProviderFemPostFilter.h"
 #include "TaskPostBoxes.h"
-#include <Mod/Fem/App/FemPostFilter.h>
-#include <Base/Console.h>
+
 
 using namespace FemGui;
-
 
 PROPERTY_SOURCE(FemGui::ViewProviderFemPostClip, FemGui::ViewProviderFemPostObject)
 
@@ -45,7 +45,7 @@ void ViewProviderFemPostClip::setupTaskDialog(TaskDlgPost* dlg) {
 
     //add the function box
     dlg->appendBox(new TaskPostClip(dlg->getView(),
-                                    &static_cast<Fem::FemPostClipFilter*>(dlg->getView()->getObject())->Function));
+        &static_cast<Fem::FemPostClipFilter*>(dlg->getView()->getObject())->Function));
 
     //add the display options
     FemGui::ViewProviderFemPostObject::setupTaskDialog(dlg);
@@ -74,6 +74,18 @@ PROPERTY_SOURCE(FemGui::ViewProviderFemPostDataAtPoint, FemGui::ViewProviderFemP
 ViewProviderFemPostDataAtPoint::ViewProviderFemPostDataAtPoint() {
 
     sPixmap = "FEM_PostFilterDataAtPoint";
+}
+
+void ViewProviderFemPostDataAtPoint::show()
+{
+    Gui::ViewProviderDocumentObject::show();
+}
+
+void ViewProviderFemPostDataAtPoint::onSelectionChanged(const Gui::SelectionChanges &)
+{
+    // do not do anything here
+    // For DataAtPoint the color bar must not be refreshed when it is selected
+    // because a single point does not make sense with a color range.
 }
 
 ViewProviderFemPostDataAtPoint::~ViewProviderFemPostDataAtPoint() {
@@ -144,7 +156,7 @@ void ViewProviderFemPostCut::setupTaskDialog(TaskDlgPost* dlg) {
 
     //add the function box
     dlg->appendBox(new TaskPostCut(dlg->getView(),
-                                    &static_cast<Fem::FemPostCutFilter*>(dlg->getView()->getObject())->Function));
+        &static_cast<Fem::FemPostCutFilter*>(dlg->getView()->getObject())->Function));
 
     //add the display options
     FemGui::ViewProviderFemPostObject::setupTaskDialog(dlg);

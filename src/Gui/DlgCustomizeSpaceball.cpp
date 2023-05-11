@@ -23,29 +23,31 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+#include <QComboBox>
 #include <QHBoxLayout>
-#include <QVBoxLayout>
-#include <QLabel>
-#include <QSplitter>
-#include <QPushButton>
 #include <QHeaderView>
+#include <QLabel>
+#include <QPainter>
 #include <QPrintDialog>
 #include <QPrinter>
-#include <QPainter>
+#include <QPushButton>
+#include <QSplitter>
 #include <QTableView>
-#include <QComboBox>
+#include <QVBoxLayout>
 #endif
 
 #include "Base/Console.h"
-#include "Application.h"
-#include "GuiApplicationNativeEventAware.h"
-#include "SpaceballEvent.h"
-#include "Command.h"
-#include "BitmapFactory.h"
-#include "DlgCustomizeSpaceball.h"
-#include "PrefWidgets.h"
 
-typedef std::vector<Base::Reference<ParameterGrp> > GroupVector;
+#include "Command.h"
+#include "DlgCustomizeSpaceball.h"
+#include "Application.h"
+#include "BitmapFactory.h"
+#include "GuiApplicationNativeEventAware.h"
+#include "PrefWidgets.h"
+#include "SpaceballEvent.h"
+
+
+using GroupVector = std::vector<Base::Reference<ParameterGrp> >;
 
 using namespace Gui::Dialog;
 
@@ -66,13 +68,13 @@ void ButtonView::goSelectionChanged(const QItemSelection &selected, const QItemS
     if (selected.indexes().isEmpty())
         return;
     QModelIndex select(selected.indexes().at(0));
-    changeCommandSelection(this->model()->data(select, Qt::UserRole).toString());
+    Q_EMIT changeCommandSelection(this->model()->data(select, Qt::UserRole).toString());
 }
 
 void ButtonView::goChangedCommand(const QString& commandName)
 {
     QModelIndex index(this->currentIndex());
-    ButtonModel *model = dynamic_cast<ButtonModel*>(this->model());
+    auto model = dynamic_cast<ButtonModel*>(this->model());
     if (model && index.isValid())
         model->setCommand(index.row(), commandName);
 }
@@ -251,9 +253,9 @@ void ButtonModel::goButtonPress(int number)
 void ButtonModel::goMacroRemoved(const QByteArray& macroName)
 {
     GroupVector groupVector = spaceballButtonGroup()->GetGroups();
-    for (GroupVector::iterator it = groupVector.begin(); it != groupVector.end(); ++it)
-        if (std::string(macroName.data()) == (*it)->GetASCII("Command"))
-            (*it)->SetASCII("Command", "");
+    for (auto & it : groupVector)
+        if (std::string(macroName.data()) == it->GetASCII("Command"))
+            it->SetASCII("Command", "");
 }
 
 void ButtonModel::goClear()
@@ -281,7 +283,7 @@ QString ButtonModel::getLabel(const int &number) const
                                               GetGroup(numberString.toUtf8())->
                                               GetASCII("Description",""));
         if (desc.length())
-            desc = tr(" \"") + desc + tr("\"");
+            desc = QString::fromUtf8(" \"") + desc + QString::fromUtf8("\"");
         return tr("Button %1").arg(number + 1) + desc;
     } else
         return tr("Out Of Range");
@@ -315,7 +317,7 @@ void CommandView::goChangeCommandSelection(const QString& commandName)
         return;
     QModelIndexList index(this->model()->match(this->model()->index(0,0), Qt::UserRole, QVariant(commandName), 1,
                                                Qt::MatchWrap | Qt::MatchRecursive));
-    if (index.size() < 1)
+    if (index.empty())
         return;
     this->expand(index.at(0));
     this->setCurrentIndex(index.at(0));
@@ -328,7 +330,7 @@ void CommandView::goClicked(const QModelIndex &index)
         QString commandName = this->model()->data(index, Qt::UserRole).toString();
         if (commandName.isEmpty())
             return;
-        changedCommand(commandName);
+        Q_EMIT changedCommand(commandName);
     }
 }
 
@@ -337,9 +339,9 @@ void CommandView::goClicked(const QModelIndex &index)
 CommandNode::CommandNode(NodeType typeIn)
 {
     nodeType = typeIn;
-    parent = 0;
+    parent = nullptr;
     children.clear();
-    aCommand = 0;
+    aCommand = nullptr;
 }
 
 CommandNode::~CommandNode()
@@ -351,14 +353,14 @@ CommandNode::~CommandNode()
 
 CommandModel::CommandModel(QObject *parent) : QAbstractItemModel(parent)
 {
-    rootNode = 0;
+    rootNode = nullptr;
     initialize();
 }
 
 CommandModel::~CommandModel()
 {
     delete rootNode;
-    rootNode = 0;
+    rootNode = nullptr;
 }
 
 QModelIndex CommandModel::index(int row, int column, const QModelIndex &parent) const
@@ -420,7 +422,7 @@ QVariant CommandModel::data(const QModelIndex &index, int role) const
             return QVariant(qApp->translate(node->aCommand->className(), node->aCommand->getMenuText()));
         if (node->nodeType == CommandNode::GroupType)
         {
-            if (node->children.size() < 1)
+            if (node->children.empty())
                 return QVariant();
             CommandNode *childNode = node->children.at(0);
             return QVariant(childNode->aCommand->translatedGroupName());
@@ -445,7 +447,7 @@ QVariant CommandModel::data(const QModelIndex &index, int role) const
             return QVariant(QString::fromUtf8(node->aCommand->getName()));
         if (node->nodeType == CommandNode::GroupType)
         {
-            if (node->children.size() < 1)
+            if (node->children.empty())
                 return QVariant();
             CommandNode *childNode = node->children.at(0);
             return QVariant(QString::fromUtf8(childNode->aCommand->getGroupName()));
@@ -489,7 +491,7 @@ void CommandModel::goAddMacro(const QByteArray &macroName)
     QModelIndexList indexList(this->match(this->index(0,0), Qt::UserRole, QVariant(QStringLiteral("Macros")),
                                           1, Qt::MatchWrap | Qt::MatchRecursive));
     QModelIndex macrosIndex;
-    if (indexList.size() < 1)
+    if (indexList.empty())
     {
         //this is the first macro and we have to add the Macros item.
         //figure out where to insert it. Should be in the command groups now.
@@ -499,7 +501,7 @@ void CommandModel::goAddMacro(const QByteArray &macroName)
             location = groups.size();
         //add row
         this->beginInsertRows(QModelIndex(), location, location);
-        CommandNode *macroNode = new CommandNode(CommandNode::GroupType);
+        auto macroNode = new CommandNode(CommandNode::GroupType);
         macroNode->parent = rootNode;
         rootNode->children.insert(location, macroNode);
         this->endInsertRows();
@@ -508,7 +510,7 @@ void CommandModel::goAddMacro(const QByteArray &macroName)
     else
         macrosIndex = indexList.at(0);
 
-    Command *command = 0;
+    Command *command = nullptr;
     command = Application::Instance->commandManager().getCommandByName(macroName);
     if (!command)
         return;
@@ -518,7 +520,7 @@ void CommandModel::goAddMacro(const QByteArray &macroName)
         return;
 
     this->beginInsertRows(macrosIndex, parentNode->children.size(), parentNode->children.size());
-    CommandNode *childNode = new CommandNode(CommandNode::CommandType);
+    auto childNode = new CommandNode(CommandNode::CommandType);
     childNode->parent = parentNode;
     parentNode->children.push_back(childNode);
     childNode->aCommand = command;
@@ -558,22 +560,22 @@ void CommandModel::initialize()
 {
     rootNode = new CommandNode(CommandNode::RootType);
     QStringList groups(orderedGroups());
-    for (QStringList::iterator it = groups.begin(); it != groups.end(); ++it)
-        groupCommands(*it);
+    for (const auto & group : groups)
+        groupCommands(group);
 }
 
 void CommandModel::groupCommands(const QString& groupName)
 {
-    CommandNode *parentNode = new CommandNode(CommandNode::GroupType);
+    auto parentNode = new CommandNode(CommandNode::GroupType);
     parentNode->parent = rootNode;
     rootNode->children.push_back(parentNode);
     std::vector <Command*> commands = Application::Instance->commandManager().getGroupCommands(groupName.toUtf8());
-    for (std::vector <Command*>::iterator it = commands.begin(); it != commands.end(); ++it)
+    for (const auto & command : commands)
     {
-        CommandNode *childNode = new CommandNode(CommandNode::CommandType);
+        auto childNode = new CommandNode(CommandNode::CommandType);
         childNode->parent = parentNode;
         parentNode->children.push_back(childNode);
-        childNode->aCommand = *it;
+        childNode->aCommand = command;
     }
 }
 
@@ -581,9 +583,9 @@ QStringList CommandModel::orderedGroups()
 {
     QStringList groups;
     std::vector <Command*> commands = Application::Instance->commandManager().getAllCommands();
-    for (std::vector <Command*>::iterator it = commands.begin(); it != commands.end(); ++it)
+    for (const auto & command : commands)
     {
-        QString groupName(QString::fromUtf8((*it)->getGroupName()));
+        QString groupName(QString::fromUtf8(command->getGroupName()));
         if (!groups.contains(groupName))
             groups << groupName;
     }
@@ -663,7 +665,7 @@ DlgCustomizeSpaceball::DlgCustomizeSpaceball(QWidget *parent)
   , widgetStates(new PrefWidgetStates(this, false))
 {
     this->setWindowTitle(tr("Spaceball Buttons"));
-    GUIApplicationNativeEventAware *app = qobject_cast<GUIApplicationNativeEventAware *>(QApplication::instance());
+    auto app = qobject_cast<GUIApplicationNativeEventAware *>(QApplication::instance());
     if (!app)
         return;
     if (!app->isSpaceballPresent())
@@ -690,9 +692,9 @@ DlgCustomizeSpaceball::~DlgCustomizeSpaceball()
 
 void DlgCustomizeSpaceball::setMessage(const QString& message)
 {
-    QLabel *messageLabel = new QLabel(message,this);
-    QVBoxLayout *layout = new QVBoxLayout();
-    QHBoxLayout *layout2 = new QHBoxLayout();
+    auto messageLabel = new QLabel(message,this);
+    auto layout = new QVBoxLayout();
+    auto layout2 = new QHBoxLayout();
     layout2->addStretch();
     layout2->addWidget(messageLabel);
     layout2->addStretch();
@@ -720,7 +722,7 @@ void DlgCustomizeSpaceball::setupCommandModelView()
 
 void DlgCustomizeSpaceball::setupLayout()
 {
-    QLabel *buttonLabel = new QLabel(tr("Buttons"), this);
+    auto buttonLabel = new QLabel(tr("Buttons"), this);
     clearButton = new QPushButton(tr("Reset"), this);
     devModel = new QComboBox(this);
 
@@ -736,17 +738,17 @@ void DlgCustomizeSpaceball::setupLayout()
         devModel->setCurrentIndex(0);
     }
 
-    QVBoxLayout *buttonGroup = new QVBoxLayout();
+    auto buttonGroup = new QVBoxLayout();
     buttonGroup->addWidget(buttonLabel);
     buttonGroup->addWidget(buttonView);
-    QHBoxLayout *clearLayout = new QHBoxLayout();
+    auto clearLayout = new QHBoxLayout();
     clearLayout->addWidget(devModel);
     clearLayout->addWidget(clearButton);
     clearLayout->addStretch();
     buttonGroup->addLayout(clearLayout);
 
-    QSplitter *splitter = new QSplitter(this);
-    QWidget *leftPane = new QWidget(this);
+    auto splitter = new QSplitter(this);
+    auto leftPane = new QWidget(this);
     leftPane->setLayout(buttonGroup);
     splitter->addWidget(leftPane);
     splitter->addWidget(commandView);
@@ -754,11 +756,11 @@ void DlgCustomizeSpaceball::setupLayout()
     widgetStates->addSplitter(splitter);
 
     printReference = new QPushButton(tr("Print Reference"), this);
-    QHBoxLayout *printLayout = new QHBoxLayout();
+    auto printLayout = new QHBoxLayout();
     printLayout->addStretch();
     printLayout->addWidget(printReference);
 
-    QVBoxLayout *layout = new QVBoxLayout();
+    auto layout = new QVBoxLayout();
     layout->addWidget(splitter);
     layout->addLayout(printLayout);
 
@@ -785,8 +787,8 @@ void DlgCustomizeSpaceball::goClear()
 
 void DlgCustomizeSpaceball::goPrint()
 {
-    QTableView *view = new QTableView(this);
-    PrintModel *model = new PrintModel(this, buttonModel, commandModel);
+    auto view = new QTableView(this);
+    auto model = new PrintModel(this, buttonModel, commandModel);
     view->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     view->setModel(model);
     view->horizontalHeader()->resizeSection(0, 150);
@@ -806,7 +808,7 @@ bool DlgCustomizeSpaceball::event(QEvent *event)
 {
     if (event->type() != Spaceball::ButtonEvent::ButtonEventType)
         return CustomizeActionPage::event(event);
-    Spaceball::ButtonEvent *buttonEvent = dynamic_cast<Spaceball::ButtonEvent *>(event);
+    auto buttonEvent = dynamic_cast<Spaceball::ButtonEvent *>(event);
     if (!buttonEvent)
         return true;
     buttonEvent->setHandled(true);

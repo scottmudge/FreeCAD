@@ -33,19 +33,19 @@ namespace PartDesignGui {
 
 class PartDesignGuiExport ViewProviderDatumLine : public PartDesignGui::ViewProviderDatum
 {
-    PROPERTY_HEADER(PartDesignGui::ViewProviderDatumLine);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderDatumLine);
 
 public:
 
     /// Constructor
     ViewProviderDatumLine();
-    virtual ~ViewProviderDatumLine();
+    ~ViewProviderDatumLine() override;
 
-    virtual void attach ( App::DocumentObject *obj );
-    virtual void updateData(const App::Property*);
+    void attach ( App::DocumentObject *obj ) override;
+    void updateData(const App::Property*) override;
 
-    virtual void setExtents (Base::BoundBox3d bbox);
-    virtual void updateExtents();
+    void setExtents (Base::BoundBox3d bbox) override;
+    void updateExtents() override;
 
 private:
     SoCoordinate3 *pCoords;

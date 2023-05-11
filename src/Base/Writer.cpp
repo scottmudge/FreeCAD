@@ -23,21 +23,17 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
+#include <limits>
+#include <locale>
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
 #include "Writer.h"
-#include "Persistence.h"
-#include "Exception.h"
 #include "Base64.h"
+#include "Exception.h"
 #include "FileInfo.h"
+#include "Persistence.h"
 #include "Stream.h"
 #include "Tools.h"
 
-#include <algorithm>
-#include <locale>
-#include <limits>
 #include <iomanip>
 
 using namespace Base;
@@ -80,15 +76,18 @@ struct cdata_filter {
 // ---------------------------------------------------------------------------
 
 Writer::Writer(short indent_size)
-  : indent(0),indent_size(indent_size)
-  ,forceXML(0),splitXML(false),preferBinary(true),fileVersion(1)
+  : indent(0)
+  , indent_size(indent_size)
+  , indBuf{}
+  , forceXML(0)
+  , splitXML(false)
+  , preferBinary(true)
+  , fileVersion(1)
 {
     indBuf[0] = '\0';
 }
 
-Writer::~Writer()
-{
-}
+Writer::~Writer() = default;
 
 std::ostream &Writer::beginCharStream(bool base64, unsigned line_size) {
     if(CharStream)
@@ -286,7 +285,7 @@ const std::vector<std::string>& Writer::getFilenames() const
     return FileNames;
 }
 
-void Writer::incInd(void)
+void Writer::incInd()
 {
     int pos = sizeof(indBuf)-1;
     if(indent < pos)
@@ -297,7 +296,7 @@ void Writer::incInd(void)
     indent += indent_size;
 }
 
-void Writer::decInd(void)
+void Writer::decInd()
 {
     if (indent >= indent_size) {
         indent -= indent_size;
@@ -345,13 +344,13 @@ void ZipWriter::putNextEntry(const char *file, const char *obj) {
     ZipStream.putNextEntry(file);
 }
 
-void ZipWriter::writeFiles(void)
+void ZipWriter::writeFiles()
 {
     // use a while loop because it is possible that while
     // processing the files new ones can be added
     size_t index = 0;
     while (index < FileList.size()) {
-        FileEntry entry = FileList.begin()[index];
+        FileEntry entry = FileList[index];
         putNextEntry(entry.FileName.c_str());
         indent = 0;
         indBuf[0] = 0;
@@ -386,9 +385,7 @@ FileWriter::FileWriter(const char* DirName) : DirName(DirName)
 {
 }
 
-FileWriter::~FileWriter()
-{
-}
+FileWriter::~FileWriter() = default;
 
 void FileWriter::putNextEntry(const char* file, const char *obj)
 {
@@ -404,14 +401,14 @@ bool FileWriter::shouldWrite(const std::string& , const Base::Persistence *) con
     return true;
 }
 
-void FileWriter::writeFiles(void)
+void FileWriter::writeFiles()
 {
     // use a while loop because it is possible that while
     // processing the files new ones can be added
     size_t index = 0;
     this->FileStream.close();
     while (index < FileList.size()) {
-        FileEntry entry = FileList.begin()[index];
+        FileEntry entry = FileList[index];
 
         if (shouldWrite(entry.FileName, entry.Object)) {
             std::string filePath = entry.FileName;

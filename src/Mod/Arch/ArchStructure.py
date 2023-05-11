@@ -27,7 +27,7 @@ import ArchProfile
 if FreeCAD.GuiUp:
     import FreeCADGui
     from PySide import QtCore, QtGui
-    from DraftTools import translate
+    from draftutils.translate import translate
     from PySide.QtCore import QT_TRANSLATE_NOOP
     import ArchPrecast
     import draftguitools.gui_trackers as DraftTrackers
@@ -193,8 +193,8 @@ class CommandStructuresFromSelection:
 
     def GetResources(self):
         return {'Pixmap': 'Arch_MultipleStructures',
-                'MenuText': QT_TRANSLATE_NOOP("Arch_Structure", "Multiple Structures"),
-                'ToolTip': QT_TRANSLATE_NOOP("Arch_Structure", "Create multiple Arch Structure objects from a selected base, using each selected edge as an extrusion path")}
+                'MenuText': QT_TRANSLATE_NOOP("Arch_StructuresFromSelection", "Multiple Structures"),
+                'ToolTip': QT_TRANSLATE_NOOP("Arch_StructuresFromSelection", "Create multiple Arch Structure objects from a selected base, using each selected edge as an extrusion path")}
 
     def IsActive(self):
         return not FreeCAD.ActiveDocument is None
@@ -230,8 +230,8 @@ class CommandStructuralSystem:
 
     def GetResources(self):
         return {'Pixmap': 'Arch_StructuralSystem',
-                'MenuText': QT_TRANSLATE_NOOP("Arch_Structure", "Structural System"),
-                'ToolTip': QT_TRANSLATE_NOOP("Arch_Structure", "Create a structural system object from a selected structure and axis")}
+                'MenuText': QT_TRANSLATE_NOOP("Arch_StructuralSystem", "Structural System"),
+                'ToolTip': QT_TRANSLATE_NOOP("Arch_StructuralSystem", "Create a structural system object from a selected structure and axis")}
 
     def IsActive(self):
         return not FreeCAD.ActiveDocument is None
@@ -887,7 +887,7 @@ class _Structure(ArchComponent.Component):
                             pl.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(0, 0, 1), -obj.BaseRotation)
                         if hasattr(obj, "BaseOffsetX") and hasattr(obj, "BaseOffsetY"):
                             pl.translate(FreeCAD.Vector(obj.BaseOffsetX, obj.BaseOffsetY, 0))
-                        if hasattr(obj, "BaseMirror"):
+                        if hasattr(obj, "BaseMirror") and obj.BaseMirror:
                             pl.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(0, 1, 0), 180)
                         baseface.Placement = DraftGeomUtils.get_placement_perpendicular_to_wire(extrusion).multiply(pl)
             else:
@@ -1379,7 +1379,7 @@ class _StructuralSystem(ArchComponent.Component): # OBSOLETE - All Arch objects 
                 if hasattr(obj,"Align"):
                     if obj.Align == False :
                         apl = self.getAxisPlacement(obj)
-                    if obj.Align == True :
+                    if obj.Align:
                         apl = None
                 else :
                     apl = self.getAxisPlacement(obj)
@@ -1419,7 +1419,7 @@ class _StructuralSystem(ArchComponent.Component): # OBSOLETE - All Arch objects 
         pts = []
         if len(obj.Axes) == 1:
             if hasattr(obj,"Align"):
-                if obj.Align == True :
+                if obj.Align:
                     p0 = obj.Axes[0].Shape.Edges[0].Vertexes[1].Point
                     for e in obj.Axes[0].Shape.Edges:
                         p = e.Vertexes[1].Point
@@ -1466,8 +1466,8 @@ if FreeCAD.GuiUp:
         def GetCommands(self):
             return ("Arch_Structure", "Arch_StructuralSystem", "Arch_StructuresFromSelection")
         def GetResources(self):
-            return { "MenuText": QT_TRANSLATE_NOOP("Arch_Structure", "Structure tools"),
-                     "ToolTip": QT_TRANSLATE_NOOP("Arch_Structure", "Structure tools")
+            return { "MenuText": QT_TRANSLATE_NOOP("Arch_StructureTools", "Structure tools"),
+                     "ToolTip": QT_TRANSLATE_NOOP("Arch_StructureTools", "Structure tools")
                    }
         def IsActive(self):
             return not FreeCAD.ActiveDocument is None

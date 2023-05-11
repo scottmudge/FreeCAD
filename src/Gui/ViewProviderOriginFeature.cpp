@@ -24,29 +24,25 @@
 
 #ifndef _PreComp_
 # include <Inventor/nodes/SoAsciiText.h>
-# include <Inventor/nodes/SoSeparator.h>
-# include <Inventor/nodes/SoMaterial.h>
-# include <Inventor/nodes/SoMaterialBinding.h>
 # include <Inventor/nodes/SoAnnotation.h>
 # include <Inventor/nodes/SoDrawStyle.h>
-# include <Inventor/nodes/SoCoordinate3.h>
-# include <Inventor/nodes/SoIndexedLineSet.h>
-# include <Inventor/nodes/SoTranslation.h>
-# include <Inventor/nodes/SoFontStyle.h>
+# include <Inventor/nodes/SoFont.h>
+# include <Inventor/nodes/SoMaterial.h>
+# include <Inventor/nodes/SoMaterialBinding.h>
+# include <Inventor/nodes/SoLightModel.h>
 # include <Inventor/nodes/SoScale.h>
-# include <Inventor/details/SoLineDetail.h>
+# include <Inventor/nodes/SoSeparator.h>
 #endif
 
 #include <App/Document.h>
 #include <App/OriginFeature.h>
 
-#include "SoFCUnifiedSelection.h"
+#include "ViewProviderOriginFeature.h"
 #include "SoFCSelection.h"
-#include "Window.h"
+#include "SoFCUnifiedSelection.h"
 #include "ViewProviderOrigin.h"
 #include "BitmapFactory.h"
 
-#include "ViewProviderOriginFeature.h"
 
 using namespace Gui;
 
@@ -132,14 +128,14 @@ void ViewProviderOriginFeature::attach(App::DocumentObject* pcObject)
     float sz = Size.getValue () / defaultSz;
 
     // Create an external separator
-    SoSeparator  *sep = new DepthSeparator(GL_LEQUAL);
+    auto sep = new DepthSeparator(GL_LEQUAL);
     sep->renderCaching = SoSeparator::OFF;
 
     // Add material from the base class
     sep->addChild(pcShapeMaterial);
 
     // Bind same material to all part
-    SoMaterialBinding* matBinding = new SoMaterialBinding;
+    auto matBinding = new SoMaterialBinding;
     matBinding->value = SoMaterialBinding::OVERALL;
     sep->addChild(matBinding);
 
@@ -154,7 +150,7 @@ void ViewProviderOriginFeature::attach(App::DocumentObject* pcObject)
     pOriginFeatureRoot->addChild (pScale);
 
     // Setup font size
-    SoFont *font = new SoFont ();
+    auto font = new SoFont ();
     font->size.setValue ( defaultSz/10.);
 
     // Adding font node under SoFCSelection node is crucial for its bounding
@@ -166,7 +162,7 @@ void ViewProviderOriginFeature::attach(App::DocumentObject* pcObject)
     pOriginFeatureRoot->addChild (font);
 
     // Create the selection node
-    SoFCSelection *highlight = new SoFCSelection ();
+    auto highlight = new SoFCSelection ();
     highlight->applySettings ();
     if ( !Selectable.getValue() ) {
         highlight->selectionMode = Gui::SoFCSelection::SEL_OFF;
@@ -176,7 +172,7 @@ void ViewProviderOriginFeature::attach(App::DocumentObject* pcObject)
     highlight->style = SoFCSelection::EMISSIVE_DIFFUSE;
 
     // Style for normal (visible) lines
-    SoDrawStyle* style = new SoDrawStyle ();
+    auto style = new SoDrawStyle ();
     style->lineWidth = 2.0f;
     highlight->addChild ( style );
 
@@ -184,7 +180,7 @@ void ViewProviderOriginFeature::attach(App::DocumentObject* pcObject)
     highlight->addChild ( pOriginFeatureRoot );
 
     // Hidden features
-    auto *hidden = new SoFCPathAnnotation;
+    auto hidden = new SoFCPathAnnotation;
     hidden->priority = -1;
     hidden->renderCaching = SoSeparator::OFF;
 
@@ -226,7 +222,7 @@ std::vector<std::string> ViewProviderOriginFeature::getDisplayModes () const
 {
     // add modes
     std::vector<std::string> StrList;
-    StrList.push_back("Base");
+    StrList.emplace_back("Base");
     return StrList;
 }
 
@@ -238,7 +234,7 @@ void ViewProviderOriginFeature::setDisplayMode (const char* ModeName)
 }
 
 bool ViewProviderOriginFeature::onDelete(const std::vector<std::string> &) {
-    App::OriginFeature *feat = static_cast <App::OriginFeature *> ( getObject() );
+    auto feat = static_cast <App::OriginFeature *> ( getObject() );
     // Forbid deletion if there is an origin this feature belongs to
 
     if ( feat->getOrigin () ) {

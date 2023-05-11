@@ -21,13 +21,15 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
+
+#include <Gui/Command.h>
+#include <Gui/Selection.h>
+#include <Gui/WaitCursor.h>
+#include <Mod/Mesh/App/MeshFeature.h>
+
 #include "DlgDecimating.h"
 #include "ui_DlgDecimating.h"
 
-#include <Gui/WaitCursor.h>
-#include <Gui/Command.h>
-#include <Gui/Selection.h>
-#include <Mod/Mesh/App/MeshFeature.h>
 
 using namespace MeshGui;
 
@@ -119,7 +121,7 @@ TaskDecimating::TaskDecimating()
 {
     widget = new DlgDecimating();
     Gui::TaskView::TaskBox* taskbox = new Gui::TaskView::TaskBox(
-        QPixmap(), widget->windowTitle(), false, 0);
+        QPixmap(), widget->windowTitle(), false, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 

@@ -23,38 +23,29 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <algorithm>
-# include <memory>
 # include <map>
+# include <memory>
 #endif
 
-#include <CXX/Extensions.hxx>
-#include <CXX/Objects.hxx>
-
-#include <Base/Interpreter.h>
-#include <Base/FileInfo.h>
-#include <Base/Tools.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DocumentObjectPy.h>
-#include <App/Property.h>
-#include <Base/PlacementPy.h>
-
 #include <Base/GeometryPyCXX.h>
+#include <Base/Interpreter.h>
+#include <Base/PlacementPy.h>
 #include <Base/VectorPy.h>
-
-#include "Core/MeshKernel.h"
-#include "Core/MeshIO.h"
+#include "Core/Approximation.h"
 #include "Core/Evaluation.h"
 #include "Core/Iterator.h"
-#include "Core/Approximation.h"
-
+#include "Core/MeshIO.h"
+#include "Core/MeshKernel.h"
 #include "WildMagic4/Wm4ContBox3.h"
 
-#include "Mesh.h"
+#include "MeshPy.h"
 #include "Exporter.h"
 #include "Importer.h"
-#include "FeatureMeshImport.h"
-#include <Mod/Mesh/App/MeshPy.h>
+#include "Mesh.h"
+
 
 using namespace Mesh;
 using namespace MeshCore;
@@ -138,10 +129,10 @@ public:
                    "\n");
     }
 
-    virtual ~Module() {}
+    ~Module() override {}
 
 private:
-    virtual Py::Object invoke_method_varargs(void *method_def, const Py::Tuple &args)
+    Py::Object invoke_method_varargs(void *method_def, const Py::Tuple &args) override
     {
         try {
             return Py::ExtensionModule<Module>::invoke_method_varargs(method_def, args);
@@ -175,7 +166,7 @@ private:
         PyMem_Free(Name);
 
         // create new document and add Import feature
-        App::Document *pcDoc = App::GetApplication().newDocument("Unnamed");
+        App::Document *pcDoc = App::GetApplication().newDocument();
 
         Mesh::Importer import(pcDoc);
         import.load(EncodedName);
@@ -185,14 +176,14 @@ private:
     Py::Object importer(const Py::Tuple& args)
     {
         char* Name;
-        char* DocName=0;
+        char* DocName=nullptr;
         if (!PyArg_ParseTuple(args.ptr(), "et|s","utf-8",&Name,&DocName))
             throw Py::Exception();
 
         std::string EncodedName = std::string(Name);
         PyMem_Free(Name);
 
-        App::Document *pcDoc = 0;
+        App::Document *pcDoc = nullptr;
         if (DocName) {
             pcDoc = App::GetApplication().getDocument(DocName);
         }
@@ -223,7 +214,7 @@ private:
         int exportAmfCompressed( hGrp->GetBool("ExportAmfCompressed", true) );
 
         static char *kwList[] = {"objectList", "filename", "tolerance",
-                                 "exportAmfCompressed", NULL};
+                                 "exportAmfCompressed", nullptr};
 
         if (!PyArg_ParseTupleAndKeywords( args.ptr(), keywds.ptr(),
                                           "Oet|dp",
@@ -244,7 +235,7 @@ private:
 
         // collect all object types that can be exported as mesh
         std::vector<App::DocumentObject*> objectList;
-        for (auto it : list) {
+        for (const auto& it : list) {
             PyObject *item = it.ptr();
             if (PyObject_TypeCheck(item, &(App::DocumentObjectPy::Type))) {
                 auto obj( static_cast<App::DocumentObjectPy *>(item)->getDocumentObjectPtr() );
@@ -266,20 +257,25 @@ private:
             meta[App::Application::Config()["ExeName"] + "-buildRevisionHash"] =
                           App::Application::Config()["BuildRevisionHash"];
 
-            exporter.reset( new AmfExporter(outputFileName, meta, exportAmfCompressed) );
-
-        } else if (exportFormat != MeshIO::Undefined) {
+            exporter.reset( new ExporterAMF(outputFileName, meta, exportAmfCompressed) );
+        }
+        else if (exportFormat == MeshIO::ThreeMF) {
+            Extension3MFFactory::initialize();
+            exporter.reset( new Exporter3MF(outputFileName, Extension3MFFactory::createExtensions()) );
+        }
+        else if (exportFormat != MeshIO::Undefined) {
             exporter.reset( new MergeExporter(outputFileName, exportFormat) );
-
-        } else {
+        }
+        else {
             std::string exStr("Can't determine mesh format from file name: '");
             exStr += outputFileName + "'";
-            throw Py::Exception(Base::BaseExceptionFreeCADError, exStr.c_str());
+            throw Py::ValueError(exStr.c_str());
         }
 
         for (auto it : objectList) {
             exporter->addObject(it, fTolerance);
         }
+
         exporter.reset();   // deletes Exporter, mesh file is written by destructor
 
         return Py::None();
@@ -335,7 +331,7 @@ private:
         }
         while (false);
         if (!mesh) {
-            throw Py::Exception(Base::BaseExceptionFreeCADError, "Creation of box failed");
+            throw Py::RuntimeError("Creation of box failed");
         }
         return Py::asObject(new MeshPy(mesh));
     }
@@ -345,7 +341,7 @@ private:
         if (!PyArg_ParseTuple(args.ptr(), "|fff",&x,&y,&z))
             throw Py::Exception();
 
-        if (y==0) 
+        if (y==0)
             y=x;
 
         float hx = x/2.0f;
@@ -368,7 +364,7 @@ private:
 
         MeshObject* mesh = MeshObject::createSphere(radius, sampling);
         if (!mesh) {
-            throw Py::Exception(Base::BaseExceptionFreeCADError, "Creation of sphere failed");
+            throw Py::RuntimeError("Creation of sphere failed");
         }
         return Py::asObject(new MeshPy(mesh));
     }
@@ -382,7 +378,7 @@ private:
 
         MeshObject* mesh = MeshObject::createEllipsoid(radius1, radius2, sampling);
         if (!mesh) {
-            throw Py::Exception(Base::BaseExceptionFreeCADError, "Creation of ellipsoid failed");
+            throw Py::RuntimeError("Creation of ellipsoid failed");
         }
         return Py::asObject(new MeshPy(mesh));
     }
@@ -398,7 +394,7 @@ private:
 
         MeshObject* mesh = MeshObject::createCylinder(radius, length, closed, edgelen, sampling);
         if (!mesh) {
-            throw Py::Exception(Base::BaseExceptionFreeCADError, "Creation of cylinder failed");
+            throw Py::RuntimeError("Creation of cylinder failed");
         }
         return Py::asObject(new MeshPy(mesh));
     }
@@ -415,7 +411,7 @@ private:
 
         MeshObject* mesh = MeshObject::createCone(radius1, radius2, len, closed, edgelen, sampling);
         if (!mesh) {
-            throw Py::Exception(Base::BaseExceptionFreeCADError, "Creation of cone failed");
+            throw Py::RuntimeError("Creation of cone failed");
         }
         return Py::asObject(new MeshPy(mesh));
     }
@@ -429,7 +425,7 @@ private:
 
         MeshObject* mesh = MeshObject::createTorus(radius1, radius2, sampling);
         if (!mesh) {
-            throw Py::Exception(Base::BaseExceptionFreeCADError, "Creation of torus failed");
+            throw Py::RuntimeError("Creation of torus failed");
         }
         return Py::asObject(new MeshPy(mesh));
     }
@@ -592,7 +588,7 @@ private:
 
 PyObject* initModule()
 {
-    return (new Module)->module().ptr();
+    return Base::Interpreter().addModule(new Module);
 }
 
 } // namespace Mesh

@@ -24,27 +24,19 @@
 #include "PreCompiled.h"
 #include "ShapeBinder.h"
 #ifndef _PreComp_
-# include <BRepAlgoAPI_Fuse.hxx>
-# include <BRepAlgoAPI_Cut.hxx>
 # include <BRepAlgoAPI_Common.hxx>
-# include <gp_Trsf.hxx>
-# include <gp_Pnt.hxx>
-# include <gp_Dir.hxx>
-# include <gp_Vec.hxx>
-# include <gp_Ax1.hxx>
+# include <BRepAlgoAPI_Cut.hxx>
+# include <BRepAlgoAPI_Fuse.hxx>
 # include <Standard_Failure.hxx>
 #endif
 
-#include "Body.h"
-#include "FeatureBoolean.h"
-
-#include <Base/Console.h>
-#include <Base/Exception.h>
-#include <Base/Parameter.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <Mod/Part/App/TopoShapeOpCode.h>
 #include <Mod/PartDesign/App/ShapeBinder.h>
+
+#include "FeatureBoolean.h"
+#include "Body.h"
 
 FC_LOG_LEVEL_INIT("PartDesign", true, true);
 
@@ -54,7 +46,7 @@ namespace PartDesign {
 
 PROPERTY_SOURCE_WITH_EXTENSIONS(PartDesign::Boolean, PartDesign::Feature)
 
-const char* Boolean::TypeEnums[]= {"Fuse","Cut","Common","Compound","Section",NULL};
+const char* Boolean::TypeEnums[]= {"Fuse","Cut","Common","Compound","Section",nullptr};
 
 Boolean::Boolean()
 {
@@ -76,11 +68,10 @@ short Boolean::mustExecute() const
     return PartDesign::Feature::mustExecute();
 }
 
-App::DocumentObjectExecReturn *Boolean::execute(void)
+App::DocumentObjectExecReturn *Boolean::execute()
 {
     // Get the operation type
     std::string type = Type.getValueAsString();
-   
     std::vector<App::DocumentObject*> tools = Group.getValues();
     auto itBegin = tools.begin();
     auto itEnd = tools.end();
@@ -169,7 +160,7 @@ App::DocumentObjectExecReturn *Boolean::execute(void)
         return App::DocumentObject::StdReturn;
     }
 
-    const char *op = 0;
+    const char *op = nullptr;
     if (type == "Fuse")
         op = Part::OpCodes::Fuse;
     else if(type == "Cut")
@@ -202,7 +193,7 @@ App::DocumentObjectExecReturn *Boolean::execute(void)
 }
 
 void Boolean::onChanged(const App::Property* prop) {
-    
+
     if(strcmp(prop->getName(), "Group") == 0)
         touch();
 

@@ -29,16 +29,11 @@ set(PartDesignGui_LIBS
     FreeCADGui
 )
 
-if(BUILD_QT5)
-    qt5_add_resources(PartDesignGui_SRCS Resources/PartDesign.qrc)
-else()
-    qt4_add_resources(PartDesignGui_SRCS Resources/PartDesign.qrc)
-endif()
+qt_add_resources(PartDesignGui_SRCS Resources/PartDesign.qrc)
 
 set(PartDesignGui_UIC_SRCS
     TaskFeaturePick.ui
-    TaskPadParameters.ui
-    TaskPocketParameters.ui
+    TaskPadPocketParameters.ui
     TaskChamferParameters.ui
     TaskFilletParameters.ui
     TaskDraftParameters.ui
@@ -64,12 +59,6 @@ set(PartDesignGui_UIC_SRCS
     DlgActiveBody.ui
     TaskHelixParameters.ui
 )
-
-if(BUILD_QT5)
-    qt5_wrap_ui(PartDesignGui_UIC_HDRS ${PartDesignGui_UIC_SRCS})
-else()
-    qt4_wrap_ui(PartDesignGui_UIC_HDRS ${PartDesignGui_UIC_SRCS})
-endif()
 
 SET(PartDesignGuiViewProvider_SRCS
     ViewProvider.cpp
@@ -161,10 +150,11 @@ SET(PartDesignGuiTaskDlgs_SRCS
     TaskFeatureParameters.h
     TaskSketchBasedParameters.cpp
     TaskSketchBasedParameters.h
-    TaskPadParameters.ui
+    TaskExtrudeParameters.cpp
+    TaskExtrudeParameters.h
+    TaskPadPocketParameters.ui
     TaskPadParameters.cpp
     TaskPadParameters.h
-    TaskPocketParameters.ui
     TaskPocketParameters.cpp
     TaskPocketParameters.h
     TaskChamferParameters.ui
@@ -244,9 +234,12 @@ SET(PartDesignGuiModule_SRCS
     Command.cpp
     CommandPrimitive.cpp
     CommandBody.cpp
+    EnumFlags.h
     Resources/PartDesign.qrc
     PreCompiled.cpp
     PreCompiled.h
+    SketchWorkflow.cpp
+    SketchWorkflow.h
     Utils.cpp
     Utils.h
     Workbench.cpp

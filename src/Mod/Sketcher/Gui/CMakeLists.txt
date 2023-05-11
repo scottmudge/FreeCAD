@@ -25,11 +25,7 @@ set(SketcherGui_LIBS
     FreeCADGui
 )
 
-if(BUILD_QT5)
-    qt5_add_resources(SketcherGui_SRCS Resources/Sketcher.qrc)
-else()
-    qt4_add_resources(SketcherGui_SRCS Resources/Sketcher.qrc)
-endif()
+qt_add_resources(SketcherGui_SRCS Resources/Sketcher.qrc)
 
 set(SketcherGui_UIC_SRCS
     TaskSketcherConstraints.ui
@@ -46,15 +42,7 @@ set(SketcherGui_UIC_SRCS
     SketcherSettingsDisplay.ui
     SketchRectangularArrayDialog.ui
     SketcherRegularPolygonDialog.ui
-    ConstraintMultiFilterDialog.ui
-    ConstraintSettingsDialog.ui
 )
-
-if(BUILD_QT5)
-    qt5_wrap_ui(SketcherGui_UIC_HDRS ${SketcherGui_UIC_SRCS})
-else()
-    qt4_wrap_ui(SketcherGui_UIC_HDRS ${SketcherGui_UIC_SRCS})
-endif()
 
 SET(SketcherGui_SRCS
     ${SketcherGui_SRCS}
@@ -62,6 +50,28 @@ SET(SketcherGui_SRCS
     AppSketcherGui.cpp
     GeometryCreationMode.h
     Command.cpp
+    AutoConstraint.h
+    Utils.h
+    Utils.cpp
+    DrawSketchHandlerLine.h
+    DrawSketchHandlerRectangle.h
+    DrawSketchHandlerPolygon.h
+    DrawSketchHandlerLineSet.h
+    DrawSketchHandlerCircle.h
+    DrawSketchHandlerEllipse.h
+    DrawSketchHandlerArc.h
+    DrawSketchHandlerArcOfEllipse.h
+    DrawSketchHandlerArcOfHyperbola.h
+    DrawSketchHandlerArcOfParabola.h
+    DrawSketchHandlerBSpline.h
+    DrawSketchHandlerPoint.h
+    DrawSketchHandlerFillet.h
+    DrawSketchHandlerTrimming.h
+    DrawSketchHandlerExtend.h
+    DrawSketchHandlerSplitting.h
+    DrawSketchHandlerExternal.h
+    DrawSketchHandlerCarbonCopy.h
+    DrawSketchHandlerSlot.h
     CommandCreateGeo.cpp
     CommandConstraints.h
     CommandConstraints.cpp
@@ -101,6 +111,20 @@ SET(SketcherGui_SRCS
     TaskSketcherValidation.h
     ShortcutListener.cpp
     ShortcutListener.h
+    # EditModeInformationOverlayCoinConverter.cpp
+    # EditModeInformationOverlayCoinConverter.h
+    # EditModeGeometryCoinConverter.cpp
+    # EditModeGeometryCoinConverter.h
+    # EditModeCoinManagerParameters.h
+    # EditModeCoinManagerParameters.cpp
+    # EditModeCoinManager.cpp
+    # EditModeCoinManager.h
+    # EditModeGeometryCoinManager.cpp
+    # EditModeGeometryCoinManager.h
+    # EditModeConstraintCoinManager.cpp
+    # EditModeConstraintCoinManager.h
+    # ViewProviderSketchCoinAttorney.cpp
+    # ViewProviderSketchCoinAttorney.h
     ViewProviderSketch.cpp
     ViewProviderSketch.h
     DrawSketchHandler.cpp
@@ -119,10 +143,6 @@ SET(SketcherGui_SRCS
     SketchRectangularArrayDialog.cpp
     SketcherRegularPolygonDialog.h
     SketcherRegularPolygonDialog.cpp
-    ConstraintMultiFilterDialog.h
-    ConstraintMultiFilterDialog.cpp
-    ConstraintSettingsDialog.h
-    ConstraintSettingsDialog.cpp
     TaskDlgEditSketch.cpp
     TaskDlgEditSketch.h
     ViewProviderPython.cpp

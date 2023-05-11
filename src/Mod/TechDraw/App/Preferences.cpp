@@ -25,22 +25,19 @@
 #ifndef _PreComp_
 #include <string>
 #include <QString>
-//#include <QFont>
-//#include <QColor>
 #endif
 
 #include <App/Application.h>
 #include <App/Material.h>
 #include <Base/Console.h>
-#include <Base/Exception.h>
 #include <Base/FileInfo.h>
 #include <Base/Parameter.h>
-#include <Base/Vector3D.h>
 
 #include "Preferences.h"
 
+
 //getters for parameters used in multiple places.
-//ensure this is in sync with preference page uis
+//ensure this is in sync with preference page user interfaces
 
 using namespace TechDraw;
 
@@ -135,9 +132,30 @@ double Preferences::vertexScale()
     return result;
 }
 
+int Preferences::scaleType()
+{
+    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+          .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/General");
+    int result = hGrp->GetInt("DefaultScaleType", 0);
+    return result;
+}
 
+double Preferences::scale()
+{
+    int prefScaleType = scaleType();
+    if (prefScaleType == 0) {       //page scale
+        Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+              .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/General");
+        return hGrp->GetFloat("DefaultPageScale", 1.0);
+    } else if (prefScaleType == 1) {    //custom scale
+        Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+              .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/General");
+        return hGrp->GetFloat("DefaultViewScale", 1.0);
+    }
+    return 1.0;
+}
 
-//lightgray #D3D3D3 
+//lightgray #D3D3D3
 
 bool Preferences::keepPagesUpToDate()
 {
@@ -192,12 +210,15 @@ QString Preferences::defaultTemplate()
                                          GetGroup("Mod/TechDraw/Files");
     std::string defaultDir = App::Application::getResourceDir() + "Mod/TechDraw/Templates/";
     std::string defaultFileName = defaultDir + "A4_LandscapeTD.svg";
-    std::string prefFileName = hGrp->GetASCII("TemplateFile",defaultFileName.c_str());
+    std::string prefFileName = hGrp->GetASCII("TemplateFile", defaultFileName.c_str());
+    if (prefFileName.empty()) {
+        prefFileName = defaultFileName;
+    }
     QString templateFileName = QString::fromStdString(prefFileName);
     Base::FileInfo fi(prefFileName);
     if (!fi.isReadable()) {
-        templateFileName = QString::fromStdString(defaultFileName);
         Base::Console().Warning("Template File: %s is not readable\n", prefFileName.c_str());
+        templateFileName = QString::fromStdString(defaultFileName);
     }
     return templateFileName;
 }
@@ -209,11 +230,14 @@ QString Preferences::defaultTemplateDir()
 
     std::string defaultDir = App::Application::getResourceDir() + "Mod/TechDraw/Templates";
     std::string prefTemplateDir = hGrp->GetASCII("TemplateDir", defaultDir.c_str());
+    if (prefTemplateDir.empty()) {
+        prefTemplateDir = defaultDir;
+    }
     QString templateDir = QString::fromStdString(prefTemplateDir);
     Base::FileInfo fi(prefTemplateDir);
     if (!fi.isReadable()) {
-        templateDir = QString::fromStdString(defaultDir);
         Base::Console().Warning("Template Directory: %s is not readable\n", prefTemplateDir.c_str());
+        templateDir = QString::fromStdString(defaultDir);
    }
     return templateDir;
 }
@@ -225,11 +249,122 @@ std::string Preferences::lineGroupFile()
                                          GetGroup("Preferences")->GetGroup("Mod/TechDraw/Files");
     std::string defaultDir = App::Application::getResourceDir() + "Mod/TechDraw/LineGroup/";
     std::string defaultFileName = defaultDir + "LineGroup.csv";
-    std::string lgFileName = hGrp->GetASCII("LineGroupFile",defaultFileName.c_str());
+    std::string lgFileName = hGrp->GetASCII("LineGroupFile", defaultFileName.c_str());
+    if (lgFileName.empty()) {
+        lgFileName = defaultFileName;
+    }
     Base::FileInfo fi(lgFileName);
     if (!fi.isReadable()) {
-        lgFileName = defaultFileName;
         Base::Console().Warning("Line Group File: %s is not readable\n", lgFileName.c_str());
+        lgFileName = defaultFileName;
     }
     return lgFileName;
+}
+
+std::string Preferences::formatSpec()
+{
+    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+                                         .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/Dimensions");
+    return hGrp->GetASCII("formatSpec", "%.2w");
+}
+
+int Preferences::altDecimals()
+{
+    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+                                         .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/Dimensions");
+    return hGrp->GetInt("AltDecimals", 2);
+}
+
+int Preferences::mattingStyle()
+{
+    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter().
+                                         GetGroup("BaseApp")->GetGroup("Preferences")->
+                                         GetGroup("Mod/TechDraw/Decorations");
+    int style = hGrp->GetInt("MattingStyle", 0);
+    return style;
+}
+
+std::string Preferences::svgFile()
+{
+    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+        .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/Files");
+
+    std::string defaultDir = App::Application::getResourceDir() + "Mod/TechDraw/Patterns/";
+    std::string defaultFileName = defaultDir + "simple.svg";
+    std::string prefHatchFile = hGrp->GetASCII("FileHatch", defaultFileName.c_str());
+    if (prefHatchFile.empty()) {
+        prefHatchFile = defaultFileName;
+    }
+    Base::FileInfo fi(prefHatchFile);
+    if (!fi.isReadable()) {
+        Base::Console().Warning("Svg Hatch File: %s is not readable\n", prefHatchFile.c_str());
+        prefHatchFile = defaultFileName;
+    }
+    return prefHatchFile;
+}
+
+std::string Preferences::patFile()
+{
+    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+        .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/PAT");
+
+    std::string defaultDir = App::Application::getResourceDir() + "Mod/TechDraw/PAT/";
+    std::string defaultFileName = defaultDir + "FCPAT.pat";
+    std::string prefHatchFile = hGrp->GetASCII("FilePattern", defaultFileName.c_str());
+    if (prefHatchFile.empty()) {
+        prefHatchFile = defaultFileName;
+    }
+    Base::FileInfo fi(prefHatchFile);
+    if (!fi.isReadable()) {
+        Base::Console().Warning("Pat Hatch File: %s is not readable\n", prefHatchFile.c_str());
+        prefHatchFile = defaultFileName;
+    }
+
+    return prefHatchFile;
+}
+
+std::string Preferences::bitmapFill()
+{
+    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+        .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/Files");
+
+    std::string defaultDir = App::Application::getResourceDir() + "Mod/TechDraw/Patterns/";
+    std::string defaultFileName = defaultDir + "default.png";
+    std::string prefBitmapFile = hGrp->GetASCII("BitmapFill", defaultFileName.c_str());
+    if (prefBitmapFile.empty()) {
+        prefBitmapFile = defaultFileName;
+    }
+    Base::FileInfo fi(prefBitmapFile);
+    if (!fi.isReadable()) {
+        Base::Console().Warning("Bitmap Fill File: %s is not readable\n", prefBitmapFile.c_str());
+        prefBitmapFile = defaultFileName;
+    }
+    return prefBitmapFile;
+}
+
+double Preferences::GapISO()
+{
+    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+                                         .GetGroup("BaseApp")->GetGroup("Preferences")->
+                                         GetGroup("Mod/TechDraw/Dimensions");
+    double factor = hGrp->GetFloat("GapISO", 8.0);
+    return factor;
+}
+
+double Preferences::GapASME()
+{
+    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
+                                         .GetGroup("BaseApp")->GetGroup("Preferences")->
+                                         GetGroup("Mod/TechDraw/Dimensions");
+    double factor = hGrp->GetFloat("GapASME", 6.0);
+    return factor;
+}
+
+bool Preferences::reportProgress()
+{
+    Base::Reference<ParameterGrp>  hGrp = App::GetApplication().GetUserParameter().
+                                          GetGroup("BaseApp")->GetGroup("Preferences")->
+                                          GetGroup("Mod/TechDraw/General");
+    bool report = hGrp->GetBool("ReportProgress", false);
+    return report;
 }

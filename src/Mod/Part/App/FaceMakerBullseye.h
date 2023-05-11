@@ -24,11 +24,11 @@
 #define PART_FACEMAKER_BULLSEYE_H
 
 #include "FaceMaker.h"
-#include <list>
 
 #include <Geom_Surface.hxx>
 #include <gp_Pln.hxx>
 #include <Bnd_Box.hxx>
+
 
 namespace Part
 {
@@ -58,11 +58,11 @@ public:
      */
     virtual void setPlane(const gp_Pln& plane) override;
 
-    virtual std::string getUserFriendlyName() const override;
-    virtual std::string getBriefExplanation() const override;
+    std::string getUserFriendlyName() const override;
+    std::string getBriefExplanation() const override;
 
 protected:
-    virtual void Build_Essence() override;
+    void Build_Essence() override;
 
 protected:
     gp_Pln myPlane; //externally supplied plane (if any)

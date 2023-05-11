@@ -23,17 +23,8 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#include <BRepAdaptor_Curve.hxx>
-#include <BRepAdaptor_Surface.hxx>
-#include <Precision.hxx>
-#include <TopoDS.hxx>
-#include <gp_Lin.hxx>
-#include <gp_Pln.hxx>
-#include <gp_Pnt.hxx>
-#endif
-
 #include "FemConstraintSpring.h"
+
 
 using namespace Fem;
 
@@ -53,12 +44,12 @@ ConstraintSpring::ConstraintSpring()
     Normals.setValues(std::vector<Base::Vector3d>());
 }
 
-App::DocumentObjectExecReturn *ConstraintSpring::execute(void)
+App::DocumentObjectExecReturn *ConstraintSpring::execute()
 {
     return Constraint::execute();
 }
 
-const char* ConstraintSpring::getViewProviderName(void) const
+const char* ConstraintSpring::getViewProviderName() const
 {
     return "FemGui::ViewProviderFemConstraintSpring";
 }

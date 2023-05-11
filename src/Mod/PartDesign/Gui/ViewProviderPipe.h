@@ -25,13 +25,12 @@
 #define PARTGUI_ViewProviderPipe_H
 
 #include "ViewProviderAddSub.h"
-#include <map>
 
 namespace PartDesignGui {
 
 class PartDesignGuiExport ViewProviderPipe : public ViewProviderAddSub
 {
-    PROPERTY_HEADER(PartDesignGui::ViewProviderPipe);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderPipe);
 
 public:
     enum Reference {
@@ -44,15 +43,15 @@ public:
     /// constructor
     ViewProviderPipe();
     /// destructor
-    virtual ~ViewProviderPipe();
+    ~ViewProviderPipe() override;
 
     /// grouping handling 
-    std::vector<App::DocumentObject*> _claimChildren(void)const;
-    void setupContextMenu(QMenu*, QObject*, const char*);
+    std::vector<App::DocumentObject*> _claimChildren() const override;
+    void setupContextMenu(QMenu*, QObject*, const char*) override;
 
 protected:
     /// Returns a newly created TaskDlgPipeParameters
-    virtual TaskDlgFeatureParameters *getEditDialog();
+    TaskDlgFeatureParameters *getEditDialog() override;
 };
 
 

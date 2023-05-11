@@ -314,7 +314,7 @@
       <item row="4" column="0" colspan="2">
        <widget class="QCheckBox" name="UseCustomThreadClearance">
         <property name="text">
-         <string>Custom Thread Clearance</string>
+         <string>Custom Thread</string>
         </property>
        </widget>
       </item>

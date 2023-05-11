@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -32,18 +31,19 @@
 # include <QThread>
 #endif
 
-#include <QtOpenGL.h>
+#include <App/Application.h>
+#include <App/DocumentParams.h>
+#include <Base/Reader.h>
+#include <Base/Writer.h>
+
 #include "Thumbnail.h"
 #include "BitmapFactory.h"
 #include "View3DInventorViewer.h"
-#include <Base/Writer.h>
-#include <Base/Reader.h>
-#include <App/Application.h>
-#include <App/DocumentParams.h>
+
 
 using namespace Gui;
 
-Thumbnail::Thumbnail(int s) : viewer(0), size(s)
+Thumbnail::Thumbnail(int s) : viewer(nullptr), size(s)
 {
 }
 
@@ -66,7 +66,7 @@ void Thumbnail::setFileName(const char* fn)
     this->uri = QUrl::fromLocalFile(QString::fromUtf8(fn));
 }
 
-unsigned int Thumbnail::getMemSize (void) const
+unsigned int Thumbnail::getMemSize () const
 {
     return 0;
 }
@@ -102,10 +102,11 @@ void Thumbnail::SaveDocFile (Base::Writer &writer) const
     QPixmap appIcon = Gui::BitmapFactory().pixmap(App::Application::Config()["AppIcon"].c_str());
     QPixmap px =  appIcon;
     if (!img.isNull()) {
+        // Create a small "Fc" Application icon in the bottom right of the thumbnail
         if (App::GetApplication().GetParameterGroupByPath
             ("User parameter:BaseApp/Preferences/Document")->GetBool("AddThumbnailLogo",true)) {
             // only scale app icon if an offscreen image could be created
-            appIcon =  appIcon.scaled(this->size / 4, this->size /4);
+            appIcon = appIcon.scaled(this->size / 4, this->size /4, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             px = BitmapFactory().merge(QPixmap::fromImage(img), appIcon, BitmapFactoryInst::BottomRight);
         }
         else {
@@ -115,7 +116,7 @@ void Thumbnail::SaveDocFile (Base::Writer &writer) const
 
     if (!px.isNull()) {
         // according to specification add some meta-information to the image
-        uint mt = QDateTime::currentDateTime().toTime_t();
+        qint64 mt = QDateTime::currentDateTime().toTime_t();
         QString mtime = QStringLiteral("%1").arg(mt);
         img.setText(QStringLiteral("Software"), qApp->applicationName());
         img.setText(QStringLiteral("Thumb::Mimetype"), QStringLiteral("application/x-extension-fcstd"));

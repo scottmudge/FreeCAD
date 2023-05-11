@@ -24,9 +24,7 @@
 #ifndef PARTGUI_ViewProviderPrimitive_H
 #define PARTGUI_ViewProviderPrimitive_H
 
-#include "ViewProvider.h"
 #include "ViewProviderAddSub.h"
-#include <Mod/Part/Gui/SoBrepFaceSet.h>
 
 namespace PartDesignGui {
 
@@ -34,20 +32,21 @@ class TaskDlgFeatureParameters;
 
 class PartDesignGuiExport ViewProviderPrimitive : public ViewProviderAddSub
 {
-    PROPERTY_HEADER(PartDesignGui::ViewProviderPrimitive);
+    using inherited = ViewProviderAddSub;
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderPrimitive);
 
 public:
     /// constructor
     ViewProviderPrimitive();
     /// destructor
-    virtual ~ViewProviderPrimitive();
-    
-    virtual void attach(App::DocumentObject*);
-    virtual void updateData(const App::Property*);
-    
+    ~ViewProviderPrimitive() override;
+
+    void attach(App::DocumentObject*) override;
+    void updateData(const App::Property*) override;
+
 protected:
-    virtual void setupContextMenu(QMenu* menu, QObject* receiver, const char* member);
-    virtual TaskDlgFeatureParameters *getEditDialog();
+    void setupContextMenu(QMenu* menu, QObject* receiver, const char* member) override;
+    TaskDlgFeatureParameters *getEditDialog() override;
     
     std::string                 displayMode;
 };

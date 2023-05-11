@@ -24,39 +24,38 @@
 #ifndef PARTDESIGN_FEATUREFILLET_H
 #define PARTDESIGN_FEATUREFILLET_H
 
-#include "FeatureDressUp.h"
-
 #include <App/PropertyStandard.h>
 #include <App/PropertyUnits.h>
-#include <App/PropertyLinks.h>
 #include <Mod/Part/App/PropertyDressUp.h>
+#include "FeatureDressUp.h"
 
 namespace PartDesign
 {
 
 class PartDesignExport Fillet : public DressUp
 {
-    PROPERTY_HEADER(PartDesign::Fillet);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::Fillet);
 
 public:
     Fillet();
 
     App::PropertyQuantityConstraint Radius;
     Part::PropertyFilletSegments Segments;
+    App::PropertyBool UseAllEdges;
 
     /** @name methods override feature */
     //@{
     /// recalculate the feature
-    App::DocumentObjectExecReturn *execute(void);
-    short mustExecute() const;
+    App::DocumentObjectExecReturn *execute(void) override;
+    short mustExecute() const override;
     /// returns the type name of the view provider
-    const char* getViewProviderName(void) const {
+    const char* getViewProviderName(void) const override {
         return "PartDesignGui::ViewProviderFillet";
     }
     //@}
 
 protected:
-    void handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, App::Property * prop);
+    void handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, App::Property * prop) override;
 
 private:
     std::vector<int> edgeIndices;

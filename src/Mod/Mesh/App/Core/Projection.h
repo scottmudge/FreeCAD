@@ -20,14 +20,14 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef MESH_PROJECTION_H
 #define MESH_PROJECTION_H
 
 #include <vector>
 #include <Base/BoundBox.h>
-#include <Base/Vector3D.h>
-#include <Mod/Mesh/App/Core/Elements.h>
+
+#include "Elements.h"
+
 
 using Base::Vector3f;
 
@@ -46,7 +46,7 @@ class MeshGeomFacet;
 class MeshExport MeshProjection
 {
 public:
-    MeshProjection(const MeshKernel&);
+    explicit MeshProjection(const MeshKernel&);
     ~MeshProjection();
 
     bool projectLineOnMesh(const MeshFacetGrid& grid, const Base::Vector3f& p1, FacetIndex f1,
@@ -64,4 +64,4 @@ private:
 
 } // namespace MeshCore
 
-#endif  // MESH_PROJECTION_H 
+#endif  // MESH_PROJECTION_H

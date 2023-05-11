@@ -21,20 +21,22 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
+
 #ifndef _PreComp_
+# include <QApplication>
 # include <QEvent>
 # include <QKeyEvent>
 #endif
 
 #include <Base/Console.h>
-#include <QCoreApplication>
 
 #include "LineEdit.h"
+
 
 using namespace SpreadsheetGui;
 
 LineEdit::LineEdit(QWidget *parent)
-    : Gui::ExpressionLineEdit(parent, false, '=')
+    : Gui::ExpressionLineEdit(parent, false, '=', true)
     , lastKeyPressed(0)
 {
     setFocusPolicy(Qt::FocusPolicy::ClickFocus);

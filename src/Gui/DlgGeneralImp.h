@@ -26,6 +26,7 @@
 
 #include "PropertyPage.h"
 #include <memory>
+#include <string>
 
 class QTabWidget;
 class QComboBox;
@@ -36,7 +37,6 @@ class PrefComboBox;
 
 namespace Dialog {
 class Ui_DlgGeneral;
-class DlgCreateNewPreferencePackImp;
 
 /** This class implements the settings for the application.
  *  You can change window style, size of pixmaps, size of recent file list and so on
@@ -47,13 +47,13 @@ class DlgGeneralImp : public PreferencePage
     Q_OBJECT
 
 public:
-    DlgGeneralImp( QWidget* parent = 0 );
-    ~DlgGeneralImp();
+    explicit DlgGeneralImp( QWidget* parent = nullptr );
+    ~DlgGeneralImp() override;
 
     static void attachObserver();
 
-    void saveSettings();
-    void loadSettings();
+    void saveSettings() override;
+    void loadSettings() override;
 
     static void populateStylesheets(const char *key,
                                     const char *path,
@@ -62,17 +62,15 @@ public:
                                     QStringList filter = QStringList());
 
 protected:
-    void changeEvent(QEvent *e);
     void updateLanguage();
+    void changeEvent(QEvent *event) override;
 
 private:
     void setRecentFileSize();
-    void saveAsNewPreferencePack();
     void setupToolBarIconSize(QComboBox *comboBox);
 
 private:
     std::unique_ptr<Ui_DlgGeneral> ui;
-    std::unique_ptr<DlgCreateNewPreferencePackImp> newPreferencePackDialog;
 };
 
 } // namespace Dialog

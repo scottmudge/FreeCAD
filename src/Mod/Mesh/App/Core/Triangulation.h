@@ -20,12 +20,11 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef MESH_TRIANGULATION_H
 #define MESH_TRIANGULATION_H
 
 #include "Elements.h"
-#include <Base/Vector3D.h>
+
 
 namespace MeshCore
 {
@@ -47,12 +46,12 @@ public:
 class MeshExport TriangulationVerifierV2 : public TriangulationVerifier
 {
 public:
-    virtual bool Accept(const Base::Vector3f& n,
+    bool Accept(const Base::Vector3f& n,
                         const Base::Vector3f& p1,
                         const Base::Vector3f& p2,
-                        const Base::Vector3f& p3) const;
-    virtual bool MustFlip(const Base::Vector3f& n1,
-                          const Base::Vector3f& n2) const;
+                        const Base::Vector3f& p3) const override;
+    bool MustFlip(const Base::Vector3f& n1,
+                          const Base::Vector3f& n2) const override;
 };
 
 class MeshExport AbstractPolygonTriangulator
@@ -149,10 +148,10 @@ class MeshExport EarClippingTriangulator : public AbstractPolygonTriangulator
 {
 public:
     EarClippingTriangulator();
-    ~EarClippingTriangulator();
+    ~EarClippingTriangulator() override;
 
 protected:
-    bool Triangulate();
+    bool Triangulate() override;
 
 private:
     /**
@@ -160,7 +159,7 @@ private:
     * The original code snippet was submitted to FlipCode.com by John W. Ratcliff
     * (jratcliff@verant.com) on July 22, 2000.
     * The original vector of 2d points is replaced by a vector of 3d points where the
-    * z-coordinate is ignored. This is because the algorithm is often used for 3d points 
+    * z-coordinate is ignored. This is because the algorithm is often used for 3d points
     * projected to a common plane. The result vector of 2d points is replaced by an
     * array of indices to the points of the polygon.
     */
@@ -191,42 +190,42 @@ class MeshExport QuasiDelaunayTriangulator : public EarClippingTriangulator
 {
 public:
     QuasiDelaunayTriangulator();
-    ~QuasiDelaunayTriangulator();
+    ~QuasiDelaunayTriangulator() override;
 
 protected:
-    bool Triangulate();
+    bool Triangulate() override;
 };
 
 class MeshExport DelaunayTriangulator : public AbstractPolygonTriangulator
 {
 public:
     DelaunayTriangulator();
-    ~DelaunayTriangulator();
+    ~DelaunayTriangulator() override;
 
 protected:
-    bool Triangulate();
+    bool Triangulate() override;
 };
 
 class MeshExport FlatTriangulator : public AbstractPolygonTriangulator
 {
 public:
     FlatTriangulator();
-    ~FlatTriangulator();
+    ~FlatTriangulator() override;
 
-    void PostProcessing(const std::vector<Base::Vector3f>&);
+    void PostProcessing(const std::vector<Base::Vector3f>&) override;
 
 protected:
-    bool Triangulate();
+    bool Triangulate() override;
 };
 
 class MeshExport ConstraintDelaunayTriangulator : public AbstractPolygonTriangulator
 {
 public:
-    ConstraintDelaunayTriangulator(float area);
-    ~ConstraintDelaunayTriangulator();
+    explicit ConstraintDelaunayTriangulator(float area);
+    ~ConstraintDelaunayTriangulator() override;
 
 protected:
-    bool Triangulate();
+    bool Triangulate() override;
 
 private:
     float fMaxArea;

@@ -20,17 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef _Preferences_h_
-#define _Preferences_h_
+#ifndef Preferences_h_
+#define Preferences_h_
 
 #include <string>
 
-//#include <QString>
-//#include <QFont>
+#include <Mod/TechDraw/TechDrawGlobal.h>
 
-//class QFont;
+
 class QString;
-//class QColor;
 
 namespace App
 {
@@ -54,7 +52,8 @@ static App::Color  selectColor();
 static App::Color  preselectColor();
 static App::Color  vertexColor();
 static double      vertexScale();
-
+static int         scaleType();
+static double      scale();
 static bool        useGlobalDecimals();
 static bool        keepPagesUpToDate();
 
@@ -67,9 +66,22 @@ static QString     defaultTemplate();
 static QString     defaultTemplateDir();
 static std::string lineGroupFile();
 
-
-
 static const double DefaultFontSizeInMM;
+
+static std::string  formatSpec();
+static int          altDecimals();
+
+static int         mattingStyle();
+
+static std::string svgFile();
+static std::string patFile();
+
+static std::string bitmapFill();
+
+static double      GapISO();
+static double      GapASME();
+
+static bool        reportProgress();
 };
 
 } //end namespace TechDraw

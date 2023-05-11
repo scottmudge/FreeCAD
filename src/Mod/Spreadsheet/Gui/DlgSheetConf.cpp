@@ -1,5 +1,5 @@
 /****************************************************************************
- *   Copyright (c) 2019 Zheng Lei (realthunder) <realthunder.dev@gmail.com> *
+ *   Copyright (c) 2019 Zheng, Lei (realthunder) <realthunder.dev@gmail.com>*
  *                                                                          *
  *   This file is part of the FreeCAD CAx development system.               *
  *                                                                          *
@@ -21,17 +21,19 @@
  ****************************************************************************/
 
 #include "PreCompiled.h"
-#include <boost/algorithm/string/predicate.hpp>
+
 #include <QMessageBox>
-#include "DlgSheetConf.h"
-#include <Base/Tools.h>
-#include <App/Range.h>
-#include <App/Document.h>
-#include <App/Application.h>
-#include <App/ExpressionParser.h>
+
 #include <App/AutoTransaction.h>
+#include <App/Document.h>
+#include <App/ExpressionParser.h>
+#include <App/Range.h>
+#include <Base/Tools.h>
 #include <Gui/CommandT.h>
+
+#include "DlgSheetConf.h"
 #include "ui_DlgSheetConf.h"
+
 
 using namespace App;
 using namespace Spreadsheet;
@@ -150,7 +152,7 @@ App::Property *DlgSheetConf::prepare(CellAddress &from, CellAddress &to,
             }
         }
     }
-    return 0;
+    return nullptr;
 }
 
 void DlgSheetConf::accept()
@@ -208,9 +210,9 @@ void DlgSheetConf::accept()
         if(!prop) {
             prop = obj->addDynamicProperty("App::PropertyEnumeration", propName.c_str(),
                                 groupName.toUtf8().constData());
-            prop->setStatus(App::Property::CopyOnChange,true);
         } else if (groupName.size())
             obj->changeDynamicProperty(prop, groupName.toUtf8().constData(), nullptr);
+        prop->setStatus(App::Property::CopyOnChange,true);
 
         // Bind the enumeration items to the column of configuration names
         Gui::cmdAppObjectArgs(obj, "setExpression('%s.Enum', '%s.cells[<<%s>>]')",
@@ -225,18 +227,10 @@ void DlgSheetConf::accept()
         // PropertyEnumeration
         Gui::cmdAppObjectArgs(sheet, "setExpression('.cells.Bind.%s.%s', "
             "'tuple(.cells, <<%s>> + str(hiddenref(%s)+%d), <<%s>> + str(hiddenref(%s)+%d))')",
-            range.from().toString(true), range.to().toString(true),
-            range.from().toString(true,false,true), prop->getFullName(), from.row()+2,
-            range.to().toString(true,false,true), prop->getFullName(), from.row()+2);
-
-        // Double bind the first cell to the enumeration property, so that we
-        // can select the configuration both inside the spreadsheet and at the
-        // object's property view.
-        std::string cellAddr = from.toString(true);
-        Gui::cmdAppObjectArgs(sheet, "set('%s', '=dbind(%s.All)')", cellAddr, prop->getFullName());
-        Gui::cmdAppObjectArgs(sheet, "recompute()");
-        Gui::cmdAppObjectArgs(sheet, "setEditMode('%s', 'Combo', False)", cellAddr);
-        Gui::cmdAppObjectArgs(sheet, "setPersistentEdit('%s')", cellAddr);
+            range.from().toString(CellAddress::Cell::ShowRowColumn),
+            range.to().toString(CellAddress::Cell::ShowRowColumn),
+            range.from().toString(CellAddress::Cell::ShowColumn), prop->getFullName(), from.row()+2,
+            range.to().toString(CellAddress::Cell::ShowColumn), prop->getFullName(), from.row()+2);
 
         Gui::Command::doCommand(Gui::Command::Doc, "App.ActiveDocument.recompute()");
         Gui::Command::commitCommand();
@@ -274,7 +268,7 @@ void DlgSheetConf::onDiscard() {
                     r.from().toString(), r.to().toString());
         }
 
-        Gui::cmdAppObjectArgs(sheet, "clear('%s')", from.toString(true));
+        Gui::cmdAppObjectArgs(sheet, "clear('%s')", from.toString(CellAddress::Cell::ShowRowColumn));
 
         if(prop && prop->hasName()) {
             auto obj = path.getDocumentObject();

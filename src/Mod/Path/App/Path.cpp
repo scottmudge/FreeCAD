@@ -20,30 +20,19 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-# include <boost/algorithm/string.hpp>
-# include <boost/regex.hpp>
-#endif
 
+# include <boost/algorithm/string.hpp>
 #include <App/Application.h>
 #include <Base/Console.h>
-#include <Base/Exception.h>
-#include <Base/Parameter.h>
 #include <Base/Reader.h>
 #include <Base/Stream.h>
 #include <Base/Writer.h>
-
-// KDL stuff - at the moment, not used
-//#include "Mod/Robot/App/kdl_cp/path_line.hpp"
-//#include "Mod/Robot/App/kdl_cp/path_circle.hpp"
-//#include "Mod/Robot/App/kdl_cp/rotational_interpolation_sa.hpp"
-//#include "Mod/Robot/App/kdl_cp/utilities/error.h"
+#include <Mod/Path/App/PathSegmentWalker.h>
 
 #include "Path.h"
-#include <Mod/Path/App/PathSegmentWalker.h>
+
 
 using namespace Path;
 using namespace Base;
@@ -83,7 +72,7 @@ Toolpath &Toolpath::operator=(const Toolpath& otherPath)
     return *this;
 }
 
-void Toolpath::clear(void)
+void Toolpath::clear()
 {
     for(std::vector<Command*>::iterator it = vpcCommands.begin();it!=vpcCommands.end();++it)
         delete ( *it );
@@ -126,7 +115,7 @@ void Toolpath::deleteCommand(int pos)
 
 double Toolpath::getLength()
 {
-    if(vpcCommands.size()==0)
+    if(vpcCommands.empty())
         return 0;
     double l = 0;
     Vector3d last(0,0,0);
@@ -169,7 +158,7 @@ double Toolpath::getCycleTime(double hFeed, double vFeed, double hRapid, double 
         vRapid = vFeed;
     }
 
-    if (vpcCommands.size() == 0) {
+    if (vpcCommands.empty()) {
         return 0;
     }
     double l = 0;
@@ -221,21 +210,21 @@ public:
     BoundBoxSegmentVisitor()
     { }
 
-    virtual void g0(int id, const Base::Vector3d &last, const Base::Vector3d &next, const std::deque<Base::Vector3d> &pts)
+    void g0(int id, const Base::Vector3d &last, const Base::Vector3d &next, const std::deque<Base::Vector3d> &pts) override
     {
       (void)id;
       processPt(last);
       processPts(pts);
       processPt(next);
     }
-    virtual void g1(int id, const Base::Vector3d &last, const Base::Vector3d &next, const std::deque<Base::Vector3d> &pts)
+    void g1(int id, const Base::Vector3d &last, const Base::Vector3d &next, const std::deque<Base::Vector3d> &pts) override
     {
       (void)id;
       processPt(last);
       processPts(pts);
       processPt(next);
     }
-    virtual void g23(int id, const Base::Vector3d &last, const Base::Vector3d &next, const std::deque<Base::Vector3d> &pts, const Base::Vector3d &center)
+    void g23(int id, const Base::Vector3d &last, const Base::Vector3d &next, const std::deque<Base::Vector3d> &pts, const Base::Vector3d &center) override
     {
       (void)id;
       (void)center;
@@ -243,8 +232,8 @@ public:
       processPts(pts);
       processPt(next);
     }
-    virtual void g8x(int id, const Base::Vector3d &last, const Base::Vector3d &next, const std::deque<Base::Vector3d> &pts,
-                     const std::deque<Base::Vector3d> &p, const std::deque<Base::Vector3d> &q)
+    void g8x(int id, const Base::Vector3d &last, const Base::Vector3d &next, const std::deque<Base::Vector3d> &pts,
+                     const std::deque<Base::Vector3d> &p, const std::deque<Base::Vector3d> &q) override
     {
       (void)id;
       (void)q; // always within the bounds of p
@@ -253,7 +242,7 @@ public:
       processPts(p);
       processPt(next);
     }
-    virtual void g38(int id, const Base::Vector3d &last, const Base::Vector3d &next)
+    void g38(int id, const Base::Vector3d &last, const Base::Vector3d &next) override
     {
       (void)id;
       processPt(last);
@@ -283,7 +272,7 @@ Base::BoundBox3d Toolpath::getBoundBox() const
     BoundBoxSegmentVisitor visitor;
     PathSegmentWalker walker(*this);
     walker.walk(visitor, Vector3d(0, 0, 0));
-    
+
     return visitor.bb;
 }
 
@@ -358,7 +347,7 @@ void Toolpath::setFromGCode(const std::string instr)
     recalculate();
 }
 
-std::string Toolpath::toGCode(void) const
+std::string Toolpath::toGCode() const
 {
     std::string result;
     for (std::vector<Command*>::const_iterator it=vpcCommands.begin();it!=vpcCommands.end();++it) {
@@ -368,10 +357,10 @@ std::string Toolpath::toGCode(void) const
     return result;
 }
 
-void Toolpath::recalculate(void) // recalculates the path cache
+void Toolpath::recalculate() // recalculates the path cache
 {
 
-    if(vpcCommands.size()==0)
+    if(vpcCommands.empty())
         return;
 
     // TODO recalculate the KDL stuff. At the moment, this is unused.
@@ -433,7 +422,7 @@ void Toolpath::recalculate(void) // recalculates the path cache
 
 // reimplemented from base class
 
-unsigned int Toolpath::getMemSize (void) const
+unsigned int Toolpath::getMemSize () const
 {
     return vpcCommands.size() * 100;
 }

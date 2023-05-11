@@ -1,25 +1,24 @@
 /***************************************************************************
- *   Copyright (c) 2008 Werner Mayer <wmayer[at]users.sourceforge.net>     *
- *                                                                         *
- *   This file is part of the FreeCAD CAx development system.              *
- *                                                                         *
- *   This library is free software; you can redistribute it and/or         *
- *   modify it under the terms of the GNU Library General Public           *
- *   License as published by the Free Software Foundation; either          *
- *   version 2 of the License, or (at your option) any later version.      *
- *                                                                         *
- *   This library  is distributed in the hope that it will be useful,      *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU Library General Public License for more details.                  *
- *                                                                         *
- *   You should have received a copy of the GNU Library General Public     *
+*   Copyright (c) 2008 Werner Mayer <wmayer[at]users.sourceforge.net>     *
+*                                                                         *
+*   This file is part of the FreeCAD CAx development system.              *
+*                                                                         *
+*   This library is free software; you can redistribute it and/or         *
+*   modify it under the terms of the GNU Library General Public           *
+*   License as published by the Free Software Foundation; either          *
+*   version 2 of the License, or (at your option) any later version.      *
+*                                                                         *
+*   This library  is distributed in the hope that it will be useful,      *
+*   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+*   GNU Library General Public License for more details.                  *
+*                                                                         *
+*   You should have received a copy of the GNU Library General Public     *
  *   License along with this library; see the file COPYING.LIB. If not,    *
  *   write to the Free Software Foundation, Inc., 59 Temple Place,         *
  *   Suite 330, Boston, MA  02111-1307, USA                                *
  *                                                                         *
  ***************************************************************************/
-
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
@@ -40,12 +39,12 @@
 #include <App/Document.h>
 #include "SceneInspector.h"
 #include "ui_SceneInspector.h"
+#include "Application.h"
+#include "Document.h"
 #include "View3DInventor.h"
 #include "View3DInventorViewer.h"
 #include "ViewProviderDocumentObject.h"
 #include "SoFCUnifiedSelection.h"
-#include "Document.h"
-#include "Application.h"
 #include "Macro.h"
 #include "ViewProviderLink.h"
 #include "PrefWidgets.h"
@@ -237,7 +236,7 @@ DlgInspector::DlgInspector(QWidget* parent, Qt::WindowFlags fl)
 
     widgetStates->addSplitter(ui->splitter);
 
-    SceneModel* model = new SceneModel(this);
+    auto model = new SceneModel(this);
     ui->treeView->setModel(model);
     ui->treeView->setRootIsDecorated(true);
 }
@@ -297,7 +296,7 @@ void DlgInspector::setDocument(Gui::Document* doc)
 {
     setNodeNames(doc);
 
-    View3DInventor* view = qobject_cast<View3DInventor*>(doc->getActiveView());
+    auto view = qobject_cast<View3DInventor*>(doc->getActiveView());
     if (view) {
         View3DInventorViewer* viewer = view->getViewer();
         setNode(viewer->getSoRenderManager()->getSceneGraph());
@@ -307,7 +306,7 @@ void DlgInspector::setDocument(Gui::Document* doc)
 
 void DlgInspector::setNode(SoNode* node)
 {
-    SceneModel* model = static_cast<SceneModel*>(ui->treeView->model());
+    auto model = static_cast<SceneModel*>(ui->treeView->model());
     model->setNode(node);
 
     QHeaderView* header = ui->treeView->header();
@@ -321,8 +320,8 @@ void DlgInspector::setNodeNames(Gui::Document* doc)
     std::vector<Gui::ViewProvider*> vps = doc->getViewProvidersOfType
             (Gui::ViewProviderDocumentObject::getClassTypeId());
     QHash<SoNode*, QString> nodeNames;
-    for (std::vector<Gui::ViewProvider*>::iterator it = vps.begin(); it != vps.end(); ++it) {
-        Gui::ViewProviderDocumentObject* vp = static_cast<Gui::ViewProviderDocumentObject*>(*it);
+    for (const auto & it : vps) {
+        auto vp = static_cast<Gui::ViewProviderDocumentObject*>(it);
         App::DocumentObject* obj = vp->getObject();
         if (obj) {
             QString label = QString::fromUtf8(obj->Label.getValue());
@@ -330,15 +329,15 @@ void DlgInspector::setNodeNames(Gui::Document* doc)
         }
 
         std::vector<std::string> modes = vp->getDisplayMaskModes();
-        for (std::vector<std::string>::iterator jt = modes.begin(); jt != modes.end(); ++jt) {
-            SoNode* node = vp->getDisplayMaskMode(jt->c_str());
+        for (const auto & mode : modes) {
+            SoNode* node = vp->getDisplayMaskMode(mode.c_str());
             if (node) {
-                nodeNames[node] = QString::fromStdString(std::string("DisplayMode(")+*jt+")");
+                nodeNames[node] = QString::fromStdString(std::string("DisplayMode(")+mode+")");
             }
         }
     }
 
-    SceneModel* model = static_cast<SceneModel*>(ui->treeView->model());
+    auto model = static_cast<SceneModel*>(ui->treeView->model());
     model->setNodeNames(nodeNames);
 }
 
@@ -358,7 +357,7 @@ void DlgInspector::on_refreshButton_clicked()
     if (doc) {
         setNodeNames(doc);
 
-        View3DInventor* view = qobject_cast<View3DInventor*>(doc->getActiveView());
+        auto view = qobject_cast<View3DInventor*>(doc->getActiveView());
         if (view) {
             View3DInventorViewer* viewer = view->getViewer();
             setNode(viewer->getSoRenderManager()->getSceneGraph());

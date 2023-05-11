@@ -24,15 +24,13 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <time.h>
-# include <stdio.h>
 # if defined(FC_OS_WIN32)
-#  include <io.h>
 #  include <windows.h>
 # elif defined(FC_OS_LINUX) || defined(FC_OS_MACOSX)
 #  include <unistd.h>
 # endif
-# include "fcntl.h"
+# include <cstring>
+# include <functional>
 #endif
 
 #include "Interpreter.h"
@@ -41,12 +39,10 @@
 #include "PyObjectBase.h"
 #include "Interpreter.h"
 #include <QCoreApplication>
-#include <frameobject.h>
-
-using namespace Base;
 
 FC_LOG_LEVEL_INIT("Console");
 
+using namespace Base;
 
 //=========================================================================
 
@@ -61,12 +57,10 @@ public:
         : QEvent(QEvent::User), msgtype(type), msg(msg)
     {
     }
-    ~ConsoleEvent()
-    {
-    }
+    ~ConsoleEvent() override = default;
 };
 
-class ConsoleOutput : public QObject
+class ConsoleOutput : public QObject // clazy:exclude=missing-qobject-macro
 {
 public:
     static ConsoleOutput* getInstance() {
@@ -76,10 +70,10 @@ public:
     }
     static void destruct() {
         delete instance;
-        instance = 0;
+        instance = nullptr;
     }
 
-    void customEvent(QEvent* ev) {
+    void customEvent(QEvent* ev) override {
         if (ev->type() == QEvent::User) {
             ConsoleEvent* ce = static_cast<ConsoleEvent*>(ev);
             switch (ce->msgtype) {
@@ -100,17 +94,13 @@ public:
     }
 
 private:
-    ConsoleOutput()
-    {
-    }
-    ~ConsoleOutput()
-    {
-    }
+    ConsoleOutput() = default;
+    ~ConsoleOutput() override = default;
 
     static ConsoleOutput* instance;
 };
 
-ConsoleOutput* ConsoleOutput::instance = 0;
+ConsoleOutput* ConsoleOutput::instance = nullptr;
 
 }
 
@@ -118,7 +108,7 @@ ConsoleOutput* ConsoleOutput::instance = 0;
 // Construction destruction
 
 
-ConsoleSingleton::ConsoleSingleton(void)
+ConsoleSingleton::ConsoleSingleton()
   : _bVerbose(true)
   , _bCanRefresh(true)
   , connectionMode(Direct)
@@ -225,9 +215,8 @@ bool ConsoleSingleton::IsMsgTypeEnabled(const char* sObs, FreeCAD_ConsoleMsgType
             return false;
         }
     }
-    else {
-        return false;
-    }
+
+    return false;
 }
 
 void ConsoleSingleton::SetConnectionMode(ConnectionMode mode)
@@ -410,14 +399,15 @@ ILogger *ConsoleSingleton::Get(const char *Name) const
         if (OName && strcmp(OName,Name) == 0)
             return *Iter;
     }
-    return 0;
+    return nullptr;
 }
 
 int *ConsoleSingleton::GetLogLevel(const char *tag, bool create) {
     if (!tag) tag = "";
     if (_logLevels.find(tag) != _logLevels.end())
         return &_logLevels[tag];
-    if (!create) return 0;
+    if (!create)
+        return nullptr;
     int &ret = _logLevels[tag];
     ret = -1;
     return &ret;
@@ -435,17 +425,17 @@ void ConsoleSingleton::EnableRefresh(bool enable) {
 //**************************************************************************
 // Singleton stuff
 
-ConsoleSingleton * ConsoleSingleton::_pcSingleton = 0;
+ConsoleSingleton * ConsoleSingleton::_pcSingleton = nullptr;
 
-void ConsoleSingleton::Destruct(void)
+void ConsoleSingleton::Destruct()
 {
     // not initialized or double destructed!
     assert(_pcSingleton);
     delete _pcSingleton;
-    _pcSingleton=0;
+    _pcSingleton=nullptr;
 }
 
-ConsoleSingleton & ConsoleSingleton::Instance(void)
+ConsoleSingleton & ConsoleSingleton::Instance()
 {
     // not initialized?
     if (!_pcSingleton)
@@ -458,233 +448,110 @@ ConsoleSingleton & ConsoleSingleton::Instance(void)
 //**************************************************************************
 // Python stuff
 
-// ConsoleSingleton Methods						// Methods structure
+// ConsoleSingleton Methods structure
 PyMethodDef ConsoleSingleton::Methods[] = {
-    {"PrintMessage",         (PyCFunction) ConsoleSingleton::sPyMessage, METH_VARARGS,
-     "PrintMessage(string) -- Print a message to the output"},
-    {"PrintLog",             (PyCFunction) ConsoleSingleton::sPyLog, METH_VARARGS,
-     "PrintLog(string) -- Print a log message to the output"},
-    {"PrintError"  ,         (PyCFunction) ConsoleSingleton::sPyError, METH_VARARGS,
-     "PrintError(string) -- Print an error message to the output"},
-    {"PrintWarning",         (PyCFunction) ConsoleSingleton::sPyWarning, METH_VARARGS,
-     "PrintWarning -- Print a warning to the output"},
-    {"SetStatus",            (PyCFunction) ConsoleSingleton::sPySetStatus, METH_VARARGS,
-     "Set the status for either Log, Msg, Wrn or Error for an observer"},
-    {"GetStatus",            (PyCFunction) ConsoleSingleton::sPyGetStatus, METH_VARARGS,
-     "Get the status for either Log, Msg, Wrn or Error for an observer"},
-    {NULL, NULL, 0, NULL}		/* Sentinel */
+    {"PrintMessage",         ConsoleSingleton::sPyMessage, METH_VARARGS,
+     "PrintMessage(obj) -> None\n\n"
+     "Print a message to the output.\n\n"
+     "obj : object\n    The string representation is printed."},
+    {"PrintLog",             ConsoleSingleton::sPyLog, METH_VARARGS,
+     "PrintLog(obj) -> None\n\n"
+     "Print a log message to the output.\n\n"
+     "obj : object\n    The string representation is printed."},
+    {"PrintError",           ConsoleSingleton::sPyError, METH_VARARGS,
+     "PrintError(obj) -> None\n\n"
+     "Print an error message to the output.\n\n"
+     "obj : object\n    The string representation is printed."},
+    {"PrintWarning",         ConsoleSingleton::sPyWarning, METH_VARARGS,
+     "PrintWarning(obj) -> None\n\n"
+     "Print a warning message to the output.\n\n"
+     "obj : object\n    The string representation is printed."},
+    {"SetStatus",            ConsoleSingleton::sPySetStatus, METH_VARARGS,
+     "SetStatus(observer, type, status) -> None\n\n"
+     "Set the status for either 'Log', 'Msg', 'Wrn' or 'Error' for an observer.\n\n"
+     "observer : str\n    Logging interface name.\n"
+     "type : str\n    Message type.\n"
+     "status : bool"},
+    {"GetStatus",            ConsoleSingleton::sPyGetStatus, METH_VARARGS,
+     "GetStatus(observer, type) -> bool or None\n\n"
+     "Get the status for either 'Log', 'Msg', 'Wrn' or 'Error' for an observer.\n"
+     "Returns None if the specified observer doesn't exist.\n\n"
+     "observer : str\n    Logging interface name.\n"
+     "type : str\n    Message type."},
+    {"GetObservers",      ConsoleSingleton::sPyGetObservers, METH_VARARGS,
+     "GetObservers() -> list of str\n\n"
+     "Get the names of the current logging interfaces."},
+    {nullptr, nullptr, 0, nullptr}  /* Sentinel */
 };
 
-static const char *checkPyFrame(const char *msg, std::string &buf)
-{
-    if (!FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_TRACE))
-        return msg;
-
-    PyGILStateLocker lock;
-
-    std::ostringstream ss;
-
-    if (FC_LOG_INSTANCE.level() > FC_LOGLEVEL_TRACE) {
-        static Py::Object pyFormatStack;
-        if (pyFormatStack.isNone()) {
-            PyObject *pymod = PyImport_ImportModule("traceback");
-            if (pymod != nullptr) {
-                PyObject* pyfunc = PyObject_GetAttrString(pymod, "format_stack");
-                if (pyfunc != nullptr) {
-                    if (PyCallable_Check(pyfunc))
-                        pyFormatStack = Py::asObject(pyfunc);
-                    else
-                        Py_DECREF(pyfunc);
-                }
-                Py_DECREF(pymod);
-            }
-            if (pyFormatStack.isNone())
-                PyErr_Clear();
-        }
-        if (!pyFormatStack.isNone()) {
-            PyObject* res = PyObject_CallFunctionObjArgs(pyFormatStack.ptr(), 0);
-            if (res == nullptr)
-                PyErr_Clear();
-            else {
-                if (PyList_Check(res)) {
-                    Py::List list(res);
-                    for (auto it = list.begin(); it!=list.end(); ++it)
-                        ss << Py::Object(*it).as_string() << "\n";
-                }
-                Py_DECREF(res);
-            }
-        }
-    }
-
-    if (ss.tellp()) {
-        ss << msg;
-        buf = ss.str();
-        return buf.c_str();
-    }
-
-    PyFrameObject* frame = PyEval_GetFrame();
-    if (frame) {
-        int line = PyFrame_GetLineNumber(frame);
-#if PY_VERSION_HEX < 0x030b0000
-        buf = PyUnicode_AsUTF8(frame->f_code->co_filename);
-#else
-        PyCodeObject* code = PyFrame_GetCode(frame);
-        buf = PyUnicode_AsUTF8(code->co_filename);
-        Py_DECREF(code);
-#endif
-        if (buf != "<string>") {
-#ifdef FC_OS_WIN32
-            std::size_t pos = buf.rfind('\\');
-#else
-            std::size_t pos = buf.rfind('/');
-#endif
-            if (pos != std::string::npos)
-                buf.erase(buf.begin(), buf.begin() + pos + 1);
-            buf += "(";
-            buf += std::to_string(line);
-            buf += "): ";
-            buf += msg;
-            return buf.c_str();
-        }
-    }
-    return msg;
-}
-
-PyObject *ConsoleSingleton::sPyMessage(PyObject * /*self*/, PyObject *args)
+namespace {
+PyObject* FC_PYCONSOLE_MSG(std::function<void(const char*)> func, PyObject* args)
 {
     PyObject *output;
     if (!PyArg_ParseTuple(args, "O", &output))
-        return NULL;
-
-    const char* string=0;
-    PyObject* unicode=0;
-    if (PyUnicode_Check(output)) {
-        string = PyUnicode_AsUTF8(output);
-    }
-    else {
-        unicode = PyObject_Str(output);
-        if (unicode)
-            string = PyUnicode_AsUTF8(unicode);
-    }
-
+        return nullptr;
     PY_TRY {
+        const char* string = nullptr;
+        PyObject* unicode = nullptr;
+        if (PyUnicode_Check(output)) {
+            string = PyUnicode_AsUTF8(output);
+        }
+        else {
+            unicode = PyObject_Str(output);
+            if (unicode)
+                string = PyUnicode_AsUTF8(unicode);
+        }
         if (string) {
             std::string buf;
-            Instance().NotifyMessage(checkPyFrame(string, buf));            // process message
+            func(LogLevel::checkPyFrame(FC_LOG_INSTANCE.level(), string, buf));            /*process message*/
         }
-    } PY_CATCH;
+        Py_XDECREF(unicode);
+    }
+    PY_CATCH
+    Py_Return;
+}
+} // anonymous namespace
 
-    Py_XDECREF(unicode);
-
-    Py_INCREF(Py_None);
-    return Py_None;
+PyObject *ConsoleSingleton::sPyMessage(PyObject * /*self*/, PyObject *args)
+{
+    return FC_PYCONSOLE_MSG([](const char* msg) {
+        Instance().Message("%s", msg);
+    }, args);
 }
 
 PyObject *ConsoleSingleton::sPyWarning(PyObject * /*self*/, PyObject *args)
 {
-    PyObject *output;
-    if (!PyArg_ParseTuple(args, "O", &output))
-        return NULL;
-
-    const char* string=0;
-    PyObject* unicode=0;
-    if (PyUnicode_Check(output)) {
-        string = PyUnicode_AsUTF8(output);
-    }
-    else {
-        unicode = PyObject_Str(output);
-        if (unicode)
-            string = PyUnicode_AsUTF8(unicode);
-    }
-
-    PY_TRY {
-        if (string) {
-            std::string buf;
-            Instance().NotifyWarning(checkPyFrame(string, buf));            // process message
-        }
-    } PY_CATCH;
-
-    Py_XDECREF(unicode);
-
-    Py_INCREF(Py_None);
-    return Py_None;
+    return FC_PYCONSOLE_MSG([](const char* msg) {
+        Instance().Warning("%s", msg);
+    }, args);
 }
 
 PyObject *ConsoleSingleton::sPyError(PyObject * /*self*/, PyObject *args)
 {
-    PyObject *output;
-    if (!PyArg_ParseTuple(args, "O", &output))
-        return NULL;
-
-    const char* string=0;
-    PyObject* unicode=0;
-    if (PyUnicode_Check(output)) {
-        string = PyUnicode_AsUTF8(output);
-    }
-    else {
-        unicode = PyObject_Str(output);
-        if (unicode)
-            string = PyUnicode_AsUTF8(unicode);
-    }
-
-    PY_TRY {
-        if (string) {
-            std::string buf;
-            Instance().NotifyError(checkPyFrame(string, buf));            // process message
-        }
-    } PY_CATCH;
-
-    Py_XDECREF(unicode);
-
-    Py_INCREF(Py_None);
-    return Py_None;
+    return FC_PYCONSOLE_MSG([](const char* msg) {
+        Instance().Error("%s", msg);
+    }, args);
 }
 
 PyObject *ConsoleSingleton::sPyLog(PyObject * /*self*/, PyObject *args)
 {
-    PyObject *output;
-    if (!PyArg_ParseTuple(args, "O", &output))
-        return NULL;
-
-    const char* string=0;
-    PyObject* unicode=0;
-    if (PyUnicode_Check(output)) {
-        string = PyUnicode_AsUTF8(output);
-    }
-    else {
-        unicode = PyObject_Str(output);
-        if (unicode)
-            string = PyUnicode_AsUTF8(unicode);
-    }
-
-    PY_TRY {
-        if (string) {
-            std::string buf;
-            Instance().NotifyLog(checkPyFrame(string,buf));            // process message
-        }
-    } PY_CATCH;
-
-    Py_XDECREF(unicode);
-
-    Py_INCREF(Py_None);
-    return Py_None;
+    return FC_PYCONSOLE_MSG([](const char* msg) {
+        Instance().Log("%s", msg);
+    }, args);
 }
 
 PyObject *ConsoleSingleton::sPyGetStatus(PyObject * /*self*/, PyObject *args)
 {
     char *pstr1;
     char *pstr2;
-    if (!PyArg_ParseTuple(args, "ss", &pstr1, &pstr2))     // convert args: Python->C
-        return NULL;                             // NULL triggers exception
+    if (!PyArg_ParseTuple(args, "ss", &pstr1, &pstr2))
+        return nullptr;
 
     PY_TRY{
         bool b=false;
         ILogger *pObs = Instance().Get(pstr1);
         if (!pObs)
-        {
-            Py_INCREF(Py_None);
-            return Py_None;
-        }
+            Py_Return;
 
         if (strcmp(pstr2,"Log") == 0)
             b = pObs->bLog;
@@ -694,323 +561,60 @@ PyObject *ConsoleSingleton::sPyGetStatus(PyObject * /*self*/, PyObject *args)
             b = pObs->bMsg;
         else if (strcmp(pstr2,"Err") == 0)
             b = pObs->bErr;
+        else
+            Py_Error(Base::PyExc_FC_GeneralError,"Unknown message type (use 'Log', 'Err', 'Msg' or 'Wrn')");
 
-        return Py_BuildValue("i",b?1:0);
-    }PY_CATCH;
+        return PyBool_FromLong(b ? 1 : 0);
+    }
+    PY_CATCH;
 }
 
 PyObject *ConsoleSingleton::sPySetStatus(PyObject * /*self*/, PyObject *args)
 {
     char *pstr1;
     char *pstr2;
-    int  Bool;
-    if (!PyArg_ParseTuple(args, "ssi", &pstr1, &pstr2,&Bool))   // convert args: Python->C
-        return NULL;                                              // NULL triggers exception
+    PyObject* pyStatus;
+    if (!PyArg_ParseTuple(args, "ssO!", &pstr1, &pstr2, &PyBool_Type, &pyStatus))
+        return nullptr;
 
     PY_TRY{
+        bool status = asBoolean(pyStatus);
         ILogger *pObs = Instance().Get(pstr1);
-        if (pObs)
-        {
+        if (pObs) {
             if (strcmp(pstr2,"Log") == 0)
-                pObs->bLog = (Bool==0)?false:true;
+                pObs->bLog = status;
             else if (strcmp(pstr2,"Wrn") == 0)
-                pObs->bWrn = (Bool==0)?false:true;
+                pObs->bWrn = status;
             else if (strcmp(pstr2,"Msg") == 0)
-                pObs->bMsg = (Bool==0)?false:true;
+                pObs->bMsg = status;
             else if (strcmp(pstr2,"Err") == 0)
-                pObs->bErr = (Bool==0)?false:true;
+                pObs->bErr = status;
             else
-                Py_Error(Base::BaseExceptionFreeCADError,"Unknown Message Type (use Log, Err, Msg or Wrn)");
+                Py_Error(Base::PyExc_FC_GeneralError,"Unknown message type (use 'Log', 'Err', 'Msg' or 'Wrn')");
 
-            Py_INCREF(Py_None);
-            return Py_None;
+            Py_Return;
         }
-	else {
-            Py_Error(Base::BaseExceptionFreeCADError,"Unknown Console Type");
-    }
-
-    } PY_CATCH;
-}
-
-//=========================================================================
-// some special observers
-
-Base::ILogger::~ILogger()
-{}
-
-ConsoleObserverFile::ConsoleObserverFile(const char *sFileName)
-  : cFileStream(Base::FileInfo(sFileName)) // can be in UTF8
-{
-    if (!cFileStream.is_open())
-        Console().Warning("Cannot open log file '%s'.\n", sFileName);
-    // mark the file as a UTF-8 encoded file
-    unsigned char bom[3] = {0xef, 0xbb, 0xbf};
-    cFileStream.write((const char*)bom,3*sizeof(char));
-}
-
-ConsoleObserverFile::~ConsoleObserverFile()
-{
-    cFileStream.close();
-}
-
-void ConsoleObserverFile::SendLog(const std::string& msg, LogStyle level)
-{
-    std::string prefix;
-    switch(level){
-        case LogStyle::Warning:
-            prefix = "Wrn: ";
-            break;
-        case LogStyle::Message:
-            prefix = "Msg: ";
-            break;
-        case LogStyle::Error:
-            prefix = "Err: ";
-            break;
-        case LogStyle::Log:
-            prefix = "Log: ";
-            break;
-    }
-
-    cFileStream << prefix << msg;
-    cFileStream.flush();
-}
-
-ConsoleObserverStd::ConsoleObserverStd() :
-#   if defined(FC_OS_WIN32)
-    useColorStderr(true)
-#   elif defined(FC_OS_LINUX) || defined(FC_OS_MACOSX) || defined(FC_OS_BSD)
-    useColorStderr( isatty(STDERR_FILENO) )
-#   else
-    useColorStderr(false)
-#   endif
-{
-    bLog = false;
-}
-
-ConsoleObserverStd::~ConsoleObserverStd()
-{
-}
-
-void ConsoleObserverStd::SendLog(const std::string& msg, LogStyle level)
-{
-    switch(level){
-        case LogStyle::Warning:
-            this->Warning(msg.c_str());
-            break;
-        case LogStyle::Message:
-            this->Message(msg.c_str());
-            break;
-        case LogStyle::Error:
-            this->Error(msg.c_str());
-            break;
-        case LogStyle::Log:
-            this->Log(msg.c_str());
-            break;
-    }
-}
-
-void ConsoleObserverStd::Message(const char *sMsg)
-{
-    printf("%s",sMsg);
-}
-
-void ConsoleObserverStd::Warning(const char *sWarn)
-{
-    if (useColorStderr) {
-#   if defined(FC_OS_WIN32)
-        ::SetConsoleTextAttribute(::GetStdHandle(STD_ERROR_HANDLE), FOREGROUND_GREEN| FOREGROUND_BLUE);
-#   elif defined(FC_OS_LINUX) || defined(FC_OS_MACOSX) || defined(FC_OS_BSD)
-        fprintf(stderr, "\033[1;33m");
-#   endif
-    }
-
-    fprintf(stderr, "%s", sWarn);
-
-    if (useColorStderr) {
-#   if defined(FC_OS_WIN32)
-        ::SetConsoleTextAttribute(::GetStdHandle(STD_ERROR_HANDLE),FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
-#   elif defined(FC_OS_LINUX) || defined(FC_OS_MACOSX) || defined(FC_OS_BSD)
-        fprintf(stderr, "\033[0m");
-#   endif
-    }
-}
-
-void ConsoleObserverStd::Error  (const char *sErr)
-{
-    if (useColorStderr) {
-#   if defined(FC_OS_WIN32)
-        ::SetConsoleTextAttribute(::GetStdHandle(STD_ERROR_HANDLE), FOREGROUND_RED|FOREGROUND_INTENSITY );
-#   elif defined(FC_OS_LINUX) || defined(FC_OS_MACOSX) || defined(FC_OS_BSD)
-        fprintf(stderr, "\033[1;31m");
-#   endif
-    }
-
-    fprintf(stderr, "%s", sErr);
-
-    if (useColorStderr) {
-#   if defined(FC_OS_WIN32)
-        ::SetConsoleTextAttribute(::GetStdHandle(STD_ERROR_HANDLE),FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
-#   elif defined(FC_OS_LINUX) || defined(FC_OS_MACOSX) || defined(FC_OS_BSD)
-        fprintf(stderr, "\033[0m");
-#   endif
-    }
-}
-
-void ConsoleObserverStd::Log    (const char *sErr)
-{
-    if (useColorStderr) {
-#   if defined(FC_OS_WIN32)
-        ::SetConsoleTextAttribute(::GetStdHandle(STD_ERROR_HANDLE), FOREGROUND_RED |FOREGROUND_GREEN);
-#   elif defined(FC_OS_LINUX) || defined(FC_OS_MACOSX) || defined(FC_OS_BSD)
-        fprintf(stderr, "\033[1;36m");
-#   endif
-    }
-
-    fprintf(stderr, "%s", sErr);
-
-    if (useColorStderr) {
-#   if defined(FC_OS_WIN32)
-        ::SetConsoleTextAttribute(::GetStdHandle(STD_ERROR_HANDLE),FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE );
-#   elif defined(FC_OS_LINUX) || defined(FC_OS_MACOSX) || defined(FC_OS_BSD)
-        fprintf(stderr, "\033[0m");
-#   endif
-    }
-}
-
-RedirectStdOutput::RedirectStdOutput()
-{
-    buffer.reserve(80);
-}
-
-int RedirectStdOutput::overflow(int c)
-{
-    if (c != EOF)
-        buffer.push_back((char)c);
-    return c;
-}
-
-int RedirectStdOutput::sync()
-{
-    // Print as log as this might be verbose
-    if (!buffer.empty() && buffer.back() == '\n') {
-        Base::Console().Log("%s", buffer.c_str());
-        buffer.clear();
-    }
-    return 0;
-}
-
-RedirectStdLog::RedirectStdLog()
-{
-    buffer.reserve(80);
-}
-
-int RedirectStdLog::overflow(int c)
-{
-    if (c != EOF)
-        buffer.push_back((char)c);
-    return c;
-}
-
-int RedirectStdLog::sync()
-{
-    // Print as log as this might be verbose
-    if (!buffer.empty() && buffer.back() == '\n') {
-        Base::Console().Log("%s", buffer.c_str());
-        buffer.clear();
-    }
-    return 0;
-}
-
-RedirectStdError::RedirectStdError()
-{
-    buffer.reserve(80);
-}
-
-int RedirectStdError::overflow(int c)
-{
-    if (c != EOF)
-        buffer.push_back((char)c);
-    return c;
-}
-
-int RedirectStdError::sync()
-{
-    if (!buffer.empty() && buffer.back() == '\n') {
-        Base::Console().Error("%s", buffer.c_str());
-        buffer.clear();
-    }
-    return 0;
-}
-
-//---------------------------------------------------------
-
-static int _TracePySrc;
-TracePySrc::TracePySrc(bool enable)
-    :enabled(enable)
-{
-    if(enabled)
-        ++_TracePySrc;
-}
-
-TracePySrc::~TracePySrc() {
-    if(enabled)
-        --_TracePySrc;
-}
-
-std::stringstream &LogLevel::prefix(std::stringstream &str, const char *src, int line)
-{
-    static FC_TIME_POINT s_tstart;
-    static bool s_timing = false;
-    if (print_time) {
-        if (!s_timing) {
-            s_timing = true;
-            _FC_TIME_INIT(s_tstart);
+        else {
+            Py_Error(Base::PyExc_FC_GeneralError,"Unknown logger type");
         }
-        auto tnow = std::chrono::FC_TIME_CLOCK::now();
-        auto d = std::chrono::duration_cast<FC_DURATION>(tnow-s_tstart);
-        str << d.count() << ' ';
-    }
-    if (print_tag) str << '<' << tag << "> ";
 
-    const char *c_src = src;
-    std::string _src;
-    int cline = line;
-
-    if (print_src==2 || _TracePySrc) {
-        PyGILStateLocker lock;
-        PyFrameObject* frame = PyEval_GetFrame();
-        if (frame) {
-            line = PyFrame_GetLineNumber(frame);
-#if PY_VERSION_HEX < 0x030b0000
-            _src = PyUnicode_AsUTF8(frame->f_code->co_filename);
-#else
-            PyCodeObject* code = PyFrame_GetCode(frame);
-            _src = PyUnicode_AsUTF8(code->co_filename);
-            Py_DECREF(code);
-#endif
-            src = _src.c_str();
-            if (src && strcmp(src,"<string>")==0) {
-                src = c_src;
-                line = cline;
-            }
-        }
     }
-    if (print_src && src && src[0]) {
-#ifdef FC_OS_WIN32
-        const char *_f = std::strrchr(src, '\\');
-#else
-        const char *_f = std::strrchr(src, '/');
-#endif
-        str << (_f?_f+1:src)<<'('<<line<<')';
-        if(c_src && src!=c_src) {
-#ifdef FC_OS_WIN32
-            _f = std::strrchr(c_src, '\\');
-#else
-            _f = std::strrchr(c_src, '/');
-#endif
-            str << '|' << (_f?_f+1:c_src) << '(' << cline <<')';
-        }
-        str << ": ";
-    }
-    return str;
+    PY_CATCH;
 }
+
+PyObject *ConsoleSingleton::sPyGetObservers(PyObject * /*self*/, PyObject *args)
+{
+    if (!PyArg_ParseTuple(args, ""))
+        return nullptr;
+
+    PY_TRY {
+        Py::List list;
+        for (auto i : Instance()._aclObservers)
+            list.append(Py::String(i->Name() ? i->Name() : ""));
+
+        return Py::new_reference_to(list);
+    }
+    PY_CATCH
+}
+
+Base::ILogger::~ILogger() = default;

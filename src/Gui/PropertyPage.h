@@ -29,6 +29,8 @@
 #include <QTimer>
 #include <QWidget>
 #include <FCGlobal.h>
+#include <boost/signals2/connection.hpp>
+
 #include <App/Application.h>
 #include <Base/Parameter.h>
 
@@ -43,8 +45,8 @@ class GuiExport PropertyPage : public QWidget
     Q_OBJECT
 
 public:
-    PropertyPage(QWidget* parent = 0);
-    virtual ~PropertyPage();
+    explicit PropertyPage(QWidget* parent = nullptr);
+    ~PropertyPage() override;
 
     bool isModified();
     void setModified(bool b);
@@ -73,15 +75,15 @@ class GuiExport PreferencePage : public QWidget
     Q_OBJECT
 
 public:
-    PreferencePage(QWidget* parent = 0);
-    virtual ~PreferencePage();
+    explicit PreferencePage(QWidget* parent = nullptr);
+    ~PreferencePage() override;
 
 public Q_SLOTS:
     virtual void loadSettings()=0;
     virtual void saveSettings()=0;
 
 protected:
-    virtual void changeEvent(QEvent *e) = 0;
+    void changeEvent(QEvent *e) override = 0;
 };
 
 /** Subclass that embeds a form from a UI file.
@@ -92,14 +94,14 @@ class GuiExport PreferenceUiForm : public PreferencePage
     Q_OBJECT
 
 public:
-    PreferenceUiForm(const QString& fn, QWidget* parent = 0);
-    virtual ~PreferenceUiForm();
+    explicit PreferenceUiForm(const QString& fn, QWidget* parent = nullptr);
+    ~PreferenceUiForm() override;
 
-    void loadSettings();
-    void saveSettings();
+    void loadSettings() override;
+    void saveSettings() override;
 
 protected:
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
 
 private:
     template <typename PW>
@@ -119,12 +121,12 @@ class GuiExport CustomizeActionPage : public QWidget
     Q_OBJECT
 
 public:
-    CustomizeActionPage(QWidget* parent = 0);
-    virtual ~CustomizeActionPage();
+    explicit CustomizeActionPage(QWidget* parent = nullptr);
+    ~CustomizeActionPage() override;
 
 protected:
-    bool event(QEvent* e);
-    virtual void changeEvent(QEvent *e) = 0;
+    bool event(QEvent* e) override;
+    void changeEvent(QEvent *e) override = 0;
 
 protected Q_SLOTS:
     virtual void onAddMacroAction(const QByteArray&)=0;
@@ -258,14 +260,14 @@ public:
 
     template<class Func>
     std::shared_ptr<ParamHandler> addHandler(const char *path, const char *key, Func func) {
-        auto handler = std::shared_ptr<ParamHandler>(new ParamHandlerT(func));
+        std::shared_ptr<ParamHandler> handler(new ParamHandlerT<Func>(func));
         addHandler(path, key, handler);
         return handler;
     }
 
     template<class Func>
     std::shared_ptr<ParamHandler> addHandler(ParameterGrp *hGrp, const char *key, Func func) {
-        auto handler = std::shared_ptr<ParamHandler>(new ParamHandlerT(func));
+        std::shared_ptr<ParamHandler> handler(new ParamHandlerT<Func>(func));
         addHandler(hGrp, key, handler);
         return handler;
     }
@@ -273,20 +275,20 @@ public:
     template<class Func>
     std::shared_ptr<ParamHandler> addDelayedHandler(const char *path, const char *key, Func func) {
         auto hGrp = App::GetApplication().GetUserParameter().GetGroup(path);
-        auto handler = std::shared_ptr<ParamHandler>(new ParamDelayedHandlerT(
-            [hGrp, func]() {
-                func(hGrp);
-            }));
+        auto wrap = [hGrp, func]() {
+            func(hGrp);
+        };
+        std::shared_ptr<ParamHandler> handler(new ParamDelayedHandlerT<decltype(wrap)>(wrap));
         addHandler(hGrp, key, handler);
         return handler;
     }
 
     template<class Func>
     std::shared_ptr<ParamHandler> addDelayedHandler(ParameterGrp *hGrp, const char *key, Func func) {
-        auto handler = std::shared_ptr<ParamHandler>(new ParamDelayedHandlerT(
-            [hGrp, func]() {
-                func(hGrp);
-            }));
+        auto wrap = [hGrp, func]() {
+            func(hGrp);
+        };
+        std::shared_ptr<ParamHandler> handler(new ParamDelayedHandlerT<decltype(wrap)>(wrap));
         addHandler(hGrp, key, handler);
         return handler;
     }
@@ -297,10 +299,10 @@ public:
                                                     Func func)
     {
         auto hGrp = App::GetApplication().GetUserParameter().GetGroup(path);
-        auto handler = std::shared_ptr<ParamHandler>(new ParamDelayedHandlerT(
-            [hGrp, func]() {
-                func(hGrp);
-            }));
+        auto wrap = [hGrp, func]() {
+            func(hGrp);
+        };
+        std::shared_ptr<ParamHandler> handler(new ParamDelayedHandlerT<decltype(wrap)>(wrap));
         for (const auto &key : keys)
             addHandler(ParamKey(hGrp, key), handler);
         return handler;
@@ -311,10 +313,10 @@ public:
                                                     const std::vector<const char *> &keys,
                                                     Func func)
     {
-        auto handler = std::shared_ptr<ParamHandler>(new ParamDelayedHandlerT(
-            [hGrp, func]() {
-                func(hGrp);
-            }));
+        auto wrap = [hGrp, func]() {
+            func(hGrp);
+        };
+        std::shared_ptr<ParamHandler> handler(new ParamDelayedHandlerT<decltype(wrap)>(wrap));
         for (const auto &key : keys)
             addHandler(ParamKey(hGrp, key), handler);
         return handler;

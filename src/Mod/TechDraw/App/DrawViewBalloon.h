@@ -20,16 +20,15 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef _TechDraw_DrawViewBalloon_h_
-#define _TechDraw_DrawViewBalloon_h_
-#include <tuple>
+#ifndef TechDraw_DrawViewBalloon_h_
+#define TechDraw_DrawViewBalloon_h_
 
-# include <App/DocumentObject.h>
-# include <App/FeaturePython.h>
-# include <App/PropertyLinks.h>
-# include <App/PropertyUnits.h>
+#include <App/DocumentObject.h>
+#include <App/PropertyLinks.h>
+#include <Mod/TechDraw/TechDrawGlobal.h>
 
 #include "DrawView.h"
+
 
 class TopoDS_Shape;
 
@@ -47,7 +46,7 @@ class TechDrawExport DrawViewBalloon : public TechDraw::DrawView
 public:
     /// Constructor
     DrawViewBalloon();
-    virtual ~DrawViewBalloon();
+    ~DrawViewBalloon() override;
 
     App::PropertyLink            SourceView;
     App::PropertyString          Text;
@@ -63,34 +62,36 @@ public:
     short mustExecute() const override;
 
     DrawViewPart* getViewPart() const;
-    QPointF origin;
+    QPointF origin;                  //WF never used??
+    QPointF getOrigin();
+    void setOrigin(QPointF p);
 
     //virtual PyObject *getPyObject(void);
 
-    virtual App::DocumentObjectExecReturn *execute(void) override;
+    App::DocumentObjectExecReturn *execute() override;
 
-    virtual const char* getViewProviderName(void) const override {
+    const char* getViewProviderName() const override {
         return "TechDrawGui::ViewProviderBalloon";
     }
 
     static const char* balloonTypeEnums[];
 
-    void handleXYLock(void) override;
+    void handleXYLock() override;
 
-    double prefKinkLength(void) const;
-    int prefShape(void) const;
-    int prefEnd(void) const;
+    double prefKinkLength() const;
+    int prefShape() const;
+    int prefEnd() const;
     void setOrigin(Base::Vector3d newOrigin);
 
     Base::Vector3d getOriginOffset() const;
 
 protected:
     void onChanged(const App::Property* prop) override;
-    virtual void handleChangedPropertyType(Base::XMLReader &reader, 
-                                           const char *TypeName, 
+    void handleChangedPropertyType(Base::XMLReader &reader,
+                                           const char *TypeName,
                                            App::Property * prop) override;
-    virtual void handleChangedPropertyName(Base::XMLReader &reader, 
-                                           const char * TypeName, 
+    void handleChangedPropertyName(Base::XMLReader &reader,
+                                           const char * TypeName,
                                            const char *PropName) override;
 
 private:

@@ -11,7 +11,6 @@ include_directories(
     ${PYTHON_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIR}
-    ${XercesC_INCLUDE_DIRS}
 )
 
 set(Image_LIBS
@@ -28,6 +27,12 @@ set(Image_SRCS
     PreCompiled.h
     AppImage.cpp
 )
+
+if(FREECAD_USE_PCH)
+    add_definitions(-D_PreComp_)
+    GET_MSVC_PRECOMPILED_SOURCE("PreCompiled.cpp" PCH_SRCS ${Image_SRCS})
+    ADD_MSVC_PRECOMPILED_HEADER(Image PreCompiled.h PreCompiled.cpp PCH_SRCS)
+endif(FREECAD_USE_PCH)
 
 add_library(Image SHARED ${Image_SRCS})
 target_link_libraries(Image ${Image_LIBS})

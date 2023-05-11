@@ -24,33 +24,26 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <Precision.hxx>
 # include <QMessageBox>
-# include <QRegExp>
-# include <QTextStream>
 # include <QCheckBox>
-# include <sstream>
 #endif
 
-#include "TaskPrimitiveParameters.h"
-#include "ui_TaskPrimitiveParameters.h"
-#include "ViewProviderDatumCS.h"
-#include "Utils.h"
-
+#include <App/Document.h>
 #include <App/Origin.h>
 #include <Base/Console.h>
-#include <Base/Interpreter.h>
 #include <Base/UnitsApi.h>
 #include <Gui/Application.h>
-#include <Gui/BitmapFactory.h>
 #include <Gui/Command.h>
 #include <Gui/Document.h>
 #include <Gui/MainWindow.h>
 #include <Gui/ViewProviderOrigin.h>
-#include <Mod/Part/App/DatumFeature.h>
 #include <Mod/PartDesign/App/Body.h>
-#include <Mod/PartDesign/App/DatumCS.h>
 #include <Mod/PartDesign/App/FeaturePrimitive.h>
+
+#include "TaskPrimitiveParameters.h"
+#include "ui_TaskPrimitiveParameters.h"
+#include "Utils.h"
+
 
 using namespace PartDesignGui;
 
@@ -421,7 +414,7 @@ void TaskBoxPrimitives::onCylinderRadiusChanged(double v) {
 void TaskBoxPrimitives::onCylinderXSkewChanged(double v) {
     PartDesign::Cylinder* cyl = static_cast<PartDesign::Cylinder*>(vp->getObject());
     // we must assure that if the user incremented from e.g. 85 degree with the
-    // spin buttons he does not end at 90.0 but 89.9999 which is shown rounded to 90 degree
+    // spin buttons, they do not end at 90.0 but at 89.9999 which is shown rounded to 90 degree
     if ((v < 90.0) && (v > -90.0)) {
         cyl->FirstAngle.setValue(v);
     }
@@ -438,7 +431,7 @@ void TaskBoxPrimitives::onCylinderXSkewChanged(double v) {
 void TaskBoxPrimitives::onCylinderYSkewChanged(double v) {
     PartDesign::Cylinder* cyl = static_cast<PartDesign::Cylinder*>(vp->getObject());
     // we must assure that if the user incremented from e.g. 85 degree with the
-    // spin buttons he does not end at 90.0 but 89.9999 which is shown rounded to 90 degree
+    // spin buttons, they do not end at 90.0 but at 89.9999 which is shown rounded to 90 degree
     if ((v < 90.0) && (v > -90.0)) {
         cyl->SecondAngle.setValue(v);
     }
@@ -545,7 +538,7 @@ void TaskBoxPrimitives::onEllipsoidRadius3Changed(double v) {
 
 void TaskBoxPrimitives::onTorusAngle1Changed(double v) {
     PartDesign::Torus* sph = static_cast<PartDesign::Torus*>(vp->getObject());
-    ui->torusAngle2->setMinimum(v); // Angle1 must geometrically be <= than Angle2  
+    ui->torusAngle2->setMinimum(v); // Angle1 must geometrically be <= than Angle2
     sph->Angle1.setValue(v);
     vp->getObject()->getDocument()->recomputeFeature(vp->getObject());
 }
@@ -595,7 +588,7 @@ void TaskBoxPrimitives::onPrismHeightChanged(double v) {
 void TaskBoxPrimitives::onPrismXSkewChanged(double v) {
     PartDesign::Prism* sph = static_cast<PartDesign::Prism*>(vp->getObject());
     // we must assure that if the user incremented from e.g. 85 degree with the
-    // spin buttons he does not end at 90.0 but 89.9999 which is shown rounded to 90 degree
+    // spin buttons, they do not end at 90.0 but at 89.9999 which is shown rounded to 90 degree
     if ((v < 90.0) && (v > -90.0)) {
         sph->FirstAngle.setValue(v);
     }
@@ -612,7 +605,7 @@ void TaskBoxPrimitives::onPrismXSkewChanged(double v) {
 void TaskBoxPrimitives::onPrismYSkewChanged(double v) {
     PartDesign::Prism* sph = static_cast<PartDesign::Prism*>(vp->getObject());
     // we must assure that if the user incremented from e.g. 85 degree with the
-    // spin buttons he does not end at 90.0 but 89.9999 which is shown rounded to 90 degree
+    // spin buttons, they do not end at 90.0 but at 89.9999 which is shown rounded to 90 degree
     if ((v < 90.0) && (v > -90.0)) {
         sph->SecondAngle.setValue(v);
     }
@@ -721,10 +714,10 @@ bool TaskBoxPrimitives::setPrimitive(App::DocumentObject *obj)
                     "%1.Length=%2\n"
                     "%1.Width=%3\n"
                     "%1.Height=%4\n")
-                    .arg(name)
-                    .arg(Base::UnitsApi::toNumber(ui->boxLength->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->boxWidth->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->boxHeight->value(), format));
+                    .arg(name,
+                         Base::UnitsApi::toNumber(ui->boxLength->value(), format),
+                         Base::UnitsApi::toNumber(ui->boxWidth->value(), format),
+                         Base::UnitsApi::toNumber(ui->boxHeight->value(), format));
                 break;
 
             case 2:  // cylinder
@@ -734,12 +727,12 @@ bool TaskBoxPrimitives::setPrimitive(App::DocumentObject *obj)
                     "%1.Angle=%4\n"
                     "%1.FirstAngle=%5\n"
                     "%1.SecondAngle=%6\n")
-                    .arg(name)
-                    .arg(Base::UnitsApi::toNumber(ui->cylinderRadius->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->cylinderHeight->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->cylinderAngle->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->cylinderXSkew->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->cylinderYSkew->value(), format));
+                    .arg(name,
+                         Base::UnitsApi::toNumber(ui->cylinderRadius->value(), format),
+                         Base::UnitsApi::toNumber(ui->cylinderHeight->value(), format),
+                         Base::UnitsApi::toNumber(ui->cylinderAngle->value(), format),
+                         Base::UnitsApi::toNumber(ui->cylinderXSkew->value(), format),
+                         Base::UnitsApi::toNumber(ui->cylinderYSkew->value(), format));
                 break;
 
             case 3:  // cone
@@ -754,11 +747,11 @@ bool TaskBoxPrimitives::setPrimitive(App::DocumentObject *obj)
                     "%1.Radius2=%3\n"
                     "%1.Height=%4\n"
                     "%1.Angle=%5\n")
-                    .arg(name)
-                    .arg(Base::UnitsApi::toNumber(ui->coneRadius1->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->coneRadius2->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->coneHeight->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->coneAngle->value(), format));
+                    .arg(name,
+                         Base::UnitsApi::toNumber(ui->coneRadius1->value(), format),
+                         Base::UnitsApi::toNumber(ui->coneRadius2->value(), format),
+                         Base::UnitsApi::toNumber(ui->coneHeight->value(), format),
+                         Base::UnitsApi::toNumber(ui->coneAngle->value(), format));
                  break;
 
             case 4:  // sphere
@@ -767,11 +760,11 @@ bool TaskBoxPrimitives::setPrimitive(App::DocumentObject *obj)
                     "%1.Angle1=%3\n"
                     "%1.Angle2=%4\n"
                     "%1.Angle3=%5\n")
-                    .arg(name)
-                    .arg(Base::UnitsApi::toNumber(ui->sphereRadius->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->sphereAngle1->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->sphereAngle2->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->sphereAngle3->value(), format));
+                    .arg(name,
+                         Base::UnitsApi::toNumber(ui->sphereRadius->value(), format),
+                         Base::UnitsApi::toNumber(ui->sphereAngle1->value(), format),
+                         Base::UnitsApi::toNumber(ui->sphereAngle2->value(), format),
+                         Base::UnitsApi::toNumber(ui->sphereAngle3->value(), format));
                 break;
             case 5:  // ellipsoid
                 cmd = QStringLiteral(
@@ -781,13 +774,13 @@ bool TaskBoxPrimitives::setPrimitive(App::DocumentObject *obj)
                     "%1.Angle1=%5\n"
                     "%1.Angle2=%6\n"
                     "%1.Angle3=%7\n")
-                    .arg(name)
-                    .arg(Base::UnitsApi::toNumber(ui->ellipsoidRadius1->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->ellipsoidRadius2->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->ellipsoidRadius3->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->ellipsoidAngle1->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->ellipsoidAngle2->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->ellipsoidAngle3->value(), format));
+                    .arg(name,
+                         Base::UnitsApi::toNumber(ui->ellipsoidRadius1->value(), format),
+                         Base::UnitsApi::toNumber(ui->ellipsoidRadius2->value(), format),
+                         Base::UnitsApi::toNumber(ui->ellipsoidRadius3->value(), format),
+                         Base::UnitsApi::toNumber(ui->ellipsoidAngle1->value(), format),
+                         Base::UnitsApi::toNumber(ui->ellipsoidAngle2->value(), format),
+                         Base::UnitsApi::toNumber(ui->ellipsoidAngle3->value(), format));
                 break;
 
             case 6:  // torus
@@ -797,12 +790,12 @@ bool TaskBoxPrimitives::setPrimitive(App::DocumentObject *obj)
                     "%1.Angle1=%4\n"
                     "%1.Angle2=%5\n"
                     "%1.Angle3=%6\n")
-                    .arg(name)
-                    .arg(Base::UnitsApi::toNumber(ui->torusRadius1->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->torusRadius2->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->torusAngle1->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->torusAngle2->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->torusAngle3->value(), format));
+                    .arg(name,
+                         Base::UnitsApi::toNumber(ui->torusRadius1->value(), format),
+                         Base::UnitsApi::toNumber(ui->torusRadius2->value(), format),
+                         Base::UnitsApi::toNumber(ui->torusAngle1->value(), format),
+                         Base::UnitsApi::toNumber(ui->torusAngle2->value(), format),
+                         Base::UnitsApi::toNumber(ui->torusAngle3->value(), format));
                 break;
             case 7:  // prism
                 cmd = QStringLiteral(
@@ -811,12 +804,12 @@ bool TaskBoxPrimitives::setPrimitive(App::DocumentObject *obj)
                     "%1.Height=%4\n"
                     "%1.FirstAngle=%5\n"
                     "%1.SecondAngle=%6\n")
-                    .arg(name)
-                    .arg(ui->prismPolygon->value())
-                    .arg(Base::UnitsApi::toNumber(ui->prismCircumradius->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->prismHeight->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->prismXSkew->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->prismYSkew->value(), format));
+                    .arg(name,
+                         QString::number(ui->prismPolygon->value()),
+                         Base::UnitsApi::toNumber(ui->prismCircumradius->value(), format),
+                         Base::UnitsApi::toNumber(ui->prismHeight->value(), format),
+                         Base::UnitsApi::toNumber(ui->prismXSkew->value(), format),
+                         Base::UnitsApi::toNumber(ui->prismYSkew->value(), format));
                 break;
             case 8:  // wedge
                 // Xmin/max, Ymin/max and Zmin/max must each not be equal
@@ -846,17 +839,17 @@ bool TaskBoxPrimitives::setPrimitive(App::DocumentObject *obj)
                     "%1.Zmax=%9\n"
                     "%1.X2max=%10\n"
                     "%1.Z2max=%11\n")
-                    .arg(name)
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeXmin->value()))
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeYmin->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeZmin->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeX2min->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeZ2min->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeXmax->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeYmax->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeZmax->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeX2max->value(), format))
-                    .arg(Base::UnitsApi::toNumber(ui->wedgeZ2max->value(), format));
+                    .arg(name,
+                         Base::UnitsApi::toNumber(ui->wedgeXmin->value(), format),
+                         Base::UnitsApi::toNumber(ui->wedgeYmin->value(), format),
+                         Base::UnitsApi::toNumber(ui->wedgeZmin->value(), format),
+                         Base::UnitsApi::toNumber(ui->wedgeX2min->value(), format),
+                         Base::UnitsApi::toNumber(ui->wedgeZ2min->value(), format),
+                         Base::UnitsApi::toNumber(ui->wedgeXmax->value(), format),
+                         Base::UnitsApi::toNumber(ui->wedgeYmax->value(), format),
+                         Base::UnitsApi::toNumber(ui->wedgeZmax->value(), format))
+                    .arg(Base::UnitsApi::toNumber(ui->wedgeX2max->value(), format),
+                         Base::UnitsApi::toNumber(ui->wedgeZ2max->value(), format));
                 break;
 
             default:

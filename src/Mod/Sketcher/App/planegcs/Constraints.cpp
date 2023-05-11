@@ -37,11 +37,11 @@ namespace GCS
 ///////////////////////////////////////
 
 Constraint::Constraint()
-: origpvec(0), pvec(0), scale(1.), tag(0), pvecChangedFlag(true), driving(true)
+: origpvec(0), pvec(0), scale(1.), tag(0), pvecChangedFlag(true), driving(true), internalAlignment(Alignment::NoInternalAlignment)
 {
 }
 
-void Constraint::redirectParams(MAP_pD_pD redirectionmap)
+void Constraint::redirectParams(const MAP_pD_pD & redirectionmap)
 {
     int i=0;
     for (VEC_pD::iterator param=origpvec.begin();
@@ -127,6 +127,339 @@ double ConstraintEqual::grad(double *param)
     if (param == param1()) deriv += 1;
     if (param == param2()) deriv += -1;
     return scale * deriv;
+}
+
+// Weighted Linear Combination
+
+ConstraintWeightedLinearCombination::ConstraintWeightedLinearCombination(size_t givennumpoles, const std::vector<double *>& givenpvec, const std::vector<double>& givenfactors)
+    : factors(givenfactors)
+    , numpoles(givennumpoles)
+{
+    pvec = givenpvec;
+    assert(pvec.size() == 2*numpoles + 1);
+    assert(factors.size() == numpoles);
+    origpvec = pvec;
+    rescale();
+}
+
+ConstraintType ConstraintWeightedLinearCombination::getTypeId()
+{
+    return WeightedLinearCombination;
+}
+
+void ConstraintWeightedLinearCombination::rescale(double coef)
+{
+    scale = coef * 1.;
+}
+
+double ConstraintWeightedLinearCombination::error()
+{
+    // Explanation of the math here:
+    // https://forum.freecadweb.org/viewtopic.php?f=9&t=71130&start=120#p635538
+
+    double sum = 0;
+    double wsum = 0;
+
+    for (size_t i = 0; i < numpoles; ++i) {
+        double wcontrib = *weightat(i) * factors[i];
+        wsum += wcontrib;
+        sum += *poleat(i) * wcontrib;
+    }
+
+    return scale * ((*thepoint()) * wsum - sum);
+}
+
+double ConstraintWeightedLinearCombination::grad(double *param)
+{
+    // Equations are from here:
+    // https://forum.freecadweb.org/viewtopic.php?f=9&t=71130&start=120#p635538
+
+    double deriv=0.;
+
+    if (param == thepoint()) {
+        // Eq. (11)
+        double wsum = 0;
+        for (size_t i = 0; i < numpoles; ++i) {
+            wsum += *weightat(i) * factors[i];
+        }
+        deriv = wsum;
+        return scale * deriv;
+    }
+
+    for (size_t i = 0; i < numpoles; ++i) {
+        if (param == poleat(i)) {
+            // Eq. (12)
+            deriv = -(*weightat(i) * factors[i]);
+            return scale * deriv;
+        }
+        if (param == weightat(i)) {
+            // Eq. (13)
+            deriv = (*thepoint() - *poleat(i)) * factors[i];
+            return scale * deriv;
+        }
+    }
+
+    return scale * deriv;
+}
+
+// Center of Gravity
+
+ConstraintCenterOfGravity::ConstraintCenterOfGravity(const std::vector<double *>& givenpvec, const std::vector<double>& givenweights)
+    : weights(givenweights)
+{
+    pvec = givenpvec;
+    numpoints = pvec.size() - 1;
+    assert(pvec.size() > 1);
+    assert(weights.size() == numpoints);
+    origpvec = pvec;
+    rescale();
+}
+
+ConstraintType ConstraintCenterOfGravity::getTypeId()
+{
+    return CenterOfGravity;
+}
+
+void ConstraintCenterOfGravity::rescale(double coef)
+{
+    scale = coef * 1.;
+}
+
+double ConstraintCenterOfGravity::error()
+{
+    double sum = 0;
+    for (size_t i = 0; i < numpoints; ++i)
+        sum += *pointat(i) * weights[i];
+
+    return scale * (*thecenter() - sum);
+}
+
+double ConstraintCenterOfGravity::grad(double *param)
+{
+    double deriv=0.;
+    if (param == thecenter())
+        deriv = 1;
+
+    for (size_t i = 0; i < numpoints; ++i)
+        if (param == pointat(i))
+            deriv = -weights[i];
+
+    return scale * deriv;
+}
+
+// Slope at B-spline knot
+
+ConstraintSlopeAtBSplineKnot::ConstraintSlopeAtBSplineKnot(BSpline& b, Line& l, size_t knotindex)
+{
+    // set up pvec: pole x-coords, pole y-coords, pole weights,
+    // line point 1 coords, line point 2 coords
+
+    numpoles = b.degree - b.mult[knotindex] + 1;
+    // slope at knot doesn't make sense if there's only C0 continuity
+    assert(numpoles >= 2);
+
+    pvec.reserve(3*numpoles + 4);
+
+    // `startpole` is the first pole affecting the knot with `knotindex`
+    size_t startpole = 0;
+    // See `System::addConstraintInternalAlignmentKnotPoint()` for some elaboration
+    for (size_t j = 1; j <= knotindex; ++j)
+        startpole += b.mult[j];
+    if (!b.periodic && startpole >= b.poles.size())
+        startpole = b.poles.size() - 1;
+
+    for (size_t i = 0; i < numpoles; ++i)
+        pvec.push_back(b.poles[(startpole + i) % b.poles.size()].x);
+    for (size_t i = 0; i < numpoles; ++i)
+        pvec.push_back(b.poles[(startpole + i) % b.poles.size()].y);
+    for (size_t i = 0; i < numpoles; ++i)
+        pvec.push_back(b.weights[(startpole + i) % b.weights.size()]);
+    pvec.push_back(l.p1.x);
+    pvec.push_back(l.p1.y);
+    pvec.push_back(l.p2.x);
+    pvec.push_back(l.p2.y);
+
+    // Set up factors to get slope at knot point
+    std::vector<double> tempfactors((numpoles + 1), 1.0 / (numpoles + 1));
+    factors.resize(numpoles);
+    slopefactors.resize(numpoles);
+    for (size_t i = 0; i < numpoles + 1; ++i) {
+        tempfactors[i] =
+            b.getLinCombFactor(*(b.knots[knotindex]), startpole + b.degree, startpole + i, b.degree - 1) /
+            (b.flattenedknots[startpole + b.degree + i] - b.flattenedknots[startpole + i]);
+    }
+    for (size_t i = 0; i < numpoles; ++i) {
+        factors[i] =
+            b.getLinCombFactor(*(b.knots[knotindex]), startpole + b.degree, startpole + i);
+        slopefactors[i] = b.degree * (tempfactors[i] - tempfactors[i+1]);
+    }
+
+    origpvec = pvec;
+    rescale();
+}
+
+ConstraintType ConstraintSlopeAtBSplineKnot::getTypeId()
+{
+    return SlopeAtBSplineKnot;
+}
+
+void ConstraintSlopeAtBSplineKnot::rescale(double coef)
+{
+    double slopex = 0., slopey = 0.;
+
+    for (size_t i = 0; i < numpoles; ++i) {
+        slopex += *polexat(i) * slopefactors[i];
+        slopey += *poleyat(i) * slopefactors[i];
+    }
+
+    scale = coef / sqrt((slopex*slopex + slopey*slopey));
+}
+
+double ConstraintSlopeAtBSplineKnot::error()
+{
+    double xsum = 0., xslopesum = 0.;
+    double ysum = 0., yslopesum = 0.;
+    double wsum = 0., wslopesum = 0.;
+
+    for (size_t i = 0; i < numpoles; ++i) {
+        double wcontrib = *weightat(i) * factors[i];
+        double wslopecontrib = *weightat(i) * slopefactors[i];
+        wsum += wcontrib;
+        xsum += *polexat(i) * wcontrib;
+        ysum += *poleyat(i) * wcontrib;
+        wslopesum += wslopecontrib;
+        xslopesum += *polexat(i) * wslopecontrib;
+        yslopesum += *poleyat(i) * wslopecontrib;
+    }
+
+    // This is actually wsum^2 * the respective slopes
+    // See Eq (19) from:
+    // https://forum.freecadweb.org/viewtopic.php?f=9&t=71130&start=120#p635538
+    double slopex = wsum*xslopesum - wslopesum*xsum;
+    double slopey = wsum*yslopesum - wslopesum*ysum;
+
+    // Normalizing it ensures that the cross product is not zero just because
+    // one vector is zero.
+    double linex = *linep2x() - *linep1x();
+    double liney = *linep2y() - *linep1y();
+    double dirx = linex / sqrt(linex*linex + liney*liney);
+    double diry = liney / sqrt(linex*linex + liney*liney);
+
+    // error is the cross product
+    return scale * (slopex*diry - slopey*dirx);
+}
+
+double ConstraintSlopeAtBSplineKnot::grad(double *param)
+{
+    // Equations are from here:
+    // https://forum.freecadweb.org/viewtopic.php?f=9&t=71130&start=120#p635538
+    double result = 0.0;
+    double linex = *linep2x() - *linep1x();
+    double liney = *linep2y() - *linep1y();
+    double dirx = linex / sqrt(linex*linex + liney*liney);
+    double diry = liney / sqrt(linex*linex + liney*liney);
+
+    for (size_t i = 0; i < numpoles; ++i) {
+        if (param == polexat(i)) {
+            // Eq. (21)
+            double wsum = 0., wslopesum = 0.;
+            for (size_t j = 0; j < numpoles; ++j) {
+                double wcontrib = *weightat(j) * factors[j];
+                double wslopecontrib = *weightat(j) * slopefactors[j];
+                wsum += wcontrib;
+                wslopesum += wslopecontrib;
+            }
+            result = (wsum*slopefactors[i] - wslopesum*factors[i]) * diry;
+            return scale * result;
+        }
+        if (param == poleyat(i)) {
+            // Eq. (21)
+            double wsum = 0., wslopesum = 0.;
+            for (size_t i = 0; i < numpoles; ++i) {
+                double wcontrib = *weightat(i) * factors[i];
+                double wslopecontrib = *weightat(i) * slopefactors[i];
+                wsum += wcontrib;
+                wslopesum += wslopecontrib;
+            }
+            result = - (wsum*slopefactors[i] - wslopesum*factors[i]) * dirx;
+            return scale * result;
+        }
+        if (param == weightat(i)) {
+            // Eq. (22)
+            double xsum = 0., xslopesum = 0.;
+            double ysum = 0., yslopesum = 0.;
+            for (size_t j = 0; j < numpoles; ++j) {
+                double wcontrib = *weightat(j) * factors[j];
+                double wslopecontrib = *weightat(j) * slopefactors[j];
+                xsum += wcontrib * (*polexat(j) - *polexat(i));
+                xslopesum += wslopecontrib * (*polexat(j) - *polexat(i));
+                ysum += wcontrib * (*poleyat(j) - *poleyat(i));
+                yslopesum += wslopecontrib * (*poleyat(j) - *poleyat(i));
+            }
+            result =
+                (factors[i]*xslopesum - slopefactors[i]*xsum) * diry -
+                (factors[i]*yslopesum - slopefactors[i]*ysum) * dirx;
+            return scale * result;
+        }
+    }
+
+    double slopex = 0., slopey = 0.;
+
+    auto getSlopes = [&]() {
+        double xsum = 0., xslopesum = 0.;
+        double ysum = 0., yslopesum = 0.;
+        double wsum = 0., wslopesum = 0.;
+
+        for (size_t i = 0; i < numpoles; ++i) {
+            double wcontrib = *weightat(i) * factors[i];
+            double wslopecontrib = *weightat(i) * slopefactors[i];
+            wsum += wcontrib;
+            xsum += *polexat(i) * wcontrib;
+            ysum += *poleyat(i) * wcontrib;
+            wslopesum += wslopecontrib;
+            xslopesum += *polexat(i) * wslopecontrib;
+            yslopesum += *poleyat(i) * wslopecontrib;
+        }
+
+        // This is actually wsum^2 * the respective slopes
+        slopex = wsum*xslopesum - wslopesum*xsum;
+        slopey = wsum*yslopesum - wslopesum*ysum;
+    };
+
+    if (param == linep1x()) {
+        getSlopes();
+        double dDirxDLinex = (liney*liney) / pow(linex*linex + liney*liney, 1.5);
+        double dDiryDLinex = -(linex*liney) / pow(linex*linex + liney*liney, 1.5);
+        // NOTE: d(linex)/d(x1) = -1
+        result = slopex*(-dDiryDLinex) - slopey*(-dDirxDLinex);
+        return scale * result;
+    }
+    if (param == linep2x()) {
+        getSlopes();
+        double dDirxDLinex = (liney*liney) / pow(linex*linex + liney*liney, 1.5);
+        double dDiryDLinex = -(linex*liney) / pow(linex*linex + liney*liney, 1.5);
+        // NOTE: d(linex)/d(x2) = 1
+        result = slopex*dDiryDLinex - slopey*dDirxDLinex;
+        return scale * result;
+    }
+    if (param == linep1y()) {
+        getSlopes();
+        double dDirxDLiney = -(linex*liney) / pow(linex*linex + liney*liney, 1.5);
+        double dDiryDLiney = (linex*linex) / pow(linex*linex + liney*liney, 1.5);
+        // NOTE: d(liney)/d(y1) = -1
+        result = slopex*(-dDiryDLiney) - slopey*(-dDirxDLiney);
+        return scale * result;
+    }
+    if (param == linep2y()) {
+        getSlopes();
+        double dDirxDLiney = -(linex*liney) / pow(linex*linex + liney*liney, 1.5);
+        double dDiryDLiney = (linex*linex) / pow(linex*linex + liney*liney, 1.5);
+        // NOTE: d(liney)/d(y2) = 1
+        result = slopex*dDiryDLiney - slopey*dDirxDLiney;
+        return scale * result;
+    }
+
+    return scale * result;
 }
 
 // Difference
@@ -553,17 +886,18 @@ void ConstraintPointOnPerpBisector::errorgrad(double *err, double *grad, double 
 double ConstraintPointOnPerpBisector::error()
 {
     double err;
-    errorgrad(&err,0,0);
+    errorgrad(&err,nullptr,nullptr);
     return scale * err;
 }
 
 double ConstraintPointOnPerpBisector::grad(double *param)
 {
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1  ) return 0.0;
+    if ( findParamInPvec(param) == -1  )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
     return deriv*scale;
 }
@@ -1095,17 +1429,18 @@ void ConstraintEllipseTangentLine::errorgrad(double *err, double *grad, double *
 double ConstraintEllipseTangentLine::error()
 {
     double err;
-    errorgrad(&err,0,0);
+    errorgrad(&err,nullptr,nullptr);
     return scale * err;
 }
 
 double ConstraintEllipseTangentLine::grad(double *param)
 {
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1 ) return 0.0;
+    if ( findParamInPvec(param) == -1 )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
     //use numeric for testing
     #if 0
@@ -1220,7 +1555,7 @@ void ConstraintInternalAlignmentPoint2Ellipse::errorgrad(double *err, double *gr
 double ConstraintInternalAlignmentPoint2Ellipse::error()
 {
     double err;
-    errorgrad(&err,0,0);
+    errorgrad(&err,nullptr,nullptr);
     return scale * err;
 
 }
@@ -1228,10 +1563,11 @@ double ConstraintInternalAlignmentPoint2Ellipse::error()
 double ConstraintInternalAlignmentPoint2Ellipse::grad(double *param)
 {
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1  ) return 0.0;
+    if ( findParamInPvec(param) == -1  )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
     //use numeric for testing
     #if 0
@@ -1353,7 +1689,7 @@ void ConstraintInternalAlignmentPoint2Hyperbola::errorgrad(double *err, double *
 double ConstraintInternalAlignmentPoint2Hyperbola::error()
 {
     double err;
-    errorgrad(&err,0,0);
+    errorgrad(&err,nullptr,nullptr);
     return scale * err;
 
 }
@@ -1361,10 +1697,11 @@ double ConstraintInternalAlignmentPoint2Hyperbola::error()
 double ConstraintInternalAlignmentPoint2Hyperbola::grad(double *param)
 {
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1  ) return 0.0;
+    if ( findParamInPvec(param) == -1  )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
     return deriv*scale;
 
@@ -1416,17 +1753,18 @@ void ConstraintEqualMajorAxesConic::errorgrad(double *err, double *grad, double 
 double ConstraintEqualMajorAxesConic::error()
 {
     double err;
-    errorgrad(&err,0,0);
+    errorgrad(&err,nullptr,nullptr);
     return scale * err;
 }
 
 double ConstraintEqualMajorAxesConic::grad(double *param)
 {
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1  ) return 0.0;
+    if ( findParamInPvec(param) == -1  )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
     return deriv * scale;
 }
@@ -1492,17 +1830,18 @@ void ConstraintEqualFocalDistance::errorgrad(double *err, double *grad, double *
 double ConstraintEqualFocalDistance::error()
 {
     double err;
-    errorgrad(&err,0,0);
+    errorgrad(&err,nullptr,nullptr);
     return scale * err;
 }
 
 double ConstraintEqualFocalDistance::grad(double *param)
 {
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1  ) return 0.0;
+    if ( findParamInPvec(param) == -1  )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
     return deriv * scale;
 }
@@ -1523,7 +1862,7 @@ ConstraintCurveValue::ConstraintCurveValue(Point &p, double* pcoord, Curve& crv,
 
 ConstraintCurveValue::~ConstraintCurveValue()
 {
-    delete this->crv; this->crv = 0;
+    delete this->crv; this->crv = nullptr;
 }
 
 void ConstraintCurveValue::ReconstructGeomPointers()
@@ -1580,17 +1919,18 @@ void ConstraintCurveValue::errorgrad(double *err, double *grad, double *param)
 double ConstraintCurveValue::error()
 {
     double err;
-    errorgrad(&err,0,0);
+    errorgrad(&err,nullptr,nullptr);
     return scale * err;
 }
 
 double ConstraintCurveValue::grad(double *param)
 {
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1  ) return 0.0;
+    if ( findParamInPvec(param) == -1  )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
     return deriv*scale;
 }
@@ -1748,7 +2088,7 @@ ConstraintPointOnParabola::ConstraintPointOnParabola(Point &p, ArcOfParabola &e)
 
 ConstraintPointOnParabola::~ConstraintPointOnParabola()
 {
-    delete this->parab; this->parab = 0;
+    delete this->parab; this->parab = nullptr;
 }
 
 void ConstraintPointOnParabola::ReconstructGeomPointers()
@@ -1807,17 +2147,18 @@ void ConstraintPointOnParabola::errorgrad(double *err, double *grad, double *par
 double ConstraintPointOnParabola::error()
 {
     double err;
-    errorgrad(&err,0,0);
+    errorgrad(&err,nullptr,nullptr);
     return scale * err;
 }
 
 double ConstraintPointOnParabola::grad(double *param)
 {
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1  ) return 0.0;
+    if ( findParamInPvec(param) == -1  )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
     return deriv*scale;
 }
@@ -1838,8 +2179,8 @@ ConstraintAngleViaPoint::ConstraintAngleViaPoint(Curve &acrv1, Curve &acrv2, Poi
 }
 ConstraintAngleViaPoint::~ConstraintAngleViaPoint()
 {
-    delete crv1; crv1 = 0;
-    delete crv2; crv2 = 0;
+    delete crv1; crv1 = nullptr;
+    delete crv2; crv2 = nullptr;
 }
 
 void ConstraintAngleViaPoint::ReconstructGeomPointers()
@@ -1884,7 +2225,8 @@ double ConstraintAngleViaPoint::error()
 double ConstraintAngleViaPoint::grad(double *param)
 {
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1  ) return 0.0;
+    if ( findParamInPvec(param) == -1  )
+        return 0.0;
 
     double deriv=0.;
 
@@ -1941,9 +2283,9 @@ ConstraintSnell::ConstraintSnell(Curve &ray1, Curve &ray2, Curve &boundary, Poin
 }
 ConstraintSnell::~ConstraintSnell()
 {
-    delete ray1; ray1 = 0;
-    delete ray2; ray2 = 0;
-    delete boundary; boundary = 0;
+    delete ray1; ray1 = nullptr;
+    delete ray2; ray2 = nullptr;
+    delete boundary; boundary = nullptr;
 }
 
 void ConstraintSnell::ReconstructGeomPointers()
@@ -1992,7 +2334,7 @@ void ConstraintSnell::errorgrad(double *err, double *grad, double* param)
 double ConstraintSnell::error()
 {
     double err;
-    errorgrad(&err, 0, 0);
+    errorgrad(&err, nullptr, nullptr);
     return scale * err;
 }
 
@@ -2000,10 +2342,11 @@ double ConstraintSnell::grad(double *param)
 {
 
     //first of all, check that we need to compute anything.
-    if ( findParamInPvec(param) == -1 ) return 0.0;
+    if ( findParamInPvec(param) == -1 )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
 
 //use numeric for testing
@@ -2111,16 +2454,17 @@ void ConstraintEqualLineLength::errorgrad(double *err, double *grad, double *par
 double ConstraintEqualLineLength::error()
 {
     double err;
-    errorgrad(&err,0,0);
+    errorgrad(&err,nullptr,nullptr);
     return scale * err;
 }
 
 double ConstraintEqualLineLength::grad(double *param)
 {
-    if ( findParamInPvec(param) == -1 ) return 0.0;
+    if ( findParamInPvec(param) == -1 )
+        return 0.0;
 
     double deriv;
-    errorgrad(0, &deriv, param);
+    errorgrad(nullptr, &deriv, param);
 
     return deriv*scale;
 }

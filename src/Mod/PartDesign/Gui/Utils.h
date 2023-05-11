@@ -1,5 +1,5 @@
 /***************************************************************************
- *  Copyright (C) 2015 Alexander Golubev (Fat-Zer) <fatzer2@gmail.com>     *
+ *   Copyright (C) 2015 Alexander Golubev (Fat-Zer) <fatzer2@gmail.com>    *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -94,7 +94,7 @@ bool importExternalElements(App::PropertyLinkSub &prop,
 
 /// Return active body or show a warning message
 PartDesign::Body *getBody(bool messageIfNot, bool autoActivate=true, bool assertModern=true,
-        App::DocumentObject **topParent=0, std::string *subname=0);
+        App::DocumentObject **topParent=nullptr, std::string *subname=nullptr);
 
 PartDesign::Body *getBody(App::SubObjectT &sobjT, 
         bool messageIfNot=true, bool autoActivate=true, bool assertModern=true);
@@ -112,11 +112,11 @@ PartDesign::Body * needActiveBodyMessage(App::Document *doc,
  *        (currently only subshapebinder)
  */
 PartDesign::Body * makeBodyActive(App::DocumentObject *body, App::Document *doc,
-                                  App::DocumentObject **topParent=0,
-                                  std::string *subname=0);
+                                  App::DocumentObject **topParent=nullptr,
+                                  std::string *subname=nullptr);
 
 /// Display error when there are existing Body objects, but none are active
-void needActiveBodyError(void);
+void needActiveBodyError();
 
 /// Create a Body object in doc, set it active, and return pointer to it
 PartDesign::Body * makeBody(App::Document *doc);
@@ -127,7 +127,7 @@ PartDesign::Body * makeBody(App::Document *doc);
  */
 PartDesign::Body *getBodyFor(const App::DocumentObject*, bool messageIfNot,
                              bool autoActivate=true, bool assertModern=true,
-                             App::DocumentObject **topParent=0, std::string *subname=0);
+                             App::DocumentObject **topParent=nullptr, std::string *subname=nullptr);
 
 App::Part        *getPartFor(const App::DocumentObject*, bool messageIfNot);
 App::Part        *getActivePart(App::DocumentObject **topParent=0, std::string *subname=0);

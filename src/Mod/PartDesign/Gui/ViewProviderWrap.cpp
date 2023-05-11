@@ -244,7 +244,7 @@ bool ViewProviderWrap::doubleClicked()
     if (!vp)
         return false;
 
-    auto sels = Gui::Selection().getSelectionT("*", false, true);
+    auto sels = Gui::Selection().getSelectionT("*", Gui::ResolveMode::NoResolve, true);
     if (sels.empty() || sels.front().getSubObject() != getObject())
         return false;
 

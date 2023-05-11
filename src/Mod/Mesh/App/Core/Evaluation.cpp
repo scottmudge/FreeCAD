@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -28,21 +27,17 @@
 # include <vector>
 #endif
 
-#include <Mod/Mesh/App/WildMagic4/Wm4Matrix3.h>
-#include <Mod/Mesh/App/WildMagic4/Wm4Vector3.h>
+#include <Base/Matrix.h>
+#include <Base/Sequencer.h>
 
 #include "Evaluation.h"
-#include "Iterator.h"
 #include "Algorithm.h"
 #include "Approximation.h"
-#include "MeshIO.h"
-#include "Helpers.h"
-#include "Grid.h"
-#include "TopoAlgorithm.h"
 #include "Functional.h"
-#include <Base/Matrix.h>
+#include "Grid.h"
+#include "Iterator.h"
+#include "TopoAlgorithm.h"
 
-#include <Base/Sequencer.h>
 
 using namespace MeshCore;
 
@@ -109,7 +104,7 @@ MeshSameOrientationCollector::MeshSameOrientationCollector(std::vector<FacetInde
 {
 }
 
-bool MeshSameOrientationCollector::Visit (const MeshFacet &rclFacet, const MeshFacet &rclFrom, 
+bool MeshSameOrientationCollector::Visit (const MeshFacet &rclFacet, const MeshFacet &rclFrom,
                                           FacetIndex ulFInd, unsigned long ulLevel)
 {
     // different orientation of rclFacet and rclFrom
@@ -146,7 +141,7 @@ bool MeshEvalOrientation::Evaluate ()
                         if ((it->_aulPoints[(i+1)%3] == rclFacet._aulPoints[(j+1)%3]) ||
                             (it->_aulPoints[(i+2)%3] == rclFacet._aulPoints[(j+2)%3])) {
                             return false; // adjacent face with wrong orientation
-                        } 
+                        }
                     }
                 }
             }
@@ -159,7 +154,7 @@ bool MeshEvalOrientation::Evaluate ()
 unsigned long MeshEvalOrientation::HasFalsePositives(const std::vector<FacetIndex>& inds) const
 {
     // All faces with wrong orientation (i.e. adjacent faces with a normal flip and their neighbours)
-    // build a segment and are marked as TMP0. Now we check all border faces of the segments with 
+    // build a segment and are marked as TMP0. Now we check all border faces of the segments with
     // their correct neighbours if there was really a normal flip. If there is no normal flip we have
     // a false positive.
     // False-positives can occur if the mesh structure has some defects which let the region-grow
@@ -519,7 +514,7 @@ bool MeshEvalSingleFacet::Evaluate ()
   (void)MeshEvalTopology::Evaluate();
 /*
   // for each (multiple) single linked facet there should
-  // exist two valid facets sharing the same edge 
+  // exist two valid facets sharing the same edge
   // so make facet 1 neighbour of facet 2 and vice versa
   const std::vector<MeshFacet>& rclFAry = _rclMesh.GetFacets();
   std::vector<MeshFacet>::const_iterator pI;
@@ -557,7 +552,7 @@ bool MeshEvalSingleFacet::Evaluate ()
       {
         unsigned long ulPt0 = std::min<unsigned long>(rclF._aulPoints[i],  rclF._aulPoints[(i+1)%3]);
         unsigned long ulPt1 = std::max<unsigned long>(rclF._aulPoints[i],  rclF._aulPoints[(i+1)%3]);
-        std::pair<unsigned long, unsigned long> clEdge(ulPt0, ulPt1); 
+        std::pair<unsigned long, unsigned long> clEdge(ulPt0, ulPt1);
 
         // number of facets sharing this edge
         ulCtNeighbours += aclHits[clEdge].size();
@@ -572,7 +567,7 @@ bool MeshEvalSingleFacet::Evaluate ()
       _aclManifoldList.push_back(aulManifolds);
   }
 */
-  return (nonManifoldList.size() == 0);
+  return (nonManifoldList.empty());
 }
 
 bool MeshFixSingleFacet::Fixup ()
@@ -587,7 +582,7 @@ bool MeshFixSingleFacet::Fixup ()
 //      MeshFacet& rF = raFacets[*it2];
     }
   }
-  
+
   _rclMesh.DeleteFacets(aulInvalids);
   return true;
 }
@@ -596,7 +591,7 @@ bool MeshFixSingleFacet::Fixup ()
 
 bool MeshEvalSelfIntersection::Evaluate ()
 {
-    // Contains bounding boxes for every facet 
+    // Contains bounding boxes for every facet
     std::vector<Base::BoundBox3f> boxes;
 
     // Splits the mesh using grid for speeding up the calculation
@@ -619,7 +614,7 @@ bool MeshEvalSelfIntersection::Evaluate ()
         clGridIter.GetElements(aulGridElements);
 
         seq.next();
-        if (aulGridElements.size()==0)
+        if (aulGridElements.empty())
             continue;
 
         MeshGeomFacet facet1, facet2;
@@ -632,19 +627,19 @@ bool MeshEvalSelfIntersection::Evaluate ()
             for (std::vector<FacetIndex>::iterator jt = it; jt != aulGridElements.end(); ++jt) {
                 if (jt == it) // the identical facet
                     continue;
-                // If the facets share a common vertex we do not check for self-intersections because they 
+                // If the facets share a common vertex we do not check for self-intersections because they
                 // could but usually do not intersect each other and the algorithm below would detect false-positives,
                 // otherwise
                 const MeshFacet& rface2 = rFaces[*jt];
-                if (rface1._aulPoints[0] == rface2._aulPoints[0] || 
+                if (rface1._aulPoints[0] == rface2._aulPoints[0] ||
                     rface1._aulPoints[0] == rface2._aulPoints[1] ||
                     rface1._aulPoints[0] == rface2._aulPoints[2])
                     continue; // ignore facets sharing a common vertex
-                if (rface1._aulPoints[1] == rface2._aulPoints[0] || 
+                if (rface1._aulPoints[1] == rface2._aulPoints[0] ||
                     rface1._aulPoints[1] == rface2._aulPoints[1] ||
                     rface1._aulPoints[1] == rface2._aulPoints[2])
                     continue; // ignore facets sharing a common vertex
-                if (rface1._aulPoints[2] == rface2._aulPoints[0] || 
+                if (rface1._aulPoints[2] == rface2._aulPoints[0] ||
                     rface1._aulPoints[2] == rface2._aulPoints[1] ||
                     rface1._aulPoints[2] == rface2._aulPoints[2])
                     continue; // ignore facets sharing a common vertex
@@ -692,7 +687,7 @@ void MeshEvalSelfIntersection::GetIntersections(const std::vector<std::pair<Face
 
 void MeshEvalSelfIntersection::GetIntersections(std::vector<std::pair<FacetIndex, FacetIndex> >& intersection) const
 {
-    // Contains bounding boxes for every facet 
+    // Contains bounding boxes for every facet
     std::vector<Base::BoundBox3f> boxes;
     //intersection.clear();
 
@@ -716,7 +711,7 @@ void MeshEvalSelfIntersection::GetIntersections(std::vector<std::pair<FacetIndex
         clGridIter.GetElements(aulGridElements);
 
         seq.next(true);
-        if (aulGridElements.size()==0)
+        if (aulGridElements.empty())
             continue;
 
         MeshGeomFacet facet1, facet2;
@@ -729,19 +724,19 @@ void MeshEvalSelfIntersection::GetIntersections(std::vector<std::pair<FacetIndex
             for (std::vector<FacetIndex>::iterator jt = it; jt != aulGridElements.end(); ++jt) {
                 if (jt == it) // the identical facet
                     continue;
-                // If the facets share a common vertex we do not check for self-intersections because they 
+                // If the facets share a common vertex we do not check for self-intersections because they
                 // could but usually do not intersect each other and the algorithm below would detect false-positives,
                 // otherwise
                 const MeshFacet& rface2 = rFaces[*jt];
-                if (rface1._aulPoints[0] == rface2._aulPoints[0] || 
+                if (rface1._aulPoints[0] == rface2._aulPoints[0] ||
                     rface1._aulPoints[0] == rface2._aulPoints[1] ||
                     rface1._aulPoints[0] == rface2._aulPoints[2])
                     continue; // ignore facets sharing a common vertex
-                if (rface1._aulPoints[1] == rface2._aulPoints[0] || 
+                if (rface1._aulPoints[1] == rface2._aulPoints[0] ||
                     rface1._aulPoints[1] == rface2._aulPoints[1] ||
                     rface1._aulPoints[1] == rface2._aulPoints[2])
                     continue; // ignore facets sharing a common vertex
-                if (rface1._aulPoints[2] == rface2._aulPoints[0] || 
+                if (rface1._aulPoints[2] == rface2._aulPoints[0] ||
                     rface1._aulPoints[2] == rface2._aulPoints[1] ||
                     rface1._aulPoints[2] == rface2._aulPoints[2])
                     continue; // ignore facets sharing a common vertex
@@ -800,8 +795,8 @@ bool MeshFixSelfIntersection::Fixup()
 
 bool MeshEvalNeighbourhood::Evaluate ()
 {
-    // Note: If more than two facets are attached to the edge then we have a 
-    // non-manifold edge here. 
+    // Note: If more than two facets are attached to the edge then we have a
+    // non-manifold edge here.
     // This means that the neighbourhood cannot be valid, for sure. But we just
     // want to check whether the neighbourhood is valid for topologic correctly
     // edges and thus we ignore this case.
@@ -1049,7 +1044,7 @@ Base::Matrix4D MeshEigensystem::Transform() const
     //
     // from local (x) to world (y,c) coordinates we have the equation
     // y = R * x  + c
-    //     <==> 
+    //     <==>
     // x = Q * y - Q * c
     Base::Matrix4D clTMat;
     // rotation part
@@ -1078,39 +1073,39 @@ bool MeshEigensystem::Evaluate()
 
     const MeshPointArray& aclPoints = _rclMesh.GetPoints ();
     for (MeshPointArray::_TConstIterator it = aclPoints.begin(); it!=aclPoints.end(); ++it) {
-        // u-Richtung
+        // u-direction
         clVect = *it - _cC;
         clProj.ProjectToLine(clVect, _cU);
         clVect = clVect + clProj;
         fH = clVect.Length();
-      
-        // zeigen Vektoren in die gleiche Richtung ?
+
+        // point vectors in the same direction ?
         if ((clVect * _cU) < 0.0f)
             fH = -fH;
 
         xmax = std::max<float>(xmax, fH);
         xmin = std::min<float>(xmin, fH);
 
-        // v-Richtung
+        // v-direction
         clVect = *it - _cC;
         clProj.ProjectToLine(clVect, _cV);
         clVect = clVect + clProj;
         fH = clVect.Length();
-  
-        // zeigen Vektoren in die gleiche Richtung ?
+
+        // point vectors in the same direction ?
         if ((clVect * _cV) < 0.0f)
           fH = -fH;
 
         ymax = std::max<float>(ymax, fH);
         ymin = std::min<float>(ymin, fH);
 
-        // w-Richtung
+        // w-direction
         clVect = *it - _cC;
         clProj.ProjectToLine(clVect, _cW);
         clVect = clVect + clProj;
         fH = clVect.Length();
-  
-        // zeigen Vektoren in die gleiche Richtung ?
+
+        // point vectors in the same direction ?
         if ((clVect * _cW) < 0.0f)
             fH = -fH;
 

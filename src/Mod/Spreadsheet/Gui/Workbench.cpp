@@ -21,24 +21,25 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <qobject.h>
+# include <QToolBar>
 #endif
 
-#include "Workbench.h"
-#include <Gui/ToolBarManager.h>
-#include <Gui/MenuManager.h>
-#include <Gui/Application.h>
-#include <Gui/MainWindow.h>
-#include <Gui/Command.h>
-#include <QToolBar>
-#include "qtcolorpicker.h"
-#include "Mod/Spreadsheet/App/Sheet.h"
 #include <App/Range.h>
+#include <Gui/Application.h>
+#include <Gui/Command.h>
+#include <Gui/MainWindow.h>
+#include <Gui/MenuManager.h>
+#include <Gui/ToolBarManager.h>
+#include "Mod/Spreadsheet/App/Sheet.h"
 #include "Mod/Spreadsheet/Gui/SpreadsheetView.h"
+
+#include "Workbench.h"
+#include "qtcolorpicker.h"
+
 
 using namespace Base;
 using namespace App;
@@ -132,7 +133,7 @@ void WorkbenchHelper::setForegroundColor(const QColor & color)
             std::vector<Range> ranges = sheetView->selectedRanges();
 
             // Execute mergeCells commands
-            if (ranges.size() > 0) {
+            if (!ranges.empty()) {
                 std::vector<Range>::const_iterator i = ranges.begin();
 
                 Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Set foreground color"));
@@ -159,7 +160,7 @@ void WorkbenchHelper::setBackgroundColor(const QColor & color)
             std::vector<Range> ranges = sheetView->selectedRanges();
 
             // Execute mergeCells commands
-            if (ranges.size() > 0) {
+            if (!ranges.empty()) {
                 std::vector<Range>::const_iterator i = ranges.begin();
 
                 Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Set background color"));

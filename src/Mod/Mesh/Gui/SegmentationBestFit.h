@@ -20,15 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef MESHGUI_SEGMENTATIONBESTFIT_H
 #define MESHGUI_SEGMENTATIONBESTFIT_H
 
-#include <QWidget>
 #include <list>
+#include <QDialog>
+
 #include <Gui/TaskView/TaskDialog.h>
 #include <Gui/TaskView/TaskView.h>
+
 #include "MeshSelection.h"
+
 
 class QDoubleSpinBox;
 
@@ -49,7 +51,7 @@ public:
     virtual std::vector<float> getParameter(Points) const = 0;
 };
 
-typedef std::list<std::pair<QString, float> > ParameterList;
+using ParameterList = std::list<std::pair<QString, float> >;
 class ParametersDialog : public QDialog
 {
     Q_OBJECT
@@ -57,10 +59,10 @@ class ParametersDialog : public QDialog
 public:
     ParametersDialog(std::vector<float>&, FitParameter*,
                      ParameterList, Mesh::Feature* mesh,
-                     QWidget* parent=0);
-    ~ParametersDialog();
-    void accept();
-    void reject();
+                     QWidget* parent=nullptr);
+    ~ParametersDialog() override;
+    void accept() override;
+    void reject() override;
 
 private Q_SLOTS:
     void on_region_clicked();
@@ -82,12 +84,12 @@ class MeshGuiExport SegmentationBestFit : public QWidget
     Q_OBJECT
 
 public:
-    SegmentationBestFit(Mesh::Feature* mesh, QWidget* parent = 0, Qt::WindowFlags fl = Qt::WindowFlags());
-    ~SegmentationBestFit();
+    explicit SegmentationBestFit(Mesh::Feature* mesh, QWidget* parent = nullptr, Qt::WindowFlags fl = Qt::WindowFlags());
+    ~SegmentationBestFit() override;
     void accept();
 
 protected:
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
 
 private Q_SLOTS:
     void on_planeParameters_clicked();
@@ -109,13 +111,13 @@ private:
 class TaskSegmentationBestFit : public Gui::TaskView::TaskDialog
 {
 public:
-    TaskSegmentationBestFit(Mesh::Feature* mesh);
-    ~TaskSegmentationBestFit();
+    explicit TaskSegmentationBestFit(Mesh::Feature* mesh);
+    ~TaskSegmentationBestFit() override;
 
 public:
-    bool accept();
+    bool accept() override;
 
-    virtual QDialogButtonBox::StandardButtons getStandardButtons() const
+    QDialogButtonBox::StandardButtons getStandardButtons() const override
     { return QDialogButtonBox::Ok | QDialogButtonBox::Cancel; }
 
 private:

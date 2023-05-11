@@ -20,17 +20,16 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef MESHALGORITHM_H
 #define MESHALGORITHM_H
 
+#include <map>
 #include <set>
 #include <vector>
-#include <map>
 
-#include "MeshKernel.h"
 #include "Elements.h"
-#include <Base/Vector3D.h>
+#include "MeshKernel.h"
+
 
 // forward declarations
 
@@ -56,7 +55,7 @@ class MeshExport MeshAlgorithm
 {
 public:
   /// Construction
-  MeshAlgorithm (const MeshKernel &rclM) : _rclMesh(rclM) { }
+  explicit MeshAlgorithm (const MeshKernel &rclM) : _rclMesh(rclM) { }
   /// Destruction
   ~MeshAlgorithm () { }
 
@@ -70,6 +69,17 @@ public:
    * occasionally.
    */
   bool NearestFacetOnRay (const Base::Vector3f &rclPt, const Base::Vector3f &rclDir, Base::Vector3f &rclRes,
+                          FacetIndex &rulFacet) const;
+  /**
+   * Searches for the nearest facet to the ray defined by
+   * (\a rclPt, \a rclDir).
+   * The point \a rclRes holds the intersection point with the ray and the
+   * nearest facet with index \a rulFacet. The angle between the ray and the normal of the triangle
+   * must be less than or equal to \a fMaxAngle.
+   * \note This method tests all facets so it should only be used
+   * occasionally.
+   */
+  bool NearestFacetOnRay (const Base::Vector3f &rclPt, const Base::Vector3f &rclDir, float fMaxAngle, Base::Vector3f &rclRes,
                           FacetIndex &rulFacet) const;
   /**
    * Searches for the nearest facet to the ray defined by
@@ -107,7 +117,7 @@ public:
    */
   bool FirstFacetToVertex(const Base::Vector3f &rclPt, float fMaxDistance, const MeshFacetGrid &rclGrid, FacetIndex &rulFacet) const;
   /**
-   * Checks from the viewpoint \a rcView if the vertex \a rcVertex is visible or it is hidden by a facet. 
+   * Checks from the viewpoint \a rcView if the vertex \a rcVertex is visible or it is hidden by a facet.
    * If the vertex is visible true is returned, false otherwise.
    */
   bool IsVertexVisible (const Base::Vector3f &rcVertex, const Base::Vector3f &rcView, const MeshFacetGrid &rclGrid ) const;
@@ -141,7 +151,7 @@ public:
    */
   void GetFacetBorders (const std::vector<FacetIndex> &raulInd, std::list<std::vector<Base::Vector3f> > &rclBorders) const;
   /**
-   * Returns all boundaries of a subset the mesh defined by \a raulInd. This method does basically the same as above unless 
+   * Returns all boundaries of a subset the mesh defined by \a raulInd. This method does basically the same as above unless
    * that it returns the point indices of the boundaries.
    * If \a ignoreOrientation is false (the default) we may get a broken boundary curve if the mesh has facets
    * with wrong orientation. However, if \a ignoreOrientation is true we may get a boundary curve with wrong
@@ -173,15 +183,15 @@ public:
    * If the boundary is not a hole or the algorithm failed false is returned, otherwise true.
    * @note \a boundary contains the point indices of the mesh data structure. The first and last index must therefore be equal.
    * @note \a rPoints contains the geometric points of the triangulation. The number of points can be the same as or exceed
-   * the number of boundary indices but it cannot be lower. 
-   * @note If the number of geometric points exceeds the number of boundary indices then the triangulation algorithm has 
+   * the number of boundary indices but it cannot be lower.
+   * @note If the number of geometric points exceeds the number of boundary indices then the triangulation algorithm has
    * introduced new points which are added to the end of \a rPoints.
    */
   bool FillupHole(const std::vector<PointIndex>& boundary,
                   AbstractPolygonTriangulator& cTria,
                   MeshFacetArray& rFaces, MeshPointArray& rPoints,
                   int level, const MeshRefPointToFacets* pP2FStructure=nullptr) const;
-  /** Sets to all facets in \a raulInds the properties in raulProps. 
+  /** Sets to all facets in \a raulInds the properties in raulProps.
    * \note Both arrays must have the same size.
    */
   void SetFacetsProperty(const std::vector<FacetIndex> &raulInds, const std::vector<unsigned long> &raulProps) const;
@@ -223,7 +233,7 @@ public:
    * Does basically the same as method above except it uses a mesh grid to speed up the computation.
    */
   void GetFacetsFromToolMesh( const MeshKernel& rToolMesh, const Base::Vector3f& rcDir, const MeshFacetGrid& rGrid, std::vector<FacetIndex> &raclCutted ) const;
-  /** 
+  /**
    * Checks whether the bounding box \a rBox is surrounded by the attached mesh which must be a solid.
    * The direction \a rcDir is used to try to foraminate the facets of the tool mesh and counts the number of foraminated facets.
    *  1 is returned if the box is completely inside the mesh
@@ -248,7 +258,7 @@ public:
   /**
    * Determines all facets of the given array \a raclFacetIndices that lie at the edge or that
    * have at least neighbour facet that is not inside the array. The resulting array \a raclResultIndices
-   * is not be deleted before the algorithm starts. \a usLevel indicates how often the algorithm is 
+   * is not be deleted before the algorithm starts. \a usLevel indicates how often the algorithm is
    * repeated.
    */
   void CheckBorderFacets (const std::vector<FacetIndex> &raclFacetIndices,
@@ -277,7 +287,7 @@ public:
   /** Returns only the points of the mesh without actually sampling the data. */
   void SubSampleAllPoints(std::vector<Base::Vector3f> &rclPoints) const;
   /**
-   * Searches for all facets that intersect the "search tube" with radius \a r around the polyline. 
+   * Searches for all facets that intersect the "search tube" with radius \a r around the polyline.
    */
   void SearchFacetsFromPolyline (const std::vector<Base::Vector3f> &rclPolyline, float fRadius,
                                  const MeshFacetGrid& rclGrid, std::vector<FacetIndex> &rclResultFacetsIndices) const;
@@ -292,11 +302,11 @@ public:
   /** Cuts the mesh with a plane. The result is a list of polylines. */
   bool CutWithPlane (const Base::Vector3f &clBase, const Base::Vector3f &clNormal, const MeshFacetGrid &rclGrid,
                      std::list<std::vector<Base::Vector3f> > &rclResult, float fMinEps = 1.0e-2f, bool bConnectPolygons = false) const;
-  /** 
-   * Gets all facets that cut the plane (N,d) and that lie between the two points left and right. 
+  /**
+   * Gets all facets that cut the plane (N,d) and that lie between the two points left and right.
    * The plane is defined by it normalized normal and the signed distance to the origin.
    */
-  void GetFacetsFromPlane (const MeshFacetGrid &rclGrid, const Base::Vector3f& clNormal, float dist, 
+  void GetFacetsFromPlane (const MeshFacetGrid &rclGrid, const Base::Vector3f& clNormal, float dist,
       const Base::Vector3f &rclLeft, const Base::Vector3f &rclRight, std::vector<FacetIndex> &rclRes) const;
 
   /** Returns true if the distance from the \a rclPt to the facet \a ulFacetIdx is less than \a fMaxDistance.
@@ -308,7 +318,7 @@ public:
    * built up. The minimum grid length must be at least \a fLength.
    */
   float CalculateMinimumGridLength(float fLength, const Base::BoundBox3f& rBBox, unsigned long maxElements) const;
-   
+
 protected:
   /** Helper method to connect the intersection points to polylines. */
   bool ConnectLines (std::list<std::pair<Base::Vector3f, Base::Vector3f> > &rclLines, std::list<std::vector<Base::Vector3f> >&rclPolylines,
@@ -318,7 +328,7 @@ protected:
   /** Searches the nearest facet in \a raulFacets to the ray (\a rclPt, \a rclDir). */
   bool RayNearestField (const Base::Vector3f &rclPt, const Base::Vector3f &rclDir, const std::vector<FacetIndex> &raulFacets,
                         Base::Vector3f &rclRes, FacetIndex &rulFacet, float fMaxAngle = Mathf::PI) const;
-  /** 
+  /**
    * Splits the boundary \a rBound in several loops and append this loops to the list of borders.
    */
   void SplitBoundaryLoops(const std::vector<PointIndex>& rBound, std::list<std::vector<PointIndex> >& aBorders);
@@ -342,9 +352,9 @@ public:
 class MeshExport PointCollector : public MeshCollector
 {
 public:
-    PointCollector(std::vector<PointIndex>& ind) : indices(ind){}
-    virtual ~PointCollector(){}
-    virtual void Append(const MeshCore::MeshKernel& kernel, FacetIndex index)
+    explicit PointCollector(std::vector<PointIndex>& ind) : indices(ind){}
+    ~PointCollector() override{}
+    void Append(const MeshCore::MeshKernel& kernel, FacetIndex index) override
     {
         PointIndex ulP1, ulP2, ulP3;
         kernel.GetFacetPoints(index, ulP1, ulP2, ulP3);
@@ -360,9 +370,9 @@ private:
 class MeshExport FacetCollector : public MeshCollector
 {
 public:
-    FacetCollector(std::vector<FacetIndex>& ind) : indices(ind){}
-    virtual ~FacetCollector(){}
-    void Append(const MeshCore::MeshKernel&, FacetIndex index)
+    explicit FacetCollector(std::vector<FacetIndex>& ind) : indices(ind){}
+    ~FacetCollector() override{}
+    void Append(const MeshCore::MeshKernel&, FacetIndex index) override
     {
         indices.push_back(index);
     }
@@ -381,7 +391,7 @@ class MeshExport MeshRefPointToFacets
 {
 public:
     /// Construction
-    MeshRefPointToFacets (const MeshKernel &rclM) : _rclMesh(rclM) 
+    explicit MeshRefPointToFacets (const MeshKernel &rclM) : _rclMesh(rclM)
     { Rebuild(); }
     /// Destruction
     ~MeshRefPointToFacets ()
@@ -411,7 +421,7 @@ protected:
 };
 
 /**
- * The MeshRefFacetToFacets builds up a structure to have access to all facets sharing 
+ * The MeshRefFacetToFacets builds up a structure to have access to all facets sharing
  * at least one same point.
  * \note If the underlying mesh kernel gets changed this structure becomes invalid and must
  * be rebuilt.
@@ -420,7 +430,7 @@ class MeshExport MeshRefFacetToFacets
 {
 public:
     /// Construction
-    MeshRefFacetToFacets (const MeshKernel &rclM) : _rclMesh(rclM)
+    explicit MeshRefFacetToFacets (const MeshKernel &rclM) : _rclMesh(rclM)
     { Rebuild(); }
     /// Destruction
     ~MeshRefFacetToFacets ()
@@ -440,7 +450,7 @@ protected:
 };
 
 /**
- * The MeshRefPointToPoints builds up a structure to have access to all neighbour points  
+ * The MeshRefPointToPoints builds up a structure to have access to all neighbour points
  * of a point. Two points are neighbours if there is an edge indexing both points.
  * \note If the underlying mesh kernel gets changed this structure becomes invalid and must
  * be rebuilt.
@@ -449,7 +459,7 @@ class MeshExport MeshRefPointToPoints
 {
 public:
     /// Construction
-    MeshRefPointToPoints (const MeshKernel &rclM) : _rclMesh(rclM) 
+    explicit MeshRefPointToPoints (const MeshKernel &rclM) : _rclMesh(rclM)
     { Rebuild(); }
     /// Destruction
     ~MeshRefPointToPoints ()
@@ -469,7 +479,7 @@ protected:
 };
 
 /**
- * The MeshRefEdgeToFacets builds up a structure to have access to all facets 
+ * The MeshRefEdgeToFacets builds up a structure to have access to all facets
  * of an edge. On a manifold mesh an edge has one or two facets associated.
  * \note If the underlying mesh kernel gets changed this structure becomes invalid and must
  * be rebuilt.
@@ -478,7 +488,7 @@ class MeshExport MeshRefEdgeToFacets
 {
 public:
     /// Construction
-    MeshRefEdgeToFacets (const MeshKernel &rclM) : _rclMesh(rclM) 
+    explicit MeshRefEdgeToFacets (const MeshKernel &rclM) : _rclMesh(rclM)
     { Rebuild(); }
     /// Destruction
     ~MeshRefEdgeToFacets ()
@@ -503,7 +513,7 @@ protected:
                 return false;
         }
     };
-    typedef std::pair<FacetIndex, FacetIndex> MeshFacetPair;
+    using MeshFacetPair = std::pair<FacetIndex, FacetIndex>;
     const MeshKernel  &_rclMesh; /**< The mesh kernel. */
     std::map<MeshEdge, MeshFacetPair, EdgeOrder> _map;
 };
@@ -517,7 +527,7 @@ class MeshExport MeshRefNormalToPoints
 {
 public:
     /// Construction
-    MeshRefNormalToPoints (const MeshKernel &rclM) : _rclMesh(rclM) 
+    explicit MeshRefNormalToPoints (const MeshKernel &rclM) : _rclMesh(rclM)
     { Rebuild(); }
     /// Destruction
     ~MeshRefNormalToPoints ()
@@ -526,12 +536,15 @@ public:
     /// Rebuilds up data structure
     void Rebuild ();
     const Base::Vector3f& operator[] (PointIndex) const;
+    const std::vector<Base::Vector3f>& GetValues() const {
+        return _norm;
+    }
 
 protected:
     const MeshKernel  &_rclMesh; /**< The mesh kernel. */
     std::vector<Base::Vector3f> _norm;
 };
 
-} // namespace MeshCore 
+} // namespace MeshCore
 
-#endif  // MESH_ALGORITHM_H 
+#endif  // MESH_ALGORITHM_H

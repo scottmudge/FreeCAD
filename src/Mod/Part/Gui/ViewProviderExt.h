@@ -20,20 +20,18 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef PARTGUI_VIEWPROVIDERPARTEXT_H
 #define PARTGUI_VIEWPROVIDERPARTEXT_H
 
+#include <map>
 #include <Standard_math.hxx>
-#include <Standard_Boolean.hxx>
-#include <TopoDS_Shape.hxx>
-#include <TopoDS_Face.hxx>
-#include <Poly_Triangulation.hxx>
-#include <TColgp_Array1OfDir.hxx>
+
 #include <App/PropertyUnits.h>
 #include <Gui/ViewProviderGeometryObject.h>
-#include <map>
+
 #include <Mod/Part/App/PartFeature.h>
+#include <Mod/Part/PartGlobal.h>
+
 
 class TopoDS_Shape;
 class TopoDS_Edge;
@@ -72,7 +70,7 @@ public:
     /// constructor
     ViewProviderPartExt();
     /// destructor
-    virtual ~ViewProviderPartExt();
+    ~ViewProviderPartExt() override;
 
     // Display properties
     App::PropertyFloatConstraint Deviation;
@@ -100,16 +98,16 @@ public:
     App::PropertyBool MapTransparency;    
     App::PropertyBool ForceMapColors;
 
-    virtual void attach(App::DocumentObject *) override;
-    virtual void setDisplayMode(const char* ModeName) override;
+    void attach(App::DocumentObject *) override;
+    void setDisplayMode(const char* ModeName) override;
     /// returns a list of all possible modes
-    virtual std::vector<std::string> getDisplayModes(void) const override;
+    std::vector<std::string> getDisplayModes(void) const override;
     /// Update the view representation
     void reload();
     /// If no other task is pending it opens a dialog to allow to change face colors
     bool changeFaceColors();
 
-    virtual void updateData(const App::Property*) override;
+    void updateData(const App::Property*) override;
 
     virtual PyObject *getPyObject() override;
 
@@ -120,17 +118,14 @@ public:
      */
     //@{
     /// indicates if the ViewProvider use the new Selection model
-    virtual bool useNewSelectionModel(void) const override {return true;}
-    virtual bool getElementPicked(const SoPickedPoint *, std::string &subname) const override;
-    virtual std::string getElement(const SoDetail *detail) const override;
-    virtual SoDetail* getDetail(const char*) const override;
-    virtual bool getDetailPath(const char *subname,
-                               SoFullPath *pPath,
-                               bool append,
-                               SoDetail *&det) const override;
-    virtual std::vector<Base::Vector3d> getModelPoints(const SoPickedPoint *) const override;
+    bool useNewSelectionModel(void) const override {return true;}
+    bool getElementPicked(const SoPickedPoint *, std::string &subname) const override;
+    std::string getElement(const SoDetail *detail) const override;
+    SoDetail* getDetail(const char*) const override;
+    bool getDetailPath(const char *subname, SoFullPath *pPath, bool append, SoDetail *&det) const override;
+    std::vector<Base::Vector3d> getModelPoints(const SoPickedPoint *) const override;
     /// return the highlight lines for a given element or the whole shape
-    virtual std::vector<Base::Vector3d> getSelectionShape(const char* Element) const override;
+    std::vector<Base::Vector3d> getSelectionShape(const char* Element) const override;
     //@}
 
     /** @name Highlight handling
@@ -148,19 +143,19 @@ public:
     void enableFullSelectionHighlight(bool face=true, bool line=true, bool point=true);
     //@}
 
-    /** @name Color management methods 
+    /** @name Color management methods
      */
     //@{
-    virtual void setElementColors(const std::map<std::string,App::Color> &colors) override;
-    virtual std::map<std::string,App::Color> getElementColors(const char *element=0) const override;
+    void setElementColors(const std::map<std::string,App::Color> &colors) override;
+    std::map<std::string,App::Color> getElementColors(const char *element=nullptr) const override;
     //@}
 
-    virtual bool isUpdateForced() const override {
+    bool isUpdateForced() const override {
         return forceUpdateCount>0;
     }
-    virtual void forceUpdate(bool enable = true) override;
+    void forceUpdate(bool enable = true) override;
 
-    virtual bool allowOverride(const App::DocumentObject &) const override;
+    bool allowOverride(const App::DocumentObject &) const override;
 
     virtual void updateColors(App::Document *sourceDoc=0, bool forceColorMap=false) override;
 
@@ -191,13 +186,13 @@ protected:
     void unsetEdit(int ModNum) override;
     //@}
 
-    virtual Base::BoundBox3d _getBoundingBox(const char *subname=0,
+    Base::BoundBox3d _getBoundingBox(const char *subname=0,
             const Base::Matrix4D *mat=0, bool transform=true,
             const Gui::View3DInventorViewer *view=0, int depth=0) const override;
 
 protected:
     /// get called by the container whenever a property has been changed
-    virtual void onChanged(const App::Property* prop) override;
+    void onChanged(const App::Property* prop) override;
 
     virtual bool hasBaseFeature() const;
 

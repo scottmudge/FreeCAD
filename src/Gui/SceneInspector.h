@@ -23,7 +23,6 @@
 #ifndef GUI_SCENEINSPECTOR_H
 #define GUI_SCENEINSPECTOR_H
 
-#include <QStandardItemModel>
 #include <QDialog>
 #include <QHash>
 #include <QTreeWidget>
@@ -46,25 +45,25 @@ class SceneModel : public QAbstractItemModel
 
 public:
     SceneModel(QObject* parent);
-    virtual ~SceneModel();
+    ~SceneModel() override;
 
     /** returns empty QVariant, unless orientation == Qt::Horizontal,
      *  role == Qt::DisplayRole and section == 0 where it returns
      *  "Inventor Tree"
      */
-    QVariant headerData (int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
+    QVariant headerData (int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     /// header data not used: returns false
-    bool setHeaderData (int section, Qt::Orientation orientation, const QVariant & value, int role = Qt::EditRole);
+    bool setHeaderData (int section, Qt::Orientation orientation, const QVariant & value, int role = Qt::EditRole) override;
     /// insert the first node in tree
     void setNode(SoNode* node);
     /// set names per node
     void setNodeNames(const QHash<SoNode*, QString>& names);
 
-    virtual QModelIndex parent(const QModelIndex & index) const;
-    virtual QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const;
-    virtual QModelIndex index(int row, int, const QModelIndex &parent = QModelIndex()) const;
-    virtual int rowCount(const QModelIndex & parent = QModelIndex()) const;
-    virtual int columnCount(const QModelIndex &) const;
+    QModelIndex parent(const QModelIndex & index) const override;
+    QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const override;
+    QModelIndex index(int row, int, const QModelIndex &parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex & parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &) const override;
 
 private:
 
@@ -88,8 +87,8 @@ class DlgInspector : public QDialog
     Q_OBJECT
 
 public:
-    DlgInspector(QWidget* parent = 0, Qt::WindowFlags fl = Qt::WindowFlags());
-    ~DlgInspector();
+    DlgInspector(QWidget* parent = nullptr, Qt::WindowFlags fl = Qt::WindowFlags());
+    ~DlgInspector() override;
 
     void setDocument(Gui::Document* doc);
 
@@ -99,7 +98,7 @@ private Q_SLOTS:
     void on_fieldView_itemExpanded(QTreeWidgetItem *item);
 
 protected:
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
     void setNode(SoNode* node);
     void setNodeNames(Gui::Document*);
     void populateFieldView(QTreeWidgetItem *parent, SoNode *n);

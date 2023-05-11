@@ -34,6 +34,7 @@ YZ, and XZ planes.
 #  in FreeCAD and a couple of utility functions.
 
 import math
+from sys import float_info
 import lazy_loader.lazy_loader as lz
 
 import FreeCAD
@@ -125,7 +126,9 @@ class Plane:
 
     def copy(self):
         """Return a new plane that is a copy of the present object."""
-        return plane(u=self.u, v=self.v, w=self.axis, pos=self.position)
+        p = plane(u=self.u, v=self.v, w=self.axis, pos=self.position)
+        p.weak = self.weak
+        return p
 
     def offsetToPoint(self, p, direction=None):
         """Return the signed distance from a point to the plane.
@@ -226,7 +229,7 @@ class Plane:
             direction = self.axis
         return direction.dot(self.position.sub(p))
 
-    def projectPoint(self, p, direction=None):
+    def projectPoint(self, p, direction=None, force_projection=True):
         """Project a point onto the plane, by default orthogonally.
 
         Parameters
@@ -239,24 +242,38 @@ class Plane:
             It defaults to `None`, which then uses the `plane.axis` (normal)
             value, meaning that the point is projected perpendicularly
             to the plane.
+        force_projection: Bool, optional
+            Forces the projection if the deviation between the direction and
+            the normal is less than float epsilon from the orthogonality.
+            The direction of projection is modified to a float epsilon
+            deviation between the direction and the orthogonal.
+            It defaults to True.
 
         Returns
         -------
         Base::Vector3
             The projected vector, scaled to the appropriate distance.
         """
-        if not direction:
-            direction = self.axis
-        lp = self.getLocalCoords(p)
-        gp = self.getGlobalCoords(Vector(lp.x, lp.y, 0))
-        a = direction.getAngle(gp.sub(p))
-        if a > math.pi/2:
-            direction = direction.negative()
-            a = math.pi - a
-        ld = self.getLocalRot(direction)
-        gd = self.getGlobalRot(Vector(ld.x, ld.y, 0))
-        hyp = abs(math.tan(a) * lp.z)
-        return gp.add(DraftVecUtils.scaleTo(gd, hyp))
+
+        axis = Vector(self.axis).normalize()
+        if direction is None:
+            dir = axis
+        else:
+            dir = Vector(direction).normalize()
+
+        cos = dir.dot(axis)
+        delta_ax_proj = (p - self.position).dot(axis)
+        # check the only conflicting case: direction orthogonal to axis
+        if abs(cos) <= float_info.epsilon:
+            if force_projection:
+                cos = math.copysign(float_info.epsilon, delta_ax_proj)
+                dir = axis.cross(dir).cross(axis) - cos*axis
+            else:
+                return None
+
+        proj = p - delta_ax_proj/cos*dir
+
+        return proj
 
     def projectPointOld(self, p, direction=None):
         """Project a point onto the plane. OBSOLETE.
@@ -328,13 +345,15 @@ class Plane:
             self.u = Vector(0, -1, 0)
             self.v = Vector(0, 0, 1)
         elif upvec:
-            self.v = upvec
+            self.u = upvec.cross(self.axis)
+            self.u.normalize()
+            self.v = self.axis.cross(self.u)
             self.v.normalize()
-            self.u = self.v.cross(self.axis)
         else:
             self.v = axis.cross(Vector(1, 0, 0))
             self.v.normalize()
             self.u = DraftVecUtils.rotate(self.v, -math.pi/2, self.axis)
+            self.u.normalize()
         offsetVector = Vector(axis)
         offsetVector.multiply(offset)
         self.position = point.add(offsetVector)
@@ -554,7 +573,7 @@ class Plane:
 
         See Also
         --------
-        alignToPointAndAxis, DraftGeomUtils.getQuad
+        alignToPointAndAxis
         """
         # Set face to the unique selected face, if found
         if not shape.isNull() and shape.ShapeType == 'Face':
@@ -562,22 +581,28 @@ class Plane:
                 place = parent.getGlobalPlacement()
             else:
                 place = FreeCAD.Placement()
-            cen = place.multVec(shape.Faces[0].CenterOfMass)
-            place.Base = FreeCAD.Vector(0, 0, 0) # Reset the Base for the conversion of the normal.
-            nor = place.multVec(shape.Faces[0].normalAt(0, 0))
+            rot = place.Rotation
+
+            cen = place.multVec(shape.CenterOfMass)
+            nor = rot.multVec(shape.normalAt(0, 0))
             self.alignToPointAndAxis(cen, nor, offset)
-            import DraftGeomUtils
-            q = DraftGeomUtils.getQuad(shape)
-            if q:
-                self.u = place.multVec(q[1])
-                self.v = place.multVec(q[2])
-                if not DraftVecUtils.equals(self.u.cross(self.v), self.axis):
-                    self.u, self.v = self.v, self.u
-                if DraftVecUtils.equals(self.u, Vector(0, 0, 1)):
-                    # the X axis is vertical: rotate 90 degrees
-                    self.u, self.v = self.v.negative(), self.u
-                elif DraftVecUtils.equals(self.u, Vector(0, 0, -1)):
-                    self.u, self.v = self.v, self.u.negative()
+
+            pmr = shape.ParameterRange # (uMin, uMax, vMin, vMax)
+            u = shape.valueAt(pmr[1], 0).sub(shape.valueAt(pmr[0], 0))
+            v = shape.valueAt(0, pmr[3]).sub(shape.valueAt(0, pmr[2]))
+            self.u = rot.multVec(u).normalize()
+            self.v = rot.multVec(v).normalize()
+
+            if shape.Orientation == "Reversed":
+                self.u, self.v = self.v, self.u
+
+            # If self.u or self.v matches a wrong global axis, rotate them:
+            if DraftVecUtils.equals(self.v, Vector(0, 0, -1)):
+                self.u, self.v = self.u.negative(), self.v.negative()
+            elif DraftVecUtils.equals(self.u, Vector(0, 0, 1)):
+                self.u, self.v = self.v.negative(), self.u
+            elif DraftVecUtils.equals(self.u, Vector(0, 0, -1)):
+                self.u, self.v = self.v, self.u.negative()
 
             self.weak = False
             return True
@@ -642,14 +667,14 @@ class Plane:
             return False
 
         shapes = list()
-        for sex in sel_ex:
-            for sub in sex.SubElementNames if sex.SubElementNames else ['']:
-                shape = Part.getShape(sex.Object, sub, needSubElement = True)
+        for obj in sel_ex:
+            for sub in obj.SubElementNames if obj.SubElementNames else ['']:
+                shape = Part.getShape(obj.Object, sub, needSubElement = True)
                 if not shape or shape.isNull():
                     FreeCAD.Console.PrintError(translate(
                         "draft",
                         "Object without Part.Shape geometry:'{}.{}'\n".format(
-                            sex.ObjectName, sub)))
+                            obj.ObjectName, sub)))
                     return False
                 shapes.append(shape)
 
@@ -657,7 +682,7 @@ class Plane:
         normal = Part.Compound(shapes).findPlane()
         if not normal:
             FreeCAD.Console.PrintError(translate(
-                "draft","Selected Shapes must define a plane\n"))
+                "draft", "Selected Shapes must define a plane") + "\n")
             return False
 
         # set center of mass
@@ -728,9 +753,9 @@ class Plane:
                     vdir = view.getViewDirection()
                     # The angle is between 0 and 180 degrees.
                     angle = vdir.getAngle(self.axis)
-                    if (angle > 0.001) and (angle < 3.14159):
-                        # don't change the plane if it is already
-                        # perpendicular to the current view
+                    # don't change the plane if the axis is already
+                    # antiparallel to the current view
+                    if abs(math.pi - angle) > Part.Precision.angular():
                         self.alignToPointAndAxis(Vector(0, 0, 0),
                                                  vdir.negative(), 0, upvec)
                 except Exception:
@@ -1218,6 +1243,34 @@ class Plane:
             norm = proj.cross(self.u)
             return DraftVecUtils.angle(self.u, proj, norm)
 
+    def getParameters(self):
+        """Return a dictionary with the data which define the plane:
+        `u`, `v`, `axis`, `weak`.
+
+        Returns
+        -------
+        dict
+            dictionary of the form:
+            {"position":position, "u":x, "v":v, "axis":axis, "weak":weak}
+        """
+        return {"position":self.position, "u":self.u, "v":self.v, "axis":self.axis, "weak":self.weak}
+
+    def setFromParameters(self, data):
+        """Set the plane according to data.
+
+        Parameters
+        ----------
+        data: dict
+            dictionary of the form:
+            {"position":position, "u":x, "v":v, "axis":axis, "weak":weak}
+       """
+        self.position = data["position"]
+        self.u = data["u"]
+        self.v = data["v"]
+        self.axis = data["axis"]
+        self.weak = data["weak"]
+
+        return None
 
 plane = Plane
 

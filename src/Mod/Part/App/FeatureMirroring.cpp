@@ -20,15 +20,13 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <gp.hxx>
+# include <BRepBuilderAPI_Transform.hxx>
 # include <gp_Ax2.hxx>
 # include <gp_Dir.hxx>
 # include <gp_Pnt.hxx>
 # include <gp_Trsf.hxx>
-# include <BRepBuilderAPI_Transform.hxx>
 #endif
 
 
@@ -41,7 +39,7 @@ PROPERTY_SOURCE(Part::Mirroring, Part::Feature)
 
 Mirroring::Mirroring()
 {
-    ADD_PROPERTY(Source,(0));
+    ADD_PROPERTY(Source,(nullptr));
     ADD_PROPERTY_TYPE(Base,(Base::Vector3d()),"Plane",App::Prop_None,"The base point of the plane");
     ADD_PROPERTY_TYPE(Normal,(Base::Vector3d(0,0,1)),"Plane",App::Prop_None,"The normal of the plane");
 }
@@ -93,7 +91,7 @@ void Mirroring::handleChangedPropertyType(Base::XMLReader &reader, const char *T
     }
 }
 
-App::DocumentObjectExecReturn *Mirroring::execute(void)
+App::DocumentObjectExecReturn *Mirroring::execute()
 {
     App::DocumentObject* link = Source.getValue();
     if (!link)

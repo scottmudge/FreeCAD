@@ -27,6 +27,7 @@
 #include <Inventor/SbVec3f.h>
 #include <Inventor/SbBox3f.h>
 #include <Inventor/actions/SoRayPickAction.h>
+#include <Mod/Part/PartGlobal.h>
 
 namespace PartGui {
 

@@ -23,7 +23,7 @@ import FreeCAD, DraftGeomUtils, Part, Draft, Arch, Mesh, MeshPart, os, sys, code
 from collections import defaultdict
 # import numpy as np
 if FreeCAD.GuiUp:
-    from DraftTools import translate
+    from draftutils.translate import translate
     import FreeCADGui
 else:
     # \cond
@@ -46,10 +46,6 @@ if open.__module__ in ['__builtin__','io']:
     pythonopen = open
 
 def decode(txt):
-
-    if sys.version_info.major < 3:
-        if isinstance(txt,unicode):
-            return txt.encode("utf8")
     return txt
 
 def findVert(aVertex,aList):
@@ -350,7 +346,7 @@ def _export(exportSet, filename, colors):
         outfile = pythonopen(filenamemtl,"w")
         outfile.write("# FreeCAD v" + ver[0] + "." + ver[1] + " build" + ver[2] + " Arch module\n")
         outfile.write("# https://www.freecadweb.org\n")
-        kinds = {"AmbientColor":"Ka ","DiffuseColor":"Kd ","SpecularColor":"Ks ","EmissiveColor":"Ke ","Transparency":"Tr "}
+        kinds = {"AmbientColor":"Ka ","DiffuseColor":"Kd ","SpecularColor":"Ks ","EmissiveColor":"Ke ","Transparency":"Tr ","Dissolve":"d "}
         done = [] # store names to avoid duplicates
         for mat in materials:
             if isinstance(mat,tuple):
@@ -358,6 +354,7 @@ def _export(exportSet, filename, colors):
                     outfile.write("newmtl " + mat[0] + "\n")
                     outfile.write("Kd " + str(mat[1][0]) + " " + str(mat[1][1]) + " " + str(mat[1][2]) + "\n")
                     outfile.write("Tr " + str(mat[2]/100) + "\n")
+                    outfile.write("d " + str(1-mat[2]/100) + "\n")
                     done.append(mat[0])
             else:
                 if not mat.Name in done:
@@ -440,7 +437,7 @@ def insert(filename,docname):
                         elif mline[:3] == "Kd ":
                             color = tuple([float(i) for i in mline[3:].split()])
                         elif mline[:2] == "d ":
-                            trans = int(float(mline[2:])*100)
+                            trans = int((1-float(mline[2:]))*100)
                     if mname and color:
                         colortable[mname] = [color,trans]
         elif line[:2] == "o ":

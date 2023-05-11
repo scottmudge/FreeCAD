@@ -26,17 +26,18 @@
 
 #include <unordered_map>
 #include <memory>
-#include <QTreeWidget>
-#include <QTime>
+#include <QElapsedTimer>
 #include <QStyledItemDelegate>
+#include <QTime>
+#include <QTreeWidget>
 
+#include <App/Application.h>
+#include <App/DocumentObject.h>
 #include <Base/Parameter.h>
 #include <Base/Persistence.h>
-#include <App/Document.h>
-#include <App/Application.h>
-
 #include <Gui/DockWindow.h>
 #include <Gui/Selection.h>
+#include <Gui/TreeItemMode.h>
 
 class QLineEdit;
 
@@ -49,33 +50,12 @@ namespace Gui {
 class SelUpMenu;
 class TreeParams;
 class ViewProviderDocumentObject;
+class DocumentItem;
 class DocumentObjectItem;
 class DocumentObjectData;
-typedef std::shared_ptr<DocumentObjectData> DocumentObjectDataPtr;
 class TreeWidgetItemDelegate;
 
-class DocumentItem;
-
-/// highlight modes for the tree items
-enum class HighlightMode {
-    None,
-    Underlined,
-    Italic,
-    Overlined,
-    Bold,
-    Blue,
-    LightBlue,
-    UserDefined
-};
-
-/// highlight modes for the tree items
-enum class TreeItemMode {
-    ExpandItem,
-    ExpandPath,
-    CollapseItem,
-    ToggleItem
-};
-
+using DocumentObjectDataPtr = std::shared_ptr<DocumentObjectData>;
 
 GuiExport int treeViewIconSize();
 GuiExport bool isTreeViewDragging();
@@ -97,8 +77,8 @@ class TreeWidget : public QTreeWidget, public SelectionObserver
     Q_PROPERTY(int itemSpacing READ itemSpacing WRITE setItemSpacing DESIGNABLE true SCRIPTABLE true)
 
 public:
-    TreeWidget(const char *name, QWidget* parent=0);
-    ~TreeWidget();
+    explicit TreeWidget(const char *name, QWidget* parent=nullptr);
+    ~TreeWidget() override;
 
     static void setupResizableColumn(TreeWidget *tree=0);
     static void scrollItemToTop();
@@ -154,7 +134,7 @@ public:
      * This function can return the non-group parent of the selected object,
      * which Gui::Selection() cannot provide.
      */
-    static std::vector<SelInfo> getSelection(App::Document *doc=0);
+    static std::vector<SelInfo> getSelection(App::Document *doc=nullptr);
 
     static TreeWidget *instance();
 
@@ -163,7 +143,7 @@ public:
 
     void markItem(const App::DocumentObject* Obj,bool mark);
 
-    virtual void selectAll() override;
+    void selectAll() override;
 
     const char *getTreeName() const;
 
@@ -201,7 +181,6 @@ protected:
     bool dropMimeData(QTreeWidgetItem *parent, int index, const QMimeData *data,
                       Qt::DropAction action) override;
     Qt::DropActions supportedDropActions () const override;
-    QMimeData * mimeData (const QList<QTreeWidgetItem *> items) const override;
     void dragEnterEvent(QDragEnterEvent * event) override;
     void dragLeaveEvent(QDragLeaveEvent * event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
@@ -242,12 +221,12 @@ protected Q_SLOTS:
     void onColumnResized(int idx, int oldsize, int newsize);
 
 private Q_SLOTS:
-    void onItemSelectionChanged(void);
+    void onItemSelectionChanged();
     void onItemChanged(QTreeWidgetItem*, int);
     void onItemEntered(QTreeWidgetItem * item);
     void onItemCollapsed(QTreeWidgetItem * item);
     void onItemExpanded(QTreeWidgetItem * item);
-    void onUpdateStatus(void);
+    void onUpdateStatus();
     void onItemPressed();
 
 Q_SIGNALS:
@@ -328,7 +307,7 @@ private:
     friend class TreeParams;
     friend class TreeWidgetItemDelegate;
 
-    typedef boost::signals2::connection Connection;
+    using Connection = boost::signals2::connection;
     Connection connectNewDocument;
     Connection connectDelDocument;
     Connection connectRenDocument;
@@ -345,10 +324,10 @@ class TreePanel : public QWidget
     Q_OBJECT
 
 public:
-    TreePanel(const char *name, QWidget* parent=nullptr);
-    virtual ~TreePanel();
+    explicit TreePanel(const char *name, QWidget* parent=nullptr);
+    ~TreePanel() override;
 
-    bool eventFilter(QObject *obj, QEvent *ev);
+    bool eventFilter(QObject *obj, QEvent *ev) override;
 
 private Q_SLOTS:
     void accept();
@@ -370,8 +349,8 @@ class TreeDockWidget : public Gui::DockWindow
     Q_OBJECT
 
 public:
-    TreeDockWidget(Gui::Document*  pcDocument,QWidget *parent=0);
-    ~TreeDockWidget();
+    explicit TreeDockWidget(Gui::Document*  pcDocument,QWidget *parent=nullptr);
+    ~TreeDockWidget() override;
 };
 
 }

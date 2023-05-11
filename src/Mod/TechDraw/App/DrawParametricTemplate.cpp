@@ -27,31 +27,22 @@
 #endif
 
 #include <Base/Exception.h>
-#include <Base/Console.h>
-#include <Base/Interpreter.h>
 #include <Base/FileInfo.h>
-#include <Base/Vector3D.h>
-#include <Base/Tools2D.h>
-
-#include <App/Application.h>
-
-#include "Geometry.h"
-
-#include <iostream>
-#include <iterator>
+#include <Base/Interpreter.h>
 
 #include "DrawParametricTemplate.h"
-#include <Mod/TechDraw/App/DrawParametricTemplatePy.h>
+#include "DrawParametricTemplatePy.h"
+#include "Geometry.h"
+
 
 using namespace TechDraw;
-using namespace std;
 
 PROPERTY_SOURCE(TechDraw::DrawParametricTemplate, TechDraw::DrawTemplate)
 
-DrawParametricTemplate::DrawParametricTemplate(void)
+DrawParametricTemplate::DrawParametricTemplate()
 {
     static const char *group = "Page";
-    ADD_PROPERTY_TYPE(Template ,(""),group, (App::PropertyType) App::Prop_None,"Template script");
+    ADD_PROPERTY_TYPE(Template ,(""), group, (App::PropertyType) App::Prop_None, "Template script");
 }
 
 DrawParametricTemplate::~DrawParametricTemplate()
@@ -59,16 +50,16 @@ DrawParametricTemplate::~DrawParametricTemplate()
 }
 
 
-PyObject *DrawParametricTemplate::getPyObject(void)
+PyObject *DrawParametricTemplate::getPyObject()
 {
     if (PythonObject.is(Py::_None())) {
         // ref counter is set to 1
-        PythonObject = Py::Object(new DrawParametricTemplatePy(this),true);
+        PythonObject = Py::Object(new DrawParametricTemplatePy(this), true);
     }
     return Py::new_reference_to(PythonObject);
 }
 
-unsigned int DrawParametricTemplate::getMemSize(void) const
+unsigned int DrawParametricTemplate::getMemSize() const
 {
     return 0;
 }
@@ -94,7 +85,7 @@ void DrawParametricTemplate::onChanged(const App::Property* prop)
     App::DocumentObject::onChanged(prop);
 }
 
-App::DocumentObjectExecReturn *DrawParametricTemplate::execute(void)
+App::DocumentObjectExecReturn *DrawParametricTemplate::execute()
 {
     std::string temp = Template.getValue();
     if (!temp.empty()) {
@@ -117,7 +108,8 @@ App::DocumentObjectExecReturn *DrawParametricTemplate::execute(void)
 
 int DrawParametricTemplate::drawLine(double x1, double y1, double x2, double y2)
 {
-    TechDraw::Generic *line = new TechDraw::Generic();
+//    TechDraw::GenericPtr line = new TechDraw::Generic();
+    TechDraw::GenericPtr line(new TechDraw::Generic());
 
     line->points.emplace_back(x1, y1);
     line->points.emplace_back(x2, y2);
@@ -128,10 +120,7 @@ int DrawParametricTemplate::drawLine(double x1, double y1, double x2, double y2)
 
 int DrawParametricTemplate::clearGeometry()
 {
-    for(std::vector<TechDraw::BaseGeom *>::iterator it = geom.begin(); it != geom.end(); ++it) {
-        delete *it;
-        *it = 0;
-    }
+    //smart pointer will delete old geoms when ref count goes to zero?
     geom.clear();
     return 0;
 }
@@ -141,7 +130,7 @@ int DrawParametricTemplate::clearGeometry()
 namespace App {
 /// @cond DOXERR
 PROPERTY_SOURCE_TEMPLATE(TechDraw::DrawParametricTemplatePython, TechDraw::DrawParametricTemplate)
-template<> const char* TechDraw::DrawParametricTemplatePython::getViewProviderName(void) const {
+template<> const char* TechDraw::DrawParametricTemplatePython::getViewProviderName() const {
     return "TechDrawGui::ViewProviderPython";
 }
 /// @endcond

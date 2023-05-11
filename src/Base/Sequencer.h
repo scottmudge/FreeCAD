@@ -24,11 +24,8 @@
 #ifndef BASE_SEQUENCER_H
 #define BASE_SEQUENCER_H
 
-#include <vector>
-#include <memory>
-#include <CXX/Extensions.hxx>
-
 #include "Exception.h"
+
 
 namespace Base
 {
@@ -206,6 +203,8 @@ protected:
 protected:
     /** construction */
     SequencerBase();
+    SequencerBase(const SequencerBase&) = default;
+    SequencerBase& operator=(const SequencerBase&) = default;
     /** Destruction */
     virtual ~SequencerBase();
     /**
@@ -253,9 +252,7 @@ class BaseExport EmptySequencer : public Base::SequencerBase
 {
 public:
     /** construction */
-    EmptySequencer();
-    /** Destruction */
-    ~EmptySequencer();
+    EmptySequencer() = default;
 };
 
 /**
@@ -265,21 +262,19 @@ class BaseExport ConsoleSequencer : public SequencerBase
 {
 public:
     /** construction */
-    ConsoleSequencer ();
-    /** Destruction */
-    ~ConsoleSequencer ();
+    ConsoleSequencer () = default;
 
 protected:
     /** Starts the sequencer */
-    void startStep();
+    void startStep() override;
     /** Writes the current progress to the console window. */
-    void nextStep(bool canAbort);
+    void nextStep(bool canAbort) override;
 
 private:
     /** Puts text to the console window */
-    void setText (const char* pszTxt);
+    void setText (const char* pszTxt) override;
     /** Resets the sequencer */
-    void resetData();
+    void resetData() override;
 };
 
 /** The SequencerLauncher class is provided for convenience. It allows you to run an instance of the
@@ -378,6 +373,10 @@ private:
     std::string strText;
     size_t nProgress = 0;
     size_t nTotalSteps = 0;
+
+private:
+    SequencerLauncher(const SequencerLauncher&);
+    void operator=(const SequencerLauncher&);
 };
 
 /** Access to the only SequencerBase instance */
@@ -385,27 +384,6 @@ inline SequencerBase& Sequencer ()
 {
     return SequencerBase::Instance();
 }
-
-class BaseExport ProgressIndicatorPy : public Py::PythonExtension<ProgressIndicatorPy>
-{
-public:
-    static void init_type(void);    // announce properties and methods
-
-    ProgressIndicatorPy();
-    ~ProgressIndicatorPy();
-
-    Py::Object repr();
-
-    Py::Object start(const Py::Tuple&);
-    Py::Object next(const Py::Tuple&);
-    Py::Object stop(const Py::Tuple&);
-
-private:
-    static PyObject *PyMake(struct _typeobject *, PyObject *, PyObject *);
-
-private:
-    std::unique_ptr<SequencerLauncher> _seq;
-};
 
 } // namespace Base
 

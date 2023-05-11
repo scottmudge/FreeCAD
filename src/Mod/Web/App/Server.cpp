@@ -20,21 +20,23 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
+#ifndef _PreComp_
+# include <memory>
+# include <stdexcept>
+# include <QCoreApplication>
+# include <QTcpSocket>
+#endif
 
-#include <QCoreApplication>
-#include <QTcpSocket>
-#include <stdexcept>
-#include <memory>
-
-#include "Server.h"
 #include <Base/Exception.h>
 #include <Base/Interpreter.h>
 
+#include "Server.h"
+
+
 using namespace Web;
 
-Firewall* Firewall::instance = 0;
+Firewall* Firewall::instance = nullptr;
 
 Firewall* Firewall::getInstance()
 {
@@ -134,7 +136,7 @@ void AppServer::incomingConnection(qintptr socket)
 
 void AppServer::readClient()
 {
-    QTcpSocket* socket = (QTcpSocket*)sender();
+    QTcpSocket* socket = static_cast<QTcpSocket*>(sender());
     if (socket->bytesAvailable() > 0) {
         QByteArray request = socket->readAll();
         std::unique_ptr<ServerEvent> event(std::make_unique<ServerEvent>(socket, request));
@@ -153,7 +155,7 @@ void AppServer::readClient()
 
 void AppServer::discardClient()
 {
-    QTcpSocket* socket = (QTcpSocket*)sender();
+    QTcpSocket* socket = static_cast<QTcpSocket*>(sender());
     socket->deleteLater();
 }
 

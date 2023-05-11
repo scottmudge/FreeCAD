@@ -20,33 +20,31 @@
  *                                                                         *
  ***************************************************************************/
 
-
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <BRepAlgoAPI_Common.hxx>
 # include <BRepCheck_Analyzer.hxx>
 # include <Standard_Failure.hxx>
+# include <TopExp.hxx>
 # include <TopoDS_Iterator.hxx>
 # include <TopTools_IndexedMapOfShape.hxx>
-# include <TopExp.hxx>
 #endif
 
-
-#include "FeaturePartCommon.h"
-#include "modelRefine.h"
 #include <App/Application.h>
 #include <App/Document.h>
 #include <Base/Parameter.h>
-#include <Base/Exception.h>
+
+#include "FeaturePartCommon.h"
+#include "modelRefine.h"
 #include "TopoShapeOpCode.h"
+
 
 using namespace Part;
 
 PROPERTY_SOURCE(Part::Common, Part::Boolean)
 
 
-Common::Common(void)
+Common::Common()
 {
 }
 
@@ -65,9 +63,9 @@ BRepAlgoAPI_BooleanOperation* Common::makeOperation(const TopoDS_Shape& base, co
 PROPERTY_SOURCE(Part::MultiCommon, Part::Feature)
 
 
-MultiCommon::MultiCommon(void)
+MultiCommon::MultiCommon()
 {
-    ADD_PROPERTY(Shapes,(0));
+    ADD_PROPERTY(Shapes,(nullptr));
     Shapes.setSize(0);
     ADD_PROPERTY_TYPE(History,(ShapeHistory()), "Boolean", (App::PropertyType)
         (App::Prop_Output|App::Prop_Transient|App::Prop_Hidden), "Shape history");
@@ -88,7 +86,7 @@ short MultiCommon::mustExecute() const
     return 0;
 }
 
-App::DocumentObjectExecReturn *MultiCommon::execute(void)
+App::DocumentObjectExecReturn *MultiCommon::execute()
 {
 #ifdef FC_NO_ELEMENT_MAP
     std::vector<TopoDS_Shape> s;
@@ -130,7 +128,7 @@ App::DocumentObjectExecReturn *MultiCommon::execute(void)
                 // Let's call algorithm computing a fuse operation:
                 BRepAlgoAPI_Common mkCommon(resShape, *it);
                 // Let's check if the fusion has been successful
-                if (!mkCommon.IsDone()) 
+                if (!mkCommon.IsDone())
                     throw BooleanException("Intersection failed");
                 resShape = mkCommon.Shape();
 

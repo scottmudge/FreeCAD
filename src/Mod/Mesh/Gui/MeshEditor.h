@@ -24,8 +24,9 @@
 #define MESHGUI_MESHEDITOR_H
 
 #include <QObject>
+
 #include <Mod/Mesh/Gui/ViewProvider.h>
-#include <boost_signals2.hpp>
+
 
 class SoCoordinate3;
 class SoFaceSet;
@@ -48,17 +49,17 @@ class SoFCMeshPickNode;
  */
 class MeshGuiExport ViewProviderFace : public Gui::ViewProviderDocumentObject
 {
-    PROPERTY_HEADER(MeshGui::ViewProviderFace);
+    PROPERTY_HEADER_WITH_OVERRIDE(MeshGui::ViewProviderFace);
 
 public:
     ViewProviderFace();
-    virtual ~ViewProviderFace();
+    ~ViewProviderFace() override;
 
     // Build up the initial Inventor node
-    void attach(App::DocumentObject* obj);
-    void setDisplayMode(const char* ModeName);
-    const char* getDefaultDisplayMode() const;
-    std::vector<std::string> getDisplayModes() const;
+    void attach(App::DocumentObject* obj) override;
+    void setDisplayMode(const char* ModeName) override;
+    const char* getDefaultDisplayMode() const override;
+    std::vector<std::string> getDisplayModes() const override;
     SoPickedPoint* getPickedPoint(const SbVec2s& pos, const Gui::View3DInventorViewer* viewer) const;
 
     ViewProviderMesh* mesh;
@@ -79,8 +80,8 @@ class MeshGuiExport MeshFaceAddition : public QObject
     Q_OBJECT
 
 public:
-    MeshFaceAddition(Gui::View3DInventor* parent);
-    ~MeshFaceAddition();
+    explicit MeshFaceAddition(Gui::View3DInventor* parent);
+    ~MeshFaceAddition() override;
 
     void startEditing(ViewProviderMesh*);
 
@@ -127,7 +128,7 @@ class MeshGuiExport MeshFillHole : public QObject
 
 public:
     MeshFillHole(MeshHoleFiller& hf, Gui::View3DInventor* parent);
-    virtual ~MeshFillHole();
+    ~MeshFillHole() override;
 
     void startEditing(ViewProviderMesh*);
 
@@ -138,8 +139,8 @@ private Q_SLOTS:
     void closeBridge();
 
 private:
-    typedef std::vector<Mesh::PointIndex> TBoundary;
-    typedef boost::signals2::connection Connection;
+    using TBoundary = std::vector<Mesh::PointIndex>;
+    using Connection = boost::signals2::connection;
 
     static void fileHoleCallback(void * ud, SoEventCallback * n);
     void createPolygons();

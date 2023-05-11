@@ -19,14 +19,15 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <cmath>
+
 # include <QDebug>
-# include <QOpenGLDebugMessage>
-# include <QOpenGLContext>
-# include <QOpenGLFunctions>
-# include <QSurfaceFormat>
 # include <QMessageBox>
+# include <QOpenGLContext>
+# include <QOpenGLDebugMessage>
+# include <QOpenGLFunctions>
 # include <QPainter>
 # include <QPainterPath>
+# include <QSurfaceFormat>
 #endif
 
 #if defined(__MINGW32__)
@@ -101,7 +102,7 @@ GLImageBox::GLImageBox(QWidget * parent, Qt::WindowFlags f)
     _zoomFactor = 1.0;
     _base_x0 = 0;
     _base_y0 = 0;
-    _pColorMap = 0;
+    _pColorMap = nullptr;
     _numMapEntries = 0;
 
 #if defined(_DEBUG) && 0
@@ -187,15 +188,15 @@ void GLImageBox::paintGL()
     drawImage();
 
     // Emit a signal for owners to draw any graphics that is needed.
-    if (_image.hasValidData() == true)
-        drawGraphics();
+    if (_image.hasValidData())
+        Q_EMIT drawGraphics();
 
     // flush the OpenGL graphical pipeline
     glFinish();
     glPopAttrib();
 
     // Double buffering is used so we need to swap the buffers
-    // There is no need to explicitly call this function because it is 
+    // There is no need to explicitly call this function because it is
     // done automatically after each widget repaint, i.e. each time after paintGL() has been executed
     // swapBuffers();
 }
@@ -203,10 +204,10 @@ void GLImageBox::paintGL()
 // Draw the image
 void GLImageBox::drawImage()
 {
-    if (_image.hasValidData() == false)
+    if (!_image.hasValidData())
         return;
 
-    // Gets the size of the displayed image area using the current display settings 
+    // Gets the size of the displayed image area using the current display settings
     // (in units of image pixels)
     int dx, dy;
     getDisplayedImageAreaSize(dx, dy);
@@ -243,7 +244,7 @@ void GLImageBox::drawImage()
         glPixelTransferf(GL_BLUE_SCALE, (float)scale);
 
         // Load the color map if present
-        if (_pColorMap != 0)
+        if (_pColorMap)
         {
             if (!haveMesa) glPixelTransferf(GL_MAP_COLOR, 1.0);
             glPixelMapfv(GL_PIXEL_MAP_R_TO_R, _numMapEntries, _pColorMap);
@@ -254,10 +255,10 @@ void GLImageBox::drawImage()
         else
         {
             glPixelTransferf(GL_MAP_COLOR, 0.0);
-            glPixelMapfv(GL_PIXEL_MAP_R_TO_R, 0, NULL);
-            glPixelMapfv(GL_PIXEL_MAP_G_TO_G, 0, NULL);
-            glPixelMapfv(GL_PIXEL_MAP_B_TO_B, 0, NULL);
-            glPixelMapfv(GL_PIXEL_MAP_A_TO_A, 0, NULL);
+            glPixelMapfv(GL_PIXEL_MAP_R_TO_R, 0, nullptr);
+            glPixelMapfv(GL_PIXEL_MAP_G_TO_G, 0, nullptr);
+            glPixelMapfv(GL_PIXEL_MAP_B_TO_B, 0, nullptr);
+            glPixelMapfv(GL_PIXEL_MAP_A_TO_A, 0, nullptr);
         }
 
         // Get the pixel format
@@ -271,11 +272,11 @@ void GLImageBox::drawImage()
     }
 }
 
-// Gets the size of the displayed image area using the current display settings 
+// Gets the size of the displayed image area using the current display settings
 // (in units of image pixels)
 void GLImageBox::getDisplayedImageAreaSize(int &dx, int &dy)
 {
-    if (_image.hasValidData() == false)
+    if (!_image.hasValidData())
     {
         dx = 0;
         dy = 0;
@@ -296,9 +297,9 @@ void GLImageBox::getDisplayedImageAreaSize(int &dx, int &dy)
         int itly = std::max<int>(_y0, 0);
         int ibrx = std::min<int>(brx, (int)(_image.getWidth()) - 1);
         int ibry = std::min<int>(bry, (int)(_image.getHeight()) - 1);
-        if ((itlx >= (int)(_image.getWidth())) || 
-            (itly >= (int)(_image.getHeight())) || 
-            (ibrx < 0) || 
+        if ((itlx >= (int)(_image.getWidth())) ||
+            (itly >= (int)(_image.getHeight())) ||
+            (ibrx < 0) ||
             (ibry < 0))
         {
             dx = 0;
@@ -312,7 +313,7 @@ void GLImageBox::getDisplayedImageAreaSize(int &dx, int &dy)
 }
 
 // Gets the value of an image sample at the given image pixel position
-// Returns 0 for valid value or -1 if coordinates or sample index are out of range or 
+// Returns 0 for valid value or -1 if coordinates or sample index are out of range or
 // if there is no image data
 int GLImageBox::getImageSample(int x, int y, unsigned short sampleIndex, double &value)
 {
@@ -399,7 +400,7 @@ void GLImageBox::getPixFormat(GLenum &pixFormat, GLenum &pixType)
 // Currently we don't limit it!
 void GLImageBox::limitCurrPos()
 {
-    if (_image.hasValidData() == false)
+    if (!_image.hasValidData())
         return;
 
     /*
@@ -435,7 +436,7 @@ void GLImageBox::setCurrPos(int x0, int y0)
 // Fixes a base position at the current position
 void GLImageBox::fixBasePosCurr()
 {
-    if (_image.hasValidData() == false)
+    if (!_image.hasValidData())
     {
         _base_x0 = 0;
         _base_y0 = 0;
@@ -452,7 +453,7 @@ void GLImageBox::fixBasePosCurr()
 // This function does not redraw (call redraw afterwards)
 void GLImageBox::setZoomFactor(double zoomFactor, bool useCentrePt, int ICx, int ICy)
 {
-    if ((useCentrePt == false) || (_image.hasValidData() == false))
+    if (!useCentrePt || !_image.hasValidData())
     {
         _zoomFactor = zoomFactor;
         limitZoomFactor();
@@ -473,24 +474,24 @@ void GLImageBox::setZoomFactor(double zoomFactor, bool useCentrePt, int ICx, int
     }
 }
 
-// Stretch or shrink the image to fit the view (although the zoom factor is limited so a 
+// Stretch or shrink the image to fit the view (although the zoom factor is limited so a
 // very small or very big image may not fit completely (depending on the size of the view)
 // This function redraws
 void GLImageBox::stretchToFit()
 {
-    if (_image.hasValidData() == false)
+    if (!_image.hasValidData())
         return;
 
     setToFit();
     update();
 }
 
-// Sets the settings needed to fit the image into the view (although the zoom factor is limited so a 
+// Sets the settings needed to fit the image into the view (although the zoom factor is limited so a
 // very small or very big image may not fit completely (depending on the size of the view)
 // This function does not redraw (call redraw afterwards)
 void GLImageBox::setToFit()
 {
-    if (_image.hasValidData() == false)
+    if (!_image.hasValidData())
         return;
 
     // Compute ideal zoom factor to fit the image
@@ -507,12 +508,12 @@ void GLImageBox::setToFit()
 }
 
 // Sets the normal viewing position and zoom = 1
-// If the image is smaller than the widget then the image is centred 
+// If the image is smaller than the widget then the image is centred
 // otherwise we view the top left part of the image
 // This function does not redraw (call redraw afterwards)
 void GLImageBox::setNormal()
 {
-    if (_image.hasValidData() == false)
+    if (!_image.hasValidData())
         return;
 
     if (((int)(_image.getWidth()) < width()) && ((int)(_image.getHeight()) < height()))
@@ -526,7 +527,7 @@ void GLImageBox::setNormal()
     }
 }
 
-// Gets the image coordinates of the centre point of the widget 
+// Gets the image coordinates of the centre point of the widget
 void GLImageBox::getCentrePoint(int &ICx, int &ICy)
 {
     ICx = (int)floor(WCToIC_X((double)(width() - 1) / 2.0) + 0.5);
@@ -545,7 +546,7 @@ void GLImageBox::relMoveWC(int WCdx, int WCdy)
 
 // Computes an image x-coordinate from the widget x-coordinate
 // Note: (_x0,_y0) is the centre of the image pixel displayed at the top left of the widget
-// therefore (_x0 - 0.5, _y0 - 0.5) is the top left coordinate of this pixel which will 
+// therefore (_x0 - 0.5, _y0 - 0.5) is the top left coordinate of this pixel which will
 // theoretically coincide with widget coordinate (-0.5,-0.5)
 // Zoom = 4:    Widget(0,0) = Image(_x0 - 0.375,_y0 - 0.375)
 // Zoom = 2:    Widget(0,0) = Image(_x0 - 0.250,_y0 - 0.250)
@@ -559,7 +560,7 @@ double GLImageBox::WCToIC_X(double WidgetX)
 
 // Computes an image y-coordinate from the widget y-coordinate
 // Note: (_x0,_y0) is the centre of the image pixel displayed at the top left of the widget
-// therefore (_x0 - 0.5, _y0 - 0.5) is the top left coordinate of this pixel which will 
+// therefore (_x0 - 0.5, _y0 - 0.5) is the top left coordinate of this pixel which will
 // theoretically coincide with widget coordinate (-0.5,-0.5)
 // Zoom = 4:    Widget(0,0) = Image(_x0 - 0.375,_y0 - 0.375)
 // Zoom = 2:    Widget(0,0) = Image(_x0 - 0.250,_y0 - 0.250)
@@ -573,7 +574,7 @@ double GLImageBox::WCToIC_Y(double WidgetY)
 
 // Computes a widget x-coordinate from an image x-coordinate
 // Note: (_x0,_y0) is the centre of the image pixel displayed at the top left of the widget
-// therefore (_x0 - 0.5, _y0 - 0.5) is the top left coordinate of this pixel which will 
+// therefore (_x0 - 0.5, _y0 - 0.5) is the top left coordinate of this pixel which will
 // theoretically coincide with widget coordinate (-0.5,-0.5)
 // Zoom = 4:    Widget(0,0) = Image(_x0 - 0.375,_y0 - 0.375)
 // Zoom = 2:    Widget(0,0) = Image(_x0 - 0.250,_y0 - 0.250)
@@ -587,7 +588,7 @@ double GLImageBox::ICToWC_X(double ImageX)
 
 // Computes a widget y-coordinate from an image y-coordinate
 // Note: (_x0,_y0) is the centre of the image pixel displayed at the top left of the widget
-// therefore (_x0 - 0.5, _y0 - 0.5) is the top left coordinate of this pixel which will 
+// therefore (_x0 - 0.5, _y0 - 0.5) is the top left coordinate of this pixel which will
 // theoretically coincide with widget coordinate (-0.5,-0.5)
 // Zoom = 4:    Widget(0,0) = Image(_x0 - 0.375,_y0 - 0.375)
 // Zoom = 2:    Widget(0,0) = Image(_x0 - 0.250,_y0 - 0.250)
@@ -698,7 +699,7 @@ void GLImageBox::resetDisplay()
 void GLImageBox::clearColorMap()
 {
     delete [] _pColorMap;
-    _pColorMap = 0;
+    _pColorMap = nullptr;
     _numMapEntries = 0;
 }
 
@@ -711,7 +712,7 @@ int GLImageBox::calcNumColorMapEntries()
     GLint maxMapEntries;
     glGetIntegerv(GL_MAX_PIXEL_MAP_TABLE, &maxMapEntries);
     int NumEntries = maxMapEntries;
-    if (_image.hasValidData() == true)
+    if (_image.hasValidData())
         NumEntries = (int)std::min<double>(pow(2.0, (double)(_image.getNumSigBitsPerSample())), (double)maxMapEntries);
     return NumEntries;
 }
@@ -750,7 +751,7 @@ int GLImageBox::createColorMap(int numEntriesReq, bool Initialise)
 
     // Initialise the color map if requested
     // (All red entries come first, then green, then blue, then alpha)
-    if (Initialise == true)
+    if (Initialise)
     {
         // For each RGB channel
         int arrayIndex = 0;
@@ -782,10 +783,10 @@ int GLImageBox::createColorMap(int numEntriesReq, bool Initialise)
 // alpha ... value for this alpha entry (range 0 to 1)
 int GLImageBox::setColorMapRGBAValue(int index, float red, float green, float blue, float alpha)
 {
-    if ((index < 0) || (index >= _numMapEntries) || 
-        (red < 0.0) || (red > 1.0) || 
-        (green < 0.0) || (green > 1.0) || 
-        (blue < 0.0) || (blue > 1.0) || 
+    if ((index < 0) || (index >= _numMapEntries) ||
+        (red < 0.0) || (red > 1.0) ||
+        (green < 0.0) || (green > 1.0) ||
+        (blue < 0.0) || (blue > 1.0) ||
         (alpha < 0.0) || (alpha > 1.0))
         return -1;
 
@@ -851,7 +852,7 @@ int GLImageBox::setColorMapAlphaValue(int index, float value)
 // Helper function to convert a pixel's value (of a sample) to the color map index (i.e. the map index that will be used for that pixel value)
 unsigned int GLImageBox::pixValToMapIndex(double PixVal)
 {
-    if (_pColorMap != NULL)
+    if (_pColorMap)
     {
         double MaxVal = pow(2.0, _image.getNumBitsPerSample()) - 1.0;
         double Scale = (pow(2.0, _image.getNumBitsPerSample()) - 1.0) / (pow(2.0, _image.getNumSigBitsPerSample()) - 1.0);

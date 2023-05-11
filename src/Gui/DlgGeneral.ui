@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>466</width>
-    <height>963</height>
+    <width>574</width>
+    <height>981</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -249,63 +249,80 @@ to use the system default size.</string>
      <property name="title">
       <string>Language</string>
      </property>
-     <layout class="QGridLayout">
-      <property name="leftMargin">
-       <number>11</number>
-      </property>
-      <property name="topMargin">
-       <number>11</number>
-      </property>
-      <property name="rightMargin">
-       <number>11</number>
-      </property>
-      <property name="bottomMargin">
-       <number>11</number>
-      </property>
-      <property name="spacing">
-       <number>6</number>
-      </property>
+     <layout class="QGridLayout" name="gridLayout_5">
       <item row="0" column="0">
-       <layout class="QHBoxLayout">
-        <property name="spacing">
-         <number>6</number>
+       <widget class="QLabel" name="TextLabel1_4">
+        <property name="text">
+         <string>Change language:</string>
         </property>
-        <property name="leftMargin">
-         <number>0</number>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QLabel" name="TextLabel1_5">
+        <property name="text">
+         <string>Number format:</string>
         </property>
-        <property name="topMargin">
-         <number>0</number>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="Gui::PrefComboBox" name="UseLocaleFormatting">
+        <property name="prefEntry" stdset="0">
+         <cstring>UseLocaleFormatting</cstring>
         </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
+        <property name="prefPath" stdset="0">
+         <cstring>General</cstring>
         </property>
         <item>
-         <widget class="QLabel" name="TextLabel1_4">
-          <property name="text">
-           <string>Change language:</string>
-          </property>
-         </widget>
+         <property name="text">
+          <string>Operating system</string>
+         </property>
         </item>
         <item>
-         <widget class="Gui::PrefComboBox" name="Languages">
-          <property name="toolTip">
-           <string>Language of the application's user interface</string>
-          </property>
-          <property name="prefPath" stdset="0">
-           <cstring>General</cstring>
-          </property>
-          <property name="prefEntry" stdset="0">
-           <cstring>Language</cstring>
-          </property>
-          <property name="prefType" stdset="0">
-           <cstring></cstring>
-          </property>
-         </widget>
+         <property name="text">
+          <string>Selected language</string>
+         </property>
         </item>
-       </layout>
+        <item>
+         <property name="text">
+          <string>C/POSIX</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="Gui::PrefCheckBox" name="SubstituteDecimal">
+        <property name="toolTip">
+         <string>If enabled, numerical keypad decimal separator
+will be substituted with locale separator, except
+in Python Console and Macro Editor where a
+dot/period will always be printed.</string>
+        </property>
+        <property name="text">
+         <string>Substitute decimal separator (numpad)</string>
+        </property>
+        <property name="prefEntry" stdset="0">
+         <cstring>SubstituteDecimalSeparator</cstring>
+        </property>
+        <property name="prefPath" stdset="0">
+         <cstring>General</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" colspan="2">
+       <widget class="Gui::PrefComboBox" name="Languages">
+        <property name="toolTip">
+         <string>Language of the application's user interface</string>
+        </property>
+        <property name="prefPath" stdset="0">
+         <cstring>General</cstring>
+        </property>
+        <property name="prefEntry" stdset="0">
+         <cstring>Language</cstring>
+        </property>
+        <property name="prefType" stdset="0">
+         <cstring></cstring>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -395,10 +412,7 @@ to use the system default size.</string>
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <property name="spacing">
-         <number>6</number>
-        </property>
+       <layout class="QGridLayout" name="gridLayout_4">
         <property name="leftMargin">
          <number>0</number>
         </property>
@@ -411,7 +425,24 @@ to use the system default size.</string>
         <property name="bottomMargin">
          <number>0</number>
         </property>
-        <item>
+        <item row="1" column="0">
+         <widget class="Gui::PrefCheckBox" name="checkPopUpWindow">
+          <property name="toolTip">
+           <string>Enable this option to make sure pop up windows (e.g. Preference dialog)
+are shown on the same screen as the main window.</string>
+          </property>
+          <property name="text">
+           <string>Show pop up window on the same screen</string>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>CheckWidgetPlacementOnRestore</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
          <widget class="Gui::PrefCheckBox" name="tiledBackground">
           <property name="toolTip">
            <string>Background of the main window will consist of tiles of a special image.
@@ -428,20 +459,22 @@ See the FreeCAD Wiki for details about the image.</string>
           </property>
          </widget>
         </item>
-        <item>
-         <widget class="Gui::PrefCheckBox" name="checkPopUpWindow">
+        <item row="0" column="1">
+         <widget class="Gui::PrefCheckBox" name="EnableCursorBlinking">
           <property name="toolTip">
-           <string>Enable this option to make sure pop up windows (e.g. Preference dialog)
-are shown on the same screen as the main window.</string>
+           <string>The text cursor will be blinking</string>
           </property>
           <property name="text">
-           <string>Show pop up window on the same screen</string>
+           <string>Enable cursor blinking</string>
           </property>
-          <property name="prefPath" stdset="0">
-           <cstring>View</cstring>
+          <property name="checked">
+           <bool>true</bool>
           </property>
           <property name="prefEntry" stdset="0">
-           <cstring>CheckWidgetPlacementOnRestore</cstring>
+           <cstring>EnableCursorBlinking</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>General</cstring>
           </property>
          </widget>
         </item>
@@ -693,7 +726,7 @@ this according to your screen size or personal taste</string>
            <number>64</number>
           </property>
           <property name="prefPath" stdset="0">
-           <cstring>View</cstring>
+           <cstring>General</cstring>
           </property>
           <property name="prefEntry" stdset="0">
            <cstring>ToolTipIconSize</cstring>
@@ -783,7 +816,6 @@ horizontal space in Python console</string>
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>Languages</tabstop>
   <tabstop>RecentFiles</tabstop>
   <tabstop>CmdHistorySize</tabstop>
   <tabstop>tiledBackground</tabstop>

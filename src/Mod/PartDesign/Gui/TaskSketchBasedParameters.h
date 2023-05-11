@@ -35,6 +35,7 @@
 
 #include "ReferenceSelection.h"
 #include "TaskFeatureParameters.h"
+#include "EnumFlags.h"
 
 class QComboBox;
 class QCheckBox;
@@ -61,7 +62,7 @@ class TaskSketchBasedParameters : public PartDesignGui::TaskFeatureParameters,
 public:
     TaskSketchBasedParameters(PartDesignGui::ViewProvider* vp, QWidget *parent,
                               const std::string& pixmapname, const QString& parname);
-    ~TaskSketchBasedParameters();
+    ~TaskSketchBasedParameters() override;
 
     enum class SelectionMode {
         none,
@@ -78,14 +79,14 @@ public:
     const QString onSelectUpToFace(const Gui::SelectionChanges& msg);
 
     void onSelectReference(QWidget *blinkWidget,
-                           const ReferenceSelection::Config &conf = ReferenceSelection::Config())
+                           const AllowSelectionFlags &conf = ReferenceSelection::defaultFlags())
     {
         onSelectReference(blinkWidget, SelectionMode::refAdd, conf);
     }
 
     void onSelectReference(QWidget *blinkWidget,
                            SelectionMode mode,
-                           const ReferenceSelection::Config &conf = ReferenceSelection::Config());
+                           const AllowSelectionFlags &conf = ReferenceSelection::defaultFlags());
     void exitSelectionMode(bool clearSelection=true);
 
     SelectionMode getSelectionMode() const;
@@ -100,6 +101,12 @@ public:
     QVariant objectNameByLabel(const QString& label, const QVariant& suggest) const;
 
     QString getFaceReference(const QString& obj, const QString& sub) const;
+
+    /// Create a label for the 2D feature: the objects name if it's already 2D,
+    /// or the subelement's name if the object is a solid.
+    QString make2DLabel(const App::DocumentObject* section,
+                        const std::vector<std::string>& subValues);
+
 
     void saveHistory();
 
@@ -117,7 +124,7 @@ protected Q_SLOTS:
     void onInnerFitJoinChanged(int);
 
 private:
-    virtual void onSelectionChanged(const Gui::SelectionChanges& msg) final;
+    void onSelectionChanged(const Gui::SelectionChanges& msg) final;
     void _exitSelectionMode();
 
 protected:
@@ -183,7 +190,7 @@ public:
         return nullptr;
     }
 
-    void setSelectionConfig(const ReferenceSelection::Config &conf);
+    void setSelectionConfig(const AllowSelectionFlags &conf);
     void setSelectionMode(TaskSketchBasedParameters::SelectionMode mode);
 
 protected:
@@ -202,7 +209,7 @@ protected:
     boost::signals2::scoped_connection conn;
     App::SubObjectT lastReference;
     App::DocumentObjectT linkProp;
-    ReferenceSelection::Config selectionConf;
+    AllowSelectionFlags selectionConf;
     boost::signals2::scoped_connection connModeChange;
     bool singleElement = false;
 };
@@ -238,7 +245,7 @@ public:
         return nullptr;
     }
 
-    void setSelectionConfig(const ReferenceSelection::Config &conf);
+    void setSelectionConfig(const AllowSelectionFlags &conf);
     void setSelectionMode(TaskSketchBasedParameters::SelectionMode mode);
 
 protected:
@@ -259,7 +266,7 @@ protected:
     boost::signals2::scoped_connection conn;
     std::vector<App::SubObjectT> lastReferences;
     App::DocumentObjectT linkProp;
-    ReferenceSelection::Config selectionConf;
+    AllowSelectionFlags selectionConf;
     boost::signals2::scoped_connection connModeChange;
 };
 
@@ -269,14 +276,14 @@ class TaskDlgSketchBasedParameters : public PartDesignGui::TaskDlgFeatureParamet
     Q_OBJECT
 
 public:
-    TaskDlgSketchBasedParameters(PartDesignGui::ViewProvider *vp);
-    ~TaskDlgSketchBasedParameters();
+    explicit TaskDlgSketchBasedParameters(PartDesignGui::ViewProvider *vp);
+    ~TaskDlgSketchBasedParameters() override;
 
 public:
     /// is called by the framework if the dialog is accepted (Ok)
-    virtual bool accept();
+    bool accept() override;
     /// is called by the framework if the dialog is rejected (Cancel)
-    virtual bool reject();
+    bool reject() override;
 };
 
 } //namespace PartDesignGui

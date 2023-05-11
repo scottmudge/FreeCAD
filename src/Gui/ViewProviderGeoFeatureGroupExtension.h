@@ -22,12 +22,11 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #ifndef GUI_VIEWPROVIDERGEOFEATUREGROUPEXTENSION_H
 #define GUI_VIEWPROVIDERGEOFEATUREGROUPEXTENSION_H
 
-#include <App/Extension.h>
 #include "ViewProviderGroupExtension.h"
+
 
 namespace Gui
 {
@@ -40,34 +39,36 @@ class GuiExport ViewProviderGeoFeatureGroupExtension : public ViewProviderGroupE
 
 public:
     /// Constructor
-    ViewProviderGeoFeatureGroupExtension(void);
-    virtual ~ViewProviderGeoFeatureGroupExtension();
+    ViewProviderGeoFeatureGroupExtension();
+    ~ViewProviderGeoFeatureGroupExtension() override;
 
-    virtual void extensionClaimChildren3D(std::vector< App::DocumentObject* > &) const override;
-    virtual SoGroup* extensionGetChildRoot(void) const override {return pcGroupChildren;};
-    virtual void extensionAttach(App::DocumentObject* pcObject) override;
-    virtual void extensionSetDisplayMode(const char* ModeName) override;
-    virtual void extensionGetDisplayModes(std::vector<std::string> &) const override;
+    void extensionClaimChildren3D(std::vector< App::DocumentObject* > &) const override;
+    SoSeparator* extensionGetFrontRoot() const override {return pcGroupFront;}
+    SoSeparator* extensionGetBackRoot() const override {return pcGroupBack;}
+    SoGroup* extensionGetChildRoot(void) const override {return pcGroupChildren;};
+    void extensionAttach(App::DocumentObject* pcObject) override;
+    void extensionSetDisplayMode(const char* ModeName) override;
+    void extensionGetDisplayModes(std::vector<std::string> &) const override;
 
     /// Show the object in the view: suppresses behavior of DocumentObjectGroup
-    virtual void extensionShow(void) override {
-        ViewProviderExtension::extensionShow();
+    void extensionShow() override {
+        ViewProviderExtension::extensionShow(); // clazy:exclude=skipped-base-method
     }
     /// Hide the object in the view: suppresses behavior of DocumentObjectGroup
-    virtual void extensionHide(void) override {
-        ViewProviderExtension::extensionHide();
+    void extensionHide() override {
+        ViewProviderExtension::extensionHide(); // clazy:exclude=skipped-base-method
     }
 
-    virtual bool extensionGetElementPicked(const SoPickedPoint *, std::string &) const override;
-    virtual bool extensionGetDetailPath(const char *, SoFullPath *, SoDetail *&) const override;
-    virtual bool extensionHandleChildren3D(const std::vector<App::DocumentObject*> &) override;
+    bool extensionGetElementPicked(const SoPickedPoint *, std::string &) const override;
+    bool extensionGetDetailPath(const char *, SoFullPath *, SoDetail *&) const override;
+    bool extensionHandleChildren3D(const std::vector<App::DocumentObject*> &) override;
 
-    virtual void extensionUpdateData(const App::Property*) override;
+    void extensionUpdateData(const App::Property*) override;
 
-    virtual void extensionModeSwitchChange(void) override;
+    void extensionModeSwitchChange(void) override;
 
-    virtual bool extensionGetToolTip(const QByteArray &, QString &) const override;
-    virtual bool extensionIconMouseEvent(QMouseEvent *, const QByteArray &) override;
+    bool extensionGetToolTip(const QByteArray &, QString &) const override;
+    bool extensionIconMouseEvent(QMouseEvent *, const QByteArray &) override;
 
     static bool needUpdateChildren(App::DocumentObject *obj);
 
@@ -75,6 +76,8 @@ protected:
     virtual void buildChildren3D();
 
 protected:
+    SoSeparator *pcGroupFront;
+    SoSeparator *pcGroupBack;
     SoGroup *pcGroupChildren;
 
 private:
@@ -83,7 +86,7 @@ private:
     LinkView *linkView;
 };
 
-typedef ViewProviderExtensionPythonT<Gui::ViewProviderGeoFeatureGroupExtension> ViewProviderGeoFeatureGroupExtensionPython;
+using ViewProviderGeoFeatureGroupExtensionPython = ViewProviderExtensionPythonT<Gui::ViewProviderGeoFeatureGroupExtension>;
 
 } //namespace Gui
 

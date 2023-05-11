@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <QApplication>
@@ -29,20 +28,17 @@
 # include <QKeyEvent>
 # include <QMessageBox>
 # include <QMetaObject>
-# include <QStatusBar>
 # include <QThread>
 # include <QTime>
 # include <QTimer>
+# include <QWindow>
 #endif
 
-#include <QWindow>
-
-
-#include <Base/Exception.h>
 #include "ProgressBar.h"
-#include "ProgressDialog.h"
 #include "MainWindow.h"
+#include "ProgressDialog.h"
 #include "WaitCursor.h"
+
 
 using namespace Gui;
 
@@ -74,10 +70,10 @@ struct ProgressBarPrivate
                 parent = QWidget::find(window->winId());
         }
         while (parent) {
-            QMessageBox* dlg = qobject_cast<QMessageBox*>(parent);
+            auto* dlg = qobject_cast<QMessageBox*>(parent);
             if (dlg && dlg->isModal())
                 return true;
-            QProgressDialog* pd = qobject_cast<QProgressDialog*>(parent);
+            auto* pd = qobject_cast<QProgressDialog*>(parent);
             if (pd)
                 return true;
             parent = parent->parentWidget();
@@ -88,7 +84,7 @@ struct ProgressBarPrivate
 };
 }
 
-SequencerBar* SequencerBar::_pclSingleton = 0;
+SequencerBar* SequencerBar::_pclSingleton = nullptr;
 
 SequencerBar* SequencerBar::instance()
 {
@@ -104,8 +100,8 @@ SequencerBar* SequencerBar::instance()
 SequencerBar::SequencerBar()
 {
     d = new SequencerBarPrivate;
-    d->bar = 0;
-    d->waitCursor = 0;
+    d->bar = nullptr;
+    d->waitCursor = nullptr;
     d->guiThread = true;
 }
 
@@ -343,7 +339,7 @@ void SequencerBar::resetData()
         // in Qt. The message is QEventDispatcherUNIX::unregisterTimer: invalid argument.
         d->bar->aboutToHide();
         delete d->waitCursor;
-        d->waitCursor = 0;
+        d->waitCursor = nullptr;
         d->bar->leaveControlEvents(d->guiThread);
         getMainWindow()->setPaneText(1, QString());
         getMainWindow()->showMessage(QString());
@@ -561,12 +557,12 @@ void ProgressBar::setupTaskBarProgress()
 
 bool ProgressBar::eventFilter(QObject* o, QEvent* e)
 {
-    if (sequencer->isRunning() && e != 0) {
+    if (sequencer->isRunning() && e) {
         QThread* currentThread = QThread::currentThread();
         QThread* thr = this->thread(); // this is the main thread
         if (thr != currentThread) {
             if (e->type() == QEvent::KeyPress) {
-                QKeyEvent* ke = static_cast<QKeyEvent*>(e);
+                auto ke = static_cast<QKeyEvent*>(e);
                 if (ke->key() == Qt::Key_Escape) {
                     // cancel the operation
                     sequencer->tryToCancel();
@@ -582,7 +578,7 @@ bool ProgressBar::eventFilter(QObject* o, QEvent* e)
         // check for ESC
         case QEvent::KeyPress:
             {
-                QKeyEvent* ke = static_cast<QKeyEvent*>(e);
+                auto ke = static_cast<QKeyEvent*>(e);
                 if (ke->key() == Qt::Key_Escape) {
                     // eventFilter() was called from the application 50 times without performing a new step (app could hang)
                     if (d->observeEventFilter > 50) {

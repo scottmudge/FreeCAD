@@ -95,10 +95,6 @@ PyObject *View3DInventorPy::getCustomAttributes(const char* attr) const
 {
     // see if an active object has the same name
     try {
-        if (strcmp(attr, "Viewer") == 0) {
-            SbVec3f dvec = getView3DInventorPtr()->getViewer()->getViewDirection();
-            return Py::new_reference_to(Py::Vector(Base::Vector3f(dvec[0], dvec[1], dvec[2])));
-        }
         if (auto obj = getView3DInventorPtr()->getActiveObject<App::DocumentObject*>(attr))
             return obj->getPyObject();
         return nullptr;
@@ -1193,6 +1189,11 @@ PyObject* View3DInventorPy::getSize(PyObject *args)
 
 PyObject* View3DInventorPy::getPoint(PyObject *args)
 {
+    return getPointOnFocalPlane(args);
+}
+
+PyObject *View3DInventorPy::getPointOnFocalPlane(PyObject *args)
+{
     try {
         short x,y;
         if (!PyArg_ParseTuple(args, "hh", &x, &y)) {
@@ -1208,7 +1209,7 @@ PyObject* View3DInventorPy::getPoint(PyObject *args)
             x = (int)Py::Int(t[0]);
             y = (int)Py::Int(t[1]);
         }
-        SbVec3f pt = getView3DInventorPtr()->getViewer()->getPointOnScreen(SbVec2s(x,y));
+        SbVec3f pt = getView3DInventorPtr()->getViewer()->getPointOnFocalPlane(SbVec2s(x,y));
         return Py::new_reference_to(Py::Vector(Base::Vector3f(pt[0], pt[1], pt[2])));
     } PY_CATCH
 }

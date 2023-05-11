@@ -53,7 +53,7 @@ const App::PropertyAngle::Constraints PolarPattern::floatAngle = { Base::toDegre
 
 PolarPattern::PolarPattern()
 {
-    ADD_PROPERTY_TYPE(Axis, (0), "PolarPattern", (App::PropertyType)(App::Prop_None), "Direction");
+    ADD_PROPERTY_TYPE(Axis, (nullptr), "PolarPattern", (App::PropertyType)(App::Prop_None), "Direction");
     ADD_PROPERTY(Reversed, (0));
     ADD_PROPERTY(Angle, (360.0));
     Angle.setConstraints(&floatAngle);
@@ -98,7 +98,7 @@ std::list<gp_Trsf> PolarPattern::getTransformations(const std::vector<Part::Topo
         offset = radians / (occurrences - 1);
 
     App::DocumentObject* refObject = Axis.getValue();
-    if (refObject == NULL)
+    if (!refObject)
         throw Base::ValueError("No axis reference specified");
     std::vector<std::string> subStrings = Axis.getSubValues();
     if (subStrings.empty())
@@ -115,7 +115,7 @@ std::list<gp_Trsf> PolarPattern::getTransformations(const std::vector<Part::Topo
             axis = refSketch->getAxis(Part::Part2DObject::V_Axis);
         else if (subStrings[0] == "N_Axis")
             axis = refSketch->getAxis(Part::Part2DObject::N_Axis);
-        else if (subStrings[0].size() > 4 && subStrings[0].substr(0,4) == "Axis") {
+        else if (subStrings[0].compare(0, 4, "Axis") == 0) {
             int AxId = std::atoi(subStrings[0].substr(4,4000).c_str());
             if (AxId >= 0 && AxId < refSketch->getAxisCount())
                 axis = refSketch->getAxis(AxId);

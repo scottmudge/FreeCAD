@@ -23,11 +23,6 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#include <cstring>
-#endif
-
-
 #include "Mod/Part/App/Part2DObject.h"
 #include "Mod/PartDesign/App/Body.h"
 #include "Mod/PartDesign/App/Feature.h"
@@ -39,7 +34,7 @@
 using namespace PartDesign;
 
 // returns a string which represents the object e.g. when printed in python
-std::string BodyPy::representation(void) const
+std::string BodyPy::representation() const
 {
     return std::string("<body object>");
 }
@@ -48,7 +43,7 @@ std::string BodyPy::representation(void) const
 
 PyObject *BodyPy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int BodyPy::setCustomAttributes(const char* /*attr*/, PyObject* /*obj*/)
@@ -63,7 +58,7 @@ PyObject* BodyPy::insertObject(PyObject *args)
     PyObject* afterPy = Py_False;
     if (!PyArg_ParseTuple(args, "O!O|O!", &(App::DocumentObjectPy::Type), &featurePy,
                             &targetPy, &PyBool_Type, &afterPy)) {
-        return 0;
+        return nullptr;
     }
 
     App::DocumentObject* feature = static_cast<App::DocumentObjectPy*>(featurePy)->getDocumentObjectPtr();
@@ -77,7 +72,7 @@ PyObject* BodyPy::insertObject(PyObject *args)
         for (int i=0, count=seq.size(); i<count; ++i) {
             if (!PyObject_TypeCheck(seq[i].ptr(), &(App::DocumentObjectPy::Type))) {
                 PyErr_SetString(PyExc_TypeError, "Expects document object in sequence");
-                return 0;
+                return nullptr;
             }
             objs.push_back(static_cast<App::DocumentObjectPy*>(seq[i].ptr())->getDocumentObjectPtr());
         }
@@ -86,10 +81,10 @@ PyObject* BodyPy::insertObject(PyObject *args)
 
     if (!Body::isAllowed(feature)) {
         PyErr_SetString(PyExc_SystemError, "Only PartDesign features, datum features and sketches can be inserted into a Body");
-        return 0;
+        return nullptr;
     }
 
-    bool after = PyObject_IsTrue(afterPy) ? true : false;
+    bool after = Base::asBoolean(afterPy);
     Body* body = this->getBodyPtr();
 
     try {
@@ -97,7 +92,7 @@ PyObject* BodyPy::insertObject(PyObject *args)
     }
     catch (Base::Exception& e) {
         PyErr_SetString(PyExc_SystemError, e.what());
-        return 0;
+        return nullptr;
     }
 
     Py_Return;
@@ -109,7 +104,7 @@ PyObject* BodyPy::newObjectAt(PyObject *args)
     const char *name;
     PyObject* targetPy = Py_None;
     if (!PyArg_ParseTuple(args, "ss|O", &type, &name, &targetPy)) {
-        return 0;
+        return nullptr;
     }
 
     std::vector<App::DocumentObject*> objs;
@@ -122,7 +117,7 @@ PyObject* BodyPy::newObjectAt(PyObject *args)
             for (int i=0, count=seq.size(); i<count; ++i) {
                 if (!PyObject_TypeCheck(seq[i].ptr(), &(App::DocumentObjectPy::Type))) {
                     PyErr_SetString(PyExc_TypeError, "Expects document object in sequence");
-                    return 0;
+                    return nullptr;
                 }
                 objs.push_back(static_cast<App::DocumentObjectPy*>(seq[i].ptr())->getDocumentObjectPtr());
             }
@@ -130,7 +125,7 @@ PyObject* BodyPy::newObjectAt(PyObject *args)
         else {
             PyErr_SetString(PyExc_TypeError, 
                     "Expects either a document object or a sequence of document objects");
-            return 0;
+            return nullptr;
         }
     }
 

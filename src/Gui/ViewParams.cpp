@@ -21,9 +21,12 @@
  ****************************************************************************/
 
 #include "PreCompiled.h"
-#include <QStatusBar>
-#include <QToolBar>
-#include <QMenuBar>
+#ifndef _PreComp_
+# include <QApplication>
+# include <QStatusBar>
+# include <QToolBar>
+# include <QMenuBar>
+#endif
 #include "Application.h"
 #include "Document.h"
 #include "ViewProvider.h"
@@ -71,6 +74,7 @@ public:
     unsigned long DefaultShapeLineColor;
     unsigned long DefaultShapeVertexColor;
     unsigned long DefaultShapeColor;
+    long DefaultShapeTransparency;
     long DefaultShapeLineWidth;
     long DefaultShapePointSize;
     bool CoinCycleCheck;
@@ -256,6 +260,8 @@ public:
         funcs["DefaultShapeVertexColor"] = &ViewParamsP::updateDefaultShapeVertexColor;
         DefaultShapeColor = handle->GetUnsigned("DefaultShapeColor", 0xCCCCCCFF);
         funcs["DefaultShapeColor"] = &ViewParamsP::updateDefaultShapeColor;
+        DefaultShapeTransparency = handle->GetInt("DefaultShapeTransparency", 0);
+        funcs["DefaultShapeTransparency"] = &ViewParamsP::updateDefaultShapeTransparency;
         DefaultShapeLineWidth = handle->GetInt("DefaultShapeLineWidth", 2);
         funcs["DefaultShapeLineWidth"] = &ViewParamsP::updateDefaultShapeLineWidth;
         DefaultShapePointSize = handle->GetInt("DefaultShapePointSize", 2);
@@ -284,7 +290,7 @@ public:
         funcs["OutlineThicken"] = &ViewParamsP::updateOutlineThicken;
         NoSelFaceHighlightWithOutline = handle->GetBool("NoSelFaceHighlightWithOutline", false);
         funcs["NoSelFaceHighlightWithOutline"] = &ViewParamsP::updateNoSelFaceHighlightWithOutline;
-        NoPreSelFaceHighlightWithOutline = handle->GetBool("NoPreSelFaceHighlightWithOutline", false);
+        NoPreSelFaceHighlightWithOutline = handle->GetBool("NoPreSelFaceHighlightWithOutline", true);
         funcs["NoPreSelFaceHighlightWithOutline"] = &ViewParamsP::updateNoPreSelFaceHighlightWithOutline;
         AutoTransparentPick = handle->GetBool("AutoTransparentPick", false);
         funcs["AutoTransparentPick"] = &ViewParamsP::updateAutoTransparentPick;
@@ -637,6 +643,10 @@ public:
         self->DefaultShapeColor = self->handle->GetUnsigned("DefaultShapeColor", 0xCCCCCCFF);
     }
     // Auto generated code (Tools/params_utils.py:238)
+    static void updateDefaultShapeTransparency(ViewParamsP *self) {
+        self->DefaultShapeTransparency = self->handle->GetInt("DefaultShapeTransparency", 0);
+    }
+    // Auto generated code (Tools/params_utils.py:238)
     static void updateDefaultShapeLineWidth(ViewParamsP *self) {
         self->DefaultShapeLineWidth = self->handle->GetInt("DefaultShapeLineWidth", 2);
     }
@@ -698,7 +708,7 @@ public:
     }
     // Auto generated code (Tools/params_utils.py:238)
     static void updateNoPreSelFaceHighlightWithOutline(ViewParamsP *self) {
-        self->NoPreSelFaceHighlightWithOutline = self->handle->GetBool("NoPreSelFaceHighlightWithOutline", false);
+        self->NoPreSelFaceHighlightWithOutline = self->handle->GetBool("NoPreSelFaceHighlightWithOutline", true);
     }
     // Auto generated code (Tools/params_utils.py:238)
     static void updateAutoTransparentPick(ViewParamsP *self) {
@@ -1681,6 +1691,33 @@ void ViewParams::removeDefaultShapeColor() {
 }
 
 // Auto generated code (Tools/params_utils.py:288)
+const char *ViewParams::docDefaultShapeTransparency() {
+    return "";
+}
+
+// Auto generated code (Tools/params_utils.py:294)
+const long & ViewParams::getDefaultShapeTransparency() {
+    return instance()->DefaultShapeTransparency;
+}
+
+// Auto generated code (Tools/params_utils.py:300)
+const long & ViewParams::defaultDefaultShapeTransparency() {
+    const static long def = 0;
+    return def;
+}
+
+// Auto generated code (Tools/params_utils.py:307)
+void ViewParams::setDefaultShapeTransparency(const long &v) {
+    instance()->handle->SetInt("DefaultShapeTransparency",v);
+    instance()->DefaultShapeTransparency = v;
+}
+
+// Auto generated code (Tools/params_utils.py:314)
+void ViewParams::removeDefaultShapeTransparency() {
+    instance()->handle->RemoveInt("DefaultShapeTransparency");
+}
+
+// Auto generated code (Tools/params_utils.py:288)
 const char *ViewParams::docDefaultShapeLineWidth() {
     return "";
 }
@@ -2079,7 +2116,7 @@ const bool & ViewParams::getNoPreSelFaceHighlightWithOutline() {
 
 // Auto generated code (Tools/params_utils.py:300)
 const bool & ViewParams::defaultNoPreSelFaceHighlightWithOutline() {
-    const static bool def = false;
+    const static bool def = true;
     return def;
 }
 

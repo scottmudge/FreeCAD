@@ -20,26 +20,33 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <BRep_Builder.hxx>
+# include <BRepAdaptor_Curve.hxx>
+# include <BRepBuilderAPI_MakeEdge.hxx>
 # include <BRepBuilderAPI_MakeWire.hxx>
+# include <Geom_BSplineCurve.hxx>
+# include <Precision.hxx>
+# include <ShapeConstruct_Curve.hxx>
+# include <Standard_ConstructionError.hxx>
 # include <Standard_Version.hxx>
 # include <TopExp_Explorer.hxx>
+# include <TopLoc_Location.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Compound.hxx>
 # include <TopoDS_Edge.hxx>
 # include <TopoDS_Wire.hxx>
-# include <TopLoc_Location.hxx>
-# include <TopTools_ListOfShape.hxx>
 # include <TopTools_ListIteratorOfListOfShape.hxx>
+# include <TopTools_ListOfShape.hxx>
 # include <TopTools_MapOfShape.hxx>
 # include <Geom_Circle.hxx>
 #endif
+
 #include "BRepOffsetAPI_MakeOffsetFix.h"
 #include "Geometry.h"
 #include "PartFeature.h"
+
 
 using namespace Part;
 
@@ -125,10 +132,31 @@ void BRepOffsetAPI_MakeOffsetFix::Perform (const Standard_Real Offset, const Sta
         mkOffset->Perform(Offset, Alt);
 }
 
+#if OCC_VERSION_HEX >= 0x070600
+void BRepOffsetAPI_MakeOffsetFix::Build(const Message_ProgressRange&)
+#else
 void BRepOffsetAPI_MakeOffsetFix::Build()
+#endif
 {
     if (mkOffset)
         mkOffset->Build();
+}
+
+void BRepOffsetAPI_MakeOffsetFix::Init(const TopoDS_Face& Spine, const GeomAbs_JoinType Join,
+                                       const Standard_Boolean IsOpenResult)
+{
+    if (!mkOffset) {
+        mkOffset.reset(new BRepOffsetAPI_MakeOffset);
+    }
+    mkOffset->Init(Spine, Join, IsOpenResult);
+}
+
+void BRepOffsetAPI_MakeOffsetFix::Init(const GeomAbs_JoinType Join, const Standard_Boolean IsOpenResult)
+{
+    if (!mkOffset) {
+        mkOffset.reset(new BRepOffsetAPI_MakeOffset);
+    }
+    mkOffset->Init(Join, IsOpenResult);
 }
 
 Standard_Boolean BRepOffsetAPI_MakeOffsetFix::IsDone() const
@@ -154,9 +182,18 @@ void BRepOffsetAPI_MakeOffsetFix::MakeWire(TopoDS_Shape& wire)
 
     myMap.clear();
     std::list<TopoDS_Edge> edgeList;
-    for (auto itLoc : myLocations) {
-        const TopTools_ListOfShape& newShapes = mkOffset->Generated(itLoc.first);
+    for (const auto& itLoc : myLocations) {
+        TopTools_ListOfShape newShapes = mkOffset->Generated(itLoc.first);
         auto &entry = myMap[itLoc.first.Located(itLoc.second)];
+        // Check generated shapes for the vertexes, too
+        TopExp_Explorer xpv(itLoc.first, TopAbs_VERTEX);
+        while (xpv.More()) {
+            TopTools_ListOfShape newEdge = mkOffset->Generated(xpv.Current());
+            if (!newEdge.IsEmpty()) {
+                newShapes.Append(newEdge);
+            }
+            xpv.Next();
+        }
         for (TopTools_ListIteratorOfListOfShape it(newShapes); it.More(); it.Next()) {
             TopoDS_Shape newShape = it.Value();
             if (aMap.Contains(newShape)) {
@@ -257,4 +294,64 @@ Standard_Boolean BRepOffsetAPI_MakeOffsetFix::IsDeleted (const TopoDS_Shape& S)
     if (mkOffset)
         return mkOffset->IsDeleted(S);
     return Standard_False;
+}
+
+TopoDS_Shape BRepOffsetAPI_MakeOffsetFix::Replace(GeomAbs_CurveType type, const TopoDS_Shape& S) const
+{
+    if (S.IsNull())
+        throw Standard_ConstructionError("Input shape is null");
+
+    // Nothing to do
+    if (type == GeomAbs_BSplineCurve)
+        return S;
+
+    if (S.ShapeType() == TopAbs_COMPOUND) {
+        BRep_Builder builder;
+        TopoDS_Compound comp;
+        builder.MakeCompound(comp);
+        comp.Location(S.Location());
+
+        TopExp_Explorer xp(S, TopAbs_WIRE);
+        while (xp.More()) {
+            TopoDS_Wire wire = TopoDS::Wire(xp.Current());
+            wire = ReplaceEdges(type, wire);
+            builder.Add(comp, wire);
+            xp.Next();
+        }
+
+        return TopoDS_Compound(std::move(comp));
+    }
+    else if (S.ShapeType() == TopAbs_WIRE) {
+        return ReplaceEdges(type, TopoDS::Wire(S));
+    }
+    else {
+        throw Standard_ConstructionError("Wrong shape type");
+    }
+}
+
+TopoDS_Wire BRepOffsetAPI_MakeOffsetFix::ReplaceEdges(GeomAbs_CurveType type, const TopoDS_Wire& wire) const
+{
+    BRepBuilderAPI_MakeWire mkWire;
+    for (TopExp_Explorer xp(wire, TopAbs_EDGE); xp.More(); xp.Next()) {
+        TopoDS_Edge edge = TopoDS::Edge(xp.Current());
+        TopLoc_Location edgeLocation = edge.Location();
+
+        BRepAdaptor_Curve curve(edge);
+
+        if (curve.GetType() == type) {
+            ShapeConstruct_Curve scc;
+            double u = curve.FirstParameter();
+            double v = curve.LastParameter();
+            Handle(Geom_BSplineCurve) spline = scc.ConvertToBSpline(curve.Curve().Curve(), u, v, Precision::Confusion());
+            if (!spline.IsNull()) {
+                BRepBuilderAPI_MakeEdge mkEdge(spline, u, v);
+                edge = mkEdge.Edge();
+                edge.Location(edgeLocation);
+            }
+        }
+
+        mkWire.Add(edge);
+    }
+
+    return mkWire.Wire();
 }

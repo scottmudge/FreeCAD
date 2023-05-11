@@ -20,39 +20,37 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <Python.h>
-# include <vtkPolyData.h>
-# include <vtkStructuredGrid.h>
-# include <vtkRectilinearGrid.h>
-# include <vtkUnstructuredGrid.h>
-# include <vtkUniformGrid.h>
 # include <vtkCompositeDataSet.h>
 # include <vtkMultiBlockDataSet.h>
 # include <vtkMultiPieceDataSet.h>
+# include <vtkPolyData.h>
+# include <vtkRectilinearGrid.h>
+# include <vtkStructuredGrid.h>
+# include <vtkUnstructuredGrid.h>
+# include <vtkUniformGrid.h>
 # include <vtkXMLDataSetWriter.h>
+# include <vtkXMLImageDataReader.h>
 # include <vtkXMLPolyDataReader.h>
+# include <vtkXMLRectilinearGridReader.h>
 # include <vtkXMLStructuredGridReader.h>
 # include <vtkXMLUnstructuredGridReader.h>
-# include <vtkXMLRectilinearGridReader.h>
-# include <vtkXMLImageDataReader.h>
 #endif
 
-#include <Base/FileInfo.h>
-#include <Base/Console.h>
-#include <Base/Writer.h>
-#include <Base/Reader.h>
 #include <App/Application.h>
 #include <App/DocumentObject.h>
+#include <Base/Console.h>
+#include <Base/FileInfo.h>
+#include <Base/Reader.h>
+#include <Base/Stream.h>
+#include <Base/Writer.h>
+#include <CXX/Objects.hxx>
 
 #include "PropertyPostDataObject.h"
 
-#ifndef _PreComp_
-
-#endif
 
 using namespace Fem;
 
@@ -66,46 +64,94 @@ PropertyPostDataObject::~PropertyPostDataObject()
 {
 }
 
-void PropertyPostDataObject::setValue(const vtkSmartPointer<vtkDataObject>& ds)
+void PropertyPostDataObject::scaleDataObject(vtkDataObject *dataObject, double s)
+{
+    auto scalePoints = [](vtkPoints *points, double s) {
+        for (vtkIdType i = 0; i < points->GetNumberOfPoints(); i++) {
+            double xyz[3];
+            points->GetPoint(i, xyz);
+            for (int j = 0; j < 3; j++)
+                xyz[j] *= s;
+            points->SetPoint(i, xyz);
+        }
+    };
+
+    if (dataObject->GetDataObjectType() == VTK_POLY_DATA) {
+        vtkPolyData *dataSet = vtkPolyData::SafeDownCast(dataObject);
+        scalePoints(dataSet->GetPoints(), s);
+    }
+    else if (dataObject->GetDataObjectType() == VTK_STRUCTURED_GRID) {
+        vtkStructuredGrid *dataSet = vtkStructuredGrid::SafeDownCast(dataObject);
+        scalePoints(dataSet->GetPoints(), s);
+    }
+    else if (dataObject->GetDataObjectType() == VTK_UNSTRUCTURED_GRID) {
+        vtkUnstructuredGrid *dataSet = vtkUnstructuredGrid::SafeDownCast(dataObject);
+        scalePoints(dataSet->GetPoints(), s);
+    }
+    else if (dataObject->GetDataObjectType() == VTK_MULTIBLOCK_DATA_SET) {
+        vtkMultiBlockDataSet *dataSet = vtkMultiBlockDataSet::SafeDownCast(dataObject);
+        for (unsigned int i = 0; i < dataSet->GetNumberOfBlocks(); i++)
+            scaleDataObject(dataSet->GetBlock(i), s);
+    }
+    else if (dataObject->GetDataObjectType() == VTK_MULTIPIECE_DATA_SET) {
+        vtkMultiPieceDataSet *dataSet = vtkMultiPieceDataSet::SafeDownCast(dataObject);
+        for (unsigned int i = 0; i < dataSet->GetNumberOfPieces(); i++)
+            scaleDataObject(dataSet->GetPiece(i), s);
+    }
+}
+
+void PropertyPostDataObject::scale(double s)
+{
+    if (m_dataObject) {
+        aboutToSetValue();
+        scaleDataObject(m_dataObject, s);
+        hasSetValue();
+    }
+}
+
+void PropertyPostDataObject::setValue(const vtkSmartPointer<vtkDataObject> &ds)
 {
     aboutToSetValue();
 
-    if(ds) {
+    if (ds) {
         createDataObjectByExternalType(ds);
         m_dataObject->DeepCopy(ds);
     }
-    else
-        m_dataObject = NULL;
+    else {
+        m_dataObject = nullptr;
+    }
 
     hasSetValue();
 }
 
-const vtkSmartPointer<vtkDataObject>& PropertyPostDataObject::getValue(void)const
+const vtkSmartPointer<vtkDataObject> &PropertyPostDataObject::getValue() const
 {
     return m_dataObject;
 }
 
-bool PropertyPostDataObject::isComposite() {
+bool PropertyPostDataObject::isComposite()
+{
 
     return m_dataObject && !m_dataObject->IsA("vtkDataSet");
 }
 
-bool PropertyPostDataObject::isDataSet() {
+bool PropertyPostDataObject::isDataSet()
+{
 
     return m_dataObject && m_dataObject->IsA("vtkDataSet");
 }
 
-int PropertyPostDataObject::getDataType() {
+int PropertyPostDataObject::getDataType()
+{
 
-    if(!m_dataObject)
+    if (!m_dataObject)
         return -1;
 
     return m_dataObject->GetDataObjectType();
 }
 
 
-
-PyObject *PropertyPostDataObject::getPyObject(void)
+PyObject *PropertyPostDataObject::getPyObject()
 {
     //TODO: fetch the vtk python object from the data set and return it
     return Py::new_reference_to(Py::None());
@@ -115,7 +161,7 @@ void PropertyPostDataObject::setPyObject(PyObject * /*value*/)
 {
 }
 
-App::Property *PropertyPostDataObject::Copy(void) const
+App::Property *PropertyPostDataObject::Copy() const
 {
     PropertyPostDataObject *prop = new PropertyPostDataObject();
     if (m_dataObject) {
@@ -127,9 +173,10 @@ App::Property *PropertyPostDataObject::Copy(void) const
     return prop;
 }
 
-void PropertyPostDataObject::createDataObjectByExternalType(vtkSmartPointer< vtkDataObject > ex) {
+void PropertyPostDataObject::createDataObjectByExternalType(vtkSmartPointer<vtkDataObject> ex)
+{
 
-    switch( ex->GetDataObjectType() ) {
+    switch (ex->GetDataObjectType()) {
 
         case VTK_POLY_DATA:
             m_dataObject = vtkSmartPointer<vtkPolyData>::New();
@@ -164,13 +211,13 @@ void PropertyPostDataObject::createDataObjectByExternalType(vtkSmartPointer< vtk
 void PropertyPostDataObject::Paste(const App::Property &from)
 {
     aboutToSetValue();
-    m_dataObject = dynamic_cast<const PropertyPostDataObject&>(from).m_dataObject;
+    m_dataObject = dynamic_cast<const PropertyPostDataObject &>(from).m_dataObject;
     hasSetValue();
 }
 
-unsigned int PropertyPostDataObject::getMemSize (void) const
+unsigned int PropertyPostDataObject::getMemSize() const
 {
-    return m_dataObject->GetActualMemorySize();
+    return m_dataObject ? m_dataObject->GetActualMemorySize() : 0;
 }
 
 void PropertyPostDataObject::getPaths(std::vector<App::ObjectIdentifier> & /*paths*/) const
@@ -187,7 +234,7 @@ void PropertyPostDataObject::getPaths(std::vector<App::ObjectIdentifier> & /*pat
 //                     << App::ObjectIdentifier::Component::SimpleComponent(App::ObjectIdentifier::String("Volume")));
 }
 
-void PropertyPostDataObject::Save (Base::Writer &writer) const
+void PropertyPostDataObject::Save(Base::Writer &writer) const
 {
     std::string extension;
     if(!m_dataObject) {
@@ -199,7 +246,7 @@ void PropertyPostDataObject::Save (Base::Writer &writer) const
     if(!forceXML)
         extension = ".";
 
-    switch( m_dataObject->GetDataObjectType() ) {
+    switch (m_dataObject->GetDataObjectType()) {
 
         case VTK_POLY_DATA:
             extension += "vtp";
@@ -216,7 +263,7 @@ void PropertyPostDataObject::Save (Base::Writer &writer) const
         case VTK_UNIFORM_GRID:
             extension += "vti"; //image data
             break;
-        //TODO:multi-datasets use multiple files, this needs to be implemented specially
+            //TODO:multi-datasets use multiple files, this needs to be implemented specially
 //         case VTK_COMPOSITE_DATA_SET:
 //             prop->m_dataObject = vtkCompositeDataSet::New();
 //             break;
@@ -231,7 +278,7 @@ void PropertyPostDataObject::Save (Base::Writer &writer) const
     };
 
     if(forceXML) {
-        writer.Stream() << writer.ind() << "<Data cdata=\"" 
+        writer.Stream() << writer.ind() << "<Data cdata=\""
             << extension << "\"/>\n";
         save(writer.beginCharStream(false) << '\n', writer);
         writer.endCharStream() << '\n' << writer.ind() << "</Data>\n";
@@ -253,15 +300,15 @@ void PropertyPostDataObject::Restore(Base::XMLReader &reader)
     } else if(!reader.hasAttribute("file"))
         return;
 
-    std::string file (reader.getAttribute("file") );
+    std::string file(reader.getAttribute("file"));
 
     if (!file.empty()) {
         // initiate a file read
-        reader.addFile(file.c_str(),this);
+        reader.addFile(file.c_str(), this);
     }
 }
 
-void PropertyPostDataObject::SaveDocFile (Base::Writer &writer) const
+void PropertyPostDataObject::SaveDocFile(Base::Writer &writer) const
 {
     save(writer.Stream(),writer);
 }
@@ -283,16 +330,25 @@ void PropertyPostDataObject::save(std::ostream &s, Base::Writer &writer) const
     else
         xmlWriter->SetDataModeToAscii();
 
-    if ( xmlWriter->Write() != 1 ) {
+#ifdef VTK_CELL_ARRAY_V2
+    // Looks like an invalid data object that causes a crash with vtk9
+    vtkUnstructuredGrid *dataGrid = vtkUnstructuredGrid::SafeDownCast(m_dataObject);
+    if (dataGrid && (dataGrid->GetPiece() < 0 || dataGrid->GetNumberOfPoints() <= 0)) {
+        std::cerr << "PropertyPostDataObject::SaveDocFile: ignore empty vtkUnstructuredGrid\n";
+        return;
+    }
+#endif
+
+    if (xmlWriter->Write() != 1) {
         // Note: Do NOT throw an exception here because if the tmp. file could
         // not be created we should not abort.
         // We only print an error message but continue writing the next files to the
         // stream...
-        App::PropertyContainer* father = this->getContainer();
+        App::PropertyContainer *father = this->getContainer();
         if (father && father->isDerivedFrom(App::DocumentObject::getClassTypeId())) {
-            App::DocumentObject* obj = static_cast<App::DocumentObject*>(father);
+            App::DocumentObject *obj = static_cast<App::DocumentObject *>(father);
             Base::Console().Error("Dataset of '%s' cannot be written to vtk file '%s'\n",
-                obj->Label.getValue(),fi.filePath().c_str());
+                                  obj->Label.getValue(), fi.filePath().c_str());
         }
         else {
             Base::Console().Error("Cannot save vtk file '%s'\n", fi.filePath().c_str());
@@ -327,7 +383,7 @@ void PropertyPostDataObject::restore(std::istream &reader, const std::string &ex
     Base::ofstream file(fi, std::ios::out | std::ios::binary);
     unsigned long ulSize = 0;
     if (reader) {
-        std::streambuf* buf = file.rdbuf();
+        std::streambuf *buf = file.rdbuf();
         reader >> buf;
         file.flush();
         ulSize = buf->pubseekoff(0, std::ios::cur, std::ios::in);
@@ -338,7 +394,7 @@ void PropertyPostDataObject::restore(std::istream &reader, const std::string &ex
     if (ulSize > 0) {
         //TODO: read in of composite data structures need to be coded, including replace of "GetOutputAsDataSet()"
         vtkSmartPointer<vtkXMLReader> xmlReader;
-        if(extension == "vtp")
+        if (extension == "vtp")
             xmlReader = vtkSmartPointer<vtkXMLPolyDataReader>::New();
         else if (extension == "vts")
             xmlReader = vtkSmartPointer<vtkXMLStructuredGridReader>::New();
@@ -357,11 +413,11 @@ void PropertyPostDataObject::restore(std::istream &reader, const std::string &ex
             // not be read it's NOT an indication for an invalid input stream 'reader'.
             // We only print an error message but continue reading the next files from the
             // stream...
-            App::PropertyContainer* father = this->getContainer();
+            App::PropertyContainer *father = this->getContainer();
             if (father && father->isDerivedFrom(App::DocumentObject::getClassTypeId())) {
-                App::DocumentObject* obj = static_cast<App::DocumentObject*>(father);
+                App::DocumentObject *obj = static_cast<App::DocumentObject *>(father);
                 Base::Console().Error("Dataset file '%s' with data of '%s' seems to be empty\n",
-                    fi.filePath().c_str(),obj->Label.getValue());
+                                      fi.filePath().c_str(), obj->Label.getValue());
             }
             else {
                 Base::Console().Warning("Loaded Dataset file '%s' seems to be empty\n", fi.filePath().c_str());

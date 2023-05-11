@@ -32,6 +32,7 @@ They inherit their behavior from the base Annotation viewprovider.
 # \ingroup draftviewproviders
 # \brief Provides the viewprovider code for the Dimension objects.
 
+import math
 import pivy.coin as coin
 import lazy_loader.lazy_loader as lz
 from PySide.QtCore import QT_TRANSLATE_NOOP
@@ -299,10 +300,6 @@ class ViewProviderDimensionBase(ViewProviderDraftAnnotation):
         """Execute when a view property is changed."""
         super(ViewProviderDimensionBase, self).onChanged(vobj, prop)
 
-    def doubleClicked(self, vobj):
-        """Execute when double clicking the icon in the tree view."""
-        self.setEdit(vobj)
-
     def getDisplayModes(self, vobj):
         """Return the display modes that this viewprovider supports."""
         return ["2D", "3D"]
@@ -396,6 +393,7 @@ class ViewProviderLinearDimension(ViewProviderDimensionBase):
         self.marksDimOvershoot = coin.SoSeparator()
         self.marksExtOvershoot = coin.SoSeparator()
         self.drawstyle = coin.SoDrawStyle()
+        import PartGui # Required for "SoBrepEdgeSet" (because a dimension is not a Part::FeaturePython object).
         self.line = coin.SoType.fromName("SoBrepEdgeSet").createInstance()
         self.coords = coin.SoCoordinate3()
 
@@ -595,10 +593,10 @@ class ViewProviderLinearDimension(ViewProviderDimensionBase):
         else:
             offset = DraftVecUtils.scaleTo(v1, 0.05)
 
-        rott = rot1
+        self.trot = rot1
         if hasattr(vobj, "FlipText") and vobj.FlipText:
-            _rott = App.Rotation(rott[0], rott[1], rott[2], rott[3])
-            rott = _rott.multiply(App.Rotation(App.Vector(0, 0, 1), 180)).Q
+            _rott = App.Rotation(self.trot[0], self.trot[1], self.trot[2], self.trot[3])
+            self.trot = _rott.multiply(App.Rotation(App.Vector(0, 0, 1), 180)).Q
             offset = offset.negative()
 
         # On first run the `DisplayMode` enumeration is not set, so we trap
@@ -628,8 +626,8 @@ class ViewProviderLinearDimension(ViewProviderDimensionBase):
         self.textpos.translation.setValue([self.tbase.x,
                                            self.tbase.y,
                                            self.tbase.z])
-        self.textpos.rotation = coin.SbRotation(rott[0], rott[1],
-                                                rott[2], rott[3])
+        self.textpos.rotation = coin.SbRotation(self.trot[0], self.trot[1],
+                                                self.trot[2], self.trot[3])
 
         show_unit = True
         if hasattr(vobj, "ShowUnit"):
@@ -958,6 +956,7 @@ class ViewProviderAngularDimension(ViewProviderDimensionBase):
         self.marks = coin.SoSeparator()
         self.drawstyle = coin.SoDrawStyle()
         self.coords = coin.SoCoordinate3()
+        import PartGui # Required for "SoBrepEdgeSet" (because a dimension is not a Part::FeaturePython object).
         self.arc = coin.SoType.fromName("SoBrepEdgeSet").createInstance()
 
         self.node = coin.SoGroup()
@@ -1117,27 +1116,32 @@ class ViewProviderAngularDimension(ViewProviderDimensionBase):
         self.coord2.point.setValue(p3)
 
         # Calculate small chords to make arrows look better
-        arrowlength = 4 * vobj.ArrowSize.Value
-        u1 = (self.circle.valueAt(first + arrowlength)
-              - self.circle.valueAt(first)).normalize()
-        u2 = (self.circle.valueAt(last)
-              - self.circle.valueAt(last - arrowlength)).normalize()
-        if hasattr(vobj, "FlipArrows") and vobj.FlipArrows:
-            u1 = u1.negative()
-            u2 = u2.negative()
+        if vobj.ArrowSize.Value !=0 \
+                and hasattr(vobj, "ScaleMultiplier") \
+                and vobj.ScaleMultiplier != 0 \
+                and hasattr(vobj, "FlipArrows"):
+            halfarrowlength = 2 * vobj.ArrowSize.Value * vobj.ScaleMultiplier
+            arrowangle = 2 * math.asin(halfarrowlength / radius)
+            if vobj.FlipArrows:
+                arrowangle = -arrowangle
 
-        w2 = self.circle.Curve.Axis
-        w1 = w2.negative()
+            u1 = (self.circle.valueAt(first + arrowangle)
+                  - self.circle.valueAt(first)).normalize()
+            u2 = (self.circle.valueAt(last)
+                  - self.circle.valueAt(last - arrowangle)).normalize()
 
-        v1 = w1.cross(u1)
-        v2 = w2.cross(u2)
-        _plane_rot_1 = DraftVecUtils.getPlaneRotation(u1, v1, w1)
-        _plane_rot_2 = DraftVecUtils.getPlaneRotation(u2, v2, w2)
-        q1 = App.Placement(_plane_rot_1).Rotation.Q
-        q2 = App.Placement(_plane_rot_2).Rotation.Q
+            w2 = self.circle.Curve.Axis
+            w1 = w2.negative()
 
-        self.trans1.rotation.setValue((q1[0], q1[1], q1[2], q1[3]))
-        self.trans2.rotation.setValue((q2[0], q2[1], q2[2], q2[3]))
+            v1 = w1.cross(u1)
+            v2 = w2.cross(u2)
+            _plane_rot_1 = DraftVecUtils.getPlaneRotation(u1, v1, w1)
+            _plane_rot_2 = DraftVecUtils.getPlaneRotation(u2, v2, w2)
+            q1 = App.Placement(_plane_rot_1).Rotation.Q
+            q2 = App.Placement(_plane_rot_2).Rotation.Q
+
+            self.trans1.rotation.setValue((q1[0], q1[1], q1[2], q1[3]))
+            self.trans2.rotation.setValue((q2[0], q2[1], q2[2], q2[3]))
 
         # Set text position and rotation
         self.tbase = midp
@@ -1194,7 +1198,7 @@ class ViewProviderAngularDimension(ViewProviderDimensionBase):
                 self.remove_dim_arrows()
                 self.draw_dim_arrows(vobj)
 
-            self.updateData(obj, "Start")
+            self.updateData(obj, None)
             # obj.touch()
 
         elif prop == "FontSize" and "ScaleMultiplier" in properties:
@@ -1222,9 +1226,11 @@ class ViewProviderAngularDimension(ViewProviderDimensionBase):
         elif (prop in ("ArrowSize", "ArrowType")
               and "ScaleMultiplier" in properties
               and hasattr(self, "node") and hasattr(self, "p2")):
+            self.updateData(obj, None)
             self.remove_dim_arrows()
             self.draw_dim_arrows(vobj)
             # obj.touch()
+
         else:
             self.updateData(obj, None)
 

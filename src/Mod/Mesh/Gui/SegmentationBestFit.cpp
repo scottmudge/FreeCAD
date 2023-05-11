@@ -20,20 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
 # include <sstream>
+
 # include <QDialog>
 # include <QDoubleSpinBox>
-# include <QVBoxLayout>
 # include <QMessageBox>
 # include <QPointer>
+# include <QVBoxLayout>
 #endif
 
-#include "SegmentationBestFit.h"
-#include "ui_SegmentationBestFit.h"
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DocumentObjectGroup.h>
@@ -41,8 +38,11 @@
 #include <Gui/SelectionObject.h>
 #include <Mod/Mesh/App/Core/Approximation.h>
 #include <Mod/Mesh/App/Core/Segmentation.h>
-#include <Mod/Mesh/App/Mesh.h>
 #include <Mod/Mesh/App/MeshFeature.h>
+
+#include "SegmentationBestFit.h"
+#include "ui_SegmentationBestFit.h"
+
 
 using namespace MeshGui;
 
@@ -51,8 +51,8 @@ class PlaneFitParameter : public FitParameter
 {
 public:
     PlaneFitParameter() {}
-    virtual ~PlaneFitParameter() {}
-    virtual std::vector<float> getParameter(FitParameter::Points pts) const {
+    ~PlaneFitParameter() override {}
+    std::vector<float> getParameter(FitParameter::Points pts) const override {
         std::vector<float> values;
         MeshCore::PlaneFit fit;
         fit.AddPoints(pts.points);
@@ -74,8 +74,8 @@ class CylinderFitParameter : public FitParameter
 {
 public:
     CylinderFitParameter() {}
-    virtual ~CylinderFitParameter() {}
-    virtual std::vector<float> getParameter(FitParameter::Points pts) const {
+    ~CylinderFitParameter() override {}
+    std::vector<float> getParameter(FitParameter::Points pts) const override {
         std::vector<float> values;
         MeshCore::CylinderFit fit;
         fit.AddPoints(pts.points);
@@ -129,8 +129,8 @@ class SphereFitParameter : public FitParameter
 {
 public:
     SphereFitParameter() {}
-    virtual ~SphereFitParameter() {}
-    virtual std::vector<float> getParameter(FitParameter::Points pts) const {
+    ~SphereFitParameter() override {}
+    std::vector<float> getParameter(FitParameter::Points pts) const override {
         std::vector<float> values;
         MeshCore::SphereFit fit;
         fit.AddPoints(pts.points);
@@ -207,7 +207,7 @@ ParametersDialog::ParametersDialog(std::vector<float>& val, FitParameter* fitPar
     int index = 0;
     QGridLayout *layout;
     layout = new QGridLayout(groupBox);
-    for (auto it : parameter) {
+    for (const auto& it : parameter) {
         QLabel* label = new QLabel(groupBox);
         label->setText(it.first);
         layout->addWidget(label, index, 0, 1, 1);
@@ -346,7 +346,7 @@ void SegmentationBestFit::on_planeParameters_clicked()
     list.push_back(std::make_pair(axis + y, p[4]));
     list.push_back(std::make_pair(axis + z, p[5]));
 
-    static QPointer<QDialog> dialog = 0;
+    static QPointer<QDialog> dialog = nullptr;
     if (!dialog)
         dialog = new ParametersDialog(planeParameter,
                                       new PlaneFitParameter,
@@ -374,7 +374,7 @@ void SegmentationBestFit::on_cylinderParameters_clicked()
     list.push_back(std::make_pair(axis + z, p[5]));
     list.push_back(std::make_pair(radius,   p[6]));
 
-    static QPointer<QDialog> dialog = 0;
+    static QPointer<QDialog> dialog = nullptr;
     if (!dialog)
         dialog = new ParametersDialog(cylinderParameter,
                                       new CylinderFitParameter,
@@ -398,7 +398,7 @@ void SegmentationBestFit::on_sphereParameters_clicked()
     list.push_back(std::make_pair(base + z, p[2]));
     list.push_back(std::make_pair(radius,   p[3]));
 
-    static QPointer<QDialog> dialog = 0;
+    static QPointer<QDialog> dialog = nullptr;
     if (!dialog)
         dialog = new ParametersDialog(sphereParameter,
                                       new SphereFitParameter,
@@ -504,7 +504,7 @@ TaskSegmentationBestFit::TaskSegmentationBestFit(Mesh::Feature* mesh)
 {
     widget = new SegmentationBestFit(mesh);
     taskbox = new Gui::TaskView::TaskBox(
-        QPixmap(), widget->windowTitle(), false, 0);
+        QPixmap(), widget->windowTitle(), false, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

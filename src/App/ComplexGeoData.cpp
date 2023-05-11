@@ -27,6 +27,9 @@
 # include <cstdlib>
 #endif
 
+#include <cctype>
+#include <random>
+
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -36,16 +39,21 @@
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/io/ios_state.hpp>
-#include <Base/Writer.h>
-#include <Base/Reader.h>
+#include <boost/regex.hpp>
 
-#include <Base/Exception.h>
+#include "ComplexGeoData.h"
+
+#include <Base/BoundBox.h>
 #include <Base/Console.h>
-#include <App/DynamicProperty.h>
-#include <App/DocumentObject.h>
+#include <Base/Exception.h>
+#include <Base/Placement.h>
+#include <Base/Reader.h>
+#include <Base/Rotation.h>
+#include <Base/Writer.h>
 #include "Application.h"
 #include "Document.h"
-#include "ComplexGeoData.h"
+#include "DocumentObject.h"
+#include "DynamicProperty.h"
 #include "MappedElement.h"
 
 FC_LOG_LEVEL_INIT("ComplexGeoData", true, 2);
@@ -1208,26 +1216,26 @@ TYPESYSTEM_SOURCE_ABSTRACT(Data::Segment , Base::BaseClass)
 TYPESYSTEM_SOURCE_ABSTRACT(Data::ComplexGeoData , Base::Persistence)
 
 
-ComplexGeoData::ComplexGeoData(void)
+ComplexGeoData::ComplexGeoData()
     :Tag(0)
 {
 }
 
-ComplexGeoData::~ComplexGeoData(void)
-{
-}
+ComplexGeoData::~ComplexGeoData() = default;
 
 Data::Segment* ComplexGeoData::getSubElementByName(const char* name) const
 {
     int index = 0;
-    std::string element(name);
-    std::string::size_type pos = element.find_first_of("0123456789");
-    if (pos != std::string::npos) {
-        index = std::atoi(element.substr(pos).c_str());
-        element = element.substr(0,pos);
+    std::string element;
+    boost::regex ex("^([^0-9]*)([0-9]*)$");
+    boost::cmatch what;
+
+    if (boost::regex_match(name, what, ex)) {
+        element = what[1].str();
+        index = std::atoi(what[2].str().c_str());
     }
 
-    return getSubElement(element.c_str(),index);
+    return getSubElement(element.c_str(), static_cast<unsigned long>(index));
 }
 
 void ComplexGeoData::applyTransform(const Base::Matrix4D& rclTrf)
@@ -1264,6 +1272,11 @@ Base::Placement ComplexGeoData::getPlacement() const
                            Base::Rotation(mat));
 }
 
+double ComplexGeoData::getAccuracy() const
+{
+    return 0.0;
+}
+
 void ComplexGeoData::getLinesFromSubElement(const Segment*,
                                             std::vector<Base::Vector3d> &Points,
                                             std::vector<Line> &lines) const
@@ -1292,7 +1305,7 @@ Base::Vector3d ComplexGeoData::getPointFromLineIntersection(const Base::Vector3f
 
 void ComplexGeoData::getPoints(std::vector<Base::Vector3d> &Points,
                                std::vector<Base::Vector3d> &Normals,
-                               float Accuracy, uint16_t flags) const
+                               double Accuracy, uint16_t flags) const
 {
     (void)Points;
     (void)Normals;
@@ -1302,7 +1315,7 @@ void ComplexGeoData::getPoints(std::vector<Base::Vector3d> &Points,
 
 void ComplexGeoData::getLines(std::vector<Base::Vector3d> &Points,
                               std::vector<Line> &lines,
-                              float Accuracy, uint16_t flags) const
+                              double Accuracy, uint16_t flags) const
 {
     (void)Points;
     (void)lines;
@@ -1312,7 +1325,7 @@ void ComplexGeoData::getLines(std::vector<Base::Vector3d> &Points,
 
 void ComplexGeoData::getFaces(std::vector<Base::Vector3d> &Points,
                               std::vector<Facet> &faces,
-                              float Accuracy, uint16_t flags) const
+                              double Accuracy, uint16_t flags) const
 {
     (void)Points;
     (void)faces;
@@ -1333,7 +1346,7 @@ const std::string &ComplexGeoData::elementMapPrefix() {
 const char *ComplexGeoData::isMappedElement(const char *name) {
     if(name && boost::starts_with(name,elementMapPrefix()))
         return name+elementMapPrefix().size();
-    return 0;
+    return nullptr;
 }
 
 std::string ComplexGeoData::getElementMapVersion() const {
@@ -1348,9 +1361,11 @@ bool ComplexGeoData::checkElementMapVersion(const char * ver) const
 }
 
 std::string ComplexGeoData::newElementName(const char *name) {
-    if(!name) return std::string();
+    if(!name)
+        return std::string();
     const char *dot = strrchr(name,'.');
-    if(!dot || dot==name) return name;
+    if(!dot || dot==name)
+        return name;
     const char *c = dot-1;
     for(;c!=name;--c) {
         if(*c == '.') {
@@ -1364,9 +1379,11 @@ std::string ComplexGeoData::newElementName(const char *name) {
 }
 
 std::string ComplexGeoData::oldElementName(const char *name) {
-    if(!name) return std::string();
+    if(!name)
+        return std::string();
     const char *dot = strrchr(name,'.');
-    if(!dot || dot==name) return name;
+    if(!dot || dot==name)
+        return name;
     const char *c = dot-1;
     for(;c!=name;--c) {
         if(*c == '.') {
@@ -1380,7 +1397,8 @@ std::string ComplexGeoData::oldElementName(const char *name) {
 }
 
 std::string ComplexGeoData::noElementName(const char *name) {
-    if(!name) return std::string();
+    if(!name)
+        return std::string();
     auto element = findElementName(name);
     if(element)
         return std::string(name,element-name);
@@ -1600,12 +1618,12 @@ MappedName ComplexGeoData::setElementName(const IndexedName & element,
 
     for(int i=0, count=name.size(); i<count; ++i) {
         char c = name[i];
-        if(c == '.' || std::isspace((int)c))
+        if(c == '.' || std::isspace(static_cast<unsigned char>(c)))
             FC_THROWM(Base::RuntimeError,"Illegal character in mapped name: " << name);
     }
     for(const char *s=element.getType();*s;++s) {
         char c = *s;
-        if(c == '.' || std::isspace((int)c))
+        if(c == '.' || std::isspace(static_cast<unsigned char>(c)))
             FC_THROWM(Base::RuntimeError,"Illegal character in element name: " << element);
     }
 
@@ -1703,8 +1721,18 @@ MappedName ComplexGeoData::renameDuplicateElement(int index,
                                                   const MappedName & name,
                                                   ElementIDRefs &sids)
 {
+    int idx;
+#ifdef FC_DEBUG
+    idx = index;
+#else
+    static std::random_device _RD;
+    static std::mt19937 _RGEN(_RD());
+    static std::uniform_int_distribution<> _RDIST(1,10000);
+    (void)index;
+    idx = _RDIST(_RGEN);
+#endif
     std::ostringstream ss;
-    ss << elementMapPrefix() << 'D' << std::hex << index;
+    ss << elementMapPrefix() << 'D' << std::hex << idx;
     MappedName renamed(name);
     encodeElementName(element.getType()[0],renamed,ss,&sids);
     if (FC_LOG_INSTANCE.isEnabled(FC_LOGLEVEL_LOG))
@@ -1889,8 +1917,6 @@ int ComplexGeoData::findTagInElementName(const MappedName & name,
         // ----------- len -----------
         _len = pos - _len;
     }
-    if(type)
-        *type = tp;
     if(tag) {
         if (_tag == 0 && recursive)
             return findTagInElementName(
@@ -1900,6 +1926,8 @@ int ComplexGeoData::findTagInElementName(const MappedName & name,
         else
             *tag = -_tag;
     }
+    if(type)
+        *type = tp;
     if(len)
         *len = _len;
     if(postfix)
@@ -1994,14 +2022,13 @@ long ComplexGeoData::getElementHistory(const MappedName & name,
     int pos = findTagInElementName(name,&tag,&len,nullptr,nullptr,true);
     if(pos < 0) {
         if(original)
-            *original = name;
+            *original = name.copy();
         return tag;
     }
     if(!original && !history)
         return tag;
 
-    MappedName tmp;
-    MappedName &ret = original?*original:tmp;
+    MappedName ret;
     if(name.startsWith(elementMapPrefix())) {
         unsigned offset = elementMapPrefix().size();
         ret = MappedName::fromRawData(name, offset);
@@ -2011,7 +2038,8 @@ long ComplexGeoData::getElementHistory(const MappedName & name,
     while(1) {
         if(!len || len>pos) {
             FC_WARN("invalid name length " << name);
-            return 0;
+            tag = 0;
+            break;
         }
         bool dehashed = false;
         if (ret.startsWith(MappedChildElements::prefix(), len)) {
@@ -2029,11 +2057,15 @@ long ComplexGeoData::getElementHistory(const MappedName & name,
         long tag2 = 0;
         pos = findTagInElementName(ret,&tag2,&len,nullptr,nullptr,true);
         if(pos < 0 || (tag2!=tag && tag2!=-tag && tag!=Tag && -tag!=Tag))
-            return tag;
+            break;
         tag = tag2;
         if(history)
             history->push_back(ret.copy());
     }
+
+    if (original)
+        *original = ret.copy();
+    return tag;
 }
 
 void ComplexGeoData::setPersistenceFileName(const char *filename) const {

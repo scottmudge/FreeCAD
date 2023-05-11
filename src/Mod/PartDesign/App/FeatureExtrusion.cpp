@@ -31,11 +31,15 @@ using namespace PartDesign;
 PROPERTY_SOURCE(PartDesign::Extrusion, PartDesign::Pad)
 
 Extrusion::Extrusion()
+    :Pad("Extrusion")
 {
 }
 
-App::DocumentObjectExecReturn *Extrusion::execute(void)
+App::DocumentObjectExecReturn *Extrusion::execute()
 {
-    return Pad::_execute(NewSolid.getValue(), false);
+    ExtrudeOptions options;
+    if (NewSolid.getValue())
+        options = ExtrudeOption::MakeFace;
+    return buildExtrusion(options);
 }
 

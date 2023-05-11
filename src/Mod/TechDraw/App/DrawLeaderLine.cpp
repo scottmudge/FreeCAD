@@ -22,21 +22,15 @@
 
 #include "PreCompiled.h"
 
-#ifndef _PreComp_
-#endif
-
 #include <App/Application.h>
 #include <Base/Console.h>
-#include <Base/Exception.h>
 #include <Base/Parameter.h>
 
-#include "DrawPage.h"
-#include "DrawView.h"
-#include "DrawUtil.h"
-
-#include <Mod/TechDraw/App/DrawLeaderLinePy.h>  // generated from DrawLeaderLinePy.xml
 #include "DrawLeaderLine.h"
+#include "DrawLeaderLinePy.h"  // generated from DrawLeaderLinePy.xml
 #include "ArrowPropEnum.h"
+#include "DrawView.h"
+
 
 using namespace TechDraw;
 
@@ -68,46 +62,42 @@ PROPERTY_SOURCE(TechDraw::DrawLeaderLine, TechDraw::DrawView)
 //                               "NONE"
 //                               NULL};
 
-DrawLeaderLine::DrawLeaderLine(void)
+DrawLeaderLine::DrawLeaderLine()
 {
     static const char *group = "Leader";
 
-    ADD_PROPERTY_TYPE(LeaderParent,(0),group,(App::PropertyType)(App::Prop_None),
+    ADD_PROPERTY_TYPE(LeaderParent, (nullptr), group, (App::PropertyType)(App::Prop_None),
                       "View to which this leader is attached");
     LeaderParent.setScope(App::LinkScope::Global);
-    ADD_PROPERTY_TYPE(WayPoints,(Base::Vector3d()) ,group, App::Prop_None,
+    ADD_PROPERTY_TYPE(WayPoints, (Base::Vector3d()) ,group, App::Prop_None,
                       "Intermediate points for Leader line");
 
 //    EndType.setEnums(ArrowTypeEnums);
-//    ADD_PROPERTY(EndType,(prefEnd()));
+//    ADD_PROPERTY(EndType, (prefEnd()));
 
     StartSymbol.setEnums(ArrowPropEnum::ArrowTypeEnums);
-    ADD_PROPERTY(StartSymbol,(0l));              //filled arrow
+    ADD_PROPERTY(StartSymbol, (0l));              //filled arrow
 
 //    ADD_PROPERTY_TYPE(StartSymbol, (0), group, App::Prop_None, "Symbol (arrowhead) for start of line");
     EndSymbol.setEnums(ArrowPropEnum::ArrowTypeEnums);
-    ADD_PROPERTY(EndSymbol,(7l));                //no symbol
+    ADD_PROPERTY(EndSymbol, (7l));                //no symbol
 //    ADD_PROPERTY_TYPE(EndSymbol, (0), group, App::Prop_None, "Symbol (arrowhead) for end of line");
 
 
-    ADD_PROPERTY_TYPE(Scalable ,(false),group,App::Prop_None,"Scale line with LeaderParent");
-    ADD_PROPERTY_TYPE(AutoHorizontal ,(getDefAuto()),group,App::Prop_None,"Forces last line segment to be horizontal");
+    ADD_PROPERTY_TYPE(Scalable ,(false), group, App::Prop_None, "Scale line with LeaderParent");
+    ADD_PROPERTY_TYPE(AutoHorizontal ,(getDefAuto()), group, App::Prop_None, "Forces last line segment to be horizontal");
 
     //hide the DrawView properties that don't apply to Leader
-    ScaleType.setStatus(App::Property::ReadOnly,true);
-    ScaleType.setStatus(App::Property::Hidden,true);
-    Scale.setStatus(App::Property::ReadOnly,true);
-    Scale.setStatus(App::Property::Hidden,true);
-    Rotation.setStatus(App::Property::ReadOnly,true);
-    Rotation.setStatus(App::Property::Hidden,true);
-    Caption.setStatus(App::Property::Hidden,true);
+    ScaleType.setStatus(App::Property::ReadOnly, true);
+    ScaleType.setStatus(App::Property::Hidden, true);
+    Scale.setStatus(App::Property::ReadOnly, true);
+    Scale.setStatus(App::Property::Hidden, true);
+    Rotation.setStatus(App::Property::ReadOnly, true);
+    Rotation.setStatus(App::Property::Hidden, true);
+    Caption.setStatus(App::Property::Hidden, true);
 
     LockPosition.setValue(true);
-    LockPosition.setStatus(App::Property::Hidden,true);
-}
-
-DrawLeaderLine::~DrawLeaderLine()
-{
+    LockPosition.setStatus(App::Property::Hidden, true);
 }
 
 void DrawLeaderLine::onChanged(const App::Property* prop)
@@ -126,7 +116,7 @@ short DrawLeaderLine::mustExecute() const
     }
 
     const App::DocumentObject* docObj = getBaseObject();
-    if (docObj != nullptr) {
+    if (docObj) {
         result = docObj->isTouched();                 //object property points to is touched
     }
     if (result) {
@@ -136,44 +126,45 @@ short DrawLeaderLine::mustExecute() const
     return DrawView::mustExecute();
 }
 
-App::DocumentObjectExecReturn *DrawLeaderLine::execute(void)
+App::DocumentObjectExecReturn *DrawLeaderLine::execute()
 {
 //    Base::Console().Message("DLL::execute()\n");
     if (!keepUpdated()) {
         return App::DocumentObject::StdReturn;
     }
     adjustLastSegment();
+    overrideKeepUpdated(false);
     return DrawView::execute();
 }
 
-DrawView* DrawLeaderLine::getBaseView(void) const
+DrawView* DrawLeaderLine::getBaseView() const
 {
     DrawView* result = nullptr;
     App::DocumentObject* baseObj = LeaderParent.getValue();
-    if (baseObj != nullptr) {
+    if (baseObj) {
         DrawView* cast = dynamic_cast<DrawView*>(baseObj);
-        if (cast != nullptr) {
+        if (cast) {
             result = cast;
         }
     }
     return result;
 }
 
-App::DocumentObject* DrawLeaderLine::getBaseObject(void) const
+App::DocumentObject* DrawLeaderLine::getBaseObject() const
 {
     App::DocumentObject* result = nullptr;
     DrawView* view = getBaseView();
-    if (view != nullptr) {
+    if (view) {
         result = view;
     }
     return result;
 }
 
-bool DrawLeaderLine::keepUpdated(void)
+bool DrawLeaderLine::keepUpdated()
 {
     bool result = false;
     DrawView* view = getBaseView();
-    if (view != nullptr) {
+    if (view) {
         result = view->keepUpdated();
     }
     return result;
@@ -181,12 +172,12 @@ bool DrawLeaderLine::keepUpdated(void)
 
 //need separate getParentScale()???
 
-double DrawLeaderLine::getBaseScale(void) const
+double DrawLeaderLine::getBaseScale() const
 {
 //    Base::Console().Message("DLL::getBaseScale()\n");
     double result = 1.0;
     DrawView* parent = getBaseView();
-    if (parent != nullptr) {
+    if (parent) {
         result = parent->getScale();
     } else {
         //TARFU
@@ -195,13 +186,13 @@ double DrawLeaderLine::getBaseScale(void) const
     return result;
 }
 
-double DrawLeaderLine::getScale(void) const
+double DrawLeaderLine::getScale() const
 {
 //    Base::Console().Message("DLL::getScale()\n");
     double result = 1.0;
     if (Scalable.getValue()) {
         DrawView* parent = getBaseView();
-        if (parent != nullptr) {
+        if (parent) {
             result = parent->getScale();
         } else {
             //TARFU
@@ -211,7 +202,7 @@ double DrawLeaderLine::getScale(void) const
     return result;
 }
 
-Base::Vector3d DrawLeaderLine::getAttachPoint(void)
+Base::Vector3d DrawLeaderLine::getAttachPoint()
 {
     Base::Vector3d result(X.getValue(),
                           Y.getValue(),
@@ -219,7 +210,7 @@ Base::Vector3d DrawLeaderLine::getAttachPoint(void)
     return result;
 }
 
-void DrawLeaderLine::adjustLastSegment(void)
+void DrawLeaderLine::adjustLastSegment()
 {
 //    Base::Console().Message("DLL::adjustLastSegment()\n");
     bool adjust = AutoHorizontal.getValue();
@@ -238,7 +229,7 @@ void DrawLeaderLine::adjustLastSegment(void)
 }
 
 //middle of last line segment
-Base::Vector3d DrawLeaderLine::getTileOrigin(void) const
+Base::Vector3d DrawLeaderLine::getTileOrigin() const
 {
     Base::Vector3d result;
     std::vector<Base::Vector3d> wp = WayPoints.getValues();
@@ -253,7 +244,7 @@ Base::Vector3d DrawLeaderLine::getTileOrigin(void) const
 }
 
 //start of last line segment
-Base::Vector3d DrawLeaderLine::getKinkPoint(void) const
+Base::Vector3d DrawLeaderLine::getKinkPoint() const
 {
     Base::Vector3d result;
     std::vector<Base::Vector3d> wp = WayPoints.getValues();
@@ -268,7 +259,7 @@ Base::Vector3d DrawLeaderLine::getKinkPoint(void) const
 }
 
 //end of last line segment
-Base::Vector3d DrawLeaderLine::getTailPoint(void) const
+Base::Vector3d DrawLeaderLine::getTailPoint() const
 {
     Base::Vector3d result;
     std::vector<Base::Vector3d> wp = WayPoints.getValues();
@@ -283,20 +274,20 @@ Base::Vector3d DrawLeaderLine::getTailPoint(void) const
 }
 
 
-bool DrawLeaderLine::getDefAuto(void) const
+bool DrawLeaderLine::getDefAuto() const
 {
     Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter().GetGroup("BaseApp")->
-                                         GetGroup("Preferences")->GetGroup("Mod/TechDraw/LeaderLines");
-    bool result = hGrp->GetBool("AutoHorizontal",true);
+                                         GetGroup("Preferences")->GetGroup("Mod/TechDraw/LeaderLine");
+    bool result = hGrp->GetBool("AutoHorizontal", true);
     return result;
 }
 
 
-PyObject *DrawLeaderLine::getPyObject(void)
+PyObject *DrawLeaderLine::getPyObject()
 {
     if (PythonObject.is(Py::_None())) {
         // ref counter is set to 1
-        PythonObject = Py::Object(new DrawLeaderLinePy(this),true);
+        PythonObject = Py::Object(new DrawLeaderLinePy(this), true);
     }
     return Py::new_reference_to(PythonObject);
 }
@@ -306,7 +297,7 @@ PyObject *DrawLeaderLine::getPyObject(void)
 namespace App {
 /// @cond DOXERR
 PROPERTY_SOURCE_TEMPLATE(TechDraw::DrawLeaderLinePython, TechDraw::DrawLeaderLine)
-template<> const char* TechDraw::DrawLeaderLinePython::getViewProviderName(void) const {
+template<> const char* TechDraw::DrawLeaderLinePython::getViewProviderName() const {
     return "TechDrawGui::ViewProviderLeader";
 }
 /// @endcond

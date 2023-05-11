@@ -30,7 +30,6 @@ include_directories(
     ${ZLIB_INCLUDE_DIR}
     ${OCC_INCLUDE_DIR}
     ${PYTHON_INCLUDE_DIRS}
-    ${XercesC_INCLUDE_DIRS}
     ${SMESH_INCLUDE_DIR}
     ${VTK_INCLUDE_DIRS}
 )
@@ -42,15 +41,19 @@ link_directories(${SMESH_LIB_PATH})
 set(FemGui_LIBS
     Fem
     FreeCADGui
+    PartGui
 )
 
 
 generate_from_xml(ViewProviderFemMeshPy)
+generate_from_xml(ViewProviderFemPostPipelinePy)
 
 
 SET(Python_SRCS
     ViewProviderFemMeshPy.xml
     ViewProviderFemMeshPyImp.cpp
+    ViewProviderFemPostPipelinePy.xml
+    ViewProviderFemPostPipelinePyImp.cpp
 )
 SOURCE_GROUP("Python" FILES ${Python_SRCS})
 
@@ -100,14 +103,6 @@ if(BUILD_FEM_VTK)
     )
 endif(BUILD_FEM_VTK)
 
-
-if(BUILD_QT5)
-    qt5_wrap_ui(FemGui_UIC_HDRS ${FemGui_UIC_SRCS})
-else()
-    qt4_wrap_ui(FemGui_UIC_HDRS ${FemGui_UIC_SRCS})
-endif()
-
-
 SET(FemGui_DLG_SRCS
     ${FemGui_UIC_HDRS}
     DlgSettingsFemCcx.ui
@@ -140,6 +135,8 @@ SET(FemGui_DLG_SRCS
     TaskFemConstraint.ui
     TaskFemConstraint.cpp
     TaskFemConstraint.h
+    TaskFemConstraintOnBoundary.cpp
+    TaskFemConstraintOnBoundary.h
     TaskFemConstraintBearing.ui
     TaskFemConstraintBearing.cpp
     TaskFemConstraintBearing.h
@@ -186,12 +183,7 @@ SET(FemGui_DLG_SRCS
 )
 SOURCE_GROUP("Constraint-Dialogs" FILES ${FemGui_DLG_SRCS})
 
-
-if(BUILD_QT5)
-    qt5_add_resources(FemResource_SRCS Resources/Fem.qrc)
-else()
-    qt4_add_resources(FemResource_SRCS Resources/Fem.qrc)
-endif()
+qt_add_resources(FemResource_SRCS Resources/Fem.qrc)
 SOURCE_GROUP("Resources" FILES ${FemResource_SRCS})
 
 
@@ -218,6 +210,8 @@ SET(FemGui_SRCS_ViewProvider
     FemSelectionGate.h
     ViewProviderFemConstraint.cpp
     ViewProviderFemConstraint.h
+    ViewProviderFemConstraintOnBoundary.cpp
+    ViewProviderFemConstraintOnBoundary.h
     ViewProviderFemConstraintBearing.cpp
     ViewProviderFemConstraintBearing.h
     ViewProviderFemConstraintFixed.cpp
@@ -309,6 +303,8 @@ SET(FemGui_SRCS_Module
     ActiveAnalysisObserver.cpp
     ActiveAnalysisObserver.h
     Command.cpp
+    FemSettings.cpp
+    FemSettings.h
     Resources/Fem.qrc
     PreCompiled.cpp
     PreCompiled.h
@@ -375,6 +371,7 @@ INSTALL(FILES ${FemGuiIcon_SVG} DESTINATION "${CMAKE_INSTALL_DATADIR}/Mod/Fem/Re
 # Python modules ui files, they are copied as they are, thus the need not to be added to Fem.qrc
 # see https://forum.freecadweb.org/viewtopic.php?f=10&t=25833
 SET(FemGuiPythonUI_SRCS
+    Resources/ui/BodyHeatSource.ui
     Resources/ui/ConstraintCentrif.ui
     Resources/ui/ConstraintTie.ui
     Resources/ui/ConstraintSectionPrint.ui
@@ -385,6 +382,7 @@ SET(FemGuiPythonUI_SRCS
     Resources/ui/ElementRotation1D.ui
     Resources/ui/FlowVelocity.ui
     Resources/ui/InitialFlowVelocity.ui
+    Resources/ui/InitialPressure.ui
     Resources/ui/Material.ui
     Resources/ui/MaterialReinforcement.ui
     Resources/ui/MeshBoundaryLayer.ui

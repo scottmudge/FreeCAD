@@ -24,8 +24,9 @@
 #define SHEETMODEL_H
 
 #include <QAbstractTableModel>
-#include <Mod/Spreadsheet/App/Utils.h>
+
 #include <App/Range.h>
+
 
 namespace Spreadsheet {
 class Sheet;
@@ -38,16 +39,16 @@ class SheetModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    explicit SheetModel(Spreadsheet::Sheet * _sheet, QObject *parent = 0);
-    ~SheetModel();
+    explicit SheetModel(Spreadsheet::Sheet * _sheet, QObject *parent = nullptr);
+    ~SheetModel() override;
     
-    SheetModel(QObject *parent);
-    int rowCount(const QModelIndex &parent = QModelIndex()) const ;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
-    QVariant headerData(int section, Qt::Orientation orientation, int role) const;
-    bool setData(const QModelIndex &index, const QVariant &value, int role);
-    Qt::ItemFlags flags(const QModelIndex &) const;
+    explicit SheetModel(QObject *parent);
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override ;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role) override;
+    Qt::ItemFlags flags(const QModelIndex &) const override;
 
     QColor foregroundColor() const;
     void setForegroundColor(const QColor &c);

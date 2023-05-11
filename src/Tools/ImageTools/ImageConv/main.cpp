@@ -136,7 +136,7 @@ int main( int argc, char **argv )
     }
     catch(const CICException& e)
     {
-        cerr << (const char*)e.what().toLatin1() << endl;
+        cerr << (const char*)e.what().toUtf8() << endl;
         CImageConvApp::Error();
     }
     catch(...)

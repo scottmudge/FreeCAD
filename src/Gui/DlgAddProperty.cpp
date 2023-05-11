@@ -27,15 +27,15 @@
 
 #include <QCompleter>
 
-#include "ui_DlgAddProperty.h"
-
-#include <Base/Tools.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DocumentObject.h>
-#include "MainWindow.h"
-#include <ViewProviderDocumentObject.h>
+#include <Base/Tools.h>
+
 #include "DlgAddProperty.h"
+#include "ui_DlgAddProperty.h"
+#include "MainWindow.h"
+#include "ViewProviderDocumentObject.h"
 
 
 using namespace Gui;
@@ -67,7 +67,7 @@ DlgAddProperty::DlgAddProperty(QWidget* parent,
 
     std::vector<Base::Type> types;
     Base::Type::getAllDerivedFrom(Base::Type::fromName("App::Property"),types);
-    for(auto type : types) {
+    for(const auto &type : types) {
         bool filtered = false;
         for (auto &t : filters) {
             if (type.isDerivedFrom(t)) {

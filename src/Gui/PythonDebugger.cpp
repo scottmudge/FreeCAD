@@ -20,22 +20,21 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <QEventLoop>
 # include <QCoreApplication>
-# include <QFileInfo>
-# include <QTimer>
+# include <QEventLoop>
 #endif
 
-#include "PythonDebugger.h"
-#include "MainWindow.h"
-#include "EditorView.h"
-#include "PythonEditor.h"
-#include "BitmapFactory.h"
-#include <Base/Interpreter.h>
 #include <Base/Console.h>
+#include <Base/Interpreter.h>
+
+#include "PythonDebugger.h"
+#include "BitmapFactory.h"
+#include "EditorView.h"
+#include "MainWindow.h"
+#include "PythonEditor.h"
+
 
 using namespace Gui;
 
@@ -99,13 +98,12 @@ int Breakpoint::lineIndex(int ind)const
 
 // -----------------------------------------------------
 
-void PythonDebugModule::init_module(void)
+void PythonDebugModule::init_module()
 {
     PythonDebugStdout::init_type();
     PythonDebugStderr::init_type();
     PythonDebugExcept::init_type();
-    static PythonDebugModule* mod = new PythonDebugModule();
-    Q_UNUSED(mod);
+    Base::Interpreter().addModule(new PythonDebugModule);
 }
 
 PythonDebugModule::PythonDebugModule()
@@ -131,6 +129,9 @@ PythonDebugModule::PythonDebugModule()
 
 PythonDebugModule::~PythonDebugModule()
 {
+    Py::Dict d(moduleDictionary());
+    d["StdOut"] = Py::None();
+    d["StdErr"] = Py::None();
 }
 
 Py::Object PythonDebugModule::getFunctionCallCount(const Py::Tuple &)
@@ -320,7 +321,7 @@ class PythonDebuggerPy : public Py::PythonExtension<PythonDebuggerPy>
 {
 public:
     PythonDebuggerPy(PythonDebugger* d) : dbg(d), depth(0) { }
-    ~PythonDebuggerPy() {}
+    ~PythonDebuggerPy() override {}
     PythonDebugger* dbg;
     int depth;
 };
@@ -352,9 +353,9 @@ struct PythonDebuggerP {
     PythonDebuggerP(PythonDebugger* that) :
         init(false), trystop(false), running(false)
     {
-        out_o = 0;
-        err_o = 0;
-        exc_o = 0;
+        out_o = nullptr;
+        err_o = nullptr;
+        exc_o = nullptr;
         Base::PyGILStateLocker lock;
         out_n = new PythonDebugStdout();
         err_n = new PythonDebugStderr();
@@ -429,25 +430,26 @@ void PythonDebugger::runFile(const QString& fn)
 #else
         FILE *fp = fopen((const char*)pxFileName,"r");
 #endif
-        if (!fp) return;
+        if (!fp)
+            return;
 
         Base::PyGILStateLocker locker;
         PyObject *module, *dict;
         module = PyImport_AddModule("__main__");
         dict = PyModule_GetDict(module);
         dict = PyDict_Copy(dict);
-        if (PyDict_GetItemString(dict, "__file__") == NULL) {
-            PyObject *f = PyUnicode_FromString((const char*)pxFileName);
-            if (f == NULL) {
+        if (!PyDict_GetItemString(dict, "__file__")) {
+            PyObject *pyObj = PyUnicode_FromString((const char*)pxFileName);
+            if (!pyObj) {
                 fclose(fp);
                 return;
             }
-            if (PyDict_SetItemString(dict, "__file__", f) < 0) {
-                Py_DECREF(f);
+            if (PyDict_SetItemString(dict, "__file__", pyObj) < 0) {
+                Py_DECREF(pyObj);
                 fclose(fp);
                 return;
             }
-            Py_DECREF(f);
+            Py_DECREF(pyObj);
         }
 
         PyObject *result = PyRun_File(fp, (const char*)pxFileName, Py_file_input, dict, dict);
@@ -496,7 +498,7 @@ bool PythonDebugger::stop()
     if (!d->init)
         return false;
     Base::PyGILStateLocker lock;
-    PyEval_SetTrace(NULL, NULL);
+    PyEval_SetTrace(nullptr, nullptr);
     PySys_SetObject("stdout", d->out_o);
     PySys_SetObject("stderr", d->err_o);
     PySys_SetObject("excepthook", d->exc_o);
@@ -507,36 +509,36 @@ bool PythonDebugger::stop()
 void PythonDebugger::tryStop()
 {
     d->trystop = true;
-    signalNextStep();
+    Q_EMIT signalNextStep();
 }
 
 void PythonDebugger::stepOver()
 {
-    signalNextStep();
+    Q_EMIT signalNextStep();
 }
 
 void PythonDebugger::stepInto()
 {
-    signalNextStep();
+    Q_EMIT signalNextStep();
 }
 
 void PythonDebugger::stepRun()
 {
-    signalNextStep();
+    Q_EMIT signalNextStep();
 }
 
 void PythonDebugger::showDebugMarker(const QString& fn, int line)
 {
-    PythonEditorView* edit = 0;
+    PythonEditorView* edit = nullptr;
     QList<QWidget*> mdis = getMainWindow()->windows();
-    for (QList<QWidget*>::iterator it = mdis.begin(); it != mdis.end(); ++it) {
-        edit = qobject_cast<PythonEditorView*>(*it);
+    for (const auto & mdi : mdis) {
+        edit = qobject_cast<PythonEditorView*>(mdi);
         if (edit && edit->fileName() == fn)
             break;
     }
 
     if (!edit) {
-        PythonEditor* editor = new PythonEditor();
+        auto editor = new PythonEditor();
         editor->setWindowIcon(Gui::BitmapFactory().iconFromTheme("applications-python"));
         edit = new PythonEditorView(editor, getMainWindow());
         edit->open(fn);
@@ -550,10 +552,10 @@ void PythonDebugger::showDebugMarker(const QString& fn, int line)
 
 void PythonDebugger::hideDebugMarker(const QString& fn)
 {
-    PythonEditorView* edit = 0;
+    PythonEditorView* edit = nullptr;
     QList<QWidget*> mdis = getMainWindow()->windows();
-    for (QList<QWidget*>::iterator it = mdis.begin(); it != mdis.end(); ++it) {
-        edit = qobject_cast<PythonEditorView*>(*it);
+    for (const auto & mdi : mdis) {
+        edit = qobject_cast<PythonEditorView*>(mdi);
         if (edit && edit->fileName() == fn) {
             edit->hideDebugMarker();
             break;
@@ -575,7 +577,7 @@ static PyCodeObject* PyFrame_GetCode(PyFrameObject *frame)
 // http://stuff.mit.edu/afs/sipb/project/python/src/python2.2-2.2.2/Modules/_hotshot.c
 int PythonDebugger::tracer_callback(PyObject *obj, PyFrameObject *frame, int what, PyObject * /*arg*/)
 {
-    PythonDebuggerPy* self = static_cast<PythonDebuggerPy*>(obj);
+    auto self = static_cast<PythonDebuggerPy*>(obj);
     PythonDebugger* dbg = self->dbg;
     if (dbg->d->trystop)
         PyErr_SetInterrupt();

@@ -20,19 +20,18 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
-#include <climits>
+
 #include <zlib.h>
 
 #include "DlgSettingsDocumentImp.h"
 #include "ui_DlgSettingsDocument.h"
-#include "PrefWidgets.h"
 #include "AutoSaver.h"
 #include "FileDialog.h"
 #include <App/DocumentParams.h>
 
 using namespace App;
+
 using namespace Gui::Dialog;
 
 /* TRANSLATOR Gui::Dialog::DlgSettingsDocumentImp */
@@ -60,7 +59,7 @@ DlgSettingsDocumentImp::DlgSettingsDocumentImp( QWidget* parent )
     ui->prefCompression->setMaximum(Z_BEST_COMPRESSION);
     connect( ui->prefLicenseType, SIGNAL(currentIndexChanged(int)), this, SLOT(onLicenseTypeChanged(int)) );
 
-    ui->prefNoNativeDialog->setChecked(FileDialog::dontUseNativeDialog(false));
+    ui->prefNoNativeDialog->setChecked(DialogOptions::dontUseNativeFileDialog(false));
 }
 
 /**

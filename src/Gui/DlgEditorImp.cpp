@@ -23,15 +23,14 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <QComboBox>
 # include <QFontDatabase>
-# include <QHeaderView>
 #endif
 
 #include "DlgEditorImp.h"
 #include "ui_DlgEditor.h"
-#include "PrefWidgets.h"
 #include "PythonEditor.h"
+#include "Tools.h"
+
 
 using namespace Gui;
 using namespace Gui::Dialog;
@@ -44,6 +43,33 @@ struct DlgSettingsEditorP
 };
 } // namespace Dialog
 } // namespace Gui
+
+namespace
+{
+
+/**
+ * Get some kind of font that is monospaced, suitable for coding.
+ *
+ * Based on 
+ * https://stackoverflow.com/questions/18896933/qt-qfont-selection-of-a-monospace-font-doesnt-work
+ */
+QFont getMonospaceFont()
+{
+    QFont font(QStringLiteral("monospace"));
+    if (font.fixedPitch())
+        return font;
+    font.setStyleHint(QFont::Monospace);
+    if (font.fixedPitch())
+        return font;
+    font.setStyleHint(QFont::TypeWriter);
+    if (font.fixedPitch())
+        return font;
+    font.setFamily(QStringLiteral("courier"));
+    if (font.fixedPitch())
+        return font;
+    return font; // We failed, but return whatever we have anyway
+}
+}
 
 /* TRANSLATOR Gui::Dialog::DlgSettingsEditorImp */
 
@@ -69,7 +95,7 @@ DlgSettingsEditorImp::DlgSettingsEditorImp( QWidget* parent )
 
     d = new DlgSettingsEditorP();
     QColor col;
-    col = Qt::black;
+    col = qApp->palette().windowText().color();
     unsigned int lText = (col.red() << 24) | (col.green() << 16) | (col.blue() << 8);
     d->colormap.push_back(QPair<QString, unsigned int>
         (QStringLiteral(QT_TR_NOOP("Text")), lText));
@@ -137,8 +163,8 @@ DlgSettingsEditorImp::DlgSettingsEditorImp( QWidget* parent )
     QStringList labels; labels << tr("Items");
     ui->displayItems->setHeaderLabels(labels);
     ui->displayItems->header()->hide();
-    for (QVector<QPair<QString, unsigned int> >::ConstIterator it = d->colormap.begin(); it != d->colormap.end(); ++it) {
-        QTreeWidgetItem* item = new QTreeWidgetItem(ui->displayItems);
+    for (QVector<QPair<QString, unsigned int> >::Iterator it = d->colormap.begin(); it != d->colormap.end(); ++it) {
+        auto item = new QTreeWidgetItem(ui->displayItems);
         item->setText(0, tr((*it).first.toUtf8()));
     }
     pythonSyntax = new PythonSyntaxHighlighter(ui->textEdit1);
@@ -181,9 +207,21 @@ void DlgSettingsEditorImp::on_colorButton_changed()
         ui->textEdit1->setStyleSheet(QString());
 }
 
+void DlgSettingsEditorImp::setEditorTabWidth(int tabWidth)
+{
+    QFontMetrics metric(font());
+    int fontSize = QtTools::horizontalAdvance(metric, QLatin1Char('0'));
+#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
+    ui->textEdit1->setTabStopWidth(tabWidth * fontSize);
+#else
+    ui->textEdit1->setTabStopDistance(tabWidth * fontSize);
+#endif
+}
+
 void DlgSettingsEditorImp::saveSettings()
 {
     ui->EnableLineNumber->onSave();
+    ui->EnableBlockCursor->onSave();
     ui->EnableFolding->onSave();
     ui->tabSize->onSave();
     ui->indentSize->onSave();
@@ -192,23 +230,28 @@ void DlgSettingsEditorImp::saveSettings()
 
     // Saves the color map
     ParameterGrp::handle hGrp = WindowParameter::getDefaultParameter()->GetGroup("Editor");
-    for (QVector<QPair<QString, unsigned int> >::ConstIterator it = d->colormap.begin(); it != d->colormap.end(); ++it) {
-        unsigned long col = static_cast<unsigned long>((*it).second);
+    for (QVector<QPair<QString, unsigned int> >::ConstIterator it = d->colormap.cbegin(); it != d->colormap.cend(); ++it) {
+        auto col = static_cast<unsigned long>((*it).second);
         hGrp->SetUnsigned((*it).first.toUtf8(), col);
     }
 
     hGrp->SetInt( "FontSize", ui->fontSize->value() );
     hGrp->SetASCII( "Font", ui->fontFamily->currentText().toUtf8() );
+
+    setEditorTabWidth(ui->tabSize->value());
 }
 
 void DlgSettingsEditorImp::loadSettings()
 {
     ui->EnableLineNumber->onRestore();
+    ui->EnableBlockCursor->onRestore();
     ui->EnableFolding->onRestore();
     ui->tabSize->onRestore();
     ui->indentSize->onRestore();
     ui->radioTabs->onRestore();
     ui->radioSpaces->onRestore();
+
+    setEditorTabWidth(ui->tabSize->value());
 
     ui->textEdit1->setPlainText(QStringLiteral(
         "# Short Python sample\n"
@@ -226,7 +269,7 @@ void DlgSettingsEditorImp::loadSettings()
     ParameterGrp::handle hGrp = WindowParameter::getDefaultParameter()->GetGroup("Editor");
     QColor background = Qt::black;
     for (QVector<QPair<QString, unsigned int> >::Iterator it = d->colormap.begin(); it != d->colormap.end(); ++it){
-        unsigned long col = static_cast<unsigned long>((*it).second);
+        auto col = static_cast<unsigned long>((*it).second);
         col = hGrp->GetUnsigned((*it).first.toUtf8(), col);
         (*it).second = static_cast<unsigned int>(col);
         QColor color;
@@ -246,18 +289,34 @@ void DlgSettingsEditorImp::loadSettings()
     // fill up font styles
     //
     ui->fontSize->setValue(10);
-    ui->fontSize->setValue( hGrp->GetInt("FontSize", ui->fontSize->value()) );
+    ui->fontSize->setValue(hGrp->GetInt("FontSize", ui->fontSize->value()));
 
-    QByteArray fontName = this->font().family().toUtf8();
+    QByteArray defaultMonospaceFont = getMonospaceFont().family().toUtf8();
 
-    QFontDatabase fdb;
-    QStringList familyNames = fdb.families( QFontDatabase::Any );
-    ui->fontFamily->addItems(familyNames);
-    int index = familyNames.indexOf(QString::fromUtf8(hGrp->GetASCII("Font", fontName).c_str()));
-    if (index < 0) index = 0;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QStringList familyNames = QFontDatabase().families(QFontDatabase::Any);
+    QStringList fixedFamilyNames;
+    for (const auto &name : familyNames) {
+        if (QFontDatabase().isFixedPitch(name)) {
+            fixedFamilyNames.append(name);
+        }
+    }
+#else
+    QStringList familyNames = QFontDatabase::families(QFontDatabase::Any);
+    QStringList fixedFamilyNames;
+    for (const auto &name : familyNames) {
+        if (QFontDatabase::isFixedPitch(name)) {
+            fixedFamilyNames.append(name);
+        }
+    }
+#endif
+    ui->fontFamily->addItems(fixedFamilyNames);
+    int index = fixedFamilyNames.indexOf(
+        QString::fromUtf8(hGrp->GetASCII("Font", defaultMonospaceFont).c_str()));
+    if (index < 0)
+        index = 0;
     ui->fontFamily->setCurrentIndex(index);
     on_fontFamily_activated(ui->fontFamily->currentText());
-
     ui->displayItems->setCurrentItem(ui->displayItems->topLevelItem(0));
 }
 
@@ -268,7 +327,7 @@ void DlgSettingsEditorImp::changeEvent(QEvent *e)
 {
     if (e->type() == QEvent::LanguageChange) {
         int index = 0;
-        for (QVector<QPair<QString, unsigned int> >::ConstIterator it = d->colormap.begin(); it != d->colormap.end(); ++it)
+        for (QVector<QPair<QString, unsigned int> >::ConstIterator it = d->colormap.cbegin(); it != d->colormap.cend(); ++it)
             ui->displayItems->topLevelItem(index++)->setText(0, tr((*it).first.toUtf8()));
         ui->retranslateUi(this);
     } else {

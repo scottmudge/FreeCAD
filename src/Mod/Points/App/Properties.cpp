@@ -20,30 +20,28 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <algorithm>
 # include <cmath>
 # include <iostream>
-# include <algorithm>
+# include <QtConcurrentMap>
 #endif
 
 #include <Base/Converter.h>
-#include <Base/Exception.h>
 #include <Base/Matrix.h>
 #include <Base/Persistence.h>
 #include <Base/Stream.h>
-#include <Base/Writer.h>
 #include <Base/VectorPy.h>
+#include <Base/Writer.h>
 
-#include "Points.h"
 #include "Properties.h"
-#include "PointsPy.h"
+#include "Points.h"
 
-#include <QtConcurrentMap>
 #ifdef _MSC_VER
 # include <ppl.h>
 #endif
+
 
 using namespace Points;
 using namespace std;
@@ -266,7 +264,7 @@ void PropertyCurvatureList::removeIndices( const std::vector<unsigned long>& uIn
     setValues(std::move(remainValue));
 }
 
-PyObject *PropertyCurvatureList::getPyObject(void)
+PyObject *PropertyCurvatureList::getPyObject()
 {
     throw Base::NotImplementedError("Not yet implemented");
 }
@@ -331,7 +329,7 @@ void PropertyCurvatureList::restoreStream(Base::InputStream &str, unsigned uCt)
     setValues(std::move(values));
 }
 
-App::Property *PropertyCurvatureList::Copy(void) const 
+App::Property *PropertyCurvatureList::Copy() const
 {
     PropertyCurvatureList* prop = new PropertyCurvatureList();
     prop->_lValueList = this->_lValueList;

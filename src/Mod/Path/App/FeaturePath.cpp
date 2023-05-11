@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #include <Inventor/nodes/SoQuadMesh.h>
 
@@ -58,7 +57,7 @@ Feature::~Feature()
 {
 }
 
-short Feature::mustExecute(void) const
+short Feature::mustExecute() const
 {
     return inherited::mustExecute();
 }
@@ -254,7 +253,7 @@ Part::TopoShape shapeFromPath(const Toolpath &toolPath,
 namespace App {
 /// @cond DOXERR
 PROPERTY_SOURCE_TEMPLATE(Path::FeaturePython, Path::Feature)
-template<> const char* Path::FeaturePython::getViewProviderName(void) const {
+template<> const char* Path::FeaturePython::getViewProviderName() const {
     return "PathGui::ViewProviderPathPython";
 }
 /// @endcond

@@ -36,11 +36,11 @@
 #include <Gui/Command.h>
 #include <Gui/Application.h>
 
-#include "TaskDatumParameters.h"
-#include "ViewProviderBody.h"
-#include "Utils.h"
-
 #include "ViewProviderDatum.h"
+#include "TaskDatumParameters.h"
+#include "Utils.h"
+#include "ViewProviderBody.h"
+
 
 using namespace PartDesignGui;
 
@@ -61,6 +61,8 @@ void ViewProviderDatum::setupContextMenu(QMenu* menu, QObject* receiver, const c
     QAction* act;
     act = menu->addAction(QObject::tr("Edit datum"), receiver, member);
     act->setData(QVariant((int)ViewProvider::Default));
+    // Call the extensions
+    Gui::ViewProvider::setupContextMenu(menu, receiver, member);
 }
 
 bool ViewProviderDatum::setEdit(int ModNum)
@@ -75,7 +77,7 @@ bool ViewProviderDatum::setEdit(int ModNum)
         Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
         TaskDlgDatumParameters *datumDlg = qobject_cast<TaskDlgDatumParameters *>(dlg);
         if (datumDlg && datumDlg->getViewProvider() != this)
-            datumDlg = 0; // another datum feature left open its task panel
+            datumDlg = nullptr; // another datum feature left open its task panel
         if (dlg && !datumDlg && !dlg->tryClose())
             return false;
 
@@ -97,7 +99,7 @@ bool ViewProviderDatum::setEdit(int ModNum)
     }
 }
 
-bool ViewProviderDatum::doubleClicked(void)
+bool ViewProviderDatum::doubleClicked()
 {
     return getDocument()->setEdit(this, ViewProvider::Default);
 }

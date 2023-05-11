@@ -33,6 +33,8 @@
 #ifndef BASE_BASE64_H
 #define BASE_BASE64_H
 
+#include <FCGlobal.h>
+
 #include <string>
 #include <memory>
 #include <vector>

@@ -23,25 +23,22 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <BRep_Tool.hxx>
+# include <sstream>
+
 # include <BRepMesh_IncrementalMesh.hxx>
-# include <GeomAPI_ProjectPointOnSurf.hxx>
-# include <GeomLProp_SLProps.hxx>
-# include <Poly_Triangulation.hxx>
 # include <TopExp_Explorer.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Face.hxx>
-# include <sstream>
 #endif
 
-#include <Base/Console.h>
-#include <Base/Exception.h>
-#include <Base/Sequencer.h>
 #include <App/ComplexGeoData.h>
-
+#include <Base/Console.h>
+#include <Base/Sequencer.h>
+#include <Base/Stream.h>
+#include <Mod/Part/App/Tools.h>
 
 #include "PovTools.h"
-#include <Mod/Part/App/Tools.h>
+
 
 using Base::Console;
 
@@ -316,7 +313,8 @@ void PovTools::writeShapeCSV(const char *FileName,
     BRepMesh_IncrementalMesh MESH(Shape,fMeshDeviation);
 
     // open the file and write
-    std::ofstream fout(FileName);
+    Base::FileInfo fi(FileName);
+    Base::ofstream fout(fi);
 
     // counting faces and start sequencer
     int l = 1;

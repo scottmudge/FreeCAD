@@ -25,16 +25,13 @@
 #define GUI_TASKVIEW_TaskPrimitiveParameters_H
 
 #include <memory>
-#include <Gui/TaskView/TaskView.h>
-#include <Gui/Selection.h>
 #include <Gui/DocumentObserver.h>
 #include <Gui/TaskView/TaskDialog.h>
+#include <Gui/TaskView/TaskView.h>
+#include <Mod/Part/Gui/TaskAttacher.h>
 
-#include "TaskSketchBasedParameters.h"
 #include "ViewProviderPrimitive.h"
-#include "TaskDatumParameters.h"
-#include <Mod/PartDesign/App/DatumCS.h>
-#include <Mod/PartDesign/App/FeaturePrimitive.h>
+#include "TaskFeatureParameters.h"
 
 class QCheckBox;
 
@@ -46,15 +43,15 @@ namespace Gui {
 class ViewProvider;
 }
 
-namespace PartDesignGui { 
+namespace PartDesignGui {
 class Ui_DlgPrimitives;
 class TaskBoxPrimitives : public TaskFeatureParameters
 {
     Q_OBJECT
 
 public:
-    TaskBoxPrimitives(ViewProviderPrimitive* vp, QWidget* parent = 0);
-    ~TaskBoxPrimitives();
+    explicit TaskBoxPrimitives(ViewProviderPrimitive* vp, QWidget* parent = nullptr);
+    ~TaskBoxPrimitives() override;
 
     bool setPrimitive(App::DocumentObject *);
 
@@ -103,7 +100,7 @@ public Q_SLOTS:
     void onWedgeZ2minChanged(double);
 
 private:
-    virtual void refresh();
+    void refresh() override;
 
 private:
     QWidget* proxy;
@@ -115,11 +112,11 @@ class TaskPrimitiveParameters :  public TaskDlgFeatureParameters
     Q_OBJECT
 
 public:
-    TaskPrimitiveParameters(ViewProviderPrimitive *PrimitiveView);
-    ~TaskPrimitiveParameters();
+    explicit TaskPrimitiveParameters(ViewProviderPrimitive *PrimitiveView);
+    ~TaskPrimitiveParameters() override;
 
 protected:
-    virtual QDialogButtonBox::StandardButtons getStandardButtons(void) const;
+    QDialogButtonBox::StandardButtons getStandardButtons() const override;
 
 private:
     TaskBoxPrimitives*     primitive;

@@ -33,17 +33,19 @@
 #include <Base/UnitsApi.h>
 #include <App/Application.h>
 #include <App/Document.h>
+#include <App/Expression.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
 #include <Gui/WaitCursor.h>
 #include <Base/Console.h>
 #include <Base/Tools.h>
 #include <Gui/Selection.h>
-#include <Gui/Command.h>
+#include <Gui/ViewProvider.h>
 #include <Mod/PartDesign/App/FeatureFillet.h>
-#include <Mod/Sketcher/App/SketchObject.h>
+
+#include "ui_TaskFilletParameters.h"
+#include "TaskFilletParameters.h"
 
 
 using namespace PartDesignGui;
@@ -108,6 +110,8 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
     this->groupLayout()->addWidget(proxy);
 
     PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
+    bool useAllEdges = pcFillet->UseAllEdges.getValue();
+    ui->checkBoxUseAllEdges->setChecked(useAllEdges);
 
     ui->filletRadius->setUnit(Base::Unit::Length);
     ui->filletRadius->setMinimum(0);
@@ -154,6 +158,9 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
             hParam->SetUnsigned(key.c_str(), newSize);
         });
       
+    createAddAllEdgesAction(ui->treeWidgetReferences);
+    connect(addAllEdgesAction, &QAction::triggered, this, &TaskFilletParameters::onAddAllEdges);
+
     refresh();
 }
 
@@ -356,6 +363,26 @@ void TaskFilletParameters::newSegment(int editColumn)
     if (editColumn)
         ui->treeWidgetReferences->editItem(item, editColumn);
     updateSegments(parent ? parent : current);
+}
+
+void TaskFilletParameters::onCheckBoxUseAllEdgesToggled(bool checked)
+{
+    ui->buttonRefAdd->setEnabled(!checked);
+    ui->treeWidgetReferences->setEnabled(!checked);
+    try {
+        setupTransaction();
+        auto pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
+        pcFillet->UseAllEdges.setValue(checked);
+        recompute();
+    }
+    catch (Base::Exception &e) {
+        e.ReportException();
+    }
+}
+
+void TaskFilletParameters::onAddAllEdges()
+{
+    TaskDressUpParameters::addAllEdges();
 }
 
 void TaskFilletParameters::onLengthChanged(double len)

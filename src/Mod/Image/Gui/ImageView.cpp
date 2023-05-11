@@ -17,30 +17,34 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <cmath>
+
 # include <QAction>
 # include <QApplication>
 # include <QMenu>
 # include <QMouseEvent>
-# include <QSlider>
 # include <QStatusBar>
 # include <QToolBar>
-# include <cmath>
 #endif
 
+#include <App/Application.h>
+#include <Base/Parameter.h>
+
 #include "ImageView.h"
-#include "../App/ImageBase.h"
 #include "XpmImages.h"
+
 
 using namespace ImageGui;
 
 
 /* TRANSLATOR ImageGui::ImageView */
 
+TYPESYSTEM_SOURCE_ABSTRACT(ImageGui::ImageView, Gui::MDIView)
+
 ImageView::ImageView(QWidget* parent)
-  : MDIView(0, parent), _ignoreCloseEvent(false)
+  : MDIView(nullptr, parent), _ignoreCloseEvent(false)
 {
-  // Create an OpenGL widget for displaying images
-#if QT_VERSION >=0x050000
+    // Create an OpenGL widget for displaying images
     // Since Qt5 there is a weird behaviour when creating a GLImageBox.
     // It works correctly for the first time when creating an image view
     // but only when no 3d view is created. For the second time or if a
@@ -64,21 +68,14 @@ ImageView::ImageView(QWidget* parent)
     // Since Qt5 the class QGLWidget is marked as deprecated and should be
     // replaced by QOpenGLWidget.
 
-#if defined(HAVE_QT5_OPENGL)
   _pGLImageBox = new GLImageBox(this);
-#else
-  _pGLImageBox = new GLImageBox(parent);
-#endif // HAVE_QT5_OPENGL
-#else
-  _pGLImageBox = new GLImageBox(this);
-#endif
   setCentralWidget(_pGLImageBox);
 
   // enable mouse tracking when moving even if no buttons are pressed
   setMouseTracking(true);
 
   // enable the mouse events
-  _mouseEventsEnabled = true; 
+  _mouseEventsEnabled = true;
 
   // Create the default status bar for displaying messages
   enableStatusBar(true);
@@ -138,7 +135,7 @@ QSize ImageView::minimumSizeHint () const
 // Enable or disable the status bar
 void ImageView::enableStatusBar(bool Enable)
 {
-  if (Enable == true)
+  if (Enable)
   {
     // Create the default status bar for displaying messages and disable the gripper
     _statusBarEnabled = true;
@@ -207,7 +204,7 @@ void ImageView::showOriginalColors()
 // Create a color map
 // (All red entries come first, then green, then blue, then alpha)
 // returns 0 for OK, -1 for memory allocation error
-// numRequestedEntries ... requested number of map entries (used if not greater than system maximum or 
+// numRequestedEntries ... requested number of map entries (used if not greater than system maximum or
 //                         if not greater than the maximum number of intensity values in the current image).
 //                         Pass zero to use the maximum possible. Always check the actual number of entries
 //                         created using getNumColorMapEntries() after a call to this method.
@@ -332,11 +329,11 @@ int ImageView::pointImageTo(void* pSrcPixelData, unsigned long width, unsigned l
 // called when user presses X
 void ImageView::closeEvent(QCloseEvent *e)
 {
-    if (_ignoreCloseEvent == true)
+    if (_ignoreCloseEvent)
     {
         // ignore the close event
         e->ignore();
-        closeEventIgnored();	// and emit a signal that we ignored it
+        Q_EMIT closeEventIgnored();	// and emit a signal that we ignored it
     }
     else
     {
@@ -347,7 +344,7 @@ void ImageView::closeEvent(QCloseEvent *e)
 // Mouse press event
 void ImageView::mousePressEvent(QMouseEvent* cEvent)
 {
-   if (_mouseEventsEnabled == true)
+   if (_mouseEventsEnabled)
    {
       // Mouse event coordinates are relative to top-left of image view (including toolbar!)
       // Get current cursor position relative to top-left of image box
@@ -383,7 +380,7 @@ void ImageView::mousePressEvent(QMouseEvent* cEvent)
 
 void ImageView::mouseDoubleClickEvent(QMouseEvent* cEvent)
 {
-   if (_mouseEventsEnabled == true)
+   if (_mouseEventsEnabled)
    {
        // Mouse event coordinates are relative to top-left of image view (including toolbar!)
        // Get current cursor position relative to top-left of image box
@@ -417,7 +414,7 @@ void ImageView::mouseMoveEvent(QMouseEvent* cEvent)
    QPoint offset = _pGLImageBox->pos();
    int box_x = cEvent->x() - offset.x();
    int box_y = cEvent->y() - offset.y();
-   if (_mouseEventsEnabled == true)
+   if (_mouseEventsEnabled)
    {
        switch(_currMode)
        {
@@ -443,7 +440,7 @@ void ImageView::mouseMoveEvent(QMouseEvent* cEvent)
 // Mouse release event
 void ImageView::mouseReleaseEvent(QMouseEvent* cEvent)
 {
-   if (_mouseEventsEnabled == true)
+   if (_mouseEventsEnabled)
    {
        // Mouse event coordinates are relative to top-left of image view (including toolbar!)
        // Get current cursor position relative to top-left of image box
@@ -471,7 +468,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent* cEvent)
 // Mouse wheel event
 void ImageView::wheelEvent(QWheelEvent * cEvent)
 {
-   if (_mouseEventsEnabled == true)
+   if (_mouseEventsEnabled)
    {
        // Mouse event coordinates are relative to top-left of image view (including toolbar!)
        // Get current cursor position relative to top-left of image box
@@ -486,11 +483,7 @@ void ImageView::wheelEvent(QWheelEvent * cEvent)
 #endif
 
        // Zoom around centrally displayed image point
-#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
        int numTicks = cEvent->angleDelta().y() / 120;
-#else
-       int numTicks = cEvent->delta() / 120;
-#endif
        if (_invertZoom)
            numTicks = -numTicks;
 
@@ -514,7 +507,7 @@ void ImageView::showEvent (QShowEvent *)
 // Update the status bar with the image parameters for the current mouse position
 void ImageView::updateStatusBar()
 {
-    if (_statusBarEnabled == true)
+    if (_statusBarEnabled)
     {
         // Create the text string to display in the status bar
         QString txt = createStatusBarText();
@@ -540,8 +533,8 @@ QString ImageView::createStatusBarText()
 
    // Create text for status bar
     QString txt;
-    if ((colorFormat == IB_CF_GREY8) || 
-        (colorFormat == IB_CF_GREY16) || 
+    if ((colorFormat == IB_CF_GREY8) ||
+        (colorFormat == IB_CF_GREY16) ||
         (colorFormat == IB_CF_GREY32))
     {
         double grey_value;
@@ -554,7 +547,7 @@ QString ImageView::createStatusBarText()
             txt = QStringLiteral("x,y = %1  |  %2 = %3")
                   .arg(tr("outside image"), tr("zoom")).arg(zoomFactor,0,'f',1);
     }
-    else if ((colorFormat == IB_CF_RGB24) || 
+    else if ((colorFormat == IB_CF_RGB24) ||
              (colorFormat == IB_CF_RGB48))
     {
         double red, green, blue;
@@ -569,7 +562,7 @@ QString ImageView::createStatusBarText()
                   .arg((int)red).arg((int)green).arg((int)blue)
                   .arg(tr("zoom")).arg(zoomFactor,0,'f',1);
     }
-    else if ((colorFormat == IB_CF_BGR24) || 
+    else if ((colorFormat == IB_CF_BGR24) ||
              (colorFormat == IB_CF_BGR48))
     {
         double red, green, blue;
@@ -584,7 +577,7 @@ QString ImageView::createStatusBarText()
                   .arg((int)red).arg((int)green).arg((int)blue)
                   .arg(tr("zoom")).arg(zoomFactor,0,'f',1);
     }
-    else if ((colorFormat == IB_CF_RGBA32) || 
+    else if ((colorFormat == IB_CF_RGBA32) ||
              (colorFormat == IB_CF_RGBA64))
     {
         double red, green, blue, alpha;
@@ -600,7 +593,7 @@ QString ImageView::createStatusBarText()
                   .arg((int)red).arg((int)green).arg((int)blue).arg((int)alpha)
                   .arg(tr("zoom")).arg(zoomFactor,0,'f',1);
     }
-    else if ((colorFormat == IB_CF_BGRA32) || 
+    else if ((colorFormat == IB_CF_BGRA32) ||
              (colorFormat == IB_CF_BGRA64))
     {
         double red, green, blue, alpha;
@@ -670,7 +663,7 @@ void ImageView::addSelect(int currX, int currY)
 }
 
 // Draw any 2D graphics necessary
-// Use GLImageBox::ICToWC_X and ICToWC_Y methods to transform image coordinates into widget coordinates (which 
+// Use GLImageBox::ICToWC_X and ICToWC_Y methods to transform image coordinates into widget coordinates (which
 // must be used by the OpenGL vertex commands).
 void ImageView::drawGraphics()
 {

@@ -143,48 +143,8 @@ structuralifcobjects = (
     "IfcStructuralPlanarAction"
 )
 
-
-def getPreferences():
-    """Retrieve the IFC preferences available in import and export.
-
-    MERGE_MODE_ARCH:
-        0 = parametric arch objects
-        1 = non-parametric arch objects
-        2 = Part shapes
-        3 = One compound per storey
-    """
-    p = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Arch")
-
-    if FreeCAD.GuiUp and p.GetBool("ifcShowDialog", False):
-        Gui.showPreferences("Import-Export", 0)
-
-    preferences = {
-        'DEBUG': p.GetBool("ifcDebug", False),
-        'PREFIX_NUMBERS': p.GetBool("ifcPrefixNumbers", False),
-        'SKIP': p.GetString("ifcSkip", "").split(","),
-        'SEPARATE_OPENINGS': p.GetBool("ifcSeparateOpenings", False),
-        'ROOT_ELEMENT': p.GetString("ifcRootElement", "IfcProduct"),
-        'GET_EXTRUSIONS': p.GetBool("ifcGetExtrusions", False),
-        'MERGE_MATERIALS': p.GetBool("ifcMergeMaterials", False),
-        'MERGE_MODE_ARCH': p.GetInt("ifcImportModeArch", 0),
-        'MERGE_MODE_STRUCT': p.GetInt("ifcImportModeStruct", 1),
-        'CREATE_CLONES': p.GetBool("ifcCreateClones", True),
-        'IMPORT_PROPERTIES': p.GetBool("ifcImportProperties", False),
-        'SPLIT_LAYERS': p.GetBool("ifcSplitLayers", False),  # wall layer, not layer for visual props
-        'FITVIEW_ONIMPORT': p.GetBool("ifcFitViewOnImport", False),
-        'ALLOW_INVALID': p.GetBool("ifcAllowInvalid", False),
-        'REPLACE_PROJECT': p.GetBool("ifcReplaceProject", False),
-        'MULTICORE': p.GetInt("ifcMulticore", 0),
-        'IMPORT_LAYER': p.GetBool("ifcImportLayer", True)
-    }
-
-    if preferences['MERGE_MODE_ARCH'] > 0:
-        preferences['SEPARATE_OPENINGS'] = False
-        preferences['GET_EXTRUSIONS'] = False
-    if not preferences['SEPARATE_OPENINGS']:
-        preferences['SKIP'].append("IfcOpeningElement")
-
-    return preferences
+# backwards compatibility
+getPreferences = importIFCHelper.getPreferences
 
 
 def export(exportList, filename, colors=None, preferences=None):
@@ -206,7 +166,6 @@ def open(filename, skip=[], only=[], root=None):
     Most of the work is done in the `insert` function.
     """
     docname = os.path.splitext(os.path.basename(filename))[0]
-    docname = importIFCHelper.decode(docname, utf=True)
     doc = FreeCAD.newDocument(docname)
     doc.Label = docname
     doc = insert(filename, doc.Name, skip, only, root)
@@ -255,9 +214,15 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
     starttime = time.time()  # in seconds
 
     if preferences is None:
-        preferences = getPreferences()
+        preferences = importIFCHelper.getPreferences()
 
     if preferences["MULTICORE"] and not hasattr(srcfile, "by_guid"):
+        # override with BIM IFC importer if present
+        try:
+            import BimIfcImport
+            return BimIfcImport.insert(srcfile, docname, preferences)
+        except:
+            pass
         return importIFCmulticore.insert(srcfile, docname, preferences)
 
     try:
@@ -285,7 +250,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
     else:
         if preferences['DEBUG']:
             _msg("Opening '{}'... ".format(srcfile), end="")
-        filename = importIFCHelper.decode(srcfile, utf=True)
+        filename = srcfile
         filesize = os.path.getsize(filename) * 1E-6  # in megabytes
         ifcfile = ifcopenshell.open(filename)
 
@@ -431,8 +396,6 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
         name = str(ptype[3:])
         if product.Name:
             name = product.Name
-            if six.PY2:
-                name = name.encode("utf8")
         if preferences['PREFIX_NUMBERS']:
             name = "ID" + str(pid) + " " + name
         obj = None
@@ -708,6 +671,10 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
                         obj.Height = 0
                         obj.Width = 0
                         obj.Length = 0
+                    if (freecadtype in ["Rebar"]) and baseobj:
+                        # TODO rebars don't keep link to their baee object - we can remove it
+                        bn = baseobj.Name
+                        doc.removeObject(bn)
                     if store:
                         sharedobjects[store] = obj
 
@@ -867,9 +834,6 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
                             if l.is_a("IfcPropertySingleValue"):
                                 if preferences['DEBUG']:
                                     print("property name",l.Name,type(l.Name))
-                                if six.PY2:
-                                    catname = catname.encode("utf8")
-                                    lname = lname.encode("utf8")
                                 ifc_spreadsheet.set(str('A'+str(n)), catname)
                                 ifc_spreadsheet.set(str('B'+str(n)), lname)
                                 if l.NominalValue:
@@ -879,10 +843,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
                                         # print("l.NominalValue.Unit",l.NominalValue.Unit,type(l.NominalValue.Unit))
                                     ifc_spreadsheet.set(str('C'+str(n)), l.NominalValue.is_a())
                                     if l.NominalValue.is_a() in ['IfcLabel','IfcText','IfcIdentifier','IfcDescriptiveMeasure']:
-                                        if six.PY2:
-                                            ifc_spreadsheet.set(str('D'+str(n)), "'" + str(l.NominalValue.wrappedValue.encode("utf8")))
-                                        else:
-                                            ifc_spreadsheet.set(str('D'+str(n)), "'" + str(l.NominalValue.wrappedValue))
+                                        ifc_spreadsheet.set(str('D'+str(n)), "'" + str(l.NominalValue.wrappedValue))
                                     else:
                                         ifc_spreadsheet.set(str('D'+str(n)), str(l.NominalValue.wrappedValue))
                                     if hasattr(l.NominalValue,'Unit'):
@@ -1046,8 +1007,6 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
             else:
                 if preferences['DEBUG']: print("no group name specified for entity: #", ifcfile[host].id(), ", entity type is used!")
                 grp_name = ifcfile[host].is_a() + "_" + str(ifcfile[host].id())
-            if six.PY2:
-                grp_name = grp_name.encode("utf8")
             grp = doc.addObject("App::DocumentObjectGroup",grp_name)
             grp.Label = grp_name
             objects[host] = grp
@@ -1166,76 +1125,8 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
             continue  # user given id skip list
         if annotation.is_a() in preferences['SKIP']:
             continue  # preferences-set type skip list
-        if annotation.is_a("IfcGrid"):
-            axes = []
-            uvwaxes = ()
-            if annotation.UAxes:
-                uvwaxes = annotation.UAxes
-            if annotation.VAxes:
-                uvwaxes = uvwaxes + annotation.VAxes
-            if annotation.WAxes:
-                uvwaxes = uvwaxes + annotation.WAxes
-            for axis in uvwaxes:
-                if axis.AxisCurve:
-                    sh = importIFCHelper.get2DShape(axis.AxisCurve,ifcscale)
-                    if sh and (len(sh[0].Vertexes) == 2):  # currently only straight axes are supported
-                        sh = sh[0]
-                        l = sh.Length
-                        pl = FreeCAD.Placement()
-                        pl.Base = sh.Vertexes[0].Point
-                        pl.Rotation = FreeCAD.Rotation(FreeCAD.Vector(0,1,0),sh.Vertexes[-1].Point.sub(sh.Vertexes[0].Point))
-                        o = Arch.makeAxis(1,l)
-                        o.Length = l
-                        o.Placement = pl
-                        o.CustomNumber = axis.AxisTag
-                        axes.append(o)
-            if axes:
-                name = "Grid"
-                grid_placement = None
-                if annotation.Name:
-                    name = annotation.Name
-                    if six.PY2:
-                        name = name.encode("utf8")
-                if annotation.ObjectPlacement:
-                    # https://forum.freecadweb.org/viewtopic.php?f=39&t=40027
-                    grid_placement = importIFCHelper.getPlacement(
-                        annotation.ObjectPlacement,
-                        scaling=1
-                    )
-                if preferences['PREFIX_NUMBERS']:
-                    name = "ID" + str(aid) + " " + name
-                anno = Arch.makeAxisSystem(axes,name)
-                if grid_placement:
-                    anno.Placement = grid_placement
-            print(" axis")
-        else:
-            name = "Annotation"
-            if annotation.Name:
-                name = annotation.Name
-                if six.PY2:
-                    name = name.encode("utf8")
-            if "annotation" not in name.lower():
-                name = "Annotation " + name
-            if preferences['PREFIX_NUMBERS']: name = "ID" + str(aid) + " " + name
-            shapes2d = []
-            for rep in annotation.Representation.Representations:
-                if rep.RepresentationIdentifier in ["Annotation","FootPrint","Axis"]:
-                    sh = importIFCHelper.get2DShape(rep,ifcscale)
-                    if sh in doc.Objects:
-                        # dirty hack: get2DShape might return an object directly if non-shape based (texts for ex)
-                        anno = sh
-                    else:
-                        shapes2d.extend(sh)
-            if shapes2d:
-                sh = Part.makeCompound(shapes2d)
-                if preferences['DEBUG']: print(" shape")
-                anno = doc.addObject("Part::Feature",name)
-                anno.Shape = sh
-                p = importIFCHelper.getPlacement(annotation.ObjectPlacement,ifcscale)
-                if p:  # and annotation.is_a("IfcAnnotation"):
-                    anno.Placement = p
-            else:
-                if preferences['DEBUG']: print(" no shape")
+
+        anno = importIFCHelper.createAnnotation(annotation,doc,ifcscale,preferences)
 
         # placing in container if needed
 
@@ -1269,8 +1160,6 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
         name = "Material"
         if material.Name:
             name = material.Name
-            if six.PY2:
-                name = name.encode("utf8")
         # mdict["Name"] = name on duplicate material names in IFC this could result in crash
         # https://forum.freecadweb.org/viewtopic.php?f=23&t=63260
         # thus use "Description"
@@ -1299,7 +1188,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
             for added_mat in added_mats:
                 if (
                     "Description" in added_mat.Material
-                    and "DiffuseColor" in added_mat.Material 
+                    and "DiffuseColor" in added_mat.Material
                     and "DiffuseColor" in mdict  # Description has been set thus it is in mdict
                     and added_mat.Material["Description"] == mdict["Description"]
                     and added_mat.Material["DiffuseColor"] == mdict["DiffuseColor"]

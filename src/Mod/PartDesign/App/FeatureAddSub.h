@@ -24,9 +24,6 @@
 #ifndef PARTDESIGN_FeatureAdditive_H
 #define PARTDESIGN_FeatureAdditive_H
 
-#include <App/PropertyStandard.h>
-#include <Mod/Part/App/PropertyTopoShape.h>
-
 #include "Feature.h"
 
 /// Base class of all additive features in PartDesign
@@ -39,17 +36,17 @@ class PartDesignExport FeatureAddSub : public PartDesign::Feature
 
 public:
     enum Type {
-        Additive    = 0,
-        Subtractive = 1,
-        Intersecting      = 2,
+        Additive        = 0,
+        Subtractive     = 1,
+        Intersecting    = 2,
     };
-    
+
     FeatureAddSub();
 
     Type getAddSubType();
 
-    virtual short mustExecute() const override;
-    virtual void onChanged(const App::Property *) override;
+    short mustExecute() const override;
+    void onChanged(const App::Property *) override;
     virtual void getAddSubShape(std::vector<std::pair<Part::TopoShape, Type> > &shapes);
     TopoShape refineShapeIfActive(const TopoShape&) const;
 
@@ -71,33 +68,33 @@ private:
     int pausedRevision = 0;
 };
 
-typedef App::FeaturePythonT<FeatureAddSub> FeatureAddSubPython;
+using FeatureAddSubPython = App::FeaturePythonT<FeatureAddSub>;
 
 class FeatureAdditivePython : public FeatureAddSubPython
 {
-    PROPERTY_HEADER(PartDesign::FeatureAdditivePython);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::FeatureAdditivePython);
 
 public:
     FeatureAdditivePython();
-    ~FeatureAdditivePython();
+    ~FeatureAdditivePython() override;
 };
 
 class FeatureSubtractivePython : public FeatureAddSubPython
 {
-    PROPERTY_HEADER(PartDesign::FeatureSubtractivePython);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::FeatureSubtractivePython);
 
 public:
     FeatureSubtractivePython();
-    ~FeatureSubtractivePython();
+    ~FeatureSubtractivePython() override;
 };
 
 class FeatureIntersectingPython : public FeatureAddSubPython
 {
-    PROPERTY_HEADER(PartDesign::FeatureIntersectingPython);
+    PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::FeatureIntersectingPython);
 
 public:
     FeatureIntersectingPython();
-    ~FeatureIntersectingPython();
+    ~FeatureIntersectingPython() override;
 };
 
 } //namespace PartDesign

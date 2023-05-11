@@ -27,6 +27,7 @@
 # include <QAction>
 # include <QFontMetrics>
 # include <QKeyEvent>
+# include <QListWidget>
 # include <QMessageBox>
 #endif
 
@@ -35,20 +36,21 @@
 #include "Utils.h"
 #include <App/Application.h>
 #include <App/Document.h>
-#include <Gui/Application.h>
-#include <Gui/Document.h>
-#include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/WaitCursor.h>
+#include <App/Expression.h>
 #include <Base/Console.h>
 #include <Base/Tools.h>
 #include <Base/UnitsApi.h>
+#include <Gui/Application.h>
+#include <Gui/Document.h>
+#include <Gui/BitmapFactory.h>
 #include <Gui/Selection.h>
-#include <Gui/Command.h>
 #include <Gui/Tools.h>
+#include <Gui/ViewProvider.h>
+#include <Gui/WaitCursor.h>
 #include <Mod/PartDesign/App/FeatureChamfer.h>
-#include <Mod/PartDesign/App/Body.h>
-#include <Mod/Sketcher/App/SketchObject.h>
+
+#include "ui_TaskChamferParameters.h"
+#include "TaskChamferParameters.h"
 
 
 using namespace PartDesignGui;
@@ -155,6 +157,11 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
     PartDesign::Chamfer* pcChamfer = static_cast<PartDesign::Chamfer*>(DressUpView->getObject());
 
     setUpUI(pcChamfer);
+
+    bool useAllEdges = pcChamfer->UseAllEdges.getValue();
+    ui->checkBoxUseAllEdges->setChecked(useAllEdges);
+    ui->buttonRefAdd->setEnabled(!useAllEdges);
+    ui->treeWidgetReferences->setEnabled(!useAllEdges);
     QMetaObject::invokeMethod(ui->chamferSize, "setFocus", Qt::QueuedConnection);
 
     QMetaObject::connectSlotsByName(this);
@@ -195,6 +202,12 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
         });
 
     refresh();
+
+    connect(ui->checkBoxUseAllEdges, SIGNAL(toggled(bool)),
+            this, SLOT(onCheckBoxUseAllEdgesToggled(bool)));
+
+    createAddAllEdgesAction(ui->treeWidgetReferences);
+    connect(addAllEdgesAction, &QAction::triggered, this, &TaskChamferParameters::onAddAllEdges);
 }
 
 void TaskChamferParameters::setUpUI(PartDesign::Chamfer* pcChamfer)
@@ -234,6 +247,7 @@ void TaskChamferParameters::setUpUI(PartDesign::Chamfer* pcChamfer)
     ui->sizeLabel->setMinimumWidth(minWidth);
     ui->size2Label->setMinimumWidth(minWidth);
     ui->angleLabel->setMinimumWidth(minWidth);
+
 }
 
 void TaskChamferParameters::setBinding(Gui::ExpressionBinding *binding,
@@ -297,6 +311,15 @@ void TaskChamferParameters::refresh()
             setItem(item, info);
         }
     }
+}
+
+void TaskChamferParameters::onCheckBoxUseAllEdgesToggled(bool checked)
+{
+    PartDesign::Chamfer* pcChamfer = static_cast<PartDesign::Chamfer*>(DressUpView->getObject());
+    ui->buttonRefAdd->setEnabled(!checked);
+    ui->treeWidgetReferences->setEnabled(!checked);
+    pcChamfer->UseAllEdges.setValue(checked);
+    pcChamfer->getDocument()->recomputeFeature(pcChamfer);
 }
 
 void TaskChamferParameters::onNewItem(QTreeWidgetItem *item)
@@ -415,6 +438,12 @@ void TaskChamferParameters::setItem(QTreeWidgetItem *item, const Part::TopoShape
         ui->treeWidgetReferences->openPersistentEditor(item, 4);
 }
 
+void TaskChamferParameters::onAddAllEdges()
+{
+    ui->checkBoxUseAllEdges->setChecked(false);
+    TaskDressUpParameters::addAllEdges();
+}
+
 void TaskChamferParameters::onTypeChanged(int index)
 {
     PartDesign::Chamfer* pcChamfer = static_cast<PartDesign::Chamfer*>(DressUpView->getObject());
@@ -459,27 +488,27 @@ void TaskChamferParameters::onFlipDirection(bool flip)
     pcChamfer->getDocument()->recomputeFeature(pcChamfer);
 }
 
-int TaskChamferParameters::getType(void) const
+int TaskChamferParameters::getType() const
 {
     return ui->chamferType->currentIndex();
 }
 
-double TaskChamferParameters::getSize(void) const
+double TaskChamferParameters::getSize() const
 {
     return ui->chamferSize->value().getValue();
 }
 
-double TaskChamferParameters::getSize2(void) const
+double TaskChamferParameters::getSize2() const
 {
     return ui->chamferSize2->value().getValue();
 }
 
-double TaskChamferParameters::getAngle(void) const
+double TaskChamferParameters::getAngle() const
 {
     return ui->chamferAngle->value().getValue();
 }
 
-bool TaskChamferParameters::getFlipDirection(void) const
+bool TaskChamferParameters::getFlipDirection() const
 {
     return ui->flipDirection->isChecked();
 }

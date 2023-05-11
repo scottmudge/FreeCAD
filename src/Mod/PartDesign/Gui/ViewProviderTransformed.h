@@ -39,23 +39,24 @@ public:
     ViewProviderTransformed()
         : featureName("undefined") {}
     /// destructor
-    virtual ~ViewProviderTransformed()
+    ~ViewProviderTransformed() override
         {}
 
     void setupContextMenu(QMenu*, QObject*, const char*) override;
+
+    Gui::ViewProvider *startEditing(int ModNum=0) override;
+    void checkAddSubColor() override;
 
     /// signals if the transformation contains errors
     boost::signals2::signal<void (QString msg)> signalDiagnosis;
 
     // The feature name of the subclass
     std::string featureName;
-
-    virtual Gui::ViewProvider *startEditing(int ModNum=0) override;
-    virtual void checkAddSubColor() override;
+    // Name of menu dialog
+    QString menuName;
 
 protected:
     virtual void updateAddSubShapeIndicator() override;
-
     bool checkDlgOpen(TaskDlgTransformedParameters* transformedDlg);
 
     QString diagMessage;

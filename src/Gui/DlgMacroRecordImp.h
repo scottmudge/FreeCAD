@@ -24,10 +24,9 @@
 #ifndef GUI_DIALOG_DLGMACRORECORDIMP_H
 #define GUI_DIALOG_DLGMACRORECORDIMP_H
 
-#include "Window.h"
 #include <QDialog>
 #include <memory>
-
+#include "Window.h"
 
 namespace Gui {
 class MacroManager;
@@ -43,8 +42,8 @@ class DlgMacroRecordImp : public QDialog, public Gui::WindowParameter
     Q_OBJECT
 
 public:
-    DlgMacroRecordImp( QWidget* parent = 0, Qt::WindowFlags fl = Qt::WindowFlags() );
-    virtual ~DlgMacroRecordImp();
+    explicit DlgMacroRecordImp( QWidget* parent = nullptr, Qt::WindowFlags fl = Qt::WindowFlags() );
+    ~DlgMacroRecordImp() override;
 
 protected Q_SLOTS:
     void on_buttonStart_clicked();

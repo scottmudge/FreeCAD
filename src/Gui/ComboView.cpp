@@ -20,26 +20,22 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <QEvent>
 # include <QSplitter>
 #endif
 
-/// Here the FreeCAD includes sorted by Base,App,Gui......
-
 #include <App/Application.h>
+#include "TaskView/TaskView.h"
 #include "ComboView.h"
 #include "BitmapFactory.h"
-#include "PropertyView.h"
-#include "ProjectView.h"
-#include "Application.h"
+#include "DockWindowManager.h"
 #include "Document.h"
 #include "MainWindow.h"
+#include "PropertyView.h"
 #include "Tree.h"
-#include "DockWindowManager.h"
-#include "TaskView/TaskView.h"
-#include "propertyeditor/PropertyEditor.h"
+
 
 using namespace Gui;
 using namespace Gui::DockWnd;
@@ -56,9 +52,9 @@ ComboView::ComboView(bool showModel, Gui::Document* pcDocument, QWidget *parent)
     hGrp = App::GetApplication().GetParameterGroupByPath(
                 "User parameter:BaseApp/Preferences/DockWindows/ComboView");
 
-    QGridLayout* pLayout = new QGridLayout(this);
+    auto pLayout = new QGridLayout(this);
     pLayout->setSpacing( 0 );
-    pLayout->setMargin ( 0 );
+    pLayout->setContentsMargins ( 0, 0, 0, 0 );
 
     // tabs to switch between Tree/Properties and TaskPanel
     tabs = new QTabWidget ();
@@ -108,7 +104,7 @@ void ComboView::setShowModel(bool showModel)
             return;
         }
         // splitter between tree and property view
-        QSplitter *splitter = new QSplitter();
+        auto splitter = new QSplitter();
         splitter->setOrientation(Qt::Vertical);
 
         tree =  new TreePanel("ComboView", this);

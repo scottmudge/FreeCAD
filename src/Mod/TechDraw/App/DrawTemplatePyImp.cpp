@@ -21,27 +21,28 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
+
 #ifndef _PreComp_
 # include <sstream>
 #endif
 
 #include "DrawTemplate.h"
-
 // inclusion of the generated files (generated out of DrawTemplateSFPy.xml)
 #include <Mod/TechDraw/App/DrawTemplatePy.h>
 #include <Mod/TechDraw/App/DrawTemplatePy.cpp>
 
+
 using namespace TechDraw;
 
 // returns a string which represents the object e.g. when printed in python
-std::string DrawTemplatePy::representation(void) const
+std::string DrawTemplatePy::representation() const
 {
     return "<TechDraw::DrawTemplate>";
 }
 
 PyObject *DrawTemplatePy::getCustomAttributes(const char* /*attr*/) const
 {
-    return 0;
+    return nullptr;
 }
 
 int DrawTemplatePy::setCustomAttributes(const char* attr, PyObject* obj)

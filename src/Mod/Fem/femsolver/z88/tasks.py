@@ -31,6 +31,7 @@ __url__ = "https://www.freecadweb.org"
 import os
 import os.path
 import subprocess
+from platform import system
 
 import FreeCAD
 
@@ -41,6 +42,8 @@ from feminout import importZ88O2Results
 from femmesh import meshsetsgetter
 from femtools import femutils
 from femtools import membertools
+
+SOLVER_TYPES = ["sorcg", "siccg", "choly"]
 
 
 class Check(run.Check):
@@ -101,32 +104,47 @@ class Solve(run.Solve):
         self.pushStatus("Get solver binary...\n")
         binary = settings.get_binary("Z88")
         if binary is None:
-            self.fail()  # a print has been made in settings module
+            self.pushStatus("Error: The z88r binary has not been found!")
+            self.fail()
+            return
+
+        prefs = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Fem/Z88")
+        solver_index = prefs.GetInt("Solver", 0)
+        solver_name = SOLVER_TYPES[solver_index]
+        self.pushStatus("Used solver: {}\n".format(solver_name))
 
         # run solver test mode
         # AFAIK: z88r needs to be run twice
         # once in test mode and once in real solve mode
         # the subprocess was just copied, it works :-)
-        # TODO: search out for "Vektor GS" and "Vektor KOI" and print values
+        # TODO: search out for "Vector GS" and "Vector KOI" and print values
         # may be compare with the used ones
         self.pushStatus("Executing solver in test mode...\n")
-        self._process = subprocess.Popen(
-            [binary, "-t", "-choly"],
-            cwd=self.directory,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        self.signalAbort.add(self._process.terminate)
-        self._process.communicate()
-        self.signalAbort.remove(self._process.terminate)
+        Solve.runZ88(self, "-t", binary, solver_name, "hide")
 
         # run solver real mode
         self.pushStatus("Executing solver in real mode...\n")
-        binary = settings.get_binary("Z88")
-        self._process = subprocess.Popen(
-            [binary, "-c", "-choly"],
-            cwd=self.directory,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+        # starting normal because the user must see the z88 window
+        Solve.runZ88(self, "-c", binary, solver_name, "normal")
+
+    def runZ88(self, command, binary, solver, state):
+        solver_name = solver
+        # minimize or hide the popups on Windows
+        if system() == "Windows":
+            self._process = subprocess.Popen(
+                [binary, command, "-" + solver_name],
+                cwd=self.directory,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                startupinfo=femutils.startProgramInfo(state)
+            )
+        else:
+            self._process = subprocess.Popen(
+                [binary, command, "-" + solver_name],
+                cwd=self.directory,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
         self.signalAbort.add(self._process.terminate)
         self._process.communicate()
         self.signalAbort.remove(self._process.terminate)

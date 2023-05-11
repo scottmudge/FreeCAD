@@ -23,11 +23,12 @@
 #ifndef SHEETTABLEVIEW_H
 #define SHEETTABLEVIEW_H
 
-#include <QTableView>
 #include <QHeaderView>
-#include <QKeyEvent>
+#include <QTableView>
+#include <QTimer>
+
 #include <Mod/Spreadsheet/App/Sheet.h>
-#include <Mod/Spreadsheet/App/Utils.h>
+
 
 namespace SpreadsheetGui {
 
@@ -43,8 +44,8 @@ public:
 Q_SIGNALS:
     void resizeFinished();
 protected:
-    void mouseReleaseEvent(QMouseEvent * event);
-    bool viewportEvent(QEvent *e);
+    void mouseReleaseEvent(QMouseEvent * event) override;
+    bool viewportEvent(QEvent *e) override;
 private:
     QTableView *owner;
 };
@@ -57,12 +58,14 @@ class SheetTableView : public QTableView
     Q_PROPERTY(QColor aliasForegroundColor READ aliasForegroundColor WRITE setAliasForegroundColor DESIGNABLE true SCRIPTABLE true)
 
 public:
-    explicit SheetTableView(QWidget *parent = 0);
-    ~SheetTableView();
+    explicit SheetTableView(QWidget *parent = nullptr);
+    ~SheetTableView() override;
     
     void edit(const QModelIndex &index);
     void setSheet(Spreadsheet::Sheet *_sheet);
     std::vector<App::Range> selectedRanges() const;
+    QModelIndexList selectedIndexesRaw() const;
+    QString toHtml() const;
 
     void updateHiddenRows();
     void updateHiddenColumns();
@@ -87,8 +90,8 @@ public Q_SLOTS:
     void ModifyBlockSelection(int targetRow, int targetColumn);
 
 protected Q_SLOTS:
-    void commitData(QWidget *editor);
-    void updateCellSpan(App::CellAddress address);
+    void commitData(QWidget *editor) override;
+    void updateCellSpan();
     void insertRows();
     void insertRowsAfter();
     void removeRows();
@@ -110,23 +113,26 @@ protected Q_SLOTS:
     void removeAlias();
 
 protected:
-    bool edit(const QModelIndex &index, EditTrigger trigger, QEvent *event);
-    bool event(QEvent *event);
-    void closeEditor(QWidget *editor, QAbstractItemDelegate::EndEditHint hint);
-    void mousePressEvent(QMouseEvent* event);
+    bool edit(const QModelIndex &index, EditTrigger trigger, QEvent *event) override;
+    bool event(QEvent *event) override;
+    void closeEditor(QWidget *editor, QAbstractItemDelegate::EndEditHint hint) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
 
-    void contextMenuEvent (QContextMenuEvent * e);
-
-    void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight , const QVector<int> &);
+    void contextMenuEvent (QContextMenuEvent * e) override;
 
     void _copySelection(const std::vector<App::Range> &ranges, bool copy);
 
     void _pasteClipboard(const char *name, int type);
 
+    void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight , const QVector<int> &);
+
+    void buildContextMenu();
+
     Spreadsheet::Sheet * sheet;
     int tabCounter;
 
-    QMenu *contextMenu;
+    QMenu *contextMenu = nullptr;
 
     std::set<long> hiddenRows;
     std::set<long> hiddenColumns;
@@ -169,7 +175,10 @@ protected:
     QAction *actionAlias;
     QAction *actionRemoveAlias;
 
+    QTimer timer;
+
     boost::signals2::scoped_connection cellSpanChangedConnection;
+    std::set<App::CellAddress> spanChanges;
 };
 
 }

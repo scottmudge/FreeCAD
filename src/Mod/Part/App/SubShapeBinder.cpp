@@ -24,7 +24,6 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <cfloat>
-# include <boost_bind_bind.hpp>
 # include <gp_Lin.hxx>
 # include <gp_Pln.hxx>
 # include <BRep_Builder.hxx>
@@ -993,7 +992,7 @@ void SubShapeBinder::collapseGeoChildren()
         for (auto itSub=subvals.begin(); itSub!=subvals.end();) {
             auto &sub = *itSub;
             App::SubObjectT sobjT(obj, sub.c_str());
-            if (sobjT.normalize(App::SubObjectT::KeepSubName)) {
+            if (sobjT.normalize(App::SubObjectT::NormalizeOption::KeepSubName)) {
                 touched = true;
                 auto newobj = sobjT.getObject();
                 sub = sobjT.getSubName();

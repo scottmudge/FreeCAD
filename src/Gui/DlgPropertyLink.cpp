@@ -20,48 +20,46 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <algorithm>
 # include <sstream>
+# include <QStyledItemDelegate>
 # include <QTreeWidgetItem>
-# include <QMessageBox>
-# include <QPushButton>
 # include <QVBoxLayout>
 #endif
 
-#include <QStyledItemDelegate>
-
-#include <Base/Tools.h>
-#include <App/Application.h>
 #include <App/Document.h>
 #include <App/DocumentObject.h>
 #include <App/GeoFeature.h>
-#include <App/DocumentObserver.h>
+#include <App/ObjectIdentifier.h>
+#include <App/PropertyPythonObject.h>
+#include <Base/Interpreter.h>
+#include <Base/Tools.h>
 
-#include "Document.h"
-#include "View3DInventor.h"
-#include "Tree.h"
-#include "Selection.h"
-#include "PropertyView.h"
-#include "BitmapFactory.h"
 #include "DlgPropertyLink.h"
+#include "ui_DlgPropertyLink.h"
 #include "Application.h"
+#include "Document.h"
+#include "BitmapFactory.h"
+#include "PropertyView.h"
+#include "Selection.h"
+#include "Tree.h"
+#include "TreeParams.h"
+#include "View3DInventor.h"
 #include "ViewProviderDocumentObject.h"
 #include "MetaTypes.h"
-#include "ui_DlgPropertyLink.h"
-#include "TreeParams.h"
 #include "Tools.h"
+
 
 using namespace Gui::Dialog;
 
 class ItemDelegate: public QStyledItemDelegate {
 public:
-    ItemDelegate(QObject* parent=0): QStyledItemDelegate(parent) {}
+    explicit ItemDelegate(QObject* parent=nullptr): QStyledItemDelegate(parent) {}
 
-    virtual QWidget* createEditor(QWidget *parent,
-            const QStyleOptionViewItem &option, const QModelIndex &index) const
+    QWidget* createEditor(QWidget *parent,
+            const QStyleOptionViewItem &option, const QModelIndex &index) const override
     {
         if(index.column() != 1)
             return nullptr;
@@ -163,7 +161,7 @@ QList<App::SubObjectT> DlgPropertyLink::getLinksFromProperty(const App::Property
     prop->getLinks(objs,true,&subs,false);
     if(subs.empty()) {
         for(auto obj : objs)
-            res.push_back(App::SubObjectT(obj,0));
+            res.push_back(App::SubObjectT(obj,nullptr));
     } else if (objs.size()==1) {
         for(auto &sub : subs)
             res.push_back(App::SubObjectT(objs.front(),sub.c_str()));
@@ -204,9 +202,9 @@ QString DlgPropertyLink::formatObject(App::Document *ownerDoc, App::DocumentObje
                                                  QString::fromUtf8(sobj->Label.getValue()));
 }
 
-static inline bool isLinkSub(QList<App::SubObjectT> links)
+static inline bool isLinkSub(const QList<App::SubObjectT>& links)
 {
-    for(auto &link : links) {
+    for(const auto &link : links) {
         if(&link == &links.front())
             continue;
         if(link.getDocumentName() != links.front().getDocumentName()
@@ -367,7 +365,7 @@ void DlgPropertyLink::init(const App::DocumentObjectT &prop, bool tryFilter)
     ui->searchBox->setDocumentObject(owner);
 
     if (selContext.getObjectName().empty()) {
-        for(auto &sel : Gui::Selection().getSelectionT("*", false)) {
+        for(auto &sel : Gui::Selection().getSelectionT("*", ResolveMode::NoResolve)) {
             if (sel.getSubObject() == owner) {
                 if (sel.getObject() != owner) 
                     selContext = sel.getParent();
@@ -452,11 +450,7 @@ void DlgPropertyLink::init(const App::DocumentObjectT &prop, bool tryFilter)
         ui->treeWidget->setColumnCount(2);
 
         // make sure to show a horizontal scrollbar if needed
-#if QT_VERSION >= 0x050000
         ui->treeWidget->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-#else
-        ui->treeWidget->header()->setResizeMode(0, QHeaderView::ResizeToContents);
-#endif
     }
 
     std::set<App::Document*> expandDocs;
@@ -533,7 +527,7 @@ void DlgPropertyLink::init(const App::DocumentObjectT &prop, bool tryFilter)
     // For link list type property, try to auto filter type
     if(tryFilter && isLinkList) {
         Base::Type objType;
-        for(auto link : oldLinks) {
+        for(const auto& link : qAsConst(oldLinks)) {
             auto obj = link.getSubObject();
             if(!obj)
                 continue;
@@ -629,7 +623,7 @@ void DlgPropertyLink::onClicked(QAbstractButton *button) {
 }
 
 void DlgPropertyLink::attachObserver(Gui::SelectionObserver *observer) {
-    if(observer->isConnectionAttached())
+    if(observer->isSelectionAttached())
         return;
 
     Gui::Selection().selStackPush();
@@ -640,7 +634,7 @@ void DlgPropertyLink::attachObserver(Gui::SelectionObserver *observer) {
             auto view = qobject_cast<Gui::PropertyView*>(p);
             if(view) {
                 parentView = view;
-                for(auto &sel : Gui::Selection().getCompleteSelection(0))
+                for(auto &sel : Gui::Selection().getCompleteSelection(ResolveMode::NoResolve))
                     savedSelections.emplace_back(sel.DocName, sel.FeatName, sel.SubName);
                 break;
             }
@@ -648,7 +642,7 @@ void DlgPropertyLink::attachObserver(Gui::SelectionObserver *observer) {
     }
     auto view = qobject_cast<Gui::PropertyView*>(parentView.data());
     if(view)
-        view->blockConnection(true);
+        view->blockSelection(true);
 }
 
 void DlgPropertyLink::onItemEntered(QTreeWidgetItem *) {
@@ -661,12 +655,17 @@ void DlgPropertyLink::leaveEvent(QEvent *ev) {
 }
 
 void DlgPropertyLink::detachObserver(Gui::SelectionObserver *observer) {
-    if(observer->isConnectionAttached())
+    if(observer->isSelectionAttached())
         observer->detachSelection();
 
     auto view = qobject_cast<Gui::PropertyView*>(parentView.data());
-    if(view && savedSelections.size()) {
-        Gui::Selection().clearSelection();
+    if(view && !savedSelections.empty()) {
+        try {
+            Gui::Selection().clearSelection();
+        }
+        catch (Py::Exception& e) {
+            e.clear();
+        }
         for(auto &sel : savedSelections) {
             if(sel.getSubObject())
                 Gui::Selection().addSelection(sel.getDocumentName().c_str(),
@@ -676,7 +675,7 @@ void DlgPropertyLink::detachObserver(Gui::SelectionObserver *observer) {
         savedSelections.clear();
     }
     if(view)
-        view->blockConnection(false);
+        view->blockSelection(false);
 
     parentView = nullptr;
 }
@@ -688,7 +687,7 @@ void DlgPropertyLink::onCurrentItemChanged(QTreeWidgetItem *item, QTreeWidgetIte
     int column = ui->treeWidget->currentColumn();
 
     auto sobjs = getLinkFromItem(item, column==1);
-    App::DocumentObject *obj = sobjs.size()?sobjs.front().getObject():nullptr;
+    App::DocumentObject *obj = !sobjs.empty()?sobjs.front().getObject():nullptr;
     if(!obj) {
         Gui::Selection().clearSelection();
         return;
@@ -734,14 +733,14 @@ QTreeWidgetItem *DlgPropertyLink::findItem(
         *pfound = false;
 
     if(!obj || !obj->getNameInDocument() || !obj->getSubObject(subname))
-        return 0;
+        return nullptr;
 
     std::vector<App::DocumentObject *> sobjs;
     if(subname && subname[0]) {
         if(!allowSubObject) {
             obj = obj->getSubObject(subname);
             if(!obj)
-                return 0;
+                return nullptr;
             sobjs.push_back(obj);
         } else {
             bool checking = true;
@@ -756,18 +755,18 @@ QTreeWidgetItem *DlgPropertyLink::findItem(
         sobjs.push_back(obj);
 
     if(sobjs.empty())
-        return 0;
+        return nullptr;
 
     if(docItems.size()) {
         auto itDoc = docItems.find(sobjs.front()->getDocument());
         if(itDoc == docItems.end())
-            return 0;
+            return nullptr;
         onItemExpanded(itDoc->second);
     }
 
     auto it = itemMap.find(sobjs.front());
     if(it == itemMap.end() || it->second->isHidden())
-        return 0;
+        return nullptr;
 
     if(!allowSubObject) {
         if(pfound)
@@ -938,7 +937,8 @@ DlgPropertyLink::getLinkFromItem(QTreeWidgetItem *item, bool needElement) const
         return res;
     }
 
-    for(const QString &element : elements.split(QLatin1Char(','))) {
+    const auto split = elements.split(QLatin1Char(','));
+    for(const QString &element : split) {
         res.append(App::SubObjectT());
         res.last() = App::SubObjectT(sobj.getDocumentName().c_str(),
                                      sobj.getObjectName().c_str(),
@@ -990,7 +990,7 @@ void DlgPropertyLink::onTimer() {
         Gui::Selection().setPreselect(res.first->getDocument()->getName(),
                                       res.first->getNameInDocument(),
                                       res.second,
-                                      0,0,0,2,true);
+                                      0, 0, 0, Gui::SelectionChanges::MsgSource::TreeView);
     }
     enterTime.start();
 }
@@ -1008,7 +1008,7 @@ QList<App::SubObjectT> DlgPropertyLink::originalLinks() const
     return oldLinks;
 }
 
-QString DlgPropertyLink::linksToPython(QList<App::SubObjectT> links) {
+QString DlgPropertyLink::linksToPython(const QList<App::SubObjectT>& links) {
     if(links.isEmpty())
         return QStringLiteral("None");
 
@@ -1019,15 +1019,15 @@ QString DlgPropertyLink::linksToPython(QList<App::SubObjectT> links) {
 
     if(isLinkSub(links)) {
         ss << '(' << links.front().getObjectPython() << ", [";
-        for(auto link : links) {
+        for(const auto& link : links) {
             const auto &sub = link.getSubName();
-            if(sub.size())
+            if(!sub.empty())
                 ss << "u'" << Base::Tools::escapeEncodeString(sub) << "',";
         }
         ss << "])";
     } else {
         ss << '[';
-        for(auto link : links)
+        for(const auto& link : links)
             ss << link.getSubObjectPython(false) << ',';
         ss << ']';
     }
@@ -1155,7 +1155,8 @@ void DlgPropertyLink::itemSearch(const QString &text, bool select) {
             auto res = resolveContext(selContext, s, App::SubObjectT(obj,subname));
             if(res.first)
                 Selection().setPreselect(res.first->getDocument()->getName(),
-                    res.first->getNameInDocument(), res.second, 0,0,0,2,true);
+                    res.first->getNameInDocument(), res.second, 0, 0, 0,
+                    Gui::SelectionChanges::MsgSource::TreeView, true);
             searchItem = item;
             ui->treeWidget->scrollToItem(searchItem);
             searchItem->setBackground(0, bgBrush);
@@ -1169,15 +1170,15 @@ QTreeWidgetItem *DlgPropertyLink::createItem(
         App::DocumentObject *obj, QTreeWidgetItem *parent)
 {
     if(!obj || !obj->getNameInDocument())
-        return 0;
+        return nullptr;
 
     if(inList.count(obj))
-        return 0;
+        return nullptr;
 
     auto vp = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(
             Application::Instance->getViewProvider(obj));
     if(!vp)
-        return 0;
+        return nullptr;
 
     QTreeWidgetItem* item;
     if(parent)
@@ -1194,7 +1195,7 @@ QTreeWidgetItem *DlgPropertyLink::createItem(
 
     if(allowSubObject || (flags & AllowSubElement)) {
         if(allowSubObject)
-            item->setChildIndicatorPolicy(obj->getLinkedObject(true)->getOutList().size()?
+            item->setChildIndicatorPolicy(!obj->getLinkedObject(true)->getOutList().empty()?
                     QTreeWidgetItem::ShowIndicator:QTreeWidgetItem::DontShowIndicator);
         item->setFlags(item->flags() | Qt::ItemIsEditable | Qt::ItemIsUserCheckable);
     } else
@@ -1211,7 +1212,7 @@ QTreeWidgetItem *DlgPropertyLink::createItem(
         Base::PyGILStateLocker lock;
         Py::Object proxy = prop->getValue();
         if(!proxy.isNone() && !proxy.isString()) {
-            const char *name = 0;
+            const char *name = nullptr;
             if (proxy.hasAttr("__class__"))
                 proxyType = QByteArray(proxy.getAttr("__class__").as_string().c_str());
             else {
@@ -1233,9 +1234,9 @@ QTreeWidgetItem *DlgPropertyLink::createItem(
 
 QTreeWidgetItem *DlgPropertyLink::createTypeItem(Base::Type type) {
     if(type.isBad())
-        return 0;
+        return nullptr;
 
-    QTreeWidgetItem *item = 0;
+    QTreeWidgetItem *item = nullptr;
     if(!type.isBad() && type!=App::DocumentObject::getClassTypeId()) {
         Base::Type parentType = type.getParent();
         if(!parentType.isBad()) {
@@ -1263,7 +1264,7 @@ QTreeWidgetItem *DlgPropertyLink::createTypeItem(Base::Type type) {
 
 bool DlgPropertyLink::filterType(QTreeWidgetItem *item) {
     auto proxyType = item->data(0, Qt::UserRole+3).toByteArray();
-    QTreeWidgetItem *proxyItem = 0;
+    QTreeWidgetItem *proxyItem = nullptr;
     if(proxyType.size()) {
         auto &pitem = typeItems[proxyType];
         if(!pitem) {
@@ -1311,13 +1312,13 @@ void DlgPropertyLink::onItemExpanded(QTreeWidgetItem * item) {
     if(item->childCount())
         return;
 
-    const char *docName = item->data(0, Qt::UserRole+1).toByteArray().constData();
+    QByteArray docName = item->data(0, Qt::UserRole+1).toByteArray();
     auto doc = App::GetApplication().getDocument(docName);
-    if(!doc)
+    if (!doc)
         return;
 
-    const char *objName = item->data(0, Qt::UserRole).toByteArray().constData();
-    if(!objName[0]) {
+    QByteArray objName = item->data(0, Qt::UserRole).toByteArray();
+    if (objName.isEmpty()) {
         for(auto obj : doc->getObjects()) {
             auto newItem = createItem(obj,item);
             if(newItem)
@@ -1325,7 +1326,8 @@ void DlgPropertyLink::onItemExpanded(QTreeWidgetItem * item) {
         }
     } else if(allowSubObject) {
         auto obj = doc->getObject(objName);
-        if(!obj) return;
+        if(!obj)
+            return;
         std::set<App::DocumentObject*> childSet;
         std::string sub;
         for(auto child : obj->getLinkedObject(true)->getOutList()) {
@@ -1348,7 +1350,8 @@ void DlgPropertyLink::on_checkObjectType_toggled(bool on)
 void DlgPropertyLink::on_typeTree_itemSelectionChanged() {
 
     selectedTypes.clear();
-    for(auto item : ui->typeTree->selectedItems())
+    const auto items = ui->typeTree->selectedItems();
+    for(auto item : items)
         selectedTypes.insert(item->data(0, Qt::UserRole).toByteArray());
 
     if(ui->checkObjectType->isChecked())

@@ -25,7 +25,6 @@
 #define APP_PROPERTYCONTAINER_H
 
 #include <map>
-#include <climits>
 #include <cstring>
 #include <Base/Persistence.h>
 
@@ -76,8 +75,8 @@ struct AppExport PropertyData
   //accepting void*
   struct OffsetBase
   {
-      OffsetBase(const App::PropertyContainer* container) : m_container(container) {}
-      OffsetBase(const App::Extension* container) : m_container(container) {}
+      OffsetBase(const App::PropertyContainer* container) : m_container(container) {}//explicit bombs
+      OffsetBase(const App::Extension* container) : m_container(container) {}//explicit bombs
 
       short int getOffsetTo(const App::Property* prop) const {
             auto *pt = (const char*)prop;
@@ -85,7 +84,7 @@ struct AppExport PropertyData
             if(pt<base || pt>base+SHRT_MAX)
                 return -1;
             return (short) (pt-base);
-      };
+      }
       char* getOffset() const {return (char*) m_container;}
 
   private:
@@ -116,7 +115,7 @@ struct AppExport PropertyData
 
   const PropertyData*     parentPropertyData;
 
-  void addProperty(OffsetBase offsetBase,const char* PropName, Property *Prop, const char* PropertyGroup= 0, PropertyType = Prop_None, const char* PropertyDocu= 0 );
+  void addProperty(OffsetBase offsetBase,const char* PropName, Property *Prop, const char* PropertyGroup= nullptr, PropertyType = Prop_None, const char* PropertyDocu= nullptr );
 
   const PropertySpec *findProperty(OffsetBase offsetBase,const char* PropName) const;
   const PropertySpec *findProperty(OffsetBase offsetBase,const Property* prop) const;
@@ -134,7 +133,7 @@ struct AppExport PropertyData
   void getPropertyList(OffsetBase offsetBase,std::vector<Property*> &List) const;
   void getPropertyNamedList(OffsetBase offsetBase, std::vector<std::pair<const char*,Property*> > &List) const;
 
-  void merge(PropertyData *other=0) const;
+  void merge(PropertyData *other=nullptr) const;
   void split(PropertyData *other);
 };
 
@@ -145,7 +144,7 @@ class PropertyContainerP;
 class AppExport PropertyContainer: public Base::Persistence
 {
 
-  TYPESYSTEM_HEADER();
+  TYPESYSTEM_HEADER_WITH_OVERRIDE();
 
 public:
   /**
@@ -158,9 +157,9 @@ public:
    * A destructor.
    * A more elaborate description of the destructor.
    */
-  virtual ~PropertyContainer();
+  ~PropertyContainer() override;
 
-  virtual unsigned int getMemSize (void) const;
+  unsigned int getMemSize () const override;
 
   /** Return a fully qualified name for this container
    *  @param python: if true, then return an expression for accessing this container in Python
@@ -215,8 +214,8 @@ public:
   /// check if the named property is hidden
   bool isHidden(const char *name) const;
   virtual App::Property* addDynamicProperty(
-        const char* type, const char* name=0,
-        const char* group=0, const char* doc=0,
+        const char* type, const char* name=nullptr,
+        const char* group=nullptr, const char* doc=nullptr,
         short attr=0, bool ro=false, bool hidden=false);
 
   DynamicProperty::PropData getDynamicPropertyData(const Property* prop) const {
@@ -239,8 +238,9 @@ public:
 
   virtual void onPropertyStatusChanged(const Property &prop, unsigned long oldStatus);
 
-  virtual void Save (Base::Writer &writer) const;
-  virtual void Restore(Base::XMLReader &reader);
+  void Save (Base::Writer &writer) const override;
+  void Restore(Base::XMLReader &reader) override;
+
   virtual void beforeSave() const;
 
   virtual void editProperty(const char * /*propName*/) {}
@@ -270,15 +270,11 @@ protected:
   virtual void onBeforeChange(const Property* /*prop*/){}
 
   //void hasChanged(Property* prop);
-  static const  PropertyData * getPropertyDataPtr(void);
-  virtual const PropertyData& getPropertyData(void) const;
+  static const  PropertyData * getPropertyDataPtr();
+  virtual const PropertyData& getPropertyData() const;
 
   virtual void handleChangedPropertyName(Base::XMLReader &reader, const char * TypeName, const char *PropName);
   virtual void handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, Property * prop);
-
-  virtual bool isOnChangeBlocked() const {
-      return false;
-  }
 
 private:
   // forbidden

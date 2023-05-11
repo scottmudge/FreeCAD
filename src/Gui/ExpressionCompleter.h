@@ -24,12 +24,10 @@
 #ifndef EXPRESSIONCOMPLETER_H
 #define EXPRESSIONCOMPLETER_H
 
-#include <QObject>
 #include <QCompleter>
 #include <QLineEdit>
+#include <QObject>
 #include <QPlainTextEdit>
-#include <set>
-#include <memory>
 #include <App/DocumentObserver.h>
 
 class QStandardItem;
@@ -66,7 +64,6 @@ public:
     void setDocumentObject(const App::DocumentObject*, bool checkInList=true);
 
     void setNoProperty(bool enabled=true);
-    void setRequireLeadingEqualSign(bool enabled);
 
     void setSearchUnit(bool enabled=true);
 
@@ -80,7 +77,7 @@ public Q_SLOTS:
     void slotUpdate(const QString &prefix, int pos);
 
 protected:
-    bool eventFilter(QObject *o, QEvent *e);
+    bool eventFilter(QObject *o, QEvent *e) override;
 
 Q_SIGNALS:
     void visibilityChanged(bool visible);
@@ -143,9 +140,9 @@ public:
     bool completerActive() const;
     void hideCompleter();
 protected:
-    void keyPressEvent(QKeyEvent * event);
-    void inputMethodEvent(QInputMethodEvent *event);
-    void contextMenuEvent(QContextMenuEvent * event);
+    void keyPressEvent(QKeyEvent * event) override;
+    void inputMethodEvent(QInputMethodEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent * event) override;
 Q_SIGNALS:
     void textChanged2(QString text, int pos);
     void completerVisibilityChanged(bool visible);

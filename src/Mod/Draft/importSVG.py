@@ -718,7 +718,7 @@ class svgHandler(xml.sax.ContentHandler):
                 inks_doc_name = attrs.getValue('sodipodi:docname')
                 inks_full_ver = attrs.getValue('inkscape:version')
                 inks_ver_pars = re.search("\d+\.\d+", inks_full_ver)
-                if inks_ver_pars != None:
+                if inks_ver_pars is not None:
                     inks_ver_f = float(inks_ver_pars.group(0))
                 else:
                     inks_ver_f = 99.99
@@ -884,7 +884,7 @@ class svgHandler(xml.sax.ContentHandler):
                 p2 = Vector(float(p2[0]), -float(p2[1]), 0)
                 p3 = data["freecad:dimpoint"]
                 p3 = Vector(float(p3[0]), -float(p3[1]), 0)
-                obj = Draft.makeDimension(p1, p2, p3)
+                obj = Draft.make_dimension(p1, p2, p3)
                 self.applyTrans(obj)
                 self.format(obj)
                 self.lastdim = obj

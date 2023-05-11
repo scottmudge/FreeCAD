@@ -20,62 +20,60 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <algorithm>
 # include <climits>
 # include <sstream>
+# include <QHeaderView>
+# include <QItemDelegate>
+# include <QItemSelectionModel>
+# include <QLocale>
+# include <QMessageBox>
+# include <QTimer>
+# include <QVBoxLayout>
+
 # include <BRep_Tool.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Edge.hxx>
 # include <TopoDS_Shape.hxx>
 # include <TopExp.hxx>
-# include <TopExp_Explorer.hxx>
 # include <TopTools_ListOfShape.hxx>
 # include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
 # include <TopTools_IndexedMapOfShape.hxx>
-# include <QItemDelegate>
-# include <QLocale>
-# include <QHeaderView>
-# include <QMessageBox>
-# include <QVBoxLayout>
-# include <QItemSelection>
-# include <QItemSelectionModel>
-# include <QTimer>
-# include <boost_bind_bind.hpp>
-# include <Python.h>
+
 # include <Inventor/actions/SoSearchAction.h>
 # include <Inventor/details/SoLineDetail.h>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
-#include "DlgFilletEdges.h"
-#include "ui_DlgFilletEdges.h"
-#include "SoBrepFaceSet.h"
-#include "SoBrepEdgeSet.h"
-#include "SoBrepPointSet.h"
 
-
-#include "../App/PartFeature.h"
-#include "../App/FeatureFillet.h"
-#include "../App/FeatureChamfer.h"
-#include <Base/UnitsApi.h>
-#include <Base/Console.h>
 #include <App/Application.h>
 #include <App/Document.h>
 #include <App/DocumentObject.h>
 #include <App/MappedElement.h>
+#include <Base/Console.h>
+#include <Base/UnitsApi.h>
 #include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
 #include <Gui/Command.h>
 #include <Gui/QuantitySpinBox.h>
-#include <Gui/WaitCursor.h>
 #include <Gui/Selection.h>
 #include <Gui/SelectionFilter.h>
+#include <Gui/SelectionObject.h>
 #include <Gui/SoFCUnifiedSelection.h>
 #include <Gui/ViewProvider.h>
+#include <Gui/WaitCursor.h>
 #include <Gui/Window.h>
+#include <Mod/Part/App/FeatureChamfer.h>
+#include <Mod/Part/App/FeatureFillet.h>
+
+#include "DlgFilletEdges.h"
+#include "ui_DlgFilletEdges.h"
+#include "SoBrepEdgeSet.h"
+#include "SoBrepFaceSet.h"
+#include "SoBrepPointSet.h"
+
 
 FC_LOG_LEVEL_INIT("Fillet",true,true);
 
@@ -90,7 +88,7 @@ QWidget *FilletRadiusDelegate::createEditor(QWidget *parent, const QStyleOptionV
                                             const QModelIndex & index) const
 {
     if (index.column() < 1)
-        return 0;
+        return nullptr;
 
     Gui::QuantitySpinBox *editor = new Gui::QuantitySpinBox(parent);
     editor->setUnit(Base::Unit::Length);
@@ -137,7 +135,7 @@ FilletRadiusModel::FilletRadiusModel(QObject * parent) : QStandardItemModel(pare
 void FilletRadiusModel::updateCheckStates()
 {
     // See http://www.qtcentre.org/threads/18856-Checkboxes-in-Treeview-do-not-get-refreshed?s=b0fea2bfc66da1098413ae9f2a651a68&p=93201#post93201
-    /*emit*/ layoutChanged();
+    Q_EMIT layoutChanged();
 }
 
 Qt::ItemFlags FilletRadiusModel::flags (const QModelIndex & index) const
@@ -152,7 +150,7 @@ bool FilletRadiusModel::setData (const QModelIndex & index, const QVariant & val
 {
     bool ok = QStandardItemModel::setData(index, value, role);
     if (role == Qt::CheckStateRole) {
-        toggleCheckState(index);
+        Q_EMIT toggleCheckState(index);
     }
     return ok;
 }
@@ -176,8 +174,8 @@ namespace PartGui {
         bool allowEdge;
         App::DocumentObject*& object;
     public:
-        EdgeFaceSelection(App::DocumentObject*& obj)
-            : Gui::SelectionFilterGate((Gui::SelectionFilter*)0), allowEdge(true), object(obj)
+        explicit EdgeFaceSelection(App::DocumentObject*& obj)
+            : Gui::SelectionFilterGate(nullPointer()), allowEdge(true), object(obj)
         {
         }
         void selectEdges()
@@ -188,7 +186,7 @@ namespace PartGui {
         {
             allowEdge = false;
         }
-        bool allow(App::Document* /*pDoc*/, App::DocumentObject*pObj, const char*sSubName)
+        bool allow(App::Document* /*pDoc*/, App::DocumentObject*pObj, const char*sSubName) override
         {
             if (pObj != this->object)
                 return false;
@@ -212,7 +210,7 @@ namespace PartGui {
         std::vector<int> edge_ids;
         TopTools_IndexedMapOfShape all_edges;
         TopTools_IndexedMapOfShape all_faces;
-        typedef boost::signals2::connection Connection;
+        using Connection = boost::signals2::connection;
         Connection connectApplicationDeletedObject;
         Connection connectApplicationDeletedDocument;
 
@@ -220,7 +218,7 @@ namespace PartGui {
         {
         public:
             App::DocumentObject* obj;
-            SelectionObjectCompare(App::DocumentObject* obj) : obj(obj)
+            explicit SelectionObjectCompare(App::DocumentObject* obj) : obj(obj)
             {
             }
             bool operator()(const Gui::SelectionObject& sel) const
@@ -245,7 +243,7 @@ DlgFilletEdges::DlgFilletEdges(FilletType type, Part::FilletBase* fillet, QWidge
     ui->filletEndRadius->setMinimum(0);
     ui->filletEndRadius->setUnit(Base::Unit::Length);
 
-    d->object = 0;
+    d->object = nullptr;
     d->selection = new EdgeFaceSelection(d->object);
     Gui::Selection().addSelectionGate(d->selection);
 
@@ -268,15 +266,19 @@ DlgFilletEdges::DlgFilletEdges(FilletType type, Part::FilletBase* fillet, QWidge
 
     d->filletType = type;
     if (d->filletType == DlgFilletEdges::CHAMFER) {
+        ui->parameterName->setTitle(tr("Chamfer Parameter"));
+        ui->labelfillet->setText(tr("Chamfer type"));
         ui->labelRadius->setText(tr("Length:"));
-        ui->filletType->setItemText(0, tr("Constant Length"));
-        ui->filletType->setItemText(1, tr("Variable Length"));
+        ui->filletType->setItemText(0, tr("Equal distance"));
+        ui->filletType->setItemText(1, tr("Two distances"));
 
         model->setHeaderData(0, Qt::Horizontal, tr("Edges to chamfer"), Qt::DisplayRole);
-        model->setHeaderData(1, Qt::Horizontal, tr("Start length"), Qt::DisplayRole);
-        model->setHeaderData(2, Qt::Horizontal, tr("End length"), Qt::DisplayRole);
+        model->setHeaderData(1, Qt::Horizontal, tr("Size"), Qt::DisplayRole);
+        model->setHeaderData(2, Qt::Horizontal, tr("Size2"), Qt::DisplayRole);
     }
     else {
+        ui->parameterName->setTitle(tr("Fillet Parameter"));
+        ui->labelfillet->setText(tr("Fillet type"));
         model->setHeaderData(0, Qt::Horizontal, tr("Edges to fillet"), Qt::DisplayRole);
         model->setHeaderData(1, Qt::Horizontal, tr("Start radius"), Qt::DisplayRole);
         model->setHeaderData(2, Qt::Horizontal, tr("End radius"), Qt::DisplayRole);
@@ -293,7 +295,7 @@ DlgFilletEdges::DlgFilletEdges(FilletType type, Part::FilletBase* fillet, QWidge
     findShapes();
 }
 
-/*  
+/*
  *  Destroys the object and frees any allocated resources
  */
 DlgFilletEdges::~DlgFilletEdges()
@@ -460,16 +462,16 @@ void DlgFilletEdges::onSelectEdgesOfFace(const QString& subelement, int type)
 void DlgFilletEdges::onDeleteObject(const App::DocumentObject& obj)
 {
     if (d->fillet == &obj) {
-        d->fillet = 0;
+        d->fillet = nullptr;
     }
     else if (d->fillet && d->fillet->Base.getValue() == &obj) {
-        d->fillet = 0;
-        d->object = 0;
+        d->fillet = nullptr;
+        d->object = nullptr;
         ui->shapeObject->setCurrentIndex(0);
         on_shapeObject_activated(0);
     }
     else if (d->object == &obj) {
-        d->object = 0;
+        d->object = nullptr;
         ui->shapeObject->removeItem(ui->shapeObject->currentIndex());
         ui->shapeObject->setCurrentIndex(0);
         on_shapeObject_activated(0);
@@ -511,7 +513,7 @@ void DlgFilletEdges::toggleCheckState(const QModelIndex& index)
     QString name = QStringLiteral("Edge%1").arg(id);
     Qt::CheckState checkState = static_cast<Qt::CheckState>(check.toInt());
 
-    bool block = this->blockConnection(true);
+    bool block = this->blockSelection(true);
 
     // is item checked
     if (checkState & Qt::Checked) {
@@ -527,13 +529,14 @@ void DlgFilletEdges::toggleCheckState(const QModelIndex& index)
             (const char*)name.toUtf8());
     }
 
-    this->blockConnection(block);
+    this->blockSelection(block);
 }
 
 void DlgFilletEdges::findShapes()
 {
     App::Document* activeDoc = App::GetApplication().getActiveDocument();
-    if (!activeDoc) return;
+    if (!activeDoc)
+        return;
 
     std::vector<App::DocumentObject*> objs = activeDoc->getObjectsOfType
         (Part::Feature::getClassTypeId());
@@ -743,7 +746,7 @@ void DlgFilletEdges::changeEvent(QEvent *e)
 
 void DlgFilletEdges::on_shapeObject_activated(int itemPos)
 {
-    d->object = 0;
+    d->object = nullptr;
     QStandardItemModel *model = qobject_cast<QStandardItemModel*>(ui->treeView->model());
     model->removeRows(0, model->rowCount());
 
@@ -967,7 +970,7 @@ bool DlgFilletEdges::accept()
         code = QStringLiteral(
         "FreeCAD.ActiveDocument.addObject(\"%1\",\"%2\")\n"
         "FreeCAD.ActiveDocument.%2.Base = FreeCAD.ActiveDocument.%3\n")
-        .arg(type).arg(name).arg(shape);
+        .arg(type, name, shape);
     }
     code += QStringLiteral("__fillets__ = []\n");
     for (int i=0; i<model->rowCount(); ++i) {
@@ -1003,7 +1006,7 @@ bool DlgFilletEdges::accept()
         "FreeCAD.ActiveDocument.%1.Edges = __fillets__\n"
         "del __fillets__\n"
         "FreeCADGui.ActiveDocument.%2.Visibility = False\n")
-        .arg(name).arg(shape);
+        .arg(name, shape);
     Gui::Command::runCommand(Gui::Command::App, code.toUtf8());
     activeDoc->commitTransaction();
     activeDoc->recompute();
@@ -1057,7 +1060,7 @@ TaskFilletEdges::TaskFilletEdges(Part::Fillet* fillet)
     widget = new DlgFilletEdges(DlgFilletEdges::FILLET, fillet);
     taskbox = new Gui::TaskView::TaskBox(
         Gui::BitmapFactory().pixmap("Part_Fillet"),
-        widget->windowTitle(), true, 0);
+        widget->windowTitle(), true, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }
@@ -1099,7 +1102,7 @@ DlgChamferEdges::DlgChamferEdges(Part::FilletBase* chamfer, QWidget* parent, Qt:
     this->setWindowTitle(tr("Chamfer Edges"));
 }
 
-/*  
+/*
  *  Destroys the object and frees any allocated resources
  */
 DlgChamferEdges::~DlgChamferEdges()
@@ -1116,7 +1119,7 @@ TaskChamferEdges::TaskChamferEdges(Part::Chamfer* chamfer)
     widget = new DlgChamferEdges(chamfer);
     taskbox = new Gui::TaskView::TaskBox(
         Gui::BitmapFactory().pixmap("Part_Chamfer"),
-        widget->windowTitle(), true, 0);
+        widget->windowTitle(), true, nullptr);
     taskbox->groupLayout()->addWidget(widget);
     Content.push_back(taskbox);
 }

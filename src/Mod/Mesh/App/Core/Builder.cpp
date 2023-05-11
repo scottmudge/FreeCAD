@@ -20,20 +20,20 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
 # include <algorithm>
 #endif
 
-#include <Base/Sequencer.h>
 #include <Base/Exception.h>
+#include <Base/Sequencer.h>
 
 #include "Builder.h"
-#include "MeshKernel.h"
 #include "Functional.h"
+#include "MeshKernel.h"
 #include <QVector>
+
 
 using namespace MeshCore;
 
@@ -60,11 +60,11 @@ void MeshBuilder::Initialize (size_t ctFacets, bool deletion)
     {
         // Clear the mesh structure and free all memory
         _meshKernel.Clear();
-    
+
         // Allocate new memory that is needed later on. If AddFacet() gets called exactly ctFacets times there is no wastage of memory
         // otherwise the vector reallocates ~50% of its future memory usage.
         // Note: A feature of the std::vector implementation is that it can hold more memory (capacity) than it actually needs (size).
-        //       This usually happens if its elements are added without specifying its final size. Later on it's a bit tricky to free the wasted 
+        //       This usually happens if its elements are added without specifying its final size. Later on it's a bit tricky to free the wasted
         //       memory. So we're strived to avoid the wastage of memory.
         _meshKernel._aclFacetArray.reserve(ctFacets);
 
@@ -275,10 +275,14 @@ struct MeshFastBuilder::Private {
         }
         bool operator<(const Vertex& rhs) const
         {
-            if      (x != rhs.x)    return x < rhs.x;
-            else if (y != rhs.y)    return y < rhs.y;
-            else if (z != rhs.z)    return z < rhs.z;
-            else                    return false;
+            if (x != rhs.x)
+                return x < rhs.x;
+            else if (y != rhs.y)
+                return y < rhs.y;
+            else if (z != rhs.z)
+                return z < rhs.z;
+            else
+                return false;
         }
     };
 
@@ -324,7 +328,7 @@ void MeshFastBuilder::AddFacet (const MeshGeomFacet& facetPoints)
 
 void MeshFastBuilder::Finish ()
 {
-    typedef QVector<Private::Vertex>::size_type size_type;
+    using size_type = QVector<Private::Vertex>::size_type;
     QVector<Private::Vertex>& verts = p->verts;
     size_type ulCtPts = verts.size();
     for (size_type i=0; i < ulCtPts; ++i) {

@@ -1,5 +1,5 @@
 /****************************************************************************
- *   Copyright (c) 2019 Zheng Lei (realthunder) <realthunder.dev@gmail.com> *
+ *   Copyright (c) 2019 Zheng, Lei (realthunder) <realthunder.dev@gmail.com>*
  *                                                                          *
  *   This file is part of the FreeCAD CAx development system.               *
  *                                                                          *
@@ -21,16 +21,19 @@
  ****************************************************************************/
 
 #include "PreCompiled.h"
+
 #include <boost/algorithm/string.hpp>
 #include <QMessageBox>
-#include "DlgBindSheet.h"
-#include <Base/Tools.h>
-#include <App/Range.h>
-#include <App/Document.h>
+
 #include <App/Application.h>
+#include <App/Document.h>
 #include <App/ExpressionParser.h>
+#include <App/Range.h>
 #include <Gui/CommandT.h>
+
+#include "DlgBindSheet.h"
 #include "ui_DlgBindSheet.h"
+
 
 using namespace App;
 using namespace Spreadsheet;
@@ -40,6 +43,8 @@ DlgBindSheet::DlgBindSheet(Sheet *sheet, const std::vector<Range> &ranges, QWidg
     : QDialog(parent), sheet(sheet), range(ranges.front()), ui(new Ui::DlgBindSheet)
 {
     ui->setupUi(this);
+    // remove the automatic help button in dialog title since we don't use it
+    setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 
     std::string toStart,toEnd;
     ExpressionPtr pStart, pEnd;
@@ -137,7 +142,7 @@ void DlgBindSheet::accept()
 {
     bool commandActive = false;
     try {
-        const char *ref = ui->comboBox->itemData(ui->comboBox->currentIndex()).toByteArray().constData();
+        const char *ref = ui->comboBox->itemData(ui->comboBox->currentIndex()).toByteArray().constData(); // clazy:exclude=returning-data-from-temporary
         auto obj = sheet;
         if(ref[0]) {
             const char *sep = strchr(ref,'#');
@@ -217,7 +222,7 @@ void DlgBindSheet::accept()
         QDialog::accept();
     } catch(Base::Exception &e) {
         e.ReportException();
-        QMessageBox::critical(this, tr("Bind cells"), QString::fromUtf8(e.what()));
+        QMessageBox::critical(this, tr("Bind Spreadsheet Cells"), tr("Error: \n") + QString::fromUtf8(e.what()));
         if(commandActive)
             Gui::Command::abortCommand();
     }

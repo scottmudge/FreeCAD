@@ -62,36 +62,37 @@ class DlgDisplayPropertiesImp : public QDialog,
     Q_OBJECT
 
 public:
-    DlgDisplayPropertiesImp(bool floating, QWidget* parent = nullptr, Qt::WindowFlags fl = Qt::WindowFlags());
-    ~DlgDisplayPropertiesImp();
+    explicit DlgDisplayPropertiesImp(bool floating, QWidget* parent = nullptr, Qt::WindowFlags fl = Qt::WindowFlags());
+    ~DlgDisplayPropertiesImp() override;
     /// Observer message from the Selection
     void OnChange(Gui::SelectionSingleton::SubjectType &rCaller,
-                  Gui::SelectionSingleton::MessageType Reason);
+                  Gui::SelectionSingleton::MessageType Reason) override;
     void showDefaultButtons(bool);
-    void reject();
+    void reject() override;
 
 private Q_SLOTS:
-    void on_changeMaterial_activated(int);
-    void on_changeMode_activated(const QString&);
-    void on_changePlot_activated(const QString&);
-    void on_buttonColor_changed();
-    void on_spinTransparency_valueChanged(int);
-    void on_spinPointSize_valueChanged(double);
-    void on_buttonLineColor_changed();
-    void on_buttonPointColor_changed();
-    void on_spinLineWidth_valueChanged(double);
-    void on_spinLineTransparency_valueChanged(int);
-    void on_buttonUserDefinedMaterial_clicked();
-    void on_buttonColorPlot_clicked();
-    void on_checkBoxMapFaceColor_toggled(bool);
-    void on_checkBoxMapLineColor_toggled(bool);
-    void on_checkBoxMapPointColor_toggled(bool);
-    void on_checkBoxMapTransparency_toggled(bool);
+    void onChangeMaterialActivated(int);
+    void onChangeModeActivated(const QString&);
+    void onChangePlotActivated(const QString&);
+    void onButtonColorChanged();
+    void onSpinTransparencyValueChanged(int);
+    void onSpinPointSizeValueChanged(int);
+    void onButtonLineColorChanged();
+    void onButtonPointColorChanged();
+    void onSpinLineWidthValueChanged(int);
+    void onSpinLineTransparencyValueChanged(int);
+    void onButtonUserDefinedMaterialClicked();
+    void onButtonColorPlotClicked();
+    void onMapFaceColorChanged(bool);
+    void onMapLineColorChanged(bool);
+    void onMapPointColorChanged(bool);
+    void onMapTransparencyChanged(bool);
 
 protected:
-    void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
 
 private:
+    void setupConnections();
     void slotChangedObject(const Gui::ViewProvider&, const App::Property& Prop);
     void setDisplayModes(const std::vector<ViewProvider*>&);
     void setMaterial(const std::vector<ViewProvider*>&);
@@ -111,11 +112,6 @@ private:
     std::vector<ViewProvider*> getSelection() const;
 
     void onPropertyBoolChanged(const char *name, bool checked);
-    void setPropertyColor(const char *name, Gui::ColorButton *button, const std::vector<ViewProvider*>&);
-    void setPropertyBool(const char *name, QCheckBox *checkbox, const std::vector<ViewProvider*>&);
-    void setPropertyInteger(const char *name, QSlider *slider, QSpinBox *spinBox, const std::vector<ViewProvider*>&);
-    void setPropertyFloat(const char *name, QDoubleSpinBox *spinBox, const std::vector<ViewProvider*>&);
-
 private:
     class Private;
     std::unique_ptr<Private> d;
@@ -127,18 +123,18 @@ class TaskDisplayProperties : public Gui::TaskView::TaskDialog
 
 public:
     TaskDisplayProperties();
-    ~TaskDisplayProperties();
+    ~TaskDisplayProperties() override;
 
 public:
-    bool reject();
+    bool reject() override;
 
-    bool isAllowedAlterDocument(void) const
+    bool isAllowedAlterDocument() const override
     { return true; }
-    bool isAllowedAlterView(void) const
+    bool isAllowedAlterView() const override
     { return true; }
-    bool isAllowedAlterSelection(void) const
+    bool isAllowedAlterSelection() const override
     { return true; }
-    QDialogButtonBox::StandardButtons getStandardButtons() const;
+    QDialogButtonBox::StandardButtons getStandardButtons() const override;
 
 private:
     DlgDisplayPropertiesImp* widget;

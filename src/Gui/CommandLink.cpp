@@ -28,32 +28,32 @@
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
-#include "CommandT.h"
-#include "Action.h"
-#include "Application.h"
-#include "MainWindow.h"
-#include "Tree.h"
-#include "Document.h"
-#include "Selection.h"
-#include "WaitCursor.h"
-#include "BitmapFactory.h"
-#include "ViewProviderDocumentObject.h"
 
-#include <Base/Console.h>
-#include <Base/Exception.h>
-#include <Base/Parameter.h>
-#include <Base/Tools.h>
 #include <App/Application.h>
+#include <App/AutoTransaction.h>
+#include <App/ComplexGeoData.h>
 #include <App/Document.h>
+#include <App/DocumentObjectGroup.h>
 #include <App/DocumentObject.h>
 #include <App/DocumentObserver.h>
-#include <App/DocumentObjectGroup.h>
 #include <App/Link.h>
-#include <App/AutoTransaction.h>
 #include <App/Part.h>
-#include <Gui/ActiveObjectList.h>
+#include <Base/Console.h>
+#include <Base/Exception.h>
+#include <Base/Tools.h>
 
-FC_LOG_LEVEL_INIT("CommandLink",true,true)
+#include "Action.h"
+#include "ActiveObjectList.h"
+#include "Application.h"
+#include "CommandT.h"
+#include "Document.h"
+#include "MainWindow.h"
+#include "Selection.h"
+#include "Tree.h"
+#include "ViewProviderDocumentObject.h"
+#include "WaitCursor.h"
+
+FC_LOG_LEVEL_INIT("CommandLink", true, true)
 
 using namespace Gui;
 
@@ -106,14 +106,14 @@ class StdCmdLinkMakeGroup : public Gui::Command
 {
 public:
     StdCmdLinkMakeGroup();
-    const char* className() const
+    const char* className() const override
     { return "StdCmdLinkMakeGroup"; }
 
 protected:
-    virtual void activated(int iMsg);
-    virtual bool isActive(void);
-    virtual Action * createAction(void);
-    virtual void languageChange();
+    void activated(int iMsg) override;
+    bool isActive() override;
+    Action * createAction() override;
+    void languageChange() override;
 };
 
 StdCmdLinkMakeGroup::StdCmdLinkMakeGroup()
@@ -132,9 +132,9 @@ bool StdCmdLinkMakeGroup::isActive() {
     return !!App::GetApplication().getActiveDocument();
 }
 
-Action * StdCmdLinkMakeGroup::createAction(void)
+Action * StdCmdLinkMakeGroup::createAction()
 {
-    ActionGroup* pcAction = new ActionGroup(this, getMainWindow());
+    auto pcAction = new ActionGroup(this, getMainWindow());
     pcAction->setDropDownMenu(true);
     applyCommandData(this->className(), pcAction);
 
@@ -155,7 +155,7 @@ void StdCmdLinkMakeGroup::languageChange()
 
     if (!_pcAction)
         return;
-    ActionGroup* pcAction = qobject_cast<ActionGroup*>(_pcAction);
+    auto pcAction = qobject_cast<ActionGroup*>(_pcAction);
     QList<QAction*> acts = pcAction->actions();
     acts[0]->setText(QObject::tr("Simple group"));
     acts[1]->setText(QObject::tr("Group with links"));
@@ -180,7 +180,7 @@ void StdCmdLinkMakeGroup::activated(int option) {
         inList.insert(container);
     }
 
-    auto objs = Gui::Selection().getSelectionT("*",0);
+    auto objs = Gui::Selection().getSelectionT("*", ResolveMode::NoResolve);
 
     std::set<App::DocumentObject*> objset;
     for (auto it=objs.begin(); it!=objs.end(); ) {
@@ -311,7 +311,7 @@ void StdCmdLinkMake::activated(int) {
         inList.insert(container);
     }
 
-    auto sels = Selection().getSelectionT("*", 0);
+    auto sels = Selection().getSelectionT("*",  ResolveMode::NoResolve);
 
     Selection().selStackPush();
     Selection().clearCompleteSelection();
@@ -474,7 +474,7 @@ void StdCmdLinkMakeRelative::activated(int) {
     App::AutoTransaction committer(QT_TRANSLATE_NOOP("Command", "Make sub-link"));
     try {
         std::map<App::SubObjectT, std::vector<std::string> > linkInfo;
-        for(auto &sel : Selection().getSelectionT("*", 0)) {
+        for(auto &sel : Selection().getSelectionT("*", ResolveMode::NoResolve)) {
             auto element = sel.getElementName();
             if (!element || !element[0]) {
                 linkInfo[sel];
@@ -564,7 +564,7 @@ static void linkConvert(bool unlink) {
     // PropertyLinkBase::CopyOnLinkReplace().
 
     std::map<std::pair<App::DocumentObject*,App::DocumentObject*>, Info> infos;
-    for(auto sel : TreeWidget::getSelection()) {
+    for(const auto& sel : TreeWidget::getSelection()) {
         auto obj = sel.vp->getObject();
         auto parent = sel.parentVp;
         if(!parent) {
@@ -631,7 +631,7 @@ static void linkConvert(bool unlink) {
                 replaceObj = link;
             }
 
-            // adjust subname for the the new object
+            // adjust subname for the new object
             auto pos = info.subname.rfind('.');
             if(pos==std::string::npos && pos)
                 info.subname.clear();
@@ -671,7 +671,8 @@ static bool linkConvertible(bool unlink) {
     int count = 0;
     for(auto &sel : TreeWidget::getSelection()) {
         auto parent = sel.parentVp;
-        if(!parent) return false;
+        if(!parent)
+            return false;
         auto obj = sel.vp->getObject();
         if(unlink) {
             auto linked = obj->getLinkedObject(false);
@@ -750,7 +751,7 @@ StdCmdLinkImport::StdCmdLinkImport()
 static std::map<App::Document*, std::vector<App::DocumentObject*> > getLinkImportSelections()
 {
     std::map<App::Document*, std::vector<App::DocumentObject*> > objMap;
-    for(auto &sel : Selection().getCompleteSelection(false)) {
+    for(auto &sel : Selection().getCompleteSelection(ResolveMode::NoResolve)) {
         auto obj = sel.pObject->resolve(sel.SubName);
         if(!obj || !obj->getNameInDocument())
             continue;
@@ -873,24 +874,24 @@ StdCmdLinkSelectLinked::StdCmdLinkSelectLinked()
     sAccel        = "S, G";
 }
 
-static App::DocumentObject *getSelectedLink(bool finalLink, std::string *subname=0) {
-    const auto &sels = Selection().getSelection("*",0,true);
+static App::DocumentObject *getSelectedLink(bool finalLink, std::string *subname=nullptr) {
+    const auto &sels = Selection().getSelection("*", ResolveMode::NoResolve, true);
     if(sels.empty())
-        return 0;
+        return nullptr;
     auto sobj = sels[0].pObject->getSubObject(sels[0].SubName);
     if(!sobj)
-        return 0;
+        return nullptr;
     auto vp = Base::freecad_dynamic_cast<ViewProviderDocumentObject>(
             Application::Instance->getViewProvider(sobj));
     if(!vp)
-        return 0;
+        return nullptr;
 
     const char *element = Data::ComplexGeoData::findElementName(sels[0].SubName);
 
     auto linkedVp = vp->getLinkedViewProvider(subname,finalLink);
     if(!linkedVp || linkedVp==vp) {
         if(sobj->getDocument()==sels[0].pObject->getDocument())
-            return 0;
+            return nullptr;
         for(const char *dot=strchr(sels[0].SubName,'.');dot;dot=strchr(dot+1,'.')) {
             std::string sub(sels[0].SubName,dot+1-sels[0].SubName);
             auto obj = sels[0].pObject->getSubObject(sub.c_str());
@@ -901,22 +902,22 @@ static App::DocumentObject *getSelectedLink(bool finalLink, std::string *subname
                 if(finalLink) {
                     if(subname)
                         *subname = element;
-                    return sobj==obj?0:sobj;
+                    return sobj==obj?nullptr:sobj;
                 }
                 if(subname)
                     *subname = std::string(dot+1);
                 return obj;
             }
         }
-        return finalLink?0:sobj;
+        return finalLink?nullptr:sobj;
     }
 
     if(finalLink && linkedVp == vp->getLinkedViewProvider())
-        return 0;
+        return nullptr;
 
     auto linked = linkedVp->getObject();
     if(!linked || !linked->getNameInDocument())
-        return 0;
+        return nullptr;
 
     if(subname && sels[0].pObject!=sobj && sels[0].SubName) {
         bool found = false;
@@ -953,7 +954,7 @@ static App::DocumentObject *getSelectedLink(bool finalLink, std::string *subname
 
         if(found) {
             linked = sels[0].pObject;
-            *subname = prefix.size()?prefix:prefix2 + *subname;
+            *subname = !prefix.empty()?prefix:prefix2 + *subname;
         }
     }
 
@@ -961,7 +962,7 @@ static App::DocumentObject *getSelectedLink(bool finalLink, std::string *subname
 }
 
 bool StdCmdLinkSelectLinked::isActive() {
-    return getSelectedLink(false)!=0;
+    return getSelectedLink(false) != nullptr;
 }
 
 void StdCmdLinkSelectLinked::activated(int)
@@ -974,7 +975,7 @@ void StdCmdLinkSelectLinked::activated(int)
     }
     Selection().selStackPush();
     Selection().clearCompleteSelection();
-    if(subname.size()) {
+    if(!subname.empty()) {
         Selection().addSelection(linked->getDocument()->getName(),linked->getNameInDocument(),subname.c_str());
         TreeWidget::scrollItemToTop();
     } else {
@@ -1001,7 +1002,7 @@ StdCmdLinkSelectLinkedFinal::StdCmdLinkSelectLinkedFinal()
 }
 
 bool StdCmdLinkSelectLinkedFinal::isActive() {
-    return getSelectedLink(true)!=0;
+    return getSelectedLink(true) != nullptr;
 }
 
 void StdCmdLinkSelectLinkedFinal::activated(int) {
@@ -1039,7 +1040,7 @@ StdCmdLinkSelectAllLinks::StdCmdLinkSelectAllLinks()
 }
 
 bool StdCmdLinkSelectAllLinks::isActive() {
-    const auto &sels = Selection().getSelection("*",true,true);
+    const auto &sels = Selection().getSelection("*", ResolveMode::OldStyleElement, true);
     if(sels.empty())
         return false;
     return App::GetApplication().hasLinksTo(sels[0].pObject);
@@ -1047,7 +1048,7 @@ bool StdCmdLinkSelectAllLinks::isActive() {
 
 void StdCmdLinkSelectAllLinks::activated(int)
 {
-    auto sels = Selection().getSelection("*",true,true);
+    auto sels = Selection().getSelection("*", ResolveMode::OldStyleElement, true);
     if(sels.empty())
         return;
     Selection().selStackPush();
@@ -1081,7 +1082,7 @@ public:
         addCommand(Application::Instance->commandManager().getCommandByName("Std_TreeSelectAllInstances"), false);
     }
 
-    virtual const char* className() const {return "StdCmdLinkSelectActions";}
+    const char* className() const override {return "StdCmdLinkSelectActions";}
 };
 
 //======================================================================
@@ -1097,7 +1098,7 @@ public:
         sGroup        = "View";
         sMenuText     = QT_TR_NOOP("Link actions");
         sToolTipText  = QT_TR_NOOP("Link actions");
-        sWhatsThis    = "Std_LinkActions";
+        sWhatsThis    = "Std_LinkMakeRelative";
         sStatusTip    = QT_TR_NOOP("Link actions");
         eType         = AlterDoc;
         bCanLog       = false;
@@ -1112,7 +1113,7 @@ public:
         addCommand(new StdCmdLinkCreateInContainer());
     }
 
-    virtual const char* className() const {return "StdCmdLinkActions";}
+    const char* className() const override {return "StdCmdLinkActions";}
 };
 
 //===========================================================================
@@ -1122,7 +1123,7 @@ public:
 
 namespace Gui {
 
-void CreateLinkCommands(void)
+void CreateLinkCommands()
 {
     CommandManager &rcCmdMgr = Application::Instance->commandManager();
     rcCmdMgr.addCommand(new StdCmdLinkMake());
