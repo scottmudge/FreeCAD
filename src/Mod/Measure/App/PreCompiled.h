@@ -47,6 +47,7 @@
 #include <GProp_GProps.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Shape.hxx>
+#include <ShapeAnalysis_Surface.hxx>
 
 #elif defined(FC_OS_WIN32)
 # include <windows.h>

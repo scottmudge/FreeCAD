@@ -69,11 +69,14 @@
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/actions/SoToVRML2Action.h>
 #include <Inventor/actions/SoWriteAction.h>
+#include <Inventor/actions/SoActions.h>
+#include <Inventor/actions/SoAudioRenderAction.h>
 
 #include <Inventor/annex/ForeignFiles/SoSTLFileKit.h>
 #include <Inventor/annex/HardCopy/SoVectorizeAction.h>
 #include <Inventor/annex/HardCopy/SoVectorizePSAction.h>
 #include <Inventor/annex/HardCopy/SoVectorOutput.h>
+#include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
 
 #include <Inventor/bundles/SoMaterialBundle.h>
 #include <Inventor/bundles/SoTextureCoordinateBundle.h>
@@ -123,6 +126,10 @@
 #include <Inventor/elements/SoViewportRegionElement.h>
 #include <Inventor/elements/SoViewVolumeElement.h>
 #include <Inventor/elements/SoWindowElement.h>
+#include <Inventor/elements/SoClipPlaneElement.h>
+#include <Inventor/elements/SoCullElement.h>
+#include <Inventor/elements/SoLinePatternElement.h>
+#include <Inventor/elements/SoGLVBOElement.h>
 
 #include <Inventor/engines/SoCalculator.h>
 #include <Inventor/engines/SoComposeVec3f.h>
@@ -160,6 +167,7 @@
 #include <Inventor/misc/SoChildList.h>
 #include <Inventor/misc/SoContextHandler.h>
 #include <Inventor/misc/SoState.h>
+#include <Inventor/misc/SoGLDriverDatabase.h>
 
 #include <Inventor/nodes/SoAnnotation.h>
 #include <Inventor/nodes/SoAntiSquish.h>
@@ -253,4 +261,5 @@
 #include <Inventor/VRMLnodes/SoVRMLNormal.h>
 #include <Inventor/VRMLnodes/SoVRMLParent.h>
 #include <Inventor/VRMLnodes/SoVRMLShape.h>
+
 #endif

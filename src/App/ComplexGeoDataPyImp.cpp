@@ -26,7 +26,6 @@
 # include <memory>
 #endif
 
-#include "ComplexGeoData.h"
 #include "MappedElement.h"
 
 // inclusion of the generated files (generated out of ComplexGeoDataPy.xml)

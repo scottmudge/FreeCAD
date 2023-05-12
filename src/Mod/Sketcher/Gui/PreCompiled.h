@@ -89,6 +89,14 @@
 #include <QStyledItemDelegate>
 #include <QTextStream>
 #include <QWidgetAction>
+#include <QAction>
+#include <QColor>
+#include <QDialog>
+#include <QFont>
+#include <QImage>
+#include <QMessageBox>
+#include <QDesktopWidget>
+#include <QTimer>
 
 // all of Inventor
 #ifndef __InventorAll__

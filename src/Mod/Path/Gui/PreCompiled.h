@@ -57,6 +57,10 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QFile>
+#include <QMenu>
+#include <QAction>
+#include <QApplication>
 
 // all of Inventor
 #include <Inventor/SbVec3f.h>
@@ -70,6 +74,8 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSwitch.h>
 #include <Inventor/nodes/SoTransform.h>
+#include <Inventor/nodes/SoPickStyle.h>
+#include <Inventor/nodes/SoAnnotation.h>
 
 #endif //_PreComp_
 

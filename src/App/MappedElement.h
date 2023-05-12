@@ -580,7 +580,7 @@ public:
     {
         int asize = this->size();
         int bsize = other.size();
-        for (int i=0, count=std::min(asize, bsize); i<count; ++i) {
+        for (int i=0, count=__min(asize, bsize); i<count; ++i) {
             char a = this->operator[](i);
             char b = other[i];
             if (a < b)
