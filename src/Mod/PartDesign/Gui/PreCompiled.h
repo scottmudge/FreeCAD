@@ -51,6 +51,14 @@
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
+#include <TopLoc_Location.hxx>
+#include <TopoDS_Face.hxx>
+#include <BRep_Builder.hxx>
+
+#include <Precision.hxx>
+#include <gp_Pln.hxx>
+#include <functional>
+#include <algorithm>
 
 // Qt
 #ifndef __QtAll__

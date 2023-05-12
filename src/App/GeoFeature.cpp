@@ -24,15 +24,12 @@
 #include "PreCompiled.h"
 
 #include <App/GeoFeaturePy.h>
-
-#include <App/GeoFeaturePy.h>
 #include <App/Link.h>
 #include <Base/Console.h>
 #include "Document.h"
-#include "ComplexGeoData.h"
-#include "GeoFeature.h"
-#include "GeoFeatureGroupExtension.h"
 #include "MappedElement.h"
+#include "GeoFeatureGroupExtension.h"
+#include "GeoFeature.h"
 
 FC_LOG_LEVEL_INIT("GeoFeature",true,true);
 

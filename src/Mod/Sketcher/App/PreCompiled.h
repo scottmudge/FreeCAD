@@ -83,6 +83,17 @@
 #include <TopoDS_Shape.hxx>
 #include <TopoDS_Vertex.hxx>
 #include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
+#include <GCPnts_AbscissaPoint.hxx>
+#include <BRepAlgoAPI_Section.hxx>
+#include <BRepBuilderAPI_MakeVertex.hxx>
+#include <BRepProj_Projection.hxx>
+#include <BRepTools_WireExplorer.hxx>
+#include <ProjLib_Plane.hxx>
+#include <GC_MakeArcOfCircle.hxx>
+#include <GeomAPI_IntSS.hxx>
+#include <GeomLProp_CLProps.hxx>
+#include <TopTools_IndexedMapOfShape.hxx>
+#include <GeomAPI_ProjectPointOnCurve.hxx>
 
 #elif defined(FC_OS_WIN32)
 #ifndef NOMINMAX
