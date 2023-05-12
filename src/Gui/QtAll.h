@@ -168,6 +168,7 @@
 #include <QWindow>
 #include <QWhatsThis>
 #include <QWhatsThisClickedEvent>
+#include <QtPlatformHeaders/QWindowsWindowFunctions>
 
 // QtNetwork
 #include <QNetworkAccessManager>

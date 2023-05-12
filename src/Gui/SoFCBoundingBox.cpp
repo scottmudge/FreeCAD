@@ -29,7 +29,7 @@
 # include <Inventor/SbBox.h>
 # include <Inventor/actions/SoGLRenderAction.h>
 # include <Inventor/elements/SoLazyElement.h>
-#include <Inventor/elements/SoModelMatrixElement.h>
+# include <Inventor/elements/SoModelMatrixElement.h>
 # include <Inventor/misc/SoState.h>
 # include <Inventor/actions/SoActions.h>
 # include <Inventor/nodes/SoText2.h>

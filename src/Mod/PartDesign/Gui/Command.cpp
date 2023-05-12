@@ -32,6 +32,7 @@
 # include <TopLoc_Location.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Face.hxx>
+# include <gp_Pln.hxx> 
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>

@@ -51,6 +51,7 @@
 # include <GCPnts_UniformDeflection.hxx>
 # include <GeomAPI_ProjectPointOnCurve.hxx>
 # include <gp_Circ.hxx>
+# include <gp_Pln.hxx> 
 # include <HLRAlgo_Projector.hxx>
 # include <HLRBRep_Algo.hxx>
 # include <HLRBRep_HLRToShape.hxx>

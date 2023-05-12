@@ -37,6 +37,7 @@
 # include <TopoDS.hxx>
 # include <TopExp.hxx>
 # include <TopExp_Explorer.hxx>
+# include <gp_Pln.hxx> 
 # include <QtGlobal>
 #endif
 

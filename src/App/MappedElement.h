@@ -33,6 +33,11 @@
 #include "ComplexGeoData.h"
 #include "StringHasher.h"
 
+// Workaround for Windows issue with std::min
+#ifndef __min
+#define __min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
 namespace App
 {
 class DocumentObject;
@@ -580,7 +585,7 @@ public:
     {
         int asize = this->size();
         int bsize = other.size();
-        for (int i=0, count=std::min(asize, bsize); i<count; ++i) {
+        for (int i=0, count=__min(asize, bsize); i<count; ++i) {
             char a = this->operator[](i);
             char b = other[i];
             if (a < b)

@@ -29,6 +29,14 @@
 #   pragma warning(disable : 4005)
 #endif
 
+#ifndef __min
+#define __min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef __max
+#define __max(a,b) (((a) > (b)) ? (a) : (b))
+#endif
+
 #ifdef _PreComp_
 
 #ifdef FC_OS_WIN32
@@ -51,6 +59,14 @@
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
+#include <TopLoc_Location.hxx>
+#include <TopoDS_Face.hxx>
+#include <BRep_Builder.hxx>
+
+#include <Precision.hxx>
+#include <gp_Pln.hxx>
+#include <functional>
+#include <algorithm>
 
 // Qt
 #ifndef __QtAll__
