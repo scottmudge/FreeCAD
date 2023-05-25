@@ -28,7 +28,7 @@
 # include <TopoDS.hxx>
 # include <TopoDS_Edge.hxx>
 # include <TopoDS_Face.hxx>
-# include <gp_Pln.hxx> 
+# include <gp_Pln.hxx>
 # include <QDialog>
 #endif
 

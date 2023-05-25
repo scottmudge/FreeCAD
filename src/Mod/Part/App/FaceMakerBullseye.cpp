@@ -37,7 +37,7 @@
 # include <TopoDS.hxx>
 # include <TopExp.hxx>
 # include <TopExp_Explorer.hxx>
-# include <gp_Pln.hxx> 
+# include <gp_Pln.hxx>
 # include <QtGlobal>
 #endif
 
@@ -113,7 +113,7 @@ void FaceMakerBullseye::Build_Essence()
             continue;
         wireInfos.emplace_back(w, box);
     }
-        
+
     // Sort wires by length of diagonal of bounding box.
     std::stable_sort(wireInfos.begin(), wireInfos.end());
 
