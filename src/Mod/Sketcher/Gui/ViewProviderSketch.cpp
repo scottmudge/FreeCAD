@@ -4478,7 +4478,7 @@ void ViewProviderSketch::toggleViewSection(int toggle)
         Gui::cmdGuiObject(getObject(), std::ostringstream()
                 << "TempoVis.sketchClipPlane("
                 << getObject()->getFullName(/*python*/true)
-                << ", reverse=" << (viewBottomOnEdit() ? "True" : "False")
+                << ", reverted=" << (viewBottomOnEdit() ? "True" : "False")
                 << ", enable=" << (enable ? "True" : "False") << ")");
     }
 }

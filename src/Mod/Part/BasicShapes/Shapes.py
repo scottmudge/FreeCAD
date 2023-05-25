@@ -28,6 +28,7 @@ __doc__ = "Basic shapes"
 
 import FreeCAD
 import Part
+import traceback
 
 
 def makeTube(outerRadius, innerRadius, height):
@@ -80,6 +81,12 @@ class _ParamUnitsObserver:
         _ParamDecimals = _ParamUnits.GetInt('Decimals', 2)
 
 _Observer = _ParamUnitsObserver()
+
+_logger = FreeCAD.Logger('PreselMacro')
+def _printTrace(verbose=False):
+    global _logger
+    if not verbose or _logger.isEnabledFor(5):
+        _logger.trace(traceback.format_exc())
 
 def _ftostr(v):
     if _Decimals:
@@ -147,6 +154,7 @@ def showPreselectInfo():
         if not sel.Object or len(sel.SubElementNames) != 1:
             return
     except Exception:
+        _printTrace()
         return
     shape, _, obj = Part.getShape(sel.Object, sel.SubElementNames[0],
                                   needSubElement=True, retType=1)
@@ -190,7 +198,7 @@ def showPreselectInfo():
                     mappedName = mappedName[:maxlen-5] + '...'
                 txt += mappedName
     except Exception:
-        pass
+        _printTrace(True)
 
     txt += '\nPlacement: %s' % _pla_tostr(shape.Placement)
     tol = getattr(shape, 'Tolerance', None)
@@ -214,7 +222,7 @@ def showPreselectInfo():
                         elements += ', '
                     elements += '%s: %d' % (element, n)
             except Exception:
-                pass
+                _printTrace(True)
         if elements:
             txt += '\n' + elements
 
@@ -223,14 +231,15 @@ def showPreselectInfo():
         txt += '\nBoundBox: %s' % ('Infinite' if shape.isInfinite() else _bbox_tostr(bbox))
         txt += '\nBound center: %s' % _vec_tostr(bbox.Center)
     except Exception:
-        pass
+        _printTrace(True)
 
     txt = _getGeoAttributes(txt, shape, ('Orientation',
                                          ('Closed', 'isClosed'),
                                          ('FirstVertex', 'firstVertex'),
                                          ('LastVertex', 'lastVertex'),
-                                         'ParameterRange',
                                         ))
+    if not shape.isInfinite():
+        txt = _getGeoAttributes(txt, shape, ('ParameterRange',))
 
     geo = getattr(shape, 'Curve', None)
     if geo:
@@ -243,13 +252,13 @@ def showPreselectInfo():
                 txt += '\nTangent: %s' % _vec_tostr(geo.tangent(u)[0])
                 txt += '\nCurvature: %s' % _ftostr(geo.curvature(u))
             except Exception:
-                pass
+                _printTrace(True)
         if isinstance(geo, Part.BSplineCurve):
             try:
                 txt += f'\nDegree: {geo.Degree}'\
                        f'\nPoles: {geo.NbPoles}'
             except Exception:
-                pass
+                _printTrace(True)
     else:
         geo = getattr(shape, 'Surface', None)
         if geo:
@@ -260,19 +269,19 @@ def showPreselectInfo():
                     txt += '\nParameter: %s' % _tostr(u)
                     txt += '\nNormal: %s' % _vec_tostr(geo.normal(*u))
                 except Exception:
-                    pass
+                    _printTrace(True)
                 try:
                     t = geo.tangent(*u)
                     txt += '\nTangent: %s %s' % (_vec_tostr(t[0]), _vec_tostr(t[1]))
                     txt += '\nCurvature: %s' % _ftostr(geo.curvature(u[0], u[1],'Mean'))
                 except Exception:
-                    pass
+                    _printTrace(True)
             if isinstance(geo, Part.BSplineSurface):
                 try:
                     txt += f'\nDegree: ({geo.UDegree}, {geo.VDegree})' \
                            f'\nPoles: ({geo.NbUPoles}, {geo.NbVPoles})'
                 except Exception:
-                    pass
+                    _printTrace(True)
     txt = _getGeoAttributes(txt, geo,
             ('Radius',
              'MajorRadius',
@@ -311,12 +320,14 @@ def showPreselectMeasure():
         if count > 3:
             return
     except Exception:
+        _printTrace()
         return
     presel = FreeCADGui.Selection.getPreselection()
     try:
         if not presel.Object or len(presel.SubElementNames) != 1:
             return
     except Exception:
+        _printTrace()
         return
     shape = Part.getShape(presel.Object, presel.SubElementNames[0], needSubElement=True)
     if shape.isNull():
@@ -354,4 +365,4 @@ def showPreselectMeasure():
                 msg = txt
             FreeCADGui.Selection.setPreselectionText(msg)
     except Exception:
-        pass
+        _printTrace(True)

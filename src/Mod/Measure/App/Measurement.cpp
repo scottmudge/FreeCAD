@@ -311,6 +311,8 @@ double Measurement::length() const
         if (!shapeset.insert(subshape.getShape()).second)
             continue;
         for (auto & edge : subshape.getSubShapes(TopAbs_EDGE)) {
+            if (edge.Infinite())
+                continue;
             double l = length(edge);
             if (l < 0.0)
                 return 0.0;
@@ -342,6 +344,8 @@ double Measurement::perimeter(bool checkInner) const
         for (auto & face : subshape.getSubTopoShapes(TopAbs_FACE)) {
             if (!shapeset.insert(face.getShape()).second)
                 continue; // skip duplicated face reference
+            if (face.isInfinite())
+                continue;
             innerWires.clear();
             auto wire = face.splitWires(&innerWires, Part::TopoShape::NoReorient);
             inner += innerWires.size();
@@ -391,6 +395,8 @@ double Measurement::area() const
             for (auto & face : subshape.getSubShapes(TopAbs_FACE)) {
                 if (!shapeset.insert(face).second)
                     continue;
+                if (face.Infinite())
+                    continue;
                 ++count;
                 GProp_GProps props;
                 BRepGProp::SurfaceProperties(face, props);
@@ -425,6 +431,8 @@ double Measurement::volume() const
             auto subshape = shape.getSubTopoShape(element.c_str());
             for (auto & shell : subshape.getSubShapes(TopAbs_SHELL)) {
                 if (!shapeset.insert(shell).second)
+                    continue;
+                if (shell.Infinite())
                     continue;
                 ++count;
                 GProp_GProps props;

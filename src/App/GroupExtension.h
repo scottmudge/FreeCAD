@@ -173,12 +173,9 @@ public:
         return Group;
     }
 
-    virtual bool getChildDefaultExport(App::DocumentObject *obj) const {
-       (void)obj;
-       return true;
-    }
+    virtual bool getChildDefaultExport(App::DocumentObject *obj, int reason) const;
     
-    bool queryChildExport(App::DocumentObject *obj) const;
+    bool queryChildExport(App::DocumentObject *obj, int reason) const;
     bool toggleChildExport(App::DocumentObject *obj, bool toggleGroup = true);
     static PropertyBool *getChildExportProperty(App::DocumentObject *obj,
                                                 bool force = false,

@@ -214,7 +214,7 @@ protected:
     void onDocumentRestored() override;
 
     virtual const App::PropertyLinkList& getExportGroupProperty(int reason) const override;
-    virtual bool getChildDefaultExport(App::DocumentObject *obj) const override;
+    virtual bool getChildDefaultExport(App::DocumentObject *obj, int reason) const override;
 
 private:
     bool showTip = false;

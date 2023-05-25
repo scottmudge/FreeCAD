@@ -32,6 +32,7 @@ namespace PartDesign
 class PartDesignExport Pocket : public FeatureExtrude
 {
     PROPERTY_HEADER_WITH_OVERRIDE(PartDesign::Pocket);
+    using inherited = FeatureExtrude;
 
 public:
     Pocket();
@@ -46,6 +47,8 @@ public:
     }
 
     void setPauseRecompute(bool enable) override;
+
+    Base::Vector3d getProfileNormal() const override;
 
 private:
     static const char* TypeEnums[];
