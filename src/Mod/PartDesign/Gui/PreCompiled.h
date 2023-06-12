@@ -29,6 +29,14 @@
 #   pragma warning(disable : 4005)
 #endif
 
+#ifndef __min
+#define __min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef __max
+#define __max(a,b) (((a) > (b)) ? (a) : (b))
+#endif
+
 #ifdef _PreComp_
 
 #ifdef FC_OS_WIN32

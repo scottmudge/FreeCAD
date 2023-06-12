@@ -164,7 +164,7 @@ void ViewProviderTransformed::checkAddSubColor()
             addcolor = intersectcolor;
     }
     // clamp transparency between 0.1 ~ 0.8
-    float t = std::max(0.1f, __min(0.8f, 1.0f - addcolor.a));
+    float t = __max(0.1f, __min(0.8f, (1.0f - addcolor.a)));
     if (!PartGui::PartParams::getPreviewWithTransparency()) {
         t = 0.0f;
         previewGroup->priority = 0;

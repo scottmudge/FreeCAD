@@ -99,7 +99,7 @@ bool setEdit(App::DocumentObject *obj, App::DocumentObject *container, const cha
     if(!container) {
         if (std::strcmp(key, PDBODYKEY)==0) {
             container = getBodyFor(obj, false);
-            if(!container) 
+            if(!container)
                 return false;
         } else if (std::strcmp(key,PARTKEY)==0) {
             container = getPartFor(obj, false);
@@ -195,7 +195,7 @@ PartDesign::Body *getBody(bool messageIfNot, bool autoActivate, bool assertModer
     return activeBody;
 }
 
-PartDesign::Body *getBody(App::SubObjectT &sobjT, 
+PartDesign::Body *getBody(App::SubObjectT &sobjT,
                           bool messageIfNot,
                           bool autoActivate,
                           bool assertModern)
@@ -685,7 +685,7 @@ PartDesign::Body *queryCommandOverride()
 
     QCheckBox checkBox(QObject::tr("Remember the choice"));
     checkBox.blockSignals(true);
-    box.addButton(&checkBox, QMessageBox::ResetRole); 
+    box.addButton(&checkBox, QMessageBox::ResetRole);
     int res = box.exec();
     if (checkBox.isChecked()) {
         QMessageBox::information(Gui::getMainWindow(),
@@ -739,7 +739,7 @@ public:
 
         Gui::Application::Instance->signalHighlightObject.connect(
             [this](const Gui::ViewProviderDocumentObject &vp,
-                   const Gui::HighlightMode &, 
+                   const Gui::HighlightMode &,
                    bool set,
                    App::DocumentObject * parent,
                    const char *subname)
@@ -1500,7 +1500,7 @@ static QCheckBox *hookPropertyBool(App::DocumentObject *obj,
         });
 
     // Auto disconnect boost signals when the following QObject signal gets
-    // disconnected when the QObject is destroied.
+    // disconnected when the QObject is destroyed.
     std::shared_ptr<boost::signals2::scoped_connection> pconn(
             new boost::signals2::scoped_connection(conn));
 

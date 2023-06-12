@@ -77,5 +77,13 @@ void Pocket::setPauseRecompute(bool enable)
                 || boost::equals(Type.getValueAsString(), "UpToFace"))) {
         enable = false;
     }
-    ProfileBased::setPauseRecompute(enable);
+    inherited::setPauseRecompute(enable);
+}
+
+
+Base::Vector3d Pocket::getProfileNormal() const
+{
+    auto res = inherited::getProfileNormal();
+    // turn around for pockets
+    return res * -1;
 }

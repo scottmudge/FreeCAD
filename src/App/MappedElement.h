@@ -33,6 +33,11 @@
 #include "ComplexGeoData.h"
 #include "StringHasher.h"
 
+// Workaround for Windows issue with std::min
+#ifndef __min
+#define __min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
 namespace App
 {
 class DocumentObject;

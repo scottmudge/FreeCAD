@@ -245,7 +245,7 @@ Gui::Action * CmdTechDrawCosmeticVertexGroup::createAction()
     applyCommandData(this->className(), pcAction);
 
     QAction* p1 = pcAction->addAction(QString());
-    p1->setIcon(Gui::BitmapFactory().iconFromTheme("actions/Techdraw_CosmeticVertex"));
+    p1->setIcon(Gui::BitmapFactory().iconFromTheme("actions/TechDraw_CosmeticVertex"));
     p1->setObjectName(QStringLiteral("TechDraw_CosmeticVertex"));
     p1->setWhatsThis(QStringLiteral("TechDraw_CosmeticVertex"));
     QAction* p2 = pcAction->addAction(QString());

@@ -32,6 +32,7 @@
 # include <TopLoc_Location.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Face.hxx>
+# include <gp_Pln.hxx>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -129,7 +130,7 @@ void UnifiedDatumCommand(Gui::Command &cmd, Base::Type type, std::string name)
             // We check if the container or any of its parent objects is selected
             // (i.e. for attaching), and exclude the container if it causes cyclic
             // reference.
-            
+
             if (!container)
                 return 0;
 
@@ -1013,7 +1014,7 @@ void prepareProfileBased(PartDesign::Body *pcActiveBody, Gui::Command* cmd, cons
                     profile.push_back(sobjT);
                     it = sels.erase(it);
                 }
-                else 
+                else
                     ++it;
             }
             base_worker(profile, sels);

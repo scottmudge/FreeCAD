@@ -118,7 +118,7 @@ void ViewProviderGroupExtension::extensionUpdateData(const App::Property *prop)
         if (!obj->getDocument()->testStatus(App::Document::Restoring)) {
             if (auto ext = obj->getExtensionByType<App::GroupExtension>(true)) {
                 if (prop == &ext->ExportMode) {
-                    for (auto obj : ext->getExportGroupProperty(App::DocumentObject::GS_DEFAULT).getValues()) {
+                    for (auto obj : ext->Group.getValues()) {
                         auto vp = Application::Instance->getViewProvider(obj);
                         if (vp)
                             vp->signalChangeIcon();

@@ -1089,8 +1089,7 @@ void SelectModule::accept()
 
 void SelectModule::reject()
 {
-    if (group->checkedButton())
-        QDialog::reject();
+    QDialog::reject();
 }
 
 void SelectModule::onButtonClicked()
@@ -1234,12 +1233,14 @@ SelectModule::Dict SelectModule::importHandler(const QStringList& fileNames, con
         if (it.value().size() > 1) {
             SelectModule dlg(it.key(),it.value(), getMainWindow());
             QApplication::beep();
-            if (dlg.exec()) {
-                QString mod = dlg.getModule();
-                const QStringList& files = fileExtension[it.key()];
-                for (const auto & file : files)
-                    dict[file] = mod;
+            if (dlg.exec() == 0) {
+                dict.clear();
+                break;
             }
+            QString mod = dlg.getModule();
+            const QStringList& files = fileExtension[it.key()];
+            for (const auto & file : files)
+                dict[file] = mod;
         }
     }
 

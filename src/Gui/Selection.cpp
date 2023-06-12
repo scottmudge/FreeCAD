@@ -2523,17 +2523,13 @@ PyObject *SelectionSingleton::sCountObjectsOfType(PyObject * /*self*/, PyObject 
     char* objecttype = nullptr;
     char* document = nullptr;
     int resolve = 1;
-    if (!PyArg_ParseTuple(args, "s|si", &objecttype, &document,&resolve))
+    if (!PyArg_ParseTuple(args, "|ssi", &objecttype, &document,&resolve))
         return nullptr;
 
     try {
         unsigned int count = Selection().countObjectsOfType(objecttype, document, toEnum(resolve));
         return PyLong_FromLong(count);
-    }
-    catch (const Base::Exception& e) {
-        e.setPyException();
-        return nullptr;
-    }
+    } PY_CATCH
 }
 
 PyObject *SelectionSingleton::sGetSelection(PyObject * /*self*/, PyObject *args)

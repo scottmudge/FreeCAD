@@ -35,6 +35,9 @@
 
 #include <FCGlobal.h>
 
+#ifdef __GNUC__
+# include <cstdint>
+#endif
 #include <string>
 #include <memory>
 #include <vector>

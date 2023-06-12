@@ -85,18 +85,25 @@ GroupExtension::GroupExtension()
 
 GroupExtension::~GroupExtension() = default;
 
-bool GroupExtension::queryChildExport(App::DocumentObject *obj) const {
+bool GroupExtension::getChildDefaultExport(App::DocumentObject *obj, int reason) const
+{
+    if (obj && obj->getNameInDocument())
+        return getExportGroupProperty(reason).find(obj->getNameInDocument()) != nullptr;
+    return false;
+}
+
+bool GroupExtension::queryChildExport(App::DocumentObject *obj, int reason) const {
     if(!obj || !obj->getNameInDocument())
         return false;
     switch(ExportMode.getValue()) {
     case ExportDisabled:
         return false;
     case ExportByVisibility:
-        return true;
+        return getChildDefaultExport(obj, reason);
     default:
         break;
     }
-    bool defvalue = getChildDefaultExport(obj);
+    bool defvalue = getChildDefaultExport(obj, reason);
     auto prop = getChildExportProperty(obj, true, defvalue);
     return prop ? prop->getValue() : defvalue;
 }
@@ -122,7 +129,7 @@ App::PropertyBool *GroupExtension::getChildExportProperty(App::DocumentObject *o
 
 bool GroupExtension::toggleChildExport(App::DocumentObject *obj, bool toggleGroup)
 {
-    auto prop = getChildExportProperty(obj, toggleGroup, getChildDefaultExport(obj));
+    auto prop = getChildExportProperty(obj, toggleGroup, getChildDefaultExport(obj, DocumentObject::GS_DEFAULT));
     if (!prop)
         return false;
     if (prop->getValue()) {
@@ -487,12 +494,12 @@ void GroupExtension::extensionOnChanged(const Property* p) {
         }
     }
 
-    if(p == &getExportGroupProperty(DocumentObject::GS_DEFAULT) || p == &ExportMode) {
+    if(p == &Group || p == &ExportMode) {
         _Conns.clear();
-        for(auto obj : getExportGroupProperty(DocumentObject::GS_DEFAULT).getValues()) {
+        for(auto obj : Group.getValues()) {
             if(!obj || !obj->getNameInDocument())
                 continue;
-            queryChildExport(obj);
+            queryChildExport(obj, DocumentObject::GS_DEFAULT);
             _Conns.push_back(obj->Visibility.signalChanged.connect(boost::bind(
                             &GroupExtension::slotChildChanged,this,bp::_1)));
             auto groupTouched = Base::freecad_dynamic_cast<PropertyBool>(
@@ -648,9 +655,9 @@ bool GroupExtension::extensionGetSubObjects(std::vector<std::string> &ret, int r
     if (reason == DocumentObject::GS_SELECT && !_enableSubObjects)
         return true;
 
-    for(auto obj : getExportGroupProperty(reason).getValues()) {
+    for(auto obj : Group.getValues()) {
         if(obj && obj->getNameInDocument()) {
-            if(reason != DocumentObject::GS_DEFAULT || queryChildExport(obj))
+            if(reason != DocumentObject::GS_DEFAULT || queryChildExport(obj, reason))
                 ret.push_back(std::string(obj->getNameInDocument())+'.');
         }
     }

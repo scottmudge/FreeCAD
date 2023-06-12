@@ -31,6 +31,10 @@
 
 //! @file  E57Format.h header file for the E57 API
 
+#ifdef __GNUC__
+# include <cstdint>
+#endif
+
 #include <cfloat>
 #include <memory>
 #include <vector>

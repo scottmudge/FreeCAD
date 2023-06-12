@@ -213,6 +213,9 @@
         <file>icons/pointers/Sketcher_Pointer_Create_Point.svg</file>
         <file>icons/pointers/Sketcher_Pointer_Extension.svg</file>
         <file>icons/pointers/Sketcher_Pointer_External.svg</file>
+        <file>icons/pointers/Sketcher_Pointer_Intersection.svg</file>
+        <file>icons/pointers/Sketcher_Pointer_Defining.svg</file>
+        <file>icons/pointers/Sketcher_Pointer_Attaching.svg</file>
         <file>icons/pointers/Sketcher_Pointer_InsertKnot.svg</file>
         <file>icons/pointers/Sketcher_Pointer_Oblong.svg</file>
         <file>icons/pointers/Sketcher_Pointer_Regular_Polygon.svg</file>
