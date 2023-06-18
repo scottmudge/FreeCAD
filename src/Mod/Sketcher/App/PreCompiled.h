@@ -94,6 +94,7 @@
 #include <gp_Parab.hxx>
 #include <gp_Pln.hxx>
 #include <gp_Pnt.hxx>
+#include <ElCLib.hxx>
 
 #elif defined(FC_OS_WIN32)
 #ifndef NOMINMAX

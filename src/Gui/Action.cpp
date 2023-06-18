@@ -805,7 +805,7 @@ void WorkbenchComboBox::showPopup()
 #if QT_VERSION < QT_VERSION_CHECK(5,14,0)
         int maxHeight = QApplication::desktop()->availableGeometry(getMainWindow()).height();
 #else
-        int maxHeight = getMainWindow()->screen()->availableGeometry();
+        int maxHeight = getMainWindow()->screen()->availableGeometry().height();
 #endif
         view()->setMinimumHeight(qMin(height * rows, maxHeight/2));
     }

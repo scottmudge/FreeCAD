@@ -4495,7 +4495,7 @@ void ViewProviderSketch::initParams()
         if (edit->viewer)
             dpi = edit->viewer->screen()->logicalDotsPerInchX();
         else
-            dpi = getMainWindow()->screen()->logicalDotsPerInchX();
+            dpi = Gui::getMainWindow()->screen()->logicalDotsPerInchX();
 #endif
         // simple scaling factor for hardcoded pixel values in the Sketcher
         edit->pixelScalingFactor = viewScalingFactor * dpi / 96; // 96 ppi is the standard pixel density for which pixel quantities were calculated
