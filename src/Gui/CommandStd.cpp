@@ -248,13 +248,14 @@ Action * StdCmdAbout::createAction()
     Action *pcAction;
 
     QString exe = qApp->applicationName();
+    if (exe.length() < 1) exe = QString::fromUtf8("Application");
     pcAction = new Action(this, getMainWindow());
-    pcAction->setText(QCoreApplication::translate(
-        this->className(), sMenuText).arg(exe));
-    pcAction->setToolTip(QCoreApplication::translate(
-        this->className(), sToolTipText).arg(exe));
-    pcAction->setStatusTip(QCoreApplication::translate(
-        this->className(), sStatusTip).arg(exe));
+    QString menuText = QCoreApplication::translate(this->className(), getMenuText()) + QString::fromUtf8(" %1");
+    QString toolTipText = QCoreApplication::translate(this->className(), getToolTipText()) + QString::fromUtf8(" %1");
+    QString statusTipText = QCoreApplication::translate(this->className(), getStatusTip()) + QString::fromUtf8(" %1");
+    pcAction->setText(menuText.arg(exe));
+    pcAction->setToolTip(toolTipText.arg(exe));
+    pcAction->setStatusTip(statusTipText.arg(exe));
     pcAction->setWhatsThis(QString::fromUtf8(sWhatsThis));
     pcAction->setIcon(QApplication::windowIcon());
     pcAction->setShortcut(QString::fromUtf8(getAccel()));
@@ -300,12 +301,13 @@ void StdCmdAbout::languageChange()
 {
     if (_pcAction) {
         QString exe = qApp->applicationName();
-        _pcAction->setText(QCoreApplication::translate(
-            this->className(), getMenuText()).arg(exe));
-        _pcAction->setToolTip(QCoreApplication::translate(
-            this->className(), getToolTipText()).arg(exe));
-        _pcAction->setStatusTip(QCoreApplication::translate(
-            this->className(), getStatusTip()).arg(exe));
+        if (exe.length() < 1) exe = QString::fromUtf8("Application");
+        QString menuText = QCoreApplication::translate(this->className(), getMenuText()) + QString::fromUtf8(" %1");
+        QString toolTipText = QCoreApplication::translate(this->className(), getToolTipText()) + QString::fromUtf8(" %1");
+        QString statusTipText = QCoreApplication::translate(this->className(), getStatusTip()) + QString::fromUtf8(" %1");
+        _pcAction->setText(menuText.arg(exe));
+        _pcAction->setToolTip(toolTipText.arg(exe));
+        _pcAction->setStatusTip(statusTipText.arg(exe));
         _pcAction->setWhatsThis(QString::fromUtf8(getWhatsThis()));
     }
 }

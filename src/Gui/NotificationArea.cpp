@@ -977,7 +977,7 @@ void NotificationArea::showInNotificationArea()
 
         QString msgw =
             QString::fromLatin1(
-                "<style>p { margin: 0 0 0 0 } td { padding: 0 15px }</style>                     \
+                "<style>table {color: black} p { margin: 0 0 0 0 } td { padding: 0 15px}</style>                     \
         <p style='white-space:normal'>                                                                                      \
         <table>                                                                                                             \
         <tr>                                                                                                               \
