@@ -99,7 +99,7 @@ public:
 
 protected:
 
-     App::DocumentObjectExecReturn *recompute() override;
+    App::DocumentObjectExecReturn *recompute() override;
 
     virtual void onNewSolidChanged();
 

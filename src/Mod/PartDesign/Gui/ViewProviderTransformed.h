@@ -37,11 +37,14 @@ class PartDesignGuiExport ViewProviderTransformed : public ViewProviderAddSub
 public:
     /// constructor
     ViewProviderTransformed()
-        : featureName("undefined") {}
+        {}
     /// destructor
     ~ViewProviderTransformed() override
         {}
 
+    // The feature name of the subclass
+    virtual const std::string & featureName() const;
+    std::string featureIcon() const;
     void setupContextMenu(QMenu*, QObject*, const char*) override;
 
     Gui::ViewProvider *startEditing(int ModNum=0) override;
@@ -50,10 +53,8 @@ public:
     /// signals if the transformation contains errors
     boost::signals2::signal<void (QString msg)> signalDiagnosis;
 
-    // The feature name of the subclass
-    std::string featureName;
     // Name of menu dialog
-    QString menuName;
+    virtual QString getMenuName() const = 0;
 
 protected:
     virtual void updateAddSubShapeIndicator() override;

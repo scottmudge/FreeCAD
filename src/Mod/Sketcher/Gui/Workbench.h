@@ -43,10 +43,14 @@ public:
     Workbench();
     ~Workbench() override;
 
+    static void enterEditMode();
+    static void leaveEditMode();
+
 protected:
     Gui::MenuItem* setupMenuBar() const override;
     Gui::ToolBarItem* setupToolBars() const override;
     Gui::ToolBarItem* setupCommandBars() const override;
+    void activated() override;
 };
 
 SketcherGuiExport void addSketcherWorkbenchSketchActions(Gui::MenuItem& sketch);
@@ -64,6 +68,7 @@ SketcherGuiExport void addSketcherWorkbenchConstraints(Gui::ToolBarItem& cons);
 SketcherGuiExport void addSketcherWorkbenchTools(Gui::ToolBarItem& consaccel);
 SketcherGuiExport void addSketcherWorkbenchBSplines(Gui::ToolBarItem& bspline);
 SketcherGuiExport void addSketcherWorkbenchVirtualSpace(Gui::ToolBarItem& virtualspace);
+SketcherGuiExport void addSketcherWorkbenchEditTools(Gui::ToolBarItem& edittools);
 
 } // namespace SketcherGui
 

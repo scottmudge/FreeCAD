@@ -29,7 +29,9 @@
 # include <QApplication>
 # include <QCheckBox>
 # include <QClipboard>
-# include <QDesktopWidget>
+# if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#   include <QDesktopWidget>
+# endif
 # include <QElapsedTimer>
 # include <QEvent>
 # include <QHBoxLayout>
@@ -67,7 +69,7 @@
 #include "Command.h"
 #include "CommandCompleter.h"
 #include "DlgUndoRedo.h"
-#include "DlgWorkbenchesImp.h"
+#include "DlgSettingsWorkbenchesImp.h"
 #include "Document.h"
 #include "EditorView.h"
 #include "FileDialog.h"
@@ -253,7 +255,7 @@ void Action::setToolTip(const QString & text, const QString & title)
     _tooltip = text;
     _title = title;
     _action->setToolTip(createToolTip(text,
-                title.isEmpty() ? _action->text() : title, 
+                title.isEmpty() ? _action->text() : title,
                 _action->font(),
                 _action->shortcut().toString(QKeySequence::NativeText),
                 _pcCmd));
@@ -504,8 +506,8 @@ Action::addCheckBox(QMenu *menu,
     action->setCheckable(true);
     action->setChecked(checked);
     menu->addAction(action);
-    QObject::connect(checkbox, SIGNAL(toggled(bool)), action, SLOT(setChecked(bool)));
-    QObject::connect(checkbox, SIGNAL(toggled(bool)), action, SIGNAL(toggled(bool)));
+    QObject::connect(checkbox, &QCheckBox::toggled, action, &QAction::setChecked);
+    QObject::connect(checkbox, &QCheckBox::toggled, action, &QAction::toggled);
     return action;
 }
 
@@ -609,6 +611,14 @@ void ActionGroup::addTo(QWidget *widget)
             item->setMenuRole(action()->menuRole());
             menu->setTitle(action()->text());
             menu->addActions(actions());
+
+            QObject::connect(menu, &QMenu::aboutToShow, [this, menu]() {
+                Q_EMIT aboutToShow(menu);
+            });
+
+            QObject::connect(menu, &QMenu::aboutToHide, [this, menu]() {
+                Q_EMIT aboutToHide(menu);
+            });
         }
         else if (widget->inherits("QToolBar")) {
             widget->addAction(action());
@@ -617,6 +627,14 @@ void ActionGroup::addTo(QWidget *widget)
             menu->addActions(actions());
             tb->setMenu(menu);
             ToolBarManager::getInstance()->checkToolbarIconSize(static_cast<QToolBar*>(widget));
+
+            QObject::connect(menu, &QMenu::aboutToShow, [this, menu]() {
+                Q_EMIT aboutToShow(menu);
+            });
+
+            QObject::connect(menu, &QMenu::aboutToHide, [this, menu]() {
+                Q_EMIT aboutToHide(menu);
+            });
         }
         else {
             widget->addActions(actions()); // no drop-down
@@ -784,7 +802,11 @@ void WorkbenchComboBox::showPopup()
     int rows = count();
     if (rows > 0) {
         int height = view()->sizeHintForRow(0);
+#if QT_VERSION < QT_VERSION_CHECK(5,14,0)
         int maxHeight = QApplication::desktop()->availableGeometry(getMainWindow()).height();
+#else
+        int maxHeight = getMainWindow()->screen()->availableGeometry();
+#endif
         view()->setMinimumHeight(qMin(height * rows, maxHeight/2));
     }
 
@@ -972,11 +994,11 @@ WorkbenchTabWidget::WorkbenchTabWidget(WorkbenchGroup* wb, QWidget* parent)
     : QTabWidget(parent), group(wb)
 {
     this->setTabBar(new WorkbenchTabBar(this));
-    connect(this, SIGNAL(currentChanged(int)), this, SLOT(onCurrentChanged()));
-    connect(this->tabBar(), SIGNAL(tabMoved(int, int)), this, SLOT(onTabMoved(int, int)));
-    connect(getMainWindow(), SIGNAL(workbenchActivated(const QString&)),
-            this, SLOT(onWorkbenchActivated(const QString&)));
-    connect(wb, SIGNAL(workbenchListUpdated()), this, SLOT(updateWorkbenches()));
+    connect(this, &QTabWidget::currentChanged, this, &WorkbenchTabWidget::onCurrentChanged);
+    connect(this->tabBar(), &QTabBar::tabMoved, this, &WorkbenchTabWidget::onTabMoved);
+    connect(getMainWindow(), &MainWindow::workbenchActivated,
+            this, &WorkbenchTabWidget::onWorkbenchActivated);
+    connect(wb, &WorkbenchGroup::workbenchListUpdated, this, &WorkbenchTabWidget::updateWorkbenches);
     updateWorkbenches();
     this->setMovable(true);
     this->tabBar()->setDrawBase(true);
@@ -1006,7 +1028,7 @@ WorkbenchTabWidget::WorkbenchTabWidget(WorkbenchGroup* wb, QWidget* parent)
     });
 
     timerCurrentChange.setSingleShot(true);
-    connect(&timerCurrentChange, SIGNAL(timeout()), this, SLOT(onCurrentChanged()));
+    connect(&timerCurrentChange, &QTimer::timeout, this, &WorkbenchTabWidget::onCurrentChanged);
 
     onChangeOrientation();
 }
@@ -1180,7 +1202,7 @@ bool WorkbenchTabWidget::eventFilter(QObject *o, QEvent *ev)
             enabled << tab->tabData(i).toString();
         Base::ConnectionBlocker blocker(connParam);
         QSignalBlocker blocker2(group);
-        DlgWorkbenchesImp::save_workbenches(enabled);
+        DlgSettingsWorkbenchesImp::saveWorkbenches(enabled);
     }
     return QTabWidget::eventFilter(o, ev);
 }
@@ -1243,7 +1265,7 @@ void WorkbenchGroup::onContextMenuRequested(const QPoint &)
 
     QMenu subMenu(tr("Disabled workbenches"));
     std::vector<QAction*> actions;
-    QStringList disabled = DlgWorkbenchesImp::load_disabled_workbenches(true);
+    QStringList disabled = DlgSettingsWorkbenchesImp::getDisabledWorkbenches();
     for (auto &wb : disabled) {
         QString name = Application::Instance->workbenchMenuText(wb);
         QPixmap px = Application::Instance->workbenchIcon(wb);
@@ -1256,7 +1278,7 @@ void WorkbenchGroup::onContextMenuRequested(const QPoint &)
         menu.addMenu(&subMenu);
         menu.addSeparator();
     }
-    QStringList enabled = DlgWorkbenchesImp::load_enabled_workbenches(true);
+    QStringList enabled = DlgSettingsWorkbenchesImp::getEnabledWorkbenches();
     for (auto &wb : enabled) {
         QString name = Application::Instance->workbenchMenuText(wb);
         QPixmap px = Application::Instance->workbenchIcon(wb);
@@ -1280,45 +1302,40 @@ void WorkbenchGroup::onContextMenuRequested(const QPoint &)
             disabled2 << action->data().toString();
     }
     if (enabled != enabled2)
-        DlgWorkbenchesImp::save_workbenches(enabled2, disabled2);
+        DlgSettingsWorkbenchesImp::saveWorkbenches(enabled2, disabled2);
 }
 
 void WorkbenchGroup::addTo(QWidget *widget)
 {
     refreshWorkbenchList();
     auto setupBox = [&](WorkbenchComboBox* box) {
-        box->setIconSize(QSize(16, 16));
         box->setToolTip(_tooltip);
         box->setStatusTip(action()->statusTip());
         box->setWhatsThis(action()->whatsThis());
-        box->addActions(groupAction()->actions());
         connect(groupAction(), &QActionGroup::triggered, box, qOverload<QAction*>(&WorkbenchComboBox::onActivated));
     };
 
     if (widget->inherits("QToolBar")) {
         QToolBar* bar = qobject_cast<QToolBar*>(widget);
         auto box = new WorkbenchComboBox(this, widget);
-        box->setToolTip(_tooltip);
-        box->setStatusTip(action()->statusTip());
-        box->setWhatsThis(action()->whatsThis());
-        connect(groupAction(), SIGNAL(triggered(QAction*)), box, SLOT(onActivated (QAction*)));
+        setupBox(box);
         box->populate();
         auto actBox = bar->addWidget(box);
         box->setAction(actBox);
         box->setContextMenuPolicy(Qt::CustomContextMenu);
-        connect(box, SIGNAL(customContextMenuRequested(QPoint)),
-                this, SLOT(onContextMenuRequested(QPoint)));
+        connect(box, &WorkbenchComboBox::customContextMenuRequested,
+                this, &WorkbenchGroup::onContextMenuRequested);
 
         auto tabbar = new WorkbenchTabWidget(this, widget);
         auto actTab = bar->addWidget(tabbar);
         tabbar->setAction(actTab);
         tabbar->setContextMenuPolicy(Qt::CustomContextMenu);
-        connect(tabbar, SIGNAL(customContextMenuRequested(QPoint)),
-                this, SLOT(onContextMenuRequested(QPoint)));
-        connect(bar, SIGNAL(orientationChanged(Qt::Orientation)),
-                tabbar, SLOT(onChangeOrientation()));
-        connect(bar, SIGNAL(topLevelChanged(bool)),
-                tabbar, SLOT(onChangeOrientation()));
+        connect(tabbar, &WorkbenchTabWidget::customContextMenuRequested,
+                this, &WorkbenchGroup::onContextMenuRequested);
+        connect(bar, &QToolBar::orientationChanged,
+                tabbar, &WorkbenchTabWidget::onChangeOrientation);
+        connect(bar, &QToolBar::topLevelChanged,
+                tabbar, &WorkbenchTabWidget::onChangeOrientation);
 
         if (_pimpl->showTabBar())
             actBox->setVisible(false);
@@ -1328,6 +1345,8 @@ void WorkbenchGroup::addTo(QWidget *widget)
     else if (widget->inherits("QMenuBar")) {
         auto* box = new WorkbenchComboBox(this, widget);
         setupBox(box);
+        box->setIconSize(QSize(16, 16));
+        box->addActions(groupAction()->actions());
 
         bool left = WorkbenchSwitcher::isLeftCorner(WorkbenchSwitcher::getValue());
         qobject_cast<QMenuBar*>(widget)->setCornerWidget(box, left ? Qt::TopLeftCorner : Qt::TopRightCorner);
@@ -1337,7 +1356,7 @@ void WorkbenchGroup::addTo(QWidget *widget)
         if (!_menu) {
             _menu = new QMenu(action()->text());
             onShowMenu();
-            connect(_menu, SIGNAL(aboutToShow()), this, SLOT(onShowMenu()));
+            connect(_menu, &QMenu::aboutToShow, this, &WorkbenchGroup::onShowMenu);
         }
         menu->addMenu(_menu);
     }
@@ -1379,36 +1398,12 @@ void WorkbenchGroup::setWorkbenchData(int index, const QString& wb)
 
 void WorkbenchGroup::refreshWorkbenchList()
 {
-    QStringList items = Application::Instance->workbenches();
-    QStringList enabled_wbs_list = DlgWorkbenchesImp::load_enabled_workbenches();
-    QStringList disabled_wbs_list = DlgWorkbenchesImp::load_disabled_workbenches();
-    QStringList enable_wbs;
+    QStringList enabled_wbs_list = DlgSettingsWorkbenchesImp::getEnabledWorkbenches();
 
-    // Go through the list of enabled workbenches and verify that they really exist because
-    // it might be possible that a workbench has been removed after setting up the list of
-    // enabled workbenches.
-    for (const auto& it : enabled_wbs_list) {
-        int index = items.indexOf(it);
-        if (index >= 0) {
-            enable_wbs << it;
-            items.removeAt(index);
-        }
-    }
-
-    // Filter out the actively disabled workbenches
-    for (const auto& it : disabled_wbs_list) {
-        int index = items.indexOf(it);
-        if (index >= 0) {
-            items.removeAt(index);
-        }
-    }
-
-    // Now add the remaining workbenches of 'items'. They have been added to the application
-    // after setting up the list of enabled workbenches.
-    enable_wbs.append(items);
+    // Resize the action group.
     QList<QAction*> workbenches = groupAction()->actions();
     int numActions = workbenches.size();
-    int extend = enable_wbs.size() - numActions;
+    int extend = enabled_wbs_list.size() - numActions;
     if (extend > 0) {
         for (int i=0; i<extend; i++) {
             QAction* action = groupAction()->addAction(QStringLiteral(""));
@@ -1425,7 +1420,7 @@ void WorkbenchGroup::refreshWorkbenchList()
 
     // Show all enabled wb
     int index = 0;
-    for (const auto& it : enable_wbs) {
+    for (const auto& it : enabled_wbs_list) {
         setWorkbenchData(index++, it);
     }
 
@@ -1509,6 +1504,22 @@ public:
         }
     }
 
+    void trySaveUserParameter()
+    {
+        // update the XML structure and save the user parameter to disk (#0001989)
+        bool saveParameter = App::GetApplication().GetParameterGroupByPath
+            ("User parameter:BaseApp/Preferences/General")->GetBool("SaveUserParameter", true);
+        if (saveParameter) {
+            saveUserParameter();
+        }
+    }
+
+    void saveUserParameter()
+    {
+        ParameterManager* parmgr = App::GetApplication().GetParameterSet("User parameter");
+        parmgr->SaveDocument(App::Application::Config()["UserParameter"].c_str());
+    }
+
 public:
     RecentFilesAction *master;
     ParameterGrp::handle handle;
@@ -1552,13 +1563,7 @@ void RecentFilesAction::appendFile(const QString& filename)
     setFiles(files);
     save();
 
-    // update the XML structure and save the user parameter to disk (#0001989)
-    bool saveParameter = App::GetApplication().GetParameterGroupByPath
-        ("User parameter:BaseApp/Preferences/General")->GetBool("SaveUserParameter", true);
-    if (saveParameter) {
-        ParameterManager* parmgr = App::GetApplication().GetParameterSet("User parameter");
-        parmgr->SaveDocument(App::Application::Config()["UserParameter"].c_str());
-    }
+    _pimpl->trySaveUserParameter();
 }
 
 /**
@@ -1620,6 +1625,7 @@ void RecentFilesAction::activateFile(int id)
         QMessageBox::critical(getMainWindow(), tr("File not found"), tr("The file '%1' cannot be opened.").arg(filename));
         files.removeAll(filename);
         setFiles(files);
+        save();
     }
     else {
         // invokes appendFile()
@@ -1732,16 +1738,29 @@ void RecentMacrosAction::setFiles(const QStringList& files)
     QList<QAction*> recentFiles = groupAction()->actions();
 
     int numRecentFiles = std::min<int>(recentFiles.count(), files.count());
+    QStringList existingCommands;
+    auto accel_col = QString::fromStdString(shortcut_modifiers);
     for (int index = 0; index < numRecentFiles; index++) {
         QFileInfo fi(files[index]);
         QString accel = tr(QString::fromUtf8(shortcut_modifiers.c_str())\
                            .append(QString::number(index+1,10)).toStdString().c_str());
-        recentFiles[index]->setText(QStringLiteral("%1 %2").arg(index+1).arg(fi.baseName()));
+        recentFiles[index]->setText(QStringLiteral("%1 %2").arg(index+1).arg(fi.completeBaseName()));
         recentFiles[index]->setStatusTip(tr("Run macro %1 (Shift+click to edit) shortcut: %2").arg(files[index]).arg(accel));
         recentFiles[index]->setToolTip(files[index]); // set the full name that we need later for saving
         recentFiles[index]->setData(QVariant(index));
         if (index < shortcut_count){
-            recentFiles[index]->setShortcut(accel);
+            auto accel_tmp = QString::fromStdString(shortcut_modifiers);
+            accel_tmp.append(QString::number(index+1,10)).toStdString();
+            auto check = Application::Instance->commandManager().checkAcceleratorForConflicts(qPrintable(accel_tmp));
+            if (check) {
+                recentFiles[index]->setShortcut(QKeySequence());
+                accel_col.append(accel_tmp);
+                existingCommands.append(QString::fromUtf8(check->getName()));
+            }
+            else {
+                accel = accel_tmp;
+                recentFiles[index]->setShortcut(accel);
+            }
         }
         recentFiles[index]->setVisible(true);
     }
@@ -1752,6 +1771,21 @@ void RecentMacrosAction::setFiles(const QStringList& files)
         recentFiles[index]->setVisible(false);
         recentFiles[index]->setText(QString());
         recentFiles[index]->setToolTip(QString());
+    }
+    // Raise a single warning no matter how many conflicts
+    if (!existingCommands.isEmpty()) {
+        auto msgMain = QStringLiteral("Recent macros : keyboard shortcut(s)");
+        for (int index = 0; index < accel_col.count(); index++) {
+            msgMain = msgMain + QStringLiteral(" %1").arg(accel_col[index]);
+        }
+        msgMain = msgMain + QStringLiteral(" disabled because of conflicts with");
+        for (int index = 0; index < existingCommands.count(); index++) {
+            msgMain = msgMain + QStringLiteral(" %1").arg(existingCommands[index]);
+        }
+        msgMain = msgMain + QStringLiteral(" respectively.\nHint: In Preferences -> Macros -> Recent Macros -> Keyboard Modifiers"
+                                           " this should be Ctrl+Shift+ by default, if this is now blank then you should revert"
+                                           " it back to Ctrl+Shift+ by pressing both keys at the same time.");
+        Base::Console().Warning("%s\n", qPrintable(msgMain));
     }
 }
 
@@ -1952,7 +1986,6 @@ void RedoAction::addTo ( QWidget * widget )
 {
     if (widget->inherits("QToolBar")) {
         actionChanged();
-        connect(action(), SIGNAL(changed()), this, SLOT(actionChanged()));
         connect(action(), &QAction::changed, this, &RedoAction::actionChanged);
         setupMenuToolButton(widget);
         widget->addAction(_toolAction);
@@ -2088,8 +2121,8 @@ void ViewCameraBindingAction::addTo ( QWidget * widget )
         _menu = new QMenu();
         setupMenuStyle(_menu);
         action()->setMenu(_menu);
-        connect(_menu, SIGNAL(aboutToShow()), this, SLOT(onShowMenu()));
-        connect(_menu, SIGNAL(triggered(QAction*)), this, SLOT(onTriggered(QAction*)));
+        connect(_menu, &QMenu::aboutToShow, this, &ViewCameraBindingAction::onShowMenu);
+        connect(_menu, &QMenu::triggered, this, &ViewCameraBindingAction::onTriggered);
     }
     if (qobject_cast<QToolBar*>(widget))
         setupMenuToolButton(widget);
@@ -2192,7 +2225,7 @@ void SelUpAction::addTo ( QWidget * widget )
     if (!_menu) {
         _menu = new SelUpMenu(nullptr);
         action()->setMenu(_menu);
-        connect(_menu, SIGNAL(aboutToShow()), this, SLOT(onShowMenu()));
+        connect(_menu, &QMenu::aboutToShow, this, &SelUpAction::onShowMenu);
     }
     if (qobject_cast<QToolBar*>(widget))
         setupMenuToolButton(widget);
@@ -2417,21 +2450,23 @@ void CmdHistoryAction::addTo ( QWidget * widget )
         _lineedit->setPlaceholderText(tr("Press SPACE to search"));
         _widgetAction = new QWidgetAction(this);
         _widgetAction->setDefaultWidget(_lineedit);
-        _completer = new CommandCompleter(_lineedit, this);
-        connect(_completer, SIGNAL(commandActivated(QByteArray)), this, SLOT(onCommandActivated(QByteArray)));
+        auto completer = new CommandCompleter(_lineedit, this);
+        connect(completer, &CommandCompleter::commandActivated,
+                this, &CmdHistoryAction::onCommandActivated);
 
+        _completer = completer;
         _newAction = new QAction(tr("Add toolbar or menu"), this);
         _newAction->setToolTip(tr("Create a Global customized toolbar or menu.\n"
                                   "Or, hold SHIFT key to create a toolbar/menu\n"
                                   "for the current workbench."));
-        connect(_newAction, SIGNAL(triggered(bool)), this, SLOT(onNewAction()));
+        connect(_newAction, &QAction::triggered, this, &CmdHistoryAction::onNewAction);
 
         _menu = new CmdHistoryMenu(_lineedit);
         setupMenuStyle(_menu);
         _menu->addAction(_widgetAction);
         _menu->addAction(_newAction);
         action()->setMenu(_menu);
-        connect(_menu, SIGNAL(aboutToShow()), this, SLOT(onShowMenu()));
+        connect(_menu, &QMenu::aboutToShow, this, &CmdHistoryAction::onShowMenu);
     }
 
     if (qobject_cast<QToolBar*>(widget))
@@ -2643,9 +2678,9 @@ protected:
         if (_pcAction)
             static_cast<ToolbarMenuSubAction*>(_pcAction)->popup(QCursor::pos());
     }
-    virtual bool isActive(void) { return true;}
+    virtual bool isActive() { return true;}
 
-    virtual Gui::Action * createAction(void) {
+    virtual Gui::Action * createAction() {
         assert(false);
         return nullptr;
     }
@@ -2682,7 +2717,7 @@ void ToolbarMenuAction::addTo ( QWidget * widget )
         setupMenuStyle(_menu);
         action()->setMenu(_menu);
         update();
-        connect(_menu, SIGNAL(aboutToShow()), this, SLOT(onShowMenu()));
+        connect(_menu, &QMenu::aboutToShow, this, &ToolbarMenuAction::onShowMenu);
     }
     if (qobject_cast<QToolBar*>(widget))
         setupMenuToolButton(widget);
@@ -3012,8 +3047,8 @@ void ExpressionAction::addTo ( QWidget * w )
     if (!_menu) {
         _menu = new QMenu();
         action()->setMenu(_menu);
-        connect(_menu, SIGNAL(aboutToShow()), this, SLOT(onShowMenu()));
-        connect(_menu, SIGNAL(triggered(QAction*)), this, SLOT(onAction(QAction*)));
+        connect(_menu, &QMenu::aboutToShow, this, &ExpressionAction::onShowMenu);
+        connect(_menu, &QMenu::triggered, this, &ExpressionAction::onAction);
 
         _pimpl->init(_menu);
     }
@@ -3057,8 +3092,8 @@ void PresetsAction::addTo ( QWidget * w )
       _menu = new QMenu();
       _menu->setToolTipsVisible(true);
       action()->setMenu(_menu);
-      connect(_menu, SIGNAL(aboutToShow()), this, SLOT(onShowMenu()));
-      connect(_menu, SIGNAL(triggered(QAction*)), this, SLOT(onAction(QAction*)));
+      connect(_menu, &QMenu::aboutToShow, this, &PresetsAction::onShowMenu);
+      connect(_menu, &QMenu::triggered, this, &PresetsAction::onAction);
     }
 
     if (qobject_cast<QToolBar*>(w))
@@ -3076,7 +3111,7 @@ void PresetsAction::onAction(QAction *action) {
             title = tr("Revert ") + title;
         push(title);
         if (revert)
-            App::GetApplication().GetUserParameter().revert(param);
+            App::GetApplication().GetUserParameter().revert(param.get());
         else {
             auto manager = &App::GetApplication().GetUserParameter();
             param->insertTo(manager);
@@ -3098,7 +3133,7 @@ PresetsAction *PresetsAction::instance()
 
 void PresetsAction::push(const QString &title)
 {
-    ParameterManager *manager = new ParameterManager;
+    auto manager = ParameterManager::Create();
     manager->CreateDocument();
     _undos.emplace_back(title, manager);
     if (_undos.size() > 10)

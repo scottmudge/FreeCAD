@@ -39,6 +39,8 @@ set(Spreadsheet_SRCS
     SheetPyImp.cpp
     SheetObserver.cpp
     SheetObserver.h
+    SheetParams.cpp
+    SheetParams.h
     Utils.cpp
     Utils.h
     AppSpreadsheet.cpp

@@ -99,6 +99,7 @@
 #include "FeaturePython.h"
 #include "GeoFeature.h"
 #include "GeoFeatureGroupExtension.h"
+#include "ImagePlane.h"
 #include "InventorObject.h"
 #include "Link.h"
 #include "LinkBaseExtensionPy.h"
@@ -111,6 +112,7 @@
 #include "Part.h"
 #include "PartPy.h"
 #include "Placement.h"
+#include "ProgramOptionsUtilities.h"
 #include "Property.h"
 #include "PropertyContainer.h"
 #include "PropertyExpressionEngine.h"
@@ -223,6 +225,18 @@ init_freecad_module(void)
     return PyModule_Create(&FreeCADModuleDef);
 }
 
+PyMODINIT_FUNC
+init_image_module()
+{
+    static struct PyModuleDef ImageModuleDef = {
+        PyModuleDef_HEAD_INIT,
+        "Image", "", -1,
+        nullptr,
+        nullptr, nullptr, nullptr, nullptr
+    };
+    return PyModule_Create(&ImageModuleDef);
+}
+
 Application::Application(std::map<std::string,std::string> &mConfig)
   : _mConfig(mConfig), _pActiveDoc(nullptr), _isRestoring(false),_allowPartial(false)
   , _isClosingAll(false), _objCount(-1), _activeTransactionID(0)
@@ -260,6 +274,10 @@ void Application::setupPythonTypes()
         nullptr, nullptr, nullptr, nullptr
     };
     PyObject* pConsoleModule = PyModule_Create(&ConsoleModuleDef);
+
+    // fake Image module
+    PyObject* imageModule = init_image_module();
+    PyDict_SetItemString(modules, "Image", imageModule);
 
     // introducing additional classes
 
@@ -356,7 +374,7 @@ void Application::setupPythonTypes()
 
 void Application::setupPythonException(PyObject* module)
 {
-    // Define cusom Python exception types
+    // Define custom Python exception types
     //
     Base::PyExc_FC_GeneralError = PyErr_NewException("Base.FreeCADError", PyExc_RuntimeError, nullptr);
     Py_INCREF(Base::PyExc_FC_GeneralError);
@@ -1230,7 +1248,7 @@ ParameterManager & Application::GetUserParameter()
     return *_pcUserParamMngr;
 }
 
-ParameterManager * Application::GetParameterSet(const char* sName) const
+Base::Reference<ParameterManager> Application::GetParameterSet(const char* sName) const
 {
     auto it = mpcPramManager.find(sName);
     if ( it != mpcPramManager.end() )
@@ -1245,13 +1263,13 @@ Application::GetParameterSetList(void) const
     return mpcPramManager;
 }
 
-ParameterManager *Application::AddParameterSet(std::string &name, const std::string &filename)
+Base::Reference<ParameterManager> Application::AddParameterSet(std::string &name, const std::string &filename)
 {
-    ParameterManager *manager = nullptr;
+    Base::Reference<ParameterManager> manager;
     if (filename.empty()) {
         auto it = mpcPramManager.find(name.c_str());
         if ( it == mpcPramManager.end() ) {
-            manager = new ParameterManager();
+            manager = ParameterManager::Create();
             manager->CreateDocument();
             mpcPramManager[name.c_str()] = manager;
         } else
@@ -1276,7 +1294,7 @@ ParameterManager *Application::AddParameterSet(std::string &name, const std::str
     QFileInfo fi(QString::fromUtf8(filename.c_str()));
     QFile::copy(fi.filePath(), fdest.filePath());
 
-    manager = new ParameterManager();
+    manager = ParameterManager::Create();
     mpcPramManager[name.c_str()] = manager;
     manager->SetSerializer(new ParameterSerializer(
                 fdest.canonicalFilePath().toUtf8().constData()));
@@ -1291,7 +1309,7 @@ ParameterManager *Application::AddParameterSet(std::string &name, const std::str
     return manager;
 }
 
-bool Application::RenameParameterSet(const char *sName, ParameterManager *hManager)
+bool Application::RenameParameterSet(const char *sName, const Base::Reference<ParameterManager> &hManager)
 {
     if (!sName || !sName[0] || !hManager
             || hManager == _pcUserParamMngr || hManager == _pcSysParamMngr)
@@ -1358,7 +1376,7 @@ void Application::RefreshParameterSet(bool savefirst)
         auto fileNames = dir.entryInfoList(
                 QStringList(QStringLiteral("*.FCParam")), QDir::Files, QDir::Name);
         for (auto &file : fileNames) {
-            Base::Reference<ParameterManager> manager = new ParameterManager();
+            Base::Reference<ParameterManager> manager = ParameterManager::Create();
             manager->SetSerializer(new ParameterSerializer(
                         file.canonicalFilePath().toUtf8().constData()));
             try {
@@ -1377,7 +1395,7 @@ void Application::RefreshParameterSet(bool savefirst)
             }
             auto it = tmp.find(name);
             if (it != tmp.end()) {
-                manager->copyTo((ParameterManager*)it->second);
+                manager->copyTo(it->second.get());
                 manager = it->second;
             }
             mpcPramManager[name] = manager;
@@ -2055,18 +2073,6 @@ void Application::initTypes()
     App::PropertyPrecision          ::init();
     App::PropertyQuantity           ::init();
     App::PropertyQuantityConstraint ::init();
-    App::PropertyAngle              ::init();
-    App::PropertyDistance           ::init();
-    App::PropertyLength             ::init();
-    App::PropertyArea               ::init();
-    App::PropertyVolume             ::init();
-    App::PropertyFrequency          ::init();
-    App::PropertySpeed              ::init();
-    App::PropertyAcceleration       ::init();
-    App::PropertyForce              ::init();
-    App::PropertyPressure           ::init();
-    App::PropertyElectricPotential  ::init();
-    App::PropertyVacuumPermittivity ::init();
     App::PropertyInteger            ::init();
     App::PropertyIntegerConstraint  ::init();
     App::PropertyPercent            ::init();
@@ -2125,6 +2131,61 @@ void Application::initTypes()
     App::PropertyPythonObject       ::init();
     App::PropertyExpressionContainer::init();
     App::PropertyExpressionEngine   ::init();
+    // all know unit properties
+    App::PropertyAcceleration               ::init();
+    App::PropertyAmountOfSubstance          ::init();
+    App::PropertyAngle                      ::init();
+    App::PropertyArea                       ::init();
+    App::PropertyCompressiveStrength        ::init();
+    App::PropertyCurrentDensity             ::init();
+    App::PropertyDensity                    ::init();
+    App::PropertyDissipationRate            ::init();
+    App::PropertyDistance                   ::init();
+    App::PropertyDynamicViscosity           ::init();
+    App::PropertyElectricalCapacitance      ::init();
+    App::PropertyElectricalConductance      ::init();
+    App::PropertyElectricalConductivity     ::init();
+    App::PropertyElectricalInductance       ::init();
+    App::PropertyElectricalResistance       ::init();
+    App::PropertyElectricCharge             ::init();
+    App::PropertyElectricCurrent            ::init();
+    App::PropertyElectricPotential          ::init();
+    App::PropertyFrequency                  ::init();
+    App::PropertyForce                      ::init();
+    App::PropertyHeatFlux                   ::init();
+    App::PropertyInverseArea                ::init();
+    App::PropertyInverseLength              ::init();
+    App::PropertyInverseVolume              ::init();
+    App::PropertyKinematicViscosity         ::init();
+    App::PropertyLength                     ::init();
+    App::PropertyLuminousIntensity          ::init();
+    App::PropertyMagneticFieldStrength      ::init();
+    App::PropertyMagneticFlux               ::init();
+    App::PropertyMagneticFluxDensity        ::init();
+    App::PropertyMagnetization              ::init();
+    App::PropertyMass                       ::init();
+    App::PropertyPressure                   ::init();
+    App::PropertyPower                      ::init();
+    App::PropertyShearModulus               ::init();
+    App::PropertySpecificEnergy             ::init();
+    App::PropertySpecificHeat               ::init();
+    App::PropertySpeed                      ::init();
+    App::PropertyStiffness                  ::init();
+    App::PropertyStress                     ::init();
+    App::PropertyTemperature                ::init();
+    App::PropertyThermalConductivity        ::init();
+    App::PropertyThermalExpansionCoefficient::init();
+    App::PropertyThermalTransferCoefficient ::init();
+    App::PropertyTime                       ::init();
+    App::PropertyUltimateTensileStrength    ::init();
+    App::PropertyVacuumPermittivity         ::init();
+    App::PropertyVelocity                   ::init();
+    App::PropertyVolume                     ::init();
+    App::PropertyVolumeFlowRate             ::init();
+    App::PropertyVolumetricThermalExpansionCoefficient::init();
+    App::PropertyWork                       ::init();
+    App::PropertyYieldStrength              ::init();
+    App::PropertyYoungsModulus              ::init();
 
     // Extension classes
     App::Extension                     ::init();
@@ -2162,12 +2223,13 @@ void Application::initTypes()
     App::DocumentObjectGroup       ::init();
     App::DocumentObjectGroupPython ::init();
     App::DocumentObjectFileIncluded::init();
+    Image::ImagePlane              ::init();
     App::InventorObject            ::init();
     App::VRMLObject                ::init();
     App::Annotation                ::init();
     App::AnnotationLabel           ::init();
     App::MeasureDistance           ::init();
-    App ::MaterialObject           ::init();
+    App::MaterialObject            ::init();
     App::MaterialObjectPython      ::init();
     App::TextDocument              ::init();
     App::Placement                 ::init();
@@ -2258,53 +2320,6 @@ void Application::initTypes()
 }
 
 namespace {
-pair<string, string> customSyntax(const string& s)
-{
-#if defined(FC_OS_MACOSX)
-    if (s.find("-psn_") == 0)
-        return make_pair(string("psn"), s.substr(5));
-#endif
-    if (s.find("-display") == 0)
-        return make_pair(string("display"), string("null"));
-    else if (s.find("-style") == 0)
-        return make_pair(string("style"), string("null"));
-    else if (s.find("-graphicssystem") == 0)
-        return make_pair(string("graphicssystem"), string("null"));
-    else if (s.find("-widgetcount") == 0)
-        return make_pair(string("widgetcount"), string(""));
-    else if (s.find("-geometry") == 0)
-        return make_pair(string("geometry"), string("null"));
-    else if (s.find("-font") == 0)
-        return make_pair(string("font"), string("null"));
-    else if (s.find("-fn") == 0)
-        return make_pair(string("fn"), string("null"));
-    else if (s.find("-background") == 0)
-        return make_pair(string("background"), string("null"));
-    else if (s.find("-bg") == 0)
-        return make_pair(string("bg"), string("null"));
-    else if (s.find("-foreground") == 0)
-        return make_pair(string("foreground"), string("null"));
-    else if (s.find("-fg") == 0)
-        return make_pair(string("fg"), string("null"));
-    else if (s.find("-button") == 0)
-        return make_pair(string("button"), string("null"));
-    else if (s.find("-btn") == 0)
-        return make_pair(string("btn"), string("null"));
-    else if (s.find("-name") == 0)
-        return make_pair(string("name"), string("null"));
-    else if (s.find("-title") == 0)
-        return make_pair(string("title"), string("null"));
-    else if (s.find("-visual") == 0)
-        return make_pair(string("visual"), string("null"));
-//  else if (s.find("-ncols") == 0)
-//    return make_pair(string("ncols"), boost::program_options::value<int>(1));
-//  else if (s.find("-cmap") == 0)
-//    return make_pair(string("cmap"), string("null"));
-    else if ('@' == s[0])
-        return std::make_pair(string("response-file"), s.substr(1));
-    else
-        return make_pair(string(), string());
-}
 
 void parseProgramOptions(int ac, char ** av, const string& exe, variables_map& vm)
 {
@@ -2424,7 +2439,7 @@ void parseProgramOptions(int ac, char ** av, const string& exe, variables_map& v
 
     try {
         store( boost::program_options::command_line_parser(args).
-               options(cmdline_options).positional(p).extra_parser(customSyntax).run(), vm);
+               options(cmdline_options).positional(p).extra_parser(Util::customSyntax).run(), vm);
 
         std::ifstream ifs("FreeCAD.cfg");
         if (ifs)
@@ -2445,7 +2460,7 @@ void parseProgramOptions(int ac, char ** av, const string& exe, variables_map& v
     if (vm.count("help")) {
         std::stringstream str;
         str << exe << endl << endl;
-        str << "For a detailed description see https://www.freecadweb.org/wiki/Start_up_and_Configuration" << endl<<endl;
+        str << "For a detailed description see https://www.freecad.org/wiki/Start_up_and_Configuration" << endl<<endl;
         str << "Usage: " << exe << " [options] File1 File2 ..." << endl << endl;
         str << visible << endl;
         throw Base::ProgramInformation(str.str());
@@ -2471,7 +2486,7 @@ void parseProgramOptions(int ac, char ** av, const string& exe, variables_map& v
         copy(tok.begin(), tok.end(), back_inserter(args));
         // Parse the file and store the options
         store( boost::program_options::command_line_parser(args).
-               options(cmdline_options).positional(p).extra_parser(customSyntax).run(), vm);
+               options(cmdline_options).positional(p).extra_parser(Util::customSyntax).run(), vm);
     }
 }
 
@@ -3040,16 +3055,32 @@ void Application::LoadParameters()
     std::string vendorPrefix;
     if (mConfig.count("VendorCFGPrefix"))
         vendorPrefix = mConfig["VendorCFGPrefix"];
-    if (mConfig.find("UserParameter") == mConfig.end())
-        mConfig["UserParameter"]   = mConfig["UserConfigPath"] + "user.cfg";
-    if (mConfig.find("SystemParameter") == mConfig.end())
-        mConfig["SystemParameter"] = mConfig["UserConfigPath"] + "system.cfg";
+
+    if (mConfig.find("UserParameter") == mConfig.end()) {
+        std::string path = mConfig["UserConfigPath"] + vendorPrefix + "user.cfg";
+        if (vendorPrefix.size() && !FileInfo(path).exists()) {
+            FileInfo fi(mConfig["UserConfigPath"] + "user.cfg");
+            if (fi.exists())
+                fi.copyTo(path.c_str());
+        }
+        mConfig["UserParameter"] = path;
+    }
+    if (mConfig.find("SystemParameter") == mConfig.end()) {
+        std::string path = mConfig["UserConfigPath"] + vendorPrefix + "system.cfg";
+        if (vendorPrefix.size() && !FileInfo(path).exists()) {
+            FileInfo fi(mConfig["UserConfigPath"] + "system.cfg");
+            if (fi.exists())
+                fi.copyTo(path.c_str());
+        }
+        mConfig["SystemParameter"] = path;
+    }
+
 
     // create standard parameter sets
-    _pcSysParamMngr = new ParameterManager();
+    _pcSysParamMngr = ParameterManager::Create();
     _pcSysParamMngr->SetSerializer(new ParameterSerializer(mConfig["SystemParameter"]));
 
-    _pcUserParamMngr = new ParameterManager();
+    _pcUserParamMngr = ParameterManager::Create();
     _pcUserParamMngr->SetSerializer(new ParameterSerializer(mConfig["UserParameter"]));
 
     try {
@@ -3109,7 +3140,7 @@ void Application::LoadParameters()
 
 #if defined(_MSC_VER)
 // fix weird error while linking boost (all versions of VC)
-// VS2010: https://forum.freecadweb.org/viewtopic.php?f=4&t=1886&p=12553&hilit=boost%3A%3Afilesystem%3A%3Aget#p12553
+// VS2010: https://forum.freecad.org/viewtopic.php?f=4&t=1886&p=12553&hilit=boost%3A%3Afilesystem%3A%3Aget#p12553
 namespace boost { namespace program_options { std::string arg="arg"; } }
 namespace boost { namespace program_options {
     const unsigned options_description::m_default_line_length = 80;

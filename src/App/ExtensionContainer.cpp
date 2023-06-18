@@ -435,3 +435,31 @@ bool ExtensionContainer::canSaveExtension(Extension *ext) const
         return !_extensions.empty();
     return true;
 }
+
+void ExtensionContainer::handleChangedPropertyName(Base::XMLReader &reader, const char * TypeName, const char *PropName)
+{
+    //inform all extensions about changed property name. This includes all properties from the
+    //extended object (this) as well as all extension properties
+    for(const auto& entry : _extensions) {
+        bool handled = entry.second->extensionHandleChangedPropertyName(reader, TypeName, PropName);
+
+        if(handled)
+            return; // one property change needs only be handled once
+    }
+
+    PropertyContainer::handleChangedPropertyName(reader, TypeName, PropName);
+}
+
+void ExtensionContainer::handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, Property * prop)
+{
+    //inform all extensions about changed property type. This includes all properties from the
+    //extended object (this) as well as all extension properties
+    for(const auto& entry : _extensions) {
+        bool handled = entry.second->extensionHandleChangedPropertyType(reader, TypeName, prop);
+
+        if(handled)
+            return; // one property change needs only be handled once
+    }
+
+    PropertyContainer::handleChangedPropertyType(reader, TypeName, prop);
+}

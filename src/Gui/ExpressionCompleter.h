@@ -29,6 +29,7 @@
 #include <QObject>
 #include <QPlainTextEdit>
 #include <App/DocumentObserver.h>
+#include <App/ExpressionTokenizer.h>
 
 class QStandardItem;
 
@@ -58,7 +59,7 @@ public:
     void getPrefixRange(QString &prefix, int &start, int &end, int &offset) const;
 
     void updatePrefixEnd(int end) {
-        prefixEnd = end;
+        tokenizer.updatePrefixEnd(end);
     }
 
     void setDocumentObject(const App::DocumentObject*, bool checkInList=true);
@@ -67,9 +68,13 @@ public:
 
     void setSearchUnit(bool enabled=true);
 
-    bool isInsideString() const {return insideString;}
+    bool isInsideString() const {
+        return tokenizer.isInsideString();
+    }
 
-    void setLeadChar(char lead) {leadChar = lead;}
+    void setLeadChar(char lead) {
+        tokenizer.setLeadChar(lead);
+    }
 
     void setupContextMenu(QMenu *menu);
 
@@ -88,18 +93,10 @@ private:
     virtual QStringList splitPath ( const QString & path ) const;
     void showPopup(bool show);
 
-    int prefixStart = 0;
-    int prefixEnd = 0;
-    bool closeString = false;
-    bool insideString = false;
-    QString currentPrefix;
-    QString savedPrefix;
+    App::ExpressionTokenizer tokenizer;
 
     App::DocumentObjectT currentObj;
-    bool noProperty = false;
     bool checkInList = true;
-    bool searchUnit = false;
-    char leadChar = 0;
 };
 
 class GuiExport ExpressionLineEdit : public QLineEdit {

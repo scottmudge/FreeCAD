@@ -25,6 +25,7 @@
 
 #include <limits>
 #include <locale>
+#include <iomanip>
 
 #include "Writer.h"
 #include "Base64.h"
@@ -34,7 +35,7 @@
 #include "Stream.h"
 #include "Tools.h"
 
-#include <iomanip>
+#include <boost/iostreams/filtering_stream.hpp>
 
 using namespace Base;
 using namespace std;
@@ -45,27 +46,27 @@ using namespace zipios;
 struct cdata_filter {
 
     typedef char char_type;
-    typedef bio::output_filter_tag category;
+    typedef boost::iostreams::output_filter_tag category;
 
     template<typename Device>
     inline bool put(Device& dev, char c) {
         switch(state) {
-        case 0:
-        case 1:
-            if(c == ']')
-                ++state;
-            else
+            case 0:
+            case 1:
+                if(c == ']')
+                    ++state;
+                else
+                    state = 0;
+                break;
+            case 2:
+                if(c == '>') {
+                    static const char escape[] = "]]><![CDATA[";
+                    boost::iostreams::write(dev,escape,sizeof(escape)-1);
+                }
                 state = 0;
-            break;
-        case 2:
-            if(c == '>') {
-                static const char escape[] = "]]><![CDATA[";
-                bio::write(dev,escape,sizeof(escape)-1);
-            }
-            state = 0;
-            break;
+                break;
         }
-        return bio::put(dev,c);
+        return boost::iostreams::put(dev,c);
     }
 
     int state = 0;
@@ -115,13 +116,16 @@ std::ostream &Writer::endCharStream() {
     return Stream();
 }
 
-std::ostream &Writer::charStream() {
-    if(!CharStream)
+std::ostream& Writer::charStream()
+{
+    if (!CharStream) {
         throw Base::RuntimeError("Writer::endCharStream(): no current character stream");
+    }
     return *CharStream;
 }
 
-void Writer::insertText(const std::string &s) {
+void Writer::insertText(const std::string& s)
+{
     beginCharStream(false) << s;
     endCharStream();
 }

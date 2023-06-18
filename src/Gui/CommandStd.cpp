@@ -1,24 +1,26 @@
-/***************************************************************************
- *   Copyright (c) 2002 Jürgen Riegel <juergen.riegel@web.de>              *
- *                                                                         *
- *   This file is part of the FreeCAD CAx development system.              *
- *                                                                         *
- *   This library is free software; you can redistribute it and/or         *
- *   modify it under the terms of the GNU Library General Public           *
- *   License as published by the Free Software Foundation; either          *
- *   version 2 of the License, or (at your option) any later version.      *
- *                                                                         *
- *   This library  is distributed in the hope that it will be useful,      *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU Library General Public License for more details.                  *
- *                                                                         *
- *   You should have received a copy of the GNU Library General Public     *
- *   License along with this library; see the file COPYING.LIB. If not,    *
- *   write to the Free Software Foundation, Inc., 59 Temple Place,         *
- *   Suite 330, Boston, MA  02111-1307, USA                                *
- *                                                                         *
- ***************************************************************************/
+ // SPDX-License-Identifier: LGPL-2.1-or-later
+
+  /****************************************************************************
+   *   Copyright (c) 2002 Jürgen Riegel <juergen.riegel@web.de>               *
+   *   Copyright (c) 2023 FreeCAD Project Association                         *
+   *                                                                          *
+   *   This file is part of FreeCAD.                                          *
+   *                                                                          *
+   *   FreeCAD is free software: you can redistribute it and/or modify it     *
+   *   under the terms of the GNU Lesser General Public License as            *
+   *   published by the Free Software Foundation, either version 2.1 of the   *
+   *   License, or (at your option) any later version.                        *
+   *                                                                          *
+   *   FreeCAD is distributed in the hope that it will be useful, but         *
+   *   WITHOUT ANY WARRANTY; without even the implied warranty of             *
+   *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU       *
+   *   Lesser General Public License for more details.                        *
+   *                                                                          *
+   *   You should have received a copy of the GNU Lesser General Public       *
+   *   License along with FreeCAD. If not, see                                *
+   *   <https://www.gnu.org/licenses/>.                                       *
+   *                                                                          *
+   ***************************************************************************/
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
@@ -197,6 +199,7 @@ StdCmdRecentMacros::StdCmdRecentMacros()
     sToolTipText  = QT_TR_NOOP("Recent macro list");
     sWhatsThis    = "Std_RecentMacros";
     sStatusTip    = QT_TR_NOOP("Recent macro list");
+    sPixmap       = "Std_RecentMacros";
     eType         = NoTransaction;
 }
 
@@ -1089,11 +1092,12 @@ Gui::Action * StdCmdUserEditMode::createAction()
 
     for (auto const &uem : Gui::Application::Instance->listUserEditModes()) {
         QAction* act = pcAction->addAction(QString());
-        auto modeName = QString::fromStdString(uem.second);
+        auto modeName = QString::fromStdString(uem.second.first);
         act->setCheckable(true);
         act->setIcon(BitmapFactory().iconFromTheme(qPrintable(QStringLiteral("Std_UserEditMode")+modeName)));
         act->setObjectName(QStringLiteral("Std_UserEditMode")+modeName);
         act->setWhatsThis(QString::fromUtf8(getWhatsThis()));
+        act->setToolTip(QString::fromStdString(uem.second.second));
 
         if (uem.first == 0) {
             pcAction->setIcon(act->icon());
@@ -1121,11 +1125,11 @@ void StdCmdUserEditMode::languageChange()
     QList<QAction*> a = pcAction->actions();
 
     for (int i = 0 ; i < a.count() ; i++) {
-        auto modeName = QString::fromStdString(Gui::Application::Instance->getUserEditModeName(i));
+        auto modeName = Gui::Application::Instance->getUserEditModeUIStrings(i);
         a[i]->setText(QCoreApplication::translate(
-        "EditMode", qPrintable(modeName)));
+        "EditMode", modeName.first.c_str()));
         a[i]->setToolTip(QCoreApplication::translate(
-        "EditMode", qPrintable(modeName+QStringLiteral(" mode"))));
+        "EditMode", modeName.second.c_str()));
     }
 }
 

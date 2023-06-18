@@ -20,7 +20,11 @@
 #***************************************************************************
 # Modified Amritpal Singh <amrit3701@gmail.com> on 07-07-2017
 
-import FreeCAD,Draft,ArchComponent,DraftVecUtils,ArchCommands
+import FreeCAD
+import Draft
+import ArchComponent
+import DraftVecUtils
+import ArchCommands
 if FreeCAD.GuiUp:
     import FreeCADGui
     from draftutils.translate import translate
@@ -43,7 +47,7 @@ else:
 
 __title__  = "FreeCAD Rebar"
 __author__ = "Yorik van Havre"
-__url__    = "https://www.freecadweb.org"
+__url__    = "https://www.freecad.org"
 
 
 def makeRebar(baseobj=None,sketch=None,diameter=None,amount=1,offset=None,name="Rebar"):
@@ -512,24 +516,32 @@ class _ViewProviderRebar(ArchComponent.ViewProviderComponent):
         return ":/icons/Arch_Rebar_Tree.svg"
 
     def setEdit(self, vobj, mode):
+        # The Reinforcement Workbench does not implement resetEdit.
+        # Therefore unsetEdit is never called and objects would stay in
+        # edit mode if this function were to return `True`.
 
-        if mode == 0:
-            if hasattr(vobj.Object, "RebarShape"):
-                try:
-                    # Import module of RebarShape
-                    module = __import__(vobj.Object.RebarShape)
-                except ImportError:
-                    FreeCAD.Console.PrintError("Unable to import RebarShape module\n")
-                    return
-                module.editDialog(vobj)
-            elif vobj.RebarShape:
-                try:
-                    # Import module of RebarShape
-                    module = __import__(vobj.RebarShape)
-                except ImportError:
-                    FreeCAD.Console.PrintError("Unable to import RebarShape module\n")
-                    return
-                module.editDialog(vobj)
+        if mode != 0:
+            return None
+
+        if hasattr(vobj.Object, "RebarShape"):
+            try:
+                # Import module of RebarShape
+                module = __import__(vobj.Object.RebarShape)
+            except ImportError:
+                FreeCAD.Console.PrintError("Unable to import RebarShape module\n")
+                return False
+        elif vobj.RebarShape:
+            try:
+                # Import module of RebarShape
+                module = __import__(vobj.RebarShape)
+            except ImportError:
+                FreeCAD.Console.PrintError("Unable to import RebarShape module\n")
+                return False
+        else:
+            return False
+
+        module.editDialog(vobj)
+        return False
 
     def updateData(self,obj,prop):
 
@@ -540,7 +552,8 @@ class _ViewProviderRebar(ArchComponent.ViewProviderComponent):
             if hasattr(obj.Proxy,"wires"):
                 if obj.Proxy.wires:
                     from pivy import coin
-                    import re,Part
+                    import Part
+                    import re
                     self.centerline = coin.SoSeparator()
                     comp = Part.makeCompound(obj.Proxy.wires)
                     pts = re.findall("point \[(.*?)\]",comp.writeInventor().replace("\n",""))

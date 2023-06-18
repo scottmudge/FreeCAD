@@ -111,7 +111,8 @@ class SketcherGuiExport EditModeCoinManager
             BSplineControlPolygonVisible,
             BSplineCombVisible,
             BSplineKnotMultiplicityVisible,
-            BSplinePoleWeightVisible
+            BSplinePoleWeightVisible,
+            ArcCircleHelperVisible
         };
 
     public:
@@ -132,6 +133,7 @@ class SketcherGuiExport EditModeCoinManager
         void updateConstraintPresentationParameters(const std::string & parametername);
         void updateElementSizeParameters(const std::string & parametername);
         void updateColor(SbColor &sbcolor, const std::string &parametername);
+        void updateUnit(const std::string &parametername);
 
         template<OverlayVisibilityParameter visibilityparameter>
         void updateOverlayVisibilityParameter(const std::string & parametername);
@@ -214,6 +216,8 @@ public:
 
     // This specific overload is to use a specific geometry list, which may be a temporal one
     void drawConstraintIcons(const GeoListFacade & geolistfacade);
+
+    void updateGeometryLayersConfiguration();
     //@}
 
     /** @name coin node access*/
@@ -224,12 +228,6 @@ public:
     //@{
     void updateColor();
     void updateColor(const GeoListFacade & geolistfacade); // overload to be used with temporal geometry.
-    //@}
-
-
-    /** @name change coin visualisation and behaviour*/
-    //@{
-    void updateGridExtent();
     //@}
 
     /** @name change constraints selectability*/
@@ -261,6 +259,8 @@ private:
     int getApplicationLogicalDPIX() const;
 
     void updateInventorNodeSizes();
+
+    void updateInventorColors();
 
     /** @name coin nodes creation*/
     void createEditModeInventorNodes();

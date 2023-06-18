@@ -569,7 +569,7 @@ void initInterpreter(int argc,char *argv[])
 {
     PyStatus status;
     PyConfig config;
-    PyConfig_InitPythonConfig(&config);
+    PyConfig_InitIsolatedConfig(&config);
 
     status = PyConfig_SetBytesArgv(&config, argc, argv);
     if (PyStatus_Exception(status)) {

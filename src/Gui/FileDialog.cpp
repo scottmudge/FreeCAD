@@ -122,8 +122,7 @@ static inline void checkFilter(QString &filter) {
 FileDialog::FileDialog(QWidget * parent)
   : QFileDialog(parent)
 {
-    connect(this, SIGNAL(filterSelected(const QString&)),
-            this, SLOT(onSelectedFilter(const QString&)));
+    connect(this, &QFileDialog::filterSelected, this, &FileDialog::onSelectedFilter);
     new PrefWidgetStates(this, true, "FileDialog", this);
 }
 
@@ -147,6 +146,7 @@ QList<QUrl> FileDialog::fetchSidebarUrls()
     QStringList list;
     list << QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
     list << QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    list << QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
     list << QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
     list << QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
     list << getWorkingDirectory();
@@ -609,7 +609,7 @@ FileOptionsDialog::FileOptionsDialog( QWidget* parent, Qt::WindowFlags fl )
     auto grid = this->findChild<QGridLayout*>();
     grid->addWidget(extensionButton, 4, 2, Qt::AlignLeft);
 
-    connect(extensionButton, SIGNAL(clicked()), this, SLOT(toggleExtension()));
+    connect(extensionButton, &QPushButton::clicked, this, &FileOptionsDialog::toggleExtension);
 }
 
 FileOptionsDialog::~FileOptionsDialog()
@@ -832,10 +832,8 @@ FileChooser::FileChooser ( QWidget * parent )
 
     layout->addWidget( lineEdit );
 
-    connect(lineEdit, SIGNAL(textChanged(const QString &)),
-            this, SIGNAL(fileNameChanged(const QString &)));
-
-    connect(lineEdit, SIGNAL(editingFinished()), this, SLOT(editingFinished()));
+    connect(lineEdit, &QLineEdit::textChanged, this, &FileChooser::fileNameChanged);
+    connect(lineEdit, &QLineEdit::editingFinished, this, &FileChooser::editingFinished);
 
     button = new QPushButton(QStringLiteral("..."), this);
 
@@ -845,7 +843,7 @@ FileChooser::FileChooser ( QWidget * parent )
 
     layout->addWidget(button);
 
-    connect( button, SIGNAL(clicked()), this, SLOT(chooseFile()));
+    connect(button, &QPushButton::clicked, this, &FileChooser::chooseFile);
 
     setFocusProxy(lineEdit);
 }
@@ -882,11 +880,11 @@ void FileChooser::editingFinished()
 }
 
 /**
- * Sets the file name \a s.
+ * Sets the file name \a fn.
  */
-void FileChooser::setFileName( const QString& s )
+void FileChooser::setFileName( const QString& fn )
 {
-    lineEdit->setText( s );
+    lineEdit->setText( fn );
 }
 
 void FileChooser::setFileNameStd( const std::string& s )
@@ -1073,8 +1071,12 @@ SelectModule::SelectModule (const QString& type, const SelectModule::Dict& types
     gridLayout->addLayout(hboxLayout, 2, 0, 1, 1);
 
     // connections
-    connect(okButton, SIGNAL(clicked()), this, SLOT(accept()));
-    connect(group, SIGNAL(buttonClicked(int)), this, SLOT(onButtonClicked()));
+    connect(okButton, &QPushButton::clicked, this, &SelectModule::accept);
+#if QT_VERSION < QT_VERSION_CHECK(5,15,0)
+    connect(group, qOverload<int>(&QButtonGroup::buttonClicked), this, &SelectModule::onButtonClicked);
+#else
+    connect(group, &QButtonGroup::idClicked, this, &SelectModule::onButtonClicked);
+#endif
 }
 
 SelectModule::~SelectModule()

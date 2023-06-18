@@ -34,6 +34,7 @@
 #endif
 
 #include <QtOpenGL.h>
+#include "Camera.h"
 #include "ViewProviderDocumentObject.h"
 #include "ViewProviderExtern.h"
 #include "Application.h"
@@ -196,55 +197,6 @@ vz.z=0
  http://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/code_v2/Axonometric/qt/Axonometric.cpp
  https://de.wikipedia.org/wiki/Arkussinus_und_Arkuskosinus
 */
-
-SbRotation Camera::rotation(Orientation view)
-{
-    switch (view) {
-    case Top:
-        return SbRotation(0, 0, 0, 1);
-    case Bottom:
-        return SbRotation(1, 0, 0, 0);
-    case Front: {
-        float root = (float)(sqrt(2.0)/2.0);
-        return SbRotation(root, 0, 0, root);
-    }
-    case Rear: {
-        float root = (float)(sqrt(2.0)/2.0);
-        return SbRotation(0, root, root, 0);
-    }
-    case Left:
-        return SbRotation(-0.5, 0.5, 0.5, -0.5);
-    case Right:
-        return SbRotation(0.5, 0.5, 0.5, 0.5);
-    case Isometric:
-        //from math import sqrt, degrees, asin
-        //p1=App.Rotation(App.Vector(1,0,0),45)
-        //p2=App.Rotation(App.Vector(0,0,1),-45)
-        //p3=p2.multiply(p1)
-        //return SbRotation(0.353553f, -0.146447f, -0.353553f, 0.853553f);
-
-        //from math import sqrt, degrees, asin
-        //p1=App.Rotation(App.Vector(1,0,0),90)
-        //p2=App.Rotation(App.Vector(0,0,1),135)
-        //p3=App.Rotation(App.Vector(-1,1,0),degrees(asin(-sqrt(1.0/3.0))))
-        //p4=p3.multiply(p2).multiply(p1)
-        //return SbRotation(0.17592, 0.424708, 0.820473, 0.339851);
-
-        //from math import sqrt, degrees, asin
-        //p1=App.Rotation(App.Vector(1,0,0),90)
-        //p2=App.Rotation(App.Vector(0,0,1),45)
-        //#p3=App.Rotation(App.Vector(1,1,0),45)
-        //p3=App.Rotation(App.Vector(1,1,0),degrees(asin(-sqrt(1.0/3.0))))
-        //p4=p3.multiply(p2).multiply(p1)
-        return SbRotation(0.424708f, 0.17592f, 0.339851f, 0.820473f);
-    case Dimetric:
-        return SbRotation(0.567952f, 0.103751f, 0.146726f, 0.803205f);
-    case Trimetric:
-        return SbRotation(0.446015f, 0.119509f, 0.229575f, 0.856787f);
-    default:
-        return SbRotation(0, 0, 0, 1);
-    }
-}
 
 PyObject* View3DInventorPy::viewBottom(PyObject *args)
 {
@@ -950,10 +902,12 @@ PyObject* View3DInventorPy::getCursorPos(PyObject *args)
     if (!PyArg_ParseTuple(args, ""))
         return nullptr;
     try {
+
         QPoint pos = getView3DInventorPtr()->mapFromGlobal(QCursor::pos());
+        SbVec2s vec = getView3DInventorPtr()->getViewer()->fromQPoint(pos);
         Py::Tuple tuple(2);
-        tuple.setItem(0, Py::Int(pos.x()));
-        tuple.setItem(1, Py::Int(getView3DInventorPtr()->height()-pos.y()-1));
+        tuple.setItem(0, Py::Int(vec[0]));
+        tuple.setItem(1, Py::Int(vec[1]));
         return Py::new_reference_to(tuple);
     } PY_CATCH
 }
@@ -993,9 +947,7 @@ PyObject* View3DInventorPy::getObjectInfo(PyObject *args)
             dict.setItem("y", Py::Float(pt[1]));
             dict.setItem("z", Py::Float(pt[2]));
 
-            Gui::Document* doc = getView3DInventorPtr()->getViewer()->getDocument();
-            ViewProvider *vp = doc ? doc->getViewProviderByPathFromHead(Point->getPath())
-                    : getView3DInventorPtr()->getViewer()->getViewProviderByPath(Point->getPath());
+            ViewProvider *vp = getView3DInventorPtr()->getViewer()->getViewProviderByPath(Point->getPath());
             if (vp && vp->isDerivedFrom(ViewProviderDocumentObject::getClassTypeId())) {
                 if (!vp->isSelectable())
                     return Py::new_reference_to(ret);
@@ -1091,7 +1043,6 @@ PyObject* View3DInventorPy::getObjectsInfo(PyObject *args)
         action.apply(getView3DInventorPtr()->getViewer()->getSoRenderManager()->getSceneGraph());
         const SoPickedPointList& pp = action.getPickedPointList();
 
-        Gui::Document* doc = getView3DInventorPtr()->getViewer()->getDocument();
         Py::Object ret = Py::None();
         if (pp.getLength() > 0) {
             Py::List list;
@@ -1103,8 +1054,7 @@ PyObject* View3DInventorPy::getObjectsInfo(PyObject *args)
                 dict.setItem("y", Py::Float(pt[1]));
                 dict.setItem("z", Py::Float(pt[2]));
 
-                ViewProvider *vp = doc ? doc->getViewProviderByPathFromHead(point->getPath())
-                        : getView3DInventorPtr()->getViewer()->getViewProviderByPath(point->getPath());
+                ViewProvider *vp = getView3DInventorPtr()->getViewer()->getViewProviderByPath(point->getPath());
                 if(vp && vp->isDerivedFrom(ViewProviderDocumentObject::getClassTypeId())) {
                     if(!vp->isSelectable())
                         continue;
@@ -1216,6 +1166,11 @@ PyObject *View3DInventorPy::getPointOnFocalPlane(PyObject *args)
 
 PyObject* View3DInventorPy::getPointOnScreen(PyObject *args)
 {
+    return getPointOnViewport(args);
+}
+
+PyObject* View3DInventorPy::getPointOnViewport(PyObject *args)
+{
     PyObject* v;
     double vx,vy,vz;
     try {
@@ -1232,27 +1187,10 @@ PyObject* View3DInventorPy::getPointOnScreen(PyObject *args)
             }
         }
 
-        const SbViewportRegion& vp = getView3DInventorPtr()->getViewer()->getSoRenderManager()->getViewportRegion();
-        float fRatio = vp.getViewportAspectRatio();
-        const SbVec2s& sp = vp.getViewportSizePixels();
-        //float dX, dY; vp.getViewportSize().getValue(dX, dY);
-        SbViewVolume vv = getView3DInventorPtr()->getViewer()->getSoRenderManager()->getCamera()->getViewVolume(fRatio);
-
-        SbVec3f pt(vx,vy,vz);
-        vv.projectToScreen(pt, pt);
-
-        //if (fRatio > 1.0f) {
-        //    pt[0] = (pt[0] - 0.5f*dX) / fRatio + 0.5f*dX;
-        //}
-        //else {
-        //    pt[1] = (pt[1] - 0.5f*dY) * fRatio + 0.5f*dY;
-        //}
-
-        int x = pt[0] * sp[0];
-        int y = pt[1] * sp[1];
+        SbVec2s pt = getView3DInventorPtr()->getViewer()->getPointOnViewport(SbVec3f(vx,vy,vz));
         Py::Tuple tuple(2);
-        tuple.setItem(0, Py::Int(x));
-        tuple.setItem(1, Py::Int(y));
+        tuple.setItem(0, Py::Int(pt[0]));
+        tuple.setItem(1, Py::Int(pt[1]));
 
         return Py::new_reference_to(tuple);
     } PY_CATCH

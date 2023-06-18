@@ -23,16 +23,27 @@
 #include "PreCompiled.h"
 #ifndef _PreComp_
 # include <QApplication>
+# include <QCheckBox>
+# include <QGridLayout>
 # include <QInputDialog>
+# include <QLabel>
+# include <QMenu>
 # include <QMessageBox>
+# include <QSignalBlocker>
+# include <QWidgetAction>
 #endif
 
 #include <App/DocumentObjectGroup.h>
 #include <Gui/Application.h>
+#include <App/OriginFeature.h>
+#include <Gui/Action.h>
+#include <Gui/BitmapFactory.h>
 #include <Gui/CommandT.h>
 #include <Gui/Control.h>
 #include <Gui/Document.h>
 #include <Gui/MainWindow.h>
+#include <Gui/PrefWidgets.h>
+#include <Gui/QuantitySpinBox.h>
 #include <Gui/SelectionFilter.h>
 #include <Gui/Action.h>
 
@@ -40,12 +51,14 @@
 #include <Mod/Sketcher/App/Constraint.h>
 #include <Mod/Sketcher/App/SketchObject.h>
 #include <Mod/Part/App/Attacher.h>
+#include <Mod/Part/Gui/AttacherTexts.h>
 #include <Mod/Part/App/Part2DObject.h>
 
 #include "SketchMirrorDialog.h"
 #include "SketchOrientationDialog.h"
 #include "TaskSketcherValidation.h"
 #include "ViewProviderSketch.h"
+#include "Utils.h"
 
 
 using namespace std;
@@ -167,7 +180,8 @@ void CmdSketcherNewSketch::activated(int iMsg)
             items.push_back(QObject::tr("Don't attach"));
             int iSugg = 0;//index of the auto-suggested mode in the list of valid modes
             for (size_t i = 0  ;  i < validModes.size()  ;  ++i){
-                items.push_back(QString::fromUtf8(AttachEngine::getModeName(validModes[i]).c_str()));
+                auto uiStrings = AttacherGui::getUIStrings(AttachEnginePlane::getClassTypeId(), validModes[i]);
+                items.push_back(uiStrings[0]);
                 if (validModes[i] == mapmode)
                     iSugg = items.size()-1;
             }
@@ -321,14 +335,7 @@ void CmdSketcherLeaveSketch::activated(int iMsg)
 
 bool CmdSketcherLeaveSketch::isActive()
 {
-    Gui::Document *doc = getActiveGuiDocument();
-    if (doc) {
-        // checks if a Sketch Viewprovider is in Edit and is in no special mode
-        SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
-        if (vp /*&& vp->getSketchMode() == ViewProviderSketch::STATUS_NONE*/)
-            return true;
-    }
-    return false;
+    return isSketchInEdit(getActiveGuiDocument());
 }
 
 DEF_STD_CMD_A(CmdSketcherStopOperation)
@@ -363,13 +370,7 @@ void CmdSketcherStopOperation::activated(int iMsg)
 
 bool CmdSketcherStopOperation::isActive()
 {
-    Gui::Document *doc = getActiveGuiDocument();
-    if (doc) {
-        SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
-        if (vp)
-            return true;
-    }
-    return false;
+    return isSketchInEdit(getActiveGuiDocument());
 }
 
 DEF_STD_CMD_A(CmdSketcherReorientSketch)
@@ -592,7 +593,10 @@ void CmdSketcherMapSketch::activated(int iMsg)
         int iSugg = 0; //index of the auto-suggested mode in the list of valid modes
         int iCurr = 0; //index of current mode in the list of valid modes
         for (size_t i = 0; i < validModes.size(); ++i) {
-            items.push_back(QString::fromUtf8(AttachEngine::getModeName(validModes[i]).c_str()));
+            // Get the 2-element vector of caption, tooltip -- this class cannot use the tooltip,
+            // so it is just ignored.
+            auto uiStrings = AttacherGui::getUIStrings(AttachEnginePlane::getClassTypeId(), validModes[i]);
+            items.push_back(uiStrings[0]);
             if (validModes[i] == curMapMode) {
                 iCurr = items.size() - 1;
                 items.back().append(bCurIncompatible?
@@ -703,14 +707,7 @@ void CmdSketcherViewSketch::activated(int iMsg)
 
 bool CmdSketcherViewSketch::isActive()
 {
-    Gui::Document *doc = getActiveGuiDocument();
-    if (doc) {
-        // checks if a Sketch Viewprovider is in Edit and is in no special mode
-        SketcherGui::ViewProviderSketch* vp = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
-        if (vp /*&& vp->getSketchMode() == ViewProviderSketch::STATUS_NONE*/)
-            return true;
-    }
-    return false;
+    return isSketchInEdit(getActiveGuiDocument());
 }
 
 DEF_STD_CMD_A(CmdSketcherViewSketchBottom)
@@ -1010,7 +1007,7 @@ bool CmdSketcherMergeSketches::isActive()
 
 // Acknowledgement of idea and original python macro goes to SpritKopf:
 // https://github.com/Spritkopf/freecad-macros/blob/master/clip-sketch/clip_sketch.FCMacro
-// https://forum.freecadweb.org/viewtopic.php?p=231481#p231085
+// https://forum.freecad.org/viewtopic.php?p=231481#p231085
 DEF_STD_CMD_A(CmdSketcherViewSection)
 
 CmdSketcherViewSection::CmdSketcherViewSection()
@@ -1040,6 +1037,705 @@ bool CmdSketcherViewSection::isActive()
     return true;
 }
 
+/* Grid tool */
+class GridSpaceAction : public QWidgetAction
+{
+public:
+    GridSpaceAction(QObject* parent) : QWidgetAction(parent) {
+        setEnabled(false);
+    }
+
+    void updateWidget() {
+
+        auto* sketchView = getView();
+
+        if(sketchView) {
+
+            auto updateCheckBox = [](QCheckBox * checkbox, bool value) {
+                auto checked = checkbox->checkState() == Qt::Checked;
+
+                if( value != checked ) {
+                    const QSignalBlocker blocker(checkbox);
+                    checkbox->setChecked(value);
+                }
+            };
+
+            auto updateCheckBoxFromProperty = [updateCheckBox](QCheckBox * checkbox, App::PropertyBool & property) {
+                auto propvalue = property.getValue();
+
+                updateCheckBox(checkbox, propvalue);
+            };
+
+            updateCheckBoxFromProperty(gridAutoSpacing, sketchView->GridAuto);
+
+            gridSizeBox->setValue(sketchView->GridSize.getValue());
+        }
+    }
+
+    void languageChange()
+    {
+        gridAutoSpacing->setText(tr("Grid Auto Spacing"));
+        gridAutoSpacing->setToolTip(tr("Resize grid automatically depending on zoom."));
+        gridAutoSpacing->setStatusTip(gridAutoSpacing->toolTip());
+
+        sizeLabel->setText(tr("Spacing"));
+        gridSizeBox->setToolTip(tr("Distance between two subsequent grid lines"));
+    }
+
+protected:
+    QWidget* createWidget(QWidget* parent) override
+    {
+        gridAutoSpacing = new QCheckBox();
+
+        sizeLabel = new QLabel();
+
+        gridSizeBox = new Gui::QuantitySpinBox();
+        gridSizeBox->setProperty("unit", QVariant(QStringLiteral("mm")));
+        gridSizeBox->setObjectName(QStringLiteral("gridSize"));
+        gridSizeBox->setMaximum(99999999.0);
+        gridSizeBox->setMinimum(0.001);
+
+        QWidget* gridSizeW = new QWidget(parent);
+        auto* layout = new QGridLayout(gridSizeW);
+        layout->addWidget(gridAutoSpacing, 0, 0, 1, 2);
+        layout->addWidget(sizeLabel, 1, 0);
+        layout->addWidget(gridSizeBox, 1, 1);
+
+        languageChange();
+
+        QObject::connect(gridAutoSpacing, &QCheckBox::stateChanged, [this](int state) {
+            auto* sketchView = getView();
+
+            if(sketchView) {
+                auto enable = (state == Qt::Checked);
+                sketchView->GridAuto.setValue(enable);
+            }
+        });
+
+        QObject::connect(gridSizeBox, qOverload<double>(&Gui::QuantitySpinBox::valueChanged), [this](double val) {
+            auto* sketchView = getView();
+            if(sketchView) {
+                sketchView->GridSize.setValue(val);
+            }
+        });
+
+        return gridSizeW;
+    }
+
+private:
+    ViewProviderSketch * getView() {
+        Gui::Document* doc = Gui::Application::Instance->activeDocument();
+
+        if(doc) {
+            return dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
+        }
+
+        return nullptr;
+    }
+
+private:
+    QCheckBox * gridAutoSpacing;
+    QLabel * sizeLabel;
+    Gui::QuantitySpinBox * gridSizeBox;
+};
+
+class CmdSketcherGrid : public Gui::Command
+{
+public:
+    CmdSketcherGrid();
+    virtual ~CmdSketcherGrid(){}
+    virtual const char* className() const override
+    { return "CmdSketcherGrid"; }
+    virtual void languageChange() override;
+protected:
+    virtual void activated(int iMsg) override;
+    virtual bool isActive(void) override;
+    virtual Gui::Action * createAction(void) override;
+private:
+    void updateIcon(bool value);
+    void updateInactiveHandlerIcon();
+
+    CmdSketcherGrid(const CmdSketcherGrid&) = delete;
+    CmdSketcherGrid(CmdSketcherGrid&&) = delete;
+    CmdSketcherGrid& operator= (const CmdSketcherGrid&) = delete;
+    CmdSketcherGrid& operator= (CmdSketcherGrid&&) = delete;
+};
+
+CmdSketcherGrid::CmdSketcherGrid()
+    : Command("Sketcher_Grid")
+{
+    sAppModule = "Sketcher";
+    sGroup = "Sketcher";
+    sMenuText = QT_TR_NOOP("Activate Grid");
+    sToolTipText = QT_TR_NOOP("Activate grid and grid settings");
+    sWhatsThis = "Sketcher_Grid";
+    sStatusTip = sToolTipText;
+    eType = 0;
+}
+
+void CmdSketcherGrid::updateIcon(bool value)
+{
+    static QIcon active = Gui::BitmapFactory().iconFromTheme("Sketcher_GridToggle");
+    static QIcon inactive = Gui::BitmapFactory().iconFromTheme("Sketcher_GridToggle_Deactivated");
+
+    auto * pcAction = qobject_cast<Gui::ActionGroup*>(getAction());
+    pcAction->setIcon(value ? active : inactive);
+}
+
+void CmdSketcherGrid::updateInactiveHandlerIcon()
+{
+    auto * vp = getInactiveHandlerEditModeSketchViewProvider();
+
+    if(vp) {
+        auto value = vp->ShowGrid.getValue();
+
+        updateIcon(value);
+    }
+}
+
+void CmdSketcherGrid::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+
+    Gui::Document* doc = getActiveGuiDocument();
+    assert(doc);
+    auto* sketchView = dynamic_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
+    assert(sketchView);
+
+    auto value = sketchView->ShowGrid.getValue();
+    sketchView->ShowGrid.setValue(!value);
+
+    updateIcon(!value);
+}
+
+Gui::Action* CmdSketcherGrid::createAction()
+{
+    auto * pcAction = new Gui::ActionGroup(this, Gui::getMainWindow());
+    pcAction->setDropDownMenu(true);
+    pcAction->setExclusive(false);
+    applyCommandData(this->className(), pcAction);
+
+    GridSpaceAction* gsa = new GridSpaceAction(pcAction);
+    pcAction->addAction(gsa);
+
+    _pcAction = pcAction;
+
+    QObject::connect(pcAction, &Gui::ActionGroup::aboutToShow, [gsa](QMenu * menu) {
+        Q_UNUSED(menu)
+        gsa->updateWidget();
+    });
+
+    // set the right pixmap
+    updateInactiveHandlerIcon();
+
+    return pcAction;
+}
+
+void CmdSketcherGrid::languageChange()
+{
+    Command::languageChange();
+
+    if (!_pcAction)
+        return;
+
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+
+    auto* gsa = static_cast<GridSpaceAction *>(a[0]);
+    gsa->languageChange();
+}
+
+bool CmdSketcherGrid::isActive()
+{
+    auto * vp = getInactiveHandlerEditModeSketchViewProvider();
+
+    if (vp) {
+        auto value = vp->ShowGrid.getValue();
+
+        updateIcon(value);
+
+        return true;
+    }
+
+    return false;
+}
+
+/* Snap tool */
+class SnapSpaceAction : public QWidgetAction
+{
+public:
+    SnapSpaceAction(QObject* parent) : QWidgetAction(parent) {
+        setEnabled(false);
+    }
+
+    void updateWidget(bool snapenabled) {
+
+        auto updateCheckBox = [](QCheckBox* checkbox, bool value) {
+            auto checked = checkbox->checkState() == Qt::Checked;
+
+            if (value != checked) {
+                const QSignalBlocker blocker(checkbox);
+                checkbox->setChecked(value);
+            }
+        };
+
+        auto updateSpinBox = [](Gui::QuantitySpinBox* spinbox, double value) {
+            auto currentvalue = spinbox->rawValue();
+
+            if (currentvalue != value) {
+                const QSignalBlocker blocker(spinbox);
+                spinbox->setValue(value);
+            }
+        };
+
+        ParameterGrp::handle hGrp = getParameterPath();
+
+        updateCheckBox(snapToObjects, hGrp->GetBool("SnapToObjects", true));
+
+        updateCheckBox(snapToGrid, hGrp->GetBool("SnapToGrid", false));
+
+        updateSpinBox(snapAngle, hGrp->GetFloat("SnapAngle", 5.0));
+
+        snapToObjects->setEnabled(snapenabled);
+        snapToGrid->setEnabled(snapenabled);
+        angleLabel->setEnabled(snapenabled);
+        snapAngle->setEnabled(snapenabled);
+    }
+
+    void languageChange()
+    {
+        snapToObjects->setText(tr("Snap to objects"));
+        snapToObjects->setToolTip(tr("New points will snap to the currently preselected object. It will also snap to the middle of lines and arcs."));
+        snapToObjects->setStatusTip(snapToObjects->toolTip());
+
+        snapToGrid->setText(tr("Snap to Grid"));
+        snapToGrid->setToolTip(tr("New points will snap to the nearest grid line.\nPoints must be set closer than a fifth of the grid spacing to a grid line to snap."));
+        snapToGrid->setStatusTip(snapToGrid->toolTip());
+
+        angleLabel->setText(tr("Snap angle"));
+        snapAngle->setToolTip(tr("Angular step for tools that use 'Snap at Angle' (line for instance). Hold CTRL to enable 'Snap at Angle'. The angle start from the East axis (horizontal right)"));
+    }
+
+protected:
+    QWidget* createWidget(QWidget* parent) override
+    {
+        snapToObjects = new QCheckBox();
+
+        snapToGrid = new QCheckBox();
+
+        angleLabel = new QLabel();
+
+        snapAngle = new Gui::QuantitySpinBox();
+        snapAngle->setProperty("unit", QVariant(QStringLiteral("deg")));
+        snapAngle->setObjectName(QStringLiteral("snapAngle"));
+        snapAngle->setMaximum(99999999.0);
+        snapAngle->setMinimum(0);
+
+        QWidget* snapW = new QWidget(parent);
+        auto* layout = new QGridLayout(snapW);
+        layout->addWidget(snapToGrid, 0, 0, 1, 2);
+        layout->addWidget(snapToObjects, 1, 0, 1, 2);
+        layout->addWidget(angleLabel, 2, 0);
+        layout->addWidget(snapAngle, 2, 1);
+
+        languageChange();
+
+        QObject::connect(snapToObjects, &QCheckBox::stateChanged, [this](int state) {
+            ParameterGrp::handle hGrp = this->getParameterPath();
+            hGrp->SetBool("SnapToObjects", state == Qt::Checked);
+        });
+
+        QObject::connect(snapToGrid, &QCheckBox::stateChanged, [this](int state) {
+            ParameterGrp::handle hGrp = this->getParameterPath();
+            hGrp->SetBool("SnapToGrid", state == Qt::Checked);
+        });
+
+        QObject::connect(snapAngle, qOverload<double>(&Gui::QuantitySpinBox::valueChanged), [this](double val) {
+            ParameterGrp::handle hGrp = this->getParameterPath();
+            hGrp->SetFloat("SnapAngle", val);
+        });
+
+        return snapW;
+    }
+
+private:
+    ParameterGrp::handle getParameterPath() {
+        return App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/Snap");
+    }
+
+private:
+    QCheckBox* snapToObjects;
+    QCheckBox* snapToGrid;
+    QLabel* angleLabel;
+    Gui::QuantitySpinBox* snapAngle;
+};
+
+class CmdSketcherSnap : public Gui::Command, public ParameterGrp::ObserverType
+{
+public:
+    CmdSketcherSnap();
+    virtual ~CmdSketcherSnap();
+    virtual const char* className() const override
+    {
+        return "CmdSketcherSnap";
+    }
+    virtual void languageChange() override;
+
+    void OnChange(Base::Subject<const char*> &rCaller, const char * sReason) override;
+protected:
+    virtual void activated(int iMsg) override;
+    virtual bool isActive(void) override;
+    virtual Gui::Action* createAction(void) override;
+private:
+    void updateIcon(bool value);
+
+    ParameterGrp::handle getParameterPath() {
+        return App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/Snap");
+    }
+
+    CmdSketcherSnap(const CmdSketcherSnap&) = delete;
+    CmdSketcherSnap(CmdSketcherSnap&&) = delete;
+    CmdSketcherSnap& operator= (const CmdSketcherSnap&) = delete;
+    CmdSketcherSnap& operator= (CmdSketcherSnap&&) = delete;
+
+    bool snapEnabled = true;
+};
+
+CmdSketcherSnap::CmdSketcherSnap()
+    : Command("Sketcher_Snap")
+{
+    sAppModule = "Sketcher";
+    sGroup = "Sketcher";
+    sMenuText = QT_TR_NOOP("Toggle Snap");
+    sToolTipText = QT_TR_NOOP("Toggle all snapping functionalities. In the menu you can toggle individually 'Snap to Grid', 'Snap to Objects' and further snap settings");
+    sWhatsThis = "Sketcher_Snap";
+    sStatusTip = sToolTipText;
+    eType = 0;
+
+    ParameterGrp::handle hGrp = this->getParameterPath();
+    hGrp->Attach(this);
+}
+
+CmdSketcherSnap::~CmdSketcherSnap() {
+
+    ParameterGrp::handle hGrp = this->getParameterPath();
+    hGrp->Detach(this);
+}
+
+void CmdSketcherSnap::OnChange(Base::Subject<const char*> &rCaller, const char * sReason)
+{
+    Q_UNUSED(rCaller)
+
+    if (strcmp(sReason, "Snap") == 0) {
+        snapEnabled = getParameterPath()->GetBool("Snap", true);
+    }
+}
+
+void CmdSketcherSnap::updateIcon(bool value)
+{
+    static QIcon active = Gui::BitmapFactory().iconFromTheme("Sketcher_Snap");
+    static QIcon inactive = Gui::BitmapFactory().iconFromTheme("Sketcher_Snap_Deactivated");
+
+    auto* pcAction = qobject_cast<Gui::ActionGroup*>(getAction());
+    pcAction->setIcon(value ? active : inactive);
+}
+
+void CmdSketcherSnap::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+
+    getParameterPath()->SetBool("Snap", !snapEnabled);
+
+    // snapEnable updated via observer
+    updateIcon(snapEnabled);
+
+    //Update the widget :
+    if (!_pcAction)
+        return;
+
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+
+    auto* ssa = static_cast<SnapSpaceAction*>(a[0]);
+    ssa->updateWidget(snapEnabled);
+}
+
+Gui::Action* CmdSketcherSnap::createAction()
+{
+    auto* pcAction = new Gui::ActionGroup(this, Gui::getMainWindow());
+    pcAction->setDropDownMenu(true);
+    pcAction->setExclusive(false);
+    applyCommandData(this->className(), pcAction);
+
+    SnapSpaceAction* ssa = new SnapSpaceAction(pcAction);
+    pcAction->addAction(ssa);
+
+    _pcAction = pcAction;
+
+    QObject::connect(pcAction, &Gui::ActionGroup::aboutToShow, [ssa, this](QMenu* menu) {
+        Q_UNUSED(menu)
+            ssa->updateWidget(snapEnabled);
+    });
+
+    // set the right pixmap
+    updateIcon(snapEnabled);
+
+    return pcAction;
+}
+
+void CmdSketcherSnap::languageChange()
+{
+    Command::languageChange();
+
+    if (!_pcAction)
+        return;
+
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+
+    auto* ssa = static_cast<SnapSpaceAction*>(a[0]);
+    ssa->languageChange();
+}
+
+bool CmdSketcherSnap::isActive()
+{
+    auto* vp = getInactiveHandlerEditModeSketchViewProvider();
+
+    if (vp) {
+        updateIcon(snapEnabled);
+
+        return true;
+    }
+
+    return false;
+}
+
+
+/* Rendering Order */
+class RenderingOrderAction : public QWidgetAction
+{
+public:
+    RenderingOrderAction(QObject* parent) : QWidgetAction(parent) {
+        setEnabled(false);
+    }
+
+    void updateWidget() {
+
+        auto hGrp = getParameterPath();
+
+        // 1->Normal Geometry, 2->Construction, 3->External
+        int topid = hGrp->GetInt("TopRenderGeometryId", 1);
+        int midid = hGrp->GetInt("MidRenderGeometryId", 2);
+        int lowid = hGrp->GetInt("LowRenderGeometryId", 3);
+
+        {
+            QSignalBlocker block(this);
+            list->clear();
+
+            QListWidgetItem* newItem = new QListWidgetItem;
+            newItem->setData(Qt::UserRole, QVariant(topid));
+            newItem->setText(topid == 1 ? tr("Normal Geometry") : topid == 2 ? tr("Construction Geometry") : tr("External Geometry"));
+            list->insertItem(0, newItem);
+
+            newItem = new QListWidgetItem;
+            newItem->setData(Qt::UserRole, QVariant(midid));
+            newItem->setText(midid == 1 ? tr("Normal Geometry") : midid == 2 ? tr("Construction Geometry") : tr("External Geometry"));
+            list->insertItem(1, newItem);
+
+            newItem = new QListWidgetItem;
+            newItem->setData(Qt::UserRole, QVariant(lowid));
+            newItem->setText(lowid == 1 ? tr("Normal Geometry") : lowid == 2 ? tr("Construction Geometry") : tr("External Geometry"));
+            list->insertItem(2, newItem);
+        }
+    }
+
+    void languageChange()
+    {
+        updateWidget();
+    }
+
+protected:
+    QWidget* createWidget(QWidget* parent) override
+    {
+        list = new QListWidget();
+        list->setDragDropMode(QAbstractItemView::InternalMove);
+        list->setDefaultDropAction(Qt::MoveAction);
+        list->setSelectionMode(QAbstractItemView::SingleSelection);
+        list->setDragEnabled(true);
+
+        QWidget* renderingWidget = new QWidget(parent);
+        auto* layout = new QGridLayout(renderingWidget);
+        layout->addWidget(list, 0, 0, 0, 0);
+
+        languageChange();
+
+        // Handle change in the order of the list entries
+        QObject::connect(list->model(), &QAbstractItemModel::rowsMoved,
+                         [this](const QModelIndex &sourceParent, int sourceStart, int sourceEnd,
+                                const QModelIndex &destinationParent, int destinationRow) {
+            Q_UNUSED(sourceParent)
+            Q_UNUSED(sourceStart)
+            Q_UNUSED(sourceEnd)
+            Q_UNUSED(destinationParent)
+            Q_UNUSED(destinationRow)
+
+            int topid = list->item(0)->data(Qt::UserRole).toInt();
+            int midid = list->item(1)->data(Qt::UserRole).toInt();
+            int lowid = list->item(2)->data(Qt::UserRole).toInt();
+
+            auto hGrp = getParameterPath();
+
+            hGrp->SetInt("TopRenderGeometryId", topid);
+            hGrp->SetInt("MidRenderGeometryId", midid);
+            hGrp->SetInt("LowRenderGeometryId", lowid);
+        });
+
+        return renderingWidget;
+    }
+
+private:
+    ParameterGrp::handle getParameterPath() {
+        return App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+    }
+
+private:
+    QListWidget* list;
+};
+
+class CmdRenderingOrder : public Gui::Command, public ParameterGrp::ObserverType
+{
+    enum class ElementType {
+        Normal = 1,
+        Construction = 2,
+        External = 3,
+    };
+public:
+    CmdRenderingOrder();
+    virtual ~CmdRenderingOrder();
+    virtual const char* className() const override
+    { return "CmdRenderingOrder"; }
+    virtual void languageChange() override;
+    void OnChange(Base::Subject<const char*> &rCaller, const char * sReason) override;
+protected:
+    virtual void activated(int iMsg) override;
+    virtual bool isActive(void) override;
+    virtual Gui::Action * createAction(void) override;
+private:
+    void updateIcon();
+
+    ParameterGrp::handle getParameterPath() {
+        return App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+    }
+
+    CmdRenderingOrder(const CmdRenderingOrder&) = delete;
+    CmdRenderingOrder(CmdRenderingOrder&&) = delete;
+    CmdRenderingOrder& operator= (const CmdRenderingOrder&) = delete;
+    CmdRenderingOrder& operator= (CmdRenderingOrder&&) = delete;
+
+    ElementType TopElement = ElementType::Normal;
+};
+
+CmdRenderingOrder::CmdRenderingOrder()
+    : Command("Sketcher_RenderingOrder")
+{
+    sAppModule = "Sketcher";
+    sGroup = "Sketcher";
+    sMenuText = QT_TR_NOOP("Configure rendering order");
+    sToolTipText = QT_TR_NOOP("Reorder the items in the list to configure rendering order.");
+    sWhatsThis = "Sketcher_RenderingOrder";
+    sStatusTip = sToolTipText;
+    eType = 0;
+
+    ParameterGrp::handle hGrp = this->getParameterPath();
+    hGrp->Attach(this);
+
+    TopElement = static_cast<ElementType>(getParameterPath()->GetInt("TopRenderGeometryId", 1));
+}
+
+CmdRenderingOrder::~CmdRenderingOrder() {
+
+    ParameterGrp::handle hGrp = this->getParameterPath();
+    hGrp->Detach(this);
+}
+
+void CmdRenderingOrder::OnChange(Base::Subject<const char*> &rCaller, const char * sReason)
+{
+    Q_UNUSED(rCaller)
+
+    if (strcmp(sReason, "TopRenderGeometryId") == 0) {
+        TopElement = static_cast<ElementType>(getParameterPath()->GetInt("TopRenderGeometryId", 1));
+
+        updateIcon();
+    }
+}
+
+void CmdRenderingOrder::updateIcon()
+{
+    static QIcon normal = Gui::BitmapFactory().iconFromTheme("Sketcher_RenderingOrder_Normal");
+    static QIcon construction = Gui::BitmapFactory().iconFromTheme("Sketcher_RenderingOrder_Construction");
+    static QIcon external = Gui::BitmapFactory().iconFromTheme("Sketcher_RenderingOrder_External");
+
+    auto * pcAction = qobject_cast<Gui::ActionGroup*>(getAction());
+
+    if(TopElement == ElementType::Normal) {
+        pcAction->setIcon(normal);
+    }
+    else if(TopElement == ElementType::Construction) {
+        pcAction->setIcon(construction);
+    }
+    else if(TopElement == ElementType::External) {
+        pcAction->setIcon(external);
+    }
+}
+
+void CmdRenderingOrder::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+}
+
+Gui::Action* CmdRenderingOrder::createAction()
+{
+    auto * pcAction = new Gui::ActionGroup(this, Gui::getMainWindow());
+    pcAction->setDropDownMenu(true);
+    pcAction->setExclusive(false);
+    applyCommandData(this->className(), pcAction);
+
+    RenderingOrderAction* roa = new RenderingOrderAction(pcAction);
+    pcAction->addAction(roa);
+
+    _pcAction = pcAction;
+
+    QObject::connect(pcAction, &Gui::ActionGroup::aboutToShow, [roa](QMenu * menu) {
+        Q_UNUSED(menu)
+        roa->updateWidget();
+    });
+
+    // set the right pixmap
+    updateIcon();
+
+    return pcAction;
+}
+
+void CmdRenderingOrder::languageChange()
+{
+    Command::languageChange();
+
+    if (!_pcAction)
+        return;
+
+    Gui::ActionGroup* pcAction = qobject_cast<Gui::ActionGroup*>(_pcAction);
+    QList<QAction*> a = pcAction->actions();
+
+    auto* roa = static_cast<RenderingOrderAction *>(a[0]);
+    roa->languageChange();
+}
+
+bool CmdRenderingOrder::isActive()
+{
+    return isSketchInEdit(getActiveGuiDocument());;
+}
+
+
 void CreateSketcherCommands()
 {
     Gui::CommandManager &rcCmdMgr = Gui::Application::Instance->commandManager();
@@ -1055,4 +1751,7 @@ void CreateSketcherCommands()
     rcCmdMgr.addCommand(new CmdSketcherMirrorSketch());
     rcCmdMgr.addCommand(new CmdSketcherMergeSketches());
     rcCmdMgr.addCommand(new CmdSketcherViewSection());
+    rcCmdMgr.addCommand(new CmdSketcherGrid());
+    rcCmdMgr.addCommand(new CmdSketcherSnap());
+    rcCmdMgr.addCommand(new CmdRenderingOrder());
 }

@@ -111,6 +111,7 @@ FillingVertexPanel::FillingVertexPanel(ViewProviderFilling* vp, Surface::Filling
 {
     ui = new Ui_TaskFillingVertex();
     ui->setupUi(this);
+    setupConnections();
 
     selectionMode = None;
     this->vp = vp;
@@ -122,7 +123,7 @@ FillingVertexPanel::FillingVertexPanel(ViewProviderFilling* vp, Surface::Filling
     action->setShortcut(QStringLiteral("Del"));
     action->setShortcutContext(Qt::WidgetShortcut);
     ui->listFreeVertex->addAction(action);
-    connect(action, SIGNAL(triggered()), this, SLOT(onDeleteVertex()));
+    connect(action, &QAction::triggered, this, &FillingVertexPanel::onDeleteVertex);
     ui->listFreeVertex->setContextMenuPolicy(Qt::ActionsContextMenu);
 }
 
@@ -134,6 +135,15 @@ FillingVertexPanel::~FillingVertexPanel()
     // no need to delete child widgets, Qt does it all for us
     delete ui;
     Gui::Selection().rmvSelectionGate();
+}
+
+void FillingVertexPanel::setupConnections()
+{
+    connect(ui->buttonVertexAdd, &QToolButton::toggled,
+            this, &FillingVertexPanel::onButtonVertexAddToggled);
+    connect(ui->buttonVertexRemove, &QToolButton::toggled,
+            this, &FillingVertexPanel::onButtonVertexRemoveToggled);
+
 }
 
 void FillingVertexPanel::appendButtons(Gui::ButtonGroup* buttonGroup)
@@ -230,7 +240,7 @@ void FillingVertexPanel::slotDeletedObject(const Gui::ViewProviderDocumentObject
     }
 }
 
-void FillingVertexPanel::on_buttonVertexAdd_toggled(bool checked)
+void FillingVertexPanel::onButtonVertexAddToggled(bool checked)
 {
     if (checked) {
         // 'selectionMode' is passed by reference and changed when the filter is deleted
@@ -242,7 +252,7 @@ void FillingVertexPanel::on_buttonVertexAdd_toggled(bool checked)
     }
 }
 
-void FillingVertexPanel::on_buttonVertexRemove_toggled(bool checked)
+void FillingVertexPanel::onButtonVertexRemoveToggled(bool checked)
 {
     if (checked) {
         // 'selectionMode' is passed by reference and changed when the filter is deleted
@@ -320,7 +330,7 @@ void FillingVertexPanel::onSelectionChanged(const Gui::SelectionChanges& msg)
         }
 
         editedObject->recomputeFeature();
-        QTimer::singleShot(50, this, SLOT(clearSelection()));
+        QTimer::singleShot(50, this, &FillingVertexPanel::clearSelection);
     }
 }
 

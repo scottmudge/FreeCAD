@@ -228,7 +228,8 @@ PartDesign::Body * makeBodyActive(App::DocumentObject *body, App::Document *doc,
 
     if(body) {
         auto _doc = parent?parent->getDocument():body->getDocument();
-        _FCMD_DOC_CMD(Gui, _doc, "ActiveView.setActiveObject('" << PDBODYKEY
+        Gui::cmdGuiDocument(_doc, std::stringstream()
+                      << "ActiveView.setActiveObject('" << PDBODYKEY
                       << "'," << Gui::Command::getObjectCmd(parent?parent:body)
                       << ",'" << sub << "')");
         return Gui::Application::Instance->activeView()->
@@ -523,6 +524,9 @@ void relinkToBody (PartDesign::Feature *feature) {
 
 bool isFeatureMovable(App::DocumentObject* const feat)
 {
+    if (!feat)
+        return false;
+
     if (feat->getTypeId().isDerivedFrom(PartDesign::Feature::getClassTypeId())) {
         auto prim = static_cast<PartDesign::Feature*>(feat);
         App::DocumentObject* bf = prim->BaseFeature.getValue();

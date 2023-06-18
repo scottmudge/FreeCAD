@@ -37,6 +37,12 @@ TaskDlgFeatureParameters *ViewProviderMultiTransform::getEditDialog() {
     return new TaskDlgMultiTransformParameters (this);
 }
 
+const std::string & ViewProviderMultiTransform::featureName() const
+{
+    static const std::string name = "MultiTransform";
+    return name;
+}
+
 std::vector<App::DocumentObject*> ViewProviderMultiTransform::_claimChildren() const
 {
     PartDesign::MultiTransform* pcMultiTransform = static_cast<PartDesign::MultiTransform*>(getObject());
@@ -48,7 +54,7 @@ std::vector<App::DocumentObject*> ViewProviderMultiTransform::_claimChildren() c
 
 void ViewProviderMultiTransform::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
 {
-    this->addDefaultAction(menu, QObject::tr("Edit %1").arg(QString::fromStdString(featureName)));
+    this->addDefaultAction(menu, QObject::tr("Edit %1").arg(QString::fromStdString(featureName())));
     inherited::setupContextMenu(menu, receiver, member); // clazy:exclude=skipped-base-method
 }
 

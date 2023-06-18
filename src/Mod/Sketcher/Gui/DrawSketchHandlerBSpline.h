@@ -153,8 +153,18 @@ public:
 
             // check if coincident with first pole
             for(auto & ac : sugConstr.back()) {
-                if( ac.Type == Sketcher::Coincident && ac.GeoId == poleGeoIds[0] && ac.PosId == Sketcher::PointPos::mid ) {
-                    IsClosed = true;
+                if (ac.Type == Sketcher::Coincident) {
+                    if (ac.GeoId == poleGeoIds[0] && ac.PosId == Sketcher::PointPos::mid)
+                        IsClosed = true;
+                    else {
+                        // The coincidence with first point may be indirect
+                        const auto coincidents =
+                            static_cast<Sketcher::SketchObject*>(sketchgui->getObject())
+                            ->getAllCoincidentPoints(ac.GeoId, ac.PosId);
+                        if (coincidents.find(poleGeoIds[0]) != coincidents.end() &&
+                            coincidents.at(poleGeoIds[0]) == Sketcher::PointPos::mid)
+                            IsClosed = true;
+                    }
                 }
             }
 
@@ -403,6 +413,8 @@ private:
 
             int currentgeoid = getHighestCurveIndex();
 
+            unsigned int maxDegree = ConstrMethod == 0 ? (BSplinePoles.size()-1) : (BSplinePoles.size());
+
             try {
                 //Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Add B-spline curve"));
 
@@ -415,11 +427,11 @@ private:
 
                 // {"poles", "mults", "knots", "periodic", "degree", "weights", "CheckRational", NULL};
                 Gui::cmdAppObjectArgs(sketchgui->getObject(), "addGeometry(Part.BSplineCurve"
-                                        "(%s,None,None,%s,%d,None,False),%s)",
-                                        controlpoints.c_str(),
-                                        ConstrMethod == 0 ?"False":"True",
-                                        SplineDegree,
-                                        geometryCreationMode==Construction?"True":"False");
+                                      "(%s,None,None,%s,%d,None,False),%s)",
+                                      controlpoints.c_str(),
+                                      ConstrMethod == 0 ?"False":"True",
+                                      std::min(maxDegree, SplineDegree),
+                                      geometryCreationMode==Construction?"True":"False");
 
                 currentgeoid++;
 
@@ -509,7 +521,7 @@ protected:
     std::vector<std::vector<AutoConstraint>> sugConstr;
 
     int ConstrMethod;
-    int SplineDegree;
+    unsigned int SplineDegree;
     bool IsClosed;
     std::vector<int> poleGeoIds;
     Base::Vector2d prevCursorPosition;

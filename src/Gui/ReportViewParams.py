@@ -41,6 +41,7 @@ Params = [
     ParamBool('checkShowReportViewOnError', True),
     ParamBool('checkShowReportViewOnNormalMessage', False),
     ParamBool('checkShowReportViewOnLogMessage', False),
+    ParamBool('checkShowReportViewOnCritical', False),
     ParamBool("checkShowReportTimecode", True),
 
     ParamInt("LogMessageSize", 0),

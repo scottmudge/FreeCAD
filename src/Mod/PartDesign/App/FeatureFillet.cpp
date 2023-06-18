@@ -75,7 +75,8 @@ App::DocumentObjectExecReturn *Fillet::execute()
     Part::TopoShape baseShape;
     try {
         baseShape = getBaseShape();
-    } catch (Base::Exception& e) {
+    }
+    catch (Base::Exception& e) {
         return new App::DocumentObjectExecReturn(e.what());
     }
     baseShape.setTransform(Base::Matrix4D());
@@ -83,12 +84,12 @@ App::DocumentObjectExecReturn *Fillet::execute()
     auto edges = UseAllEdges.getValue() ? baseShape.getSubTopoShapes(TopAbs_EDGE)
                                         : getContinuousEdges(baseShape);
     if (edges.empty())
-        return new App::DocumentObjectExecReturn("Fillet not possible on selected shapes");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Fillet not possible on selected shapes"));
 
     double radius = Radius.getValue();
 
     if(radius <= 0)
-        return new App::DocumentObjectExecReturn("Fillet radius must be greater than zero");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Fillet radius must be greater than zero"));
 
     this->positionByBaseFeature();
 
@@ -112,7 +113,7 @@ App::DocumentObjectExecReturn *Fillet::execute()
 
         shape.makEFillet(baseShape,edges,segmentList,Radius.getValue());
         if (shape.isNull())
-            return new App::DocumentObjectExecReturn("Resulting shape is null");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Resulting shape is null"));
 
         TopTools_ListOfShape aLarg;
         aLarg.Append(baseShape.getShape());

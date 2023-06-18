@@ -59,6 +59,10 @@ class Facebinder(DraftObject):
         obj.setEditorMode("Area",1)
 
     def execute(self,obj):
+        if self.props_changed_placement_only(obj):
+            self.props_changed_clear()
+            return
+
         import Part
         pl = obj.Placement
         if not obj.Faces:
@@ -120,6 +124,10 @@ class Facebinder(DraftObject):
             obj.Area = area
         except Exception:
             pass
+        self.props_changed_clear()
+
+    def onChanged(self, obj, prop):
+        self.props_changed_store(prop)
 
     def addSubobjects(self,obj,facelinks):
         """adds facelinks to this facebinder"""

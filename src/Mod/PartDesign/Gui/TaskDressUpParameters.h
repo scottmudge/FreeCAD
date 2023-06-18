@@ -27,6 +27,7 @@
 #include <boost/signals2.hpp>
 
 #include <Gui/TaskView/TaskView.h>
+#include <Mod/PartDesign/App/FeatureDressUp.h>
 
 #include "TaskFeatureParameters.h"
 #include "ViewProviderDressUp.h"

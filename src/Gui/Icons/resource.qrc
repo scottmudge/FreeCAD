@@ -28,6 +28,7 @@
         <file>media-record.svg</file>
         <file>media-playback-stop.svg</file>
         <file>preferences-display.svg</file>
+        <file>preferences-python.svg</file>
         <file>preferences-general.svg</file>
         <file>preferences-import-export.svg</file>
         <file>preferences-workbenches.svg</file>
@@ -81,6 +82,8 @@
         <file>edit-undo.svg</file>
         <file>edit-edit.svg</file>
         <file>edit-cleartext.svg</file>
+        <file>info.svg</file>
+        <file>critical-info.svg</file>
         <file>tree-item-drag.svg</file>
         <file>tree-item-hide.svg</file>
         <file>tree-show-hidden.svg</file>
@@ -128,6 +131,8 @@
         <file>accessories-text-editor.svg</file>
         <file>accessories-calculator.svg</file>
         <file>internet-web-browser.svg</file>
+        <file>InTray.svg</file>
+        <file>InTray_missed_notifications.svg</file>
         <file>view-select.svg</file>
         <file>view-unselectable.svg</file>
         <file>view-refresh.svg</file>
@@ -201,6 +206,7 @@
         <file>Std_RandomColor.svg</file>
         <file>Std_ObjectRandomColor.svg</file>
         <file>Std_RecentFiles.svg</file>
+        <file>Std_RecentMacros.svg</file>
         <file>Std_Revert.svg</file>
         <file>Std_SaveAll.svg</file>
         <file>Std_SaveCopy.svg</file>
@@ -295,6 +301,10 @@
         <file>Std_UserEditModeTransform.svg</file>
         <file>Std_UserEditModeCutting.svg</file>
         <file>Std_UserEditModeColor.svg</file>
+        <file>Warning.svg</file>
+        <file>image-open.svg</file>
+        <file>image-plane.svg</file>
+        <file>image-scaling.svg</file>
     </qresource>
     <!-- Demonstrating support for an embedded icon theme -->
     <!-- See also http://permalink.gmane.org/gmane.comp.lib.qt.general/26374 -->

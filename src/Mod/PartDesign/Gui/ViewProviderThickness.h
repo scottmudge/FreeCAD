@@ -36,12 +36,17 @@ class PartDesignGuiExport ViewProviderThickness : public ViewProviderDressUp
 
 public:
     /// constructor
-    ViewProviderThickness()
-        { sPixmap = "PartDesign_Thickness.svg";
-          menuName = tr("Thickness parameters"); }
+    ViewProviderThickness() {
+        sPixmap = "PartDesign_Thickness.svg";
+    }
+
+    QString getMenuName() const override {
+        return tr("Thickness parameters");
+    }
 
     /// return "Thickness"
     const std::string & featureName() const override;
+    void setupContextMenu(QMenu*, QObject*, const char*) override;
 
 protected:
     /// Returns a newly create dialog for the part to be placed in the task view

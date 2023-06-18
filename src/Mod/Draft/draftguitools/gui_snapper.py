@@ -56,7 +56,7 @@ from draftutils.translate import translate
 
 __title__ = "FreeCAD Draft Snap tools"
 __author__ = "Yorik van Havre"
-__url__ = "https://www.freecadweb.org"
+__url__ = "https://www.freecad.org"
 
 UNSNAPPABLES = ('Image::ImagePlane',)
 
@@ -640,9 +640,9 @@ class Snapper:
                                             self.lastExtensions[0] = ne
                                     else:
                                         if (not DraftGeomUtils.areColinear(ne,self.lastExtensions[0])) and \
-                                            (not DraftGeomUtils.areColinear(ne,self.lastExtensions[1])):
-                                                self.lastExtensions[1] = self.lastExtensions[0]
-                                                self.lastExtensions[0] = ne
+                                                (not DraftGeomUtils.areColinear(ne,self.lastExtensions[1])):
+                                            self.lastExtensions[1] = self.lastExtensions[0]
+                                            self.lastExtensions[0] = ne
                                     return np,ne
                         elif self.isEnabled('Parallel'):
                             if last:
@@ -1438,7 +1438,7 @@ class Snapper:
             Gui.Snapper.off()
             self.ui.offUi()
             if callback:
-                if len(inspect.getargspec(callback).args) > 1:
+                if len(inspect.getfullargspec(callback).args) > 1:
                     obj = None
                     if self.snapInfo and ("Object" in self.snapInfo) and self.snapInfo["Object"]:
                         obj = App.ActiveDocument.getObject(self.snapInfo["Object"])
@@ -1457,7 +1457,7 @@ class Snapper:
             Gui.Snapper.off()
             self.ui.offUi()
             if callback:
-                if len(inspect.getargspec(callback).args) > 1:
+                if len(inspect.getfullargspec(callback).args) > 1:
                     callback(None, None)
                 else:
                     callback(None)
@@ -1589,20 +1589,20 @@ class Snapper:
 
     def hide(self):
         """Hide the toolbar."""
-        toolbar = self.get_snap_toolbar()
-        if toolbar:
-            toolbar.hide()
+        if hasattr(self, "toolbar") and self.toolbar:
+            self.toolbar.hide()
+            self.toolbar.toggleViewAction().setVisible(False)
 
 
-    def setGrid(self):
+    def setGrid(self, tool=False):
         """Set the grid, if visible."""
         self.setTrackers()
         if self.grid and (not self.forceGridOff):
             if self.grid.Visible:
-                self.grid.set()
+                self.grid.set(tool)
 
 
-    def setTrackers(self):
+    def setTrackers(self, tool=False):
         """Set the trackers."""
         v = Draft.get3DView()
         if v and (v != self.activeview):
@@ -1620,7 +1620,10 @@ class Snapper:
             else:
                 if Draft.getParam("grid", True):
                     self.grid = trackers.gridTracker()
-                    self.grid.on()
+                    if Draft.getParam("alwaysShowGrid", True) or tool:
+                        self.grid.on()
+                    else:
+                        self.grid.off()
                 else:
                     self.grid = None
                 self.tracker = trackers.snapTracker()
@@ -1650,8 +1653,8 @@ class Snapper:
                 self.trackers[9].append(self.holdTracker)
             self.activeview = v
 
-        if self.grid and (not self.forceGridOff):
-            self.grid.set()
+        if tool and self.grid and (not self.forceGridOff):
+            self.grid.set(tool)
 
 
     def addHoldPoint(self):

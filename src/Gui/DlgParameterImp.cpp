@@ -79,6 +79,8 @@ DlgParameterImp::DlgParameterImp( QWidget* parent,  Qt::WindowFlags fl )
   , widgetStates(new PrefWidgetStates(this))
 {
     ui->setupUi(this);
+    setupConnections();
+
     ui->checkSort->setVisible(false); // for testing
 
     widgetStates->addSplitter(ui->splitter3);
@@ -105,10 +107,10 @@ DlgParameterImp::DlgParameterImp( QWidget* parent,  Qt::WindowFlags fl )
     paramValue->sortByColumn(0, Qt::AscendingOrder);
     paramValue->header()->setProperty("showSortIndicator", QVariant(true));
 
-    connect(paramGroup, SIGNAL(itemChanged(QTreeWidgetItem*, int)),
-            this, SLOT(onGroupItemChanged(QTreeWidgetItem*, int)));
-    connect(paramValue, SIGNAL(itemChanged(QTreeWidgetItem*, int)),
-            this, SLOT(onValueItemChanged(QTreeWidgetItem*, int)));
+    connect(paramGroup, &QTreeWidget::itemChanged,
+            this, &DlgParameterImp::onGroupItemChanged);
+    connect(paramValue, &QTreeWidget::itemChanged,
+            this, &DlgParameterImp::onValueItemChanged);
 
     QSizePolicy policy = paramValue->sizePolicy();
     policy.setHorizontalStretch(3);
@@ -119,13 +121,13 @@ DlgParameterImp::DlgParameterImp( QWidget* parent,  Qt::WindowFlags fl )
     qApp->translate( "Gui::Dialog::DlgParameterImp", "User parameter" );
 #endif
 
-    connect(ui->parameterSet, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(onChangeParameterSet(int)));
-    connect(paramGroup, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)),
-            this, SLOT(onGroupSelected(QTreeWidgetItem*)));
+    connect(ui->parameterSet, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, &DlgParameterImp::onChangeParameterSet);
+    connect(paramGroup, &QTreeWidget::currentItemChanged,
+            this, &DlgParameterImp::onGroupSelected);
     onGroupSelected(paramGroup->currentItem());
 
-    // setup for function on_findGroup_changed:
+    // setup for function onFindGroupTextChanged:
     // store the current font properties because
     // we don't know what style sheet the user uses for FC
     defaultFont = paramGroup->font();
@@ -187,14 +189,52 @@ DlgParameterImp::~DlgParameterImp()
     paramGroup->_owner = nullptr;
 }
 
-void DlgParameterImp::on_buttonFind_clicked()
+void DlgParameterImp::setupConnections()
+{
+    connect(ui->buttonFind, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonFindClicked);
+    connect(ui->findGroupLE, &QLineEdit::textChanged,
+            this, &DlgParameterImp::onFindGroupTextChanged);
+    connect(ui->buttonSaveToDisk, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonSaveToDiskClicked);
+    connect(ui->btnExport, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonExportClicked);
+    connect(ui->btnImport, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonImportClicked);
+    connect(ui->btnAdd, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonAddClicked);
+    connect(ui->btnRename, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonRenameClicked);
+    connect(ui->btnRemove, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonRemoveClicked);
+    connect(ui->btnToolTip, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonToolTipClicked);
+    connect(ui->btnRefresh, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonRefreshClicked);
+    connect(ui->btnRestart, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonRestartClicked);
+    connect(ui->btnReset, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonResetClicked);
+    connect(ui->closeButton, &QPushButton::clicked,
+            this, &DlgParameterImp::onCloseButtonClicked);
+    connect(ui->btnCopy, &QPushButton::clicked,
+            this, &DlgParameterImp::onButtonCopyClicked);
+    connect(ui->checkSort, &QCheckBox::toggled,
+            this, &DlgParameterImp::onCheckSortToggled);
+    connect(ui->checkBoxMonitor, &QCheckBox::toggled,
+            this, &DlgParameterImp::onCheckBoxMonitorToggled);
+    connect(ui->checkBoxPreset, &QCheckBox::toggled,
+            this, &DlgParameterImp::onCheckBoxPresetToggled);
+}
+
+void DlgParameterImp::onButtonFindClicked()
 {
     if (finder.isNull())
         finder = new DlgParameterFind(this);
     finder->show();
 }
 
-void DlgParameterImp::on_btnCopy_clicked()
+void DlgParameterImp::onButtonCopyClicked()
 {
     std::string name = QStringLiteral("%1(copy)").arg(
             ui->parameterSet->currentText()).toUtf8().constData();
@@ -204,16 +244,16 @@ void DlgParameterImp::on_btnCopy_clicked()
     if (auto h = copyParameters(curParamManager)) {
         h->SetASCII("Name", name);
         h->SetASCII("ToolTip", tooltip);
-        h->copyTo(manager);
+        h->copyTo(manager.get());
     }
 
-    on_btnRefresh_clicked();
+    onButtonRefreshClicked();
     int idx = ui->parameterSet->findData(QByteArray(name.c_str()));
     if (idx >= 0)
         ui->parameterSet->setCurrentIndex(idx);
 }
 
-void DlgParameterImp::on_findGroupLE_textChanged(const QString &SearchStr)
+void DlgParameterImp::onFindGroupTextChanged(const QString &SearchStr)
 {
     // search for group tree items and highlight found results
 
@@ -300,7 +340,7 @@ void DlgParameterImp::changeEvent(QEvent *e)
     }
 }
 
-void DlgParameterImp::on_checkSort_toggled(bool on)
+void DlgParameterImp::onCheckSortToggled(bool on)
 {
     paramGroup->setSortingEnabled(on);
     paramGroup->sortByColumn(0, Qt::AscendingOrder);
@@ -311,7 +351,7 @@ void DlgParameterImp::on_checkSort_toggled(bool on)
     paramValue->header()->setProperty("showSortIndicator", QVariant(on));
 }
 
-void DlgParameterImp::on_closeButton_clicked()
+void DlgParameterImp::onCloseButtonClicked()
 {
     close();
 }
@@ -530,11 +570,11 @@ void DlgParameterImp::onChangeParameterSet(int itemPos)
     {
         QSignalBlocker block(ui->checkBoxMonitor);
         ui->checkBoxMonitor->setChecked(monitors.count(rcParMngr) > 0);
-        on_checkBoxMonitor_toggled(ui->checkBoxMonitor->isChecked());
+        onCheckBoxMonitorToggled(ui->checkBoxMonitor->isChecked());
     }
 }
 
-void DlgParameterImp::on_checkBoxMonitor_toggled(bool checked)
+void DlgParameterImp::onCheckBoxMonitorToggled(bool checked)
 {
     if (!checked) {
         monitors.erase(curParamManager);
@@ -582,12 +622,12 @@ void DlgParameterImp::on_checkBoxMonitor_toggled(bool checked)
     }
 }
 
-void DlgParameterImp::on_btnRestart_clicked()
+void DlgParameterImp::onButtonRestartClicked()
 {
     QTimer::singleShot(100, [](){Application::Instance->restart();});
 }
 
-void DlgParameterImp::on_btnReset_clicked()
+void DlgParameterImp::onButtonResetClicked()
 {
     QString msg;
     if (curParamManager == &App::GetApplication().GetUserParameter())
@@ -620,7 +660,7 @@ void DlgParameterImp::on_btnReset_clicked()
     }
 }
 
-void DlgParameterImp::on_btnImport_clicked()
+void DlgParameterImp::onButtonImportClicked()
 {
     if (QMessageBox::warning(this,
                 tr("Import parameter from file"),
@@ -630,7 +670,7 @@ void DlgParameterImp::on_btnImport_clicked()
     doImportOrMerge(curParamManager, false);
 }
 
-void DlgParameterImp::on_btnExport_clicked()
+void DlgParameterImp::onButtonExportClicked()
 {
     auto h = copyParameters(curParamManager);
     if (!h)
@@ -643,8 +683,8 @@ ParameterGrp::handle DlgParameterImp::copyParameters(ParameterManager *manager)
     auto it = monitors.find(manager);
     if (it == monitors.end())
         return nullptr;
-    ParameterManager *hTmp = new ParameterManager;
-    ParameterGrp::handle res = hTmp;
+    auto hTmp = ParameterManager::Create();
+    ParameterGrp::handle res(hTmp.get());
     hTmp->CreateDocument();
     for (auto &v : it->second.changes) {
         auto hSrc = v.first;
@@ -690,7 +730,7 @@ ParameterGrp::handle DlgParameterImp::copyParameters(ParameterManager *manager)
     return res;
 }
 
-void DlgParameterImp::on_btnAdd_clicked()
+void DlgParameterImp::onButtonAddClicked()
 {
     QString file = FileDialog::getOpenFileName( this,
             tr("Add Configuration"), QString(),
@@ -703,18 +743,18 @@ void DlgParameterImp::on_btnAdd_clicked()
     ui->parameterSet->setCurrentIndex(ui->parameterSet->count()-1);
 }
 
-void DlgParameterImp::on_btnRename_clicked()
+void DlgParameterImp::onButtonRenameClicked()
 {
     if (!ui->parameterSet->isEditable()) {
         ui->parameterSet->setEditable(true);
         ui->parameterSet->setFocus();
         ui->parameterSet->lineEdit()->selectAll();
-        connect(ui->parameterSet->lineEdit(), SIGNAL(editingFinished()),
-                this, SLOT(onParameterSetNameChanged()));
+        connect(ui->parameterSet->lineEdit(), &QLineEdit::editingFinished,
+                this, &DlgParameterImp::onParameterSetNameChanged);
     }
 }
 
-void DlgParameterImp::on_btnRefresh_clicked()
+void DlgParameterImp::onButtonRefreshClicked()
 {
     saveState();
     QSignalBlocker guard(paramGroup);
@@ -782,7 +822,7 @@ void DlgParameterImp::populate()
     }
 }
 
-void DlgParameterImp::on_btnRemove_clicked()
+void DlgParameterImp::onButtonRemoveClicked()
 {
     int index = ui->parameterSet->currentIndex();
     if (index < 0)
@@ -803,7 +843,7 @@ void DlgParameterImp::on_btnRemove_clicked()
     onChangeParameterSet(index);
 }
 
-void DlgParameterImp::on_btnToolTip_clicked()
+void DlgParameterImp::onButtonToolTipClicked()
 {
     int index = ui->parameterSet->currentIndex();
     if (index < 0)
@@ -828,7 +868,7 @@ void DlgParameterImp::on_btnToolTip_clicked()
     }
 }
 
-void DlgParameterImp::on_checkBoxPreset_toggled(bool checked)
+void DlgParameterImp::onCheckBoxPresetToggled(bool checked)
 {
     int index = ui->parameterSet->currentIndex();
     if (index < 0)
@@ -1188,7 +1228,7 @@ void DlgParameterImp::slotParamChanged(ParameterGrp *Param,
     }
 }
 
-void DlgParameterImp::on_buttonSaveToDisk_clicked()
+void DlgParameterImp::onButtonSaveToDiskClicked()
 {
     int index = ui->parameterSet->currentIndex();
     ParameterManager* parmgr = App::GetApplication().GetParameterSet(ui->parameterSet->itemData(index).toByteArray());
@@ -1221,15 +1261,15 @@ ParameterGroup::ParameterGroup( DlgParameterImp *owner, QWidget * parent )
   : QTreeWidget(parent), _owner(owner)
 {
     menuEdit = new QMenu(this);
-    expandAct = menuEdit->addAction(QString(), this, SLOT(onToggleSelectedItem()));
+    expandAct = menuEdit->addAction(QString(), this, &ParameterGroup::onToggleSelectedItem);
     menuEdit->addSeparator();
-    subGrpAct = menuEdit->addAction(QString(), this, SLOT(onCreateSubgroup()));
-    removeAct = menuEdit->addAction(QString(), this, SLOT(onDeleteSelectedItem()));
-    renameAct = menuEdit->addAction(QString(), this, SLOT(onRenameSelectedItem()));
+    subGrpAct = menuEdit->addAction(QString(), this, &ParameterGroup::onCreateSubgroup);
+    removeAct = menuEdit->addAction(QString(), this, &ParameterGroup::onDeleteSelectedItem);
+    renameAct = menuEdit->addAction(QString(), this, &ParameterGroup::onRenameSelectedItem);
     menuEdit->addSeparator();
-    exportAct = menuEdit->addAction(QString(), this, SLOT(onExportToFile()));
-    importAct = menuEdit->addAction(QString(), this, SLOT(onImportFromFile()));
-    mergeAct = menuEdit->addAction(QString(), this, SLOT(onMergeFromFile()));
+    exportAct = menuEdit->addAction(QString(), this, &ParameterGroup::onExportToFile);
+    importAct = menuEdit->addAction(QString(), this, &ParameterGroup::onImportFromFile);
+    mergeAct = menuEdit->addAction(QString(), this, &ParameterGroup::onMergeFromFile);
     menuEdit->setDefaultAction(expandAct);
     applyLanguage();
 }
@@ -1527,23 +1567,23 @@ ParameterValue::ParameterValue( DlgParameterImp *owner, QWidget * parent )
   : QTreeWidget(parent), _owner(owner)
 {
     menuEdit = new QMenu(this);
-    changeAct = menuEdit->addAction(tr("Change value"), this, SLOT(onChangeSelectedItem()));
+    changeAct = menuEdit->addAction(tr("Change value"), this, qOverload<>(&ParameterValue::onChangeSelectedItem));
     menuEdit->addSeparator();
-    removeAct = menuEdit->addAction(tr("Remove key"), this, SLOT(onDeleteSelectedItem()));
-    renameAct = menuEdit->addAction(tr("Rename key"), this, SLOT(onRenameSelectedItem()));
-    touchAct = menuEdit->addAction(tr("Touch item"), this, SLOT(onTouchItem()));
+    removeAct = menuEdit->addAction(tr("Remove key"), this, &ParameterValue::onDeleteSelectedItem);
+    renameAct = menuEdit->addAction(tr("Rename key"), this, &ParameterValue::onRenameSelectedItem);
+    touchAct = menuEdit->addAction(tr("Touch item"), this, &ParameterValue::onTouchItem);
     menuEdit->setDefaultAction(changeAct);
 
     menuEdit->addSeparator();
     menuNew = menuEdit->addMenu(tr("New"));
-    newStrAct = menuNew->addAction(tr("New string item"), this, SLOT(onCreateTextItem()));
-    newFltAct = menuNew->addAction(tr("New float item"), this, SLOT(onCreateFloatItem()));
-    newIntAct = menuNew->addAction(tr("New integer item"), this, SLOT(onCreateIntItem()));
-    newUlgAct = menuNew->addAction(tr("New unsigned item"), this, SLOT(onCreateUIntItem()));
-    newBlnAct = menuNew->addAction(tr("New Boolean item"), this, SLOT(onCreateBoolItem()));
+    newStrAct = menuNew->addAction(tr("New string item"), this, &ParameterValue::onCreateTextItem);
+    newFltAct = menuNew->addAction(tr("New float item"), this, &ParameterValue::onCreateFloatItem);
+    newIntAct = menuNew->addAction(tr("New integer item"), this, &ParameterValue::onCreateIntItem);
+    newUlgAct = menuNew->addAction(tr("New unsigned item"), this, &ParameterValue::onCreateUIntItem);
+    newBlnAct = menuNew->addAction(tr("New Boolean item"), this, &ParameterValue::onCreateBoolItem);
 
-    connect(this, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)),
-            this, SLOT(onChangeSelectedItem(QTreeWidgetItem*, int)));
+    connect(this, &ParameterValue::itemDoubleClicked,
+            this, qOverload<QTreeWidgetItem*, int>(&ParameterValue::onChangeSelectedItem));
 }
 
 ParameterValue::~ParameterValue()

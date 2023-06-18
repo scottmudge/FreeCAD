@@ -538,14 +538,14 @@ void TaskView::showDialog(TaskDialog *dlg)
     ActiveCtrl->buttonBox->setStandardButtons(dlg->getStandardButtons());
 
     // make connection to the needed signals
-    connect(ActiveCtrl->buttonBox,SIGNAL(accepted()),
-            this,SLOT(accept()));
-    connect(ActiveCtrl->buttonBox,SIGNAL(rejected()),
-            this,SLOT(reject()));
-    connect(ActiveCtrl->buttonBox,SIGNAL(helpRequested()),
-            this,SLOT(helpRequested()));
-    connect(ActiveCtrl->buttonBox,SIGNAL(clicked(QAbstractButton *)),
-            this,SLOT(clicked(QAbstractButton *)));
+    connect(ActiveCtrl->buttonBox, &QDialogButtonBox::accepted,
+            this, &TaskView::accept);
+    connect(ActiveCtrl->buttonBox, &QDialogButtonBox::rejected,
+            this, &TaskView::reject);
+    connect(ActiveCtrl->buttonBox, &QDialogButtonBox::helpRequested,
+            this, &TaskView::helpRequested);
+    connect(ActiveCtrl->buttonBox, &QDialogButtonBox::clicked,
+            this, &TaskView::clicked);
 
     this->contents = dlg->getDialogContent();
 
@@ -772,7 +772,7 @@ void TaskView::addTaskWatcher()
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
     // Workaround to avoid a crash in Qt. See also
-    // https://forum.freecadweb.org/viewtopic.php?f=8&t=39187
+    // https://forum.freecad.org/viewtopic.php?f=8&t=39187
     //
     // Notify the button box about a style change so that it can
     // safely delete the style animation of its push buttons.

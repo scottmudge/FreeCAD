@@ -23,15 +23,17 @@
 #ifndef GUI_VIEW3DINVENTOR_H
 #define GUI_VIEW3DINVENTOR_H
 
-#include <Inventor/sensors/SoNodeSensor.h>
-#include <Inventor/SbVec3f.h>
-#include <Inventor/SbRotation.h>
+#include <memory>
 
 #include <QImage>
 #include <QtOpenGL.h>
 
 #include <Base/Parameter.h>
 #include <App/PropertyStandard.h>
+#include <Inventor/sensors/SoNodeSensor.h>
+#include <Inventor/SbVec3f.h>
+#include <Inventor/SbRotation.h>
+
 #include "InventorBase.h"
 #include "MDIView.h"
 
@@ -47,23 +49,7 @@ class Document;
 class View3DInventorViewer;
 class View3DInventorPy;
 
-class GuiExport Camera
-{
-public:
-    enum Orientation {
-        Top,
-        Bottom,
-        Front,
-        Rear,
-        Left,
-        Right,
-        Isometric,
-        Dimetric,
-        Trimetric,
-    };
-
-    static SbRotation rotation(Orientation view);
-};
+class View3DSettings;
 
 class GuiExport GLOverlayWidget : public QWidget
 {
@@ -86,7 +72,7 @@ protected:
  *  It consists out of the 3D view
  *  \author Juergen Riegel
  */
-class GuiExport View3DInventor : public MDIView, public ParameterGrp::ObserverType
+class GuiExport View3DInventor : public MDIView
 {
     Q_OBJECT
 
@@ -114,8 +100,6 @@ public:
     bool onMsg(const char* pMsg, const char** ppReturn) override;
     bool onHasMsg(const char* pMsg) const override;
     void deleteSelf() override;
-    /// Observer message from the ParameterGrp
-    void OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::MessageType Reason) override;
     /// get called when the document is updated
     void onRename(Gui::Document *pDoc) override;
     void onUpdate(void) override;
@@ -187,6 +171,9 @@ protected Q_SLOTS:
 public:
     bool eventFilter(QObject*, QEvent* ) override;
 
+private:
+    void applySettings();
+
 protected:
     void windowStateChanged(MDIView* ) override;
     void dropEvent        (QDropEvent      * e) override;
@@ -214,15 +201,12 @@ protected:
 
     void onCameraChanged(CameraInfo &src, CameraInfo &dst);
 
-    /// handle to the viewer parameter group
-    ParameterGrp::handle hGrp;
-    ParameterGrp::handle hGrpNavi;
-
 private:
     View3DInventorViewer * _viewer;
     View3DInventorPy *_viewerPy;
     QTimer * stopSpinTimer;
     QStackedWidget* stack;
+    std::unique_ptr<View3DSettings> viewSettings;
 
     CameraInfo camInfo;
     CameraInfo boundCamInfo;

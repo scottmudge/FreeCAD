@@ -56,7 +56,8 @@
 #include <BRepTools.hxx>
 #include <BRep_Builder.hxx>
 #include <Bnd_Box.hxx>
-#include <QtConcurrentRun>
+#include <ShapeAnalysis.hxx>
+#include <ShapeFix_Shape.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
@@ -71,9 +72,9 @@
 #include <gp_Pln.hxx>
 #include <gp_Pnt.hxx>
 #include <sstream>
+#include <QtConcurrentRun>
 #endif
 
-#include <App/Application.h>
 #include <App/Document.h>
 #include <Base/BoundBox.h>
 #include <Base/Console.h>
@@ -88,6 +89,7 @@
 #include "DrawUtil.h"
 #include "EdgeWalker.h"
 #include "GeometryObject.h"
+#include "Preferences.h"
 
 #include "DrawViewSection.h"
 
@@ -264,19 +266,28 @@ void DrawViewSection::onChanged(const App::Property* prop)
 
 TopoDS_Shape DrawViewSection::getShapeToCut()
 {
-    //    Base::Console().Message("DVS::getShapeToCut()\n");
-    App::DocumentObject* base = BaseView.getValue();
-    TechDraw::DrawViewPart* dvp = nullptr;
-    if (!base || !base->getTypeId().isDerivedFrom(TechDraw::DrawViewPart::getClassTypeId())) {
-        //this can probably only happen with scripting
+//    Base::Console().Message("DVS::getShapeToCut()\n");
+    App::DocumentObject *base = BaseView.getValue();
+    TechDraw::DrawViewPart *dvp = nullptr;
+    TechDraw::DrawViewSection *dvs = nullptr;
+    if (!base) {
         return TopoDS_Shape();
     }
-    else {
-        dvp = static_cast<TechDraw::DrawViewPart*>(base);
-    }
-    TopoDS_Shape shapeToCut = dvp->getSourceShape();
-    if (FuseBeforeCut.getValue()) {
-        shapeToCut = dvp->getSourceShapeFused();
+
+    TopoDS_Shape shapeToCut;
+    if (base->getTypeId().isDerivedFrom(TechDraw::DrawViewSection::getClassTypeId())) {
+        dvs = static_cast<TechDraw::DrawViewSection *>(base);
+        shapeToCut = dvs->getCutShape();
+    } else if (base->getTypeId().isDerivedFrom(TechDraw::DrawViewPart::getClassTypeId())) {
+        dvp = static_cast<TechDraw::DrawViewPart *>(base);
+        shapeToCut = dvp->getSourceShape();
+        if (FuseBeforeCut.getValue()) {
+            shapeToCut = dvp->getSourceShapeFused();
+        }
+
+    } else {
+        Base::Console().Message("DVS::getShapeToCut - base is weird\n");
+        return TopoDS_Shape();
     }
     return shapeToCut;
 }
@@ -369,7 +380,11 @@ void DrawViewSection::sectionExec(TopoDS_Shape& baseShape)
         connectCutWatcher =
             QObject::connect(&m_cutWatcher, &QFutureWatcherBase::finished, &m_cutWatcher,
                              [this] { this->onSectionCutFinished(); });
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
         m_cutFuture = QtConcurrent::run(this, &DrawViewSection::makeSectionCut, baseShape);
+#else
+        m_cutFuture = QtConcurrent::run(&DrawViewSection::makeSectionCut, this, baseShape);
+#endif
         m_cutWatcher.setFuture(m_cutFuture);
         waitingForCut(true);
     }
@@ -379,7 +394,7 @@ void DrawViewSection::sectionExec(TopoDS_Shape& baseShape)
     }
 }
 
-void DrawViewSection::makeSectionCut(TopoDS_Shape& baseShape)
+void DrawViewSection::makeSectionCut(const TopoDS_Shape& baseShape)
 {
     //    Base::Console().Message("DVS::makeSectionCut() - %s - baseShape.IsNull: %d\n",
     //                            getNameInDocument(), baseShape.IsNull());
@@ -399,7 +414,8 @@ void DrawViewSection::makeSectionCut(TopoDS_Shape& baseShape)
         BRepTools::Write(m_cuttingTool, "DVSTool.brep");//debug
     }
 
-    // perform cut
+    //perform the cut. We cut each solid in myShape individually to avoid issues where
+    //a compound BaseShape does not cut correctly.
     BRep_Builder builder;
     TopoDS_Compound cutPieces;
     builder.MakeCompound(cutPieces);
@@ -526,13 +542,11 @@ void DrawViewSection::postHlrTasks(void)
     DrawViewPart::postHlrTasks();
 
     //second pass if required
-    if (ScaleType.isValue("Automatic")) {
-        if (!checkFit()) {
-            double newScale = autoScale();
-            Scale.setValue(newScale);
-            Scale.purgeTouched();
-            sectionExec(m_saveShape);
-        }
+    if (ScaleType.isValue("Automatic") && !checkFit()) {
+        double newScale = autoScale();
+        Scale.setValue(newScale);
+        Scale.purgeTouched();
+        sectionExec(m_saveShape);
     }
     overrideKeepUpdated(false);
 
@@ -542,6 +556,9 @@ void DrawViewSection::postHlrTasks(void)
     if (faceIntersections.IsNull()) {
         requestPaint();
         return;
+    }
+    if (debugSection()) {
+        BRepTools::Write(faceIntersections, "DVSFaceIntersections.brep");//debug
     }
 
     TopoDS_Shape centeredFaces = TechDraw::moveShape(faceIntersections, m_saveCentroid * -1.0);
@@ -601,10 +618,10 @@ gp_Pln DrawViewSection::getSectionPlane() const
 //! case is a compound of individual cuts) with the "effective" (flattened) section plane.
 TopoDS_Compound DrawViewSection::findSectionPlaneIntersections(const TopoDS_Shape& shape)
 {
-    //    Base::Console().Message("DVS::findSectionPlaneIntersections() - %s\n", getNameInDocument());
+//    Base::Console().Message("DVS::findSectionPlaneIntersections() - %s\n", getNameInDocument());
     if (shape.IsNull()) {
         // this shouldn't happen
-        //        Base::Console().Warning("DrawViewSection::findSectionPlaneInter - %s - input shape is Null\n", getNameInDocument());
+        Base::Console().Warning("DrawViewSection::findSectionPlaneInter - %s - input shape is Null\n", getNameInDocument());
         return TopoDS_Compound();
     }
 
@@ -637,7 +654,9 @@ TopoDS_Compound DrawViewSection::findSectionPlaneIntersections(const TopoDS_Shap
 //move section faces to line up with cut shape
 TopoDS_Compound DrawViewSection::alignSectionFaces(TopoDS_Shape faceIntersections)
 {
-    //    Base::Console().Message("DVS::alignSectionFaces()\n");
+//    Base::Console().Message("DVS::alignSectionFaces() - %s - faceIntersection.isnull: %d\n",
+//                            getNameInDocument(),
+//                            faceIntersections.IsNull());
     TopoDS_Compound sectionFaces;
     TopoDS_Shape centeredShape =
         TechDraw::moveShape(faceIntersections, getOriginalCentroid() * -1.0);
@@ -657,7 +676,11 @@ TopoDS_Compound DrawViewSection::mapToPage(TopoDS_Shape& shapeToAlign)
     // needs to be aligned to paper plane (origin, stdZ);
     //project the faces in the shapeToAlign, build new faces from the resulting wires and
     //combine everything into a compound of faces
-    //    Base::Console().Message("DVS::mapToPage() - shapeToAlign.null: %d\n", shapeToAlign.IsNull());
+//    Base::Console().Message("DVS::mapToPage() - shapeToAlign.null: %d\n", shapeToAlign.IsNull());
+    if (debugSection()) {
+        BRepTools::Write(shapeToAlign, "DVSShapeToAlign.brep");   //debug
+    }
+
     BRep_Builder builder;
     TopoDS_Compound result;
     builder.MakeCompound(result);
@@ -682,22 +705,87 @@ TopoDS_Compound DrawViewSection::mapToPage(TopoDS_Shape& shapeToAlign)
             faceWires.push_back(cleanWire);
         }
 
-        //first wire should be the outer boundary of the face
-        BRepBuilderAPI_MakeFace mkFace(faceWires.front());
-        int wireCount = faceWires.size();
-        for (int iWire = 1; iWire < wireCount; iWire++) {
-            //make holes in the face with the rest of the wires
-            mkFace.Add(faceWires.at(iWire));
+        //validate section face wires
+        std::vector<TopoDS_Wire> goodWires;
+        constexpr double minWireArea = 0.000001; //arbitrary very small face size
+        for (auto &wire : faceWires) {
+            if (wire.IsNull()) {
+                continue;
+            }
+            if (!BRep_Tool::IsClosed(wire)) {
+                continue; //can not make a face from open wire
+            }
+            double area = ShapeAnalysis::ContourArea(wire);
+            if (area <= minWireArea) {
+                continue; //can not make a face from wire with no area
+            }
+            goodWires.push_back(wire);
         }
-        builder.Add(result, mkFace.Face());
+
+        if (goodWires.empty()) {
+            Base::Console().Warning("DVS::mapToPage - %s - section face has no valid wires.\n",
+                                    getNameInDocument());
+            continue;
+        }
+
+        TopoDS_Shape holeyShape = makeFaceFromWires(goodWires);
+        if (holeyShape.IsNull()) {
+            continue;
+        }
+
+        builder.Add(result, TopoDS::Face(holeyShape));
         if (debugSection()) {
             std::stringstream ss;
             ss << "DVSFaceFromWires" << iFace << ".brep";
-            BRepTools::Write(mkFace.Face(), ss.str().c_str());//debug
+            BRepTools::Write(holeyShape, ss.str().c_str()); //debug
         }
     }
 
     return result;
+}
+
+//makes a [perforated] face from an outer wire and wires describing the holes.  Open wires
+//and wires with zero area are assumed to already have been removed.
+TopoDS_Shape DrawViewSection::makeFaceFromWires(std::vector<TopoDS_Wire> &inWires)
+{
+    //make sure the largest wire is the first
+    EdgeWalker eWalker;
+    std::vector<TopoDS_Wire> goodWires = eWalker.sortWiresBySize(inWires);
+
+    // make a face from the good wires
+    //first good wire should be the outer boundary of the face
+    TopoDS_Face faceToFix;
+    TopoDS_Shape orientedShape = goodWires.at(0).Oriented(TopAbs_FORWARD);
+    TopoDS_Wire orientedWire = TopoDS::Wire(orientedShape);
+    orientedWire.Orientation(TopAbs_FORWARD);
+    TopoDS_Face blankFace = BRepBuilderAPI_MakeFace(orientedWire);
+    int wireCount = goodWires.size();
+    if (wireCount < 2) {
+        faceToFix = blankFace;
+    } else {
+        //add the holes
+        BRepBuilderAPI_MakeFace mkFace(blankFace);
+        for (int iWire = 1; iWire < wireCount; iWire++) {
+            //make holes in the face with the rest of the wires
+            orientedShape = goodWires.at(iWire).Oriented(TopAbs_REVERSED);
+            orientedWire = TopoDS::Wire(orientedShape);
+            mkFace.Add(orientedWire);
+        }
+
+        if (!mkFace.IsDone()) {
+            Base::Console().Warning("DVS::makeFaceFromWires - %s - failed to make section face.\n",
+                                    getNameInDocument());
+            return TopoDS_Shape();
+        }
+        faceToFix = mkFace.Face();
+    }
+
+    //setting the wire orientation above should generate a valid face, but sometimes
+    //does not, so we fix the shape to resolve any issues
+    Handle(ShapeFix_Shape) sfs = new ShapeFix_Shape;
+    sfs->Init(faceToFix);
+    sfs->Perform();
+    return sfs->Shape();
 }
 
 //turn OCC section faces into TD geometry
@@ -801,30 +889,26 @@ bool DrawViewSection::isReallyInBox(const gp_Pnt p, const Bnd_Box& bb) const
 Base::Vector3d DrawViewSection::getXDirection() const
 {
     //    Base::Console().Message("DVS::getXDirection() - %s\n", Label.getValue());
-    Base::Vector3d result(1.0, 0.0, 0.0);//default X
     App::Property* prop = getPropertyByName("XDirection");
-    if (prop) {
-        //we have an XDirection property
-        if (DrawUtil::fpCompare(XDirection.getValue().Length(), 0.0)) {
-            //but it has no value, so we make a value
-            if (BaseView.getValue()) {
-                gp_Ax2 cs = getCSFromBase(SectionDirection.getValueAsString());
-                gp_Dir gXDir = cs.XDirection();
-                result = Base::Vector3d(gXDir.X(), gXDir.Y(), gXDir.Z());
-            }
-        }
-        else {
-            //XDirection is good, so we use it
-            result = XDirection.getValue();
-        }
-    }
-    else {
-        //no XDirection property.  can this happen?
+    if (!prop) {
+        // No XDirection property.  can this happen?
         gp_Ax2 cs = getCSFromBase(SectionDirection.getValueAsString());
         gp_Dir gXDir = cs.XDirection();
-        result = Base::Vector3d(gXDir.X(), gXDir.Y(), gXDir.Z());
+        return Base::Vector3d(gXDir.X(), gXDir.Y(), gXDir.Z());
     }
-    return result;
+
+    //we have an XDirection property
+    if (DrawUtil::fpCompare(XDirection.getValue().Length(), 0.0)) {
+        //but it has no value, so we make a value
+        if (BaseView.getValue()) {
+            gp_Ax2 cs = getCSFromBase(SectionDirection.getValueAsString());
+            gp_Dir gXDir = cs.XDirection();
+            return Base::Vector3d(gXDir.X(), gXDir.Y(), gXDir.Z());
+        }
+    }
+
+    //XDirection is good, so we use it
+    return XDirection.getValue();
 }
 
 void DrawViewSection::setCSFromBase(const std::string sectionName)
@@ -910,8 +994,6 @@ gp_Ax2 DrawViewSection::getCSFromBase(const std::string sectionName) const
         dvsXDir = gp_Dir(sectionXDir.x, sectionXDir.y, sectionXDir.z);
     }
     else {
-        Base::Console().Log("Error - DVS::getCSFromBase - bad sectionName: %s\n",
-                            sectionName.c_str());
         dvsDir = dvpRight;
         dvsXDir = dvpDir;
     }
@@ -940,7 +1022,7 @@ gp_Ax2 DrawViewSection::getSectionCS() const
         sectionCS = gp_Ax2(gOrigin, gNormal, gXDir);
     }
     catch (...) {
-        Base::Console().Log("DVS::getSectionCS - %s - failed to create section CS\n",
+        Base::Console().Error("DVS::getSectionCS - %s - failed to create section CS\n",
                             getNameInDocument());
     }
     return sectionCS;
@@ -965,47 +1047,41 @@ std::vector<LineSet> DrawViewSection::getDrawableLines(int i)
 {
     //    Base::Console().Message("DVS::getDrawableLines(%d) - lineSets: %d\n", i, m_lineSets.size());
     std::vector<LineSet> result;
-    result = DrawGeomHatch::getTrimmedLinesSection(this, m_lineSets, getSectionTopoDSFace(i),
-                                                   HatchScale.getValue(), HatchRotation.getValue(),
-                                                   HatchOffset.getValue());
-    return result;
+    return DrawGeomHatch::getTrimmedLinesSection(this, m_lineSets, getSectionTopoDSFace(i),
+                                                 HatchScale.getValue(), HatchRotation.getValue(),
+                                                 HatchOffset.getValue());
 }
 
 TopoDS_Face DrawViewSection::getSectionTopoDSFace(int i)
 {
-    TopoDS_Face result;
     TopExp_Explorer expl(m_sectionTopoDSFaces, TopAbs_FACE);
     int count = 1;
     for (; expl.More(); expl.Next(), count++) {
         if (count == i + 1) {
-            result = TopoDS::Face(expl.Current());
+            return TopoDS::Face(expl.Current());
         }
     }
-    return result;
+    return TopoDS_Face();
 }
 
 TechDraw::DrawViewPart* DrawViewSection::getBaseDVP() const
 {
-    TechDraw::DrawViewPart* baseDVP = nullptr;
     App::DocumentObject* base = BaseView.getValue();
-    if (base) {
-        if (base->getTypeId().isDerivedFrom(TechDraw::DrawViewPart::getClassTypeId())) {
-            baseDVP = static_cast<TechDraw::DrawViewPart*>(base);
-        }
+    if (base && base->getTypeId().isDerivedFrom(TechDraw::DrawViewPart::getClassTypeId())) {
+        TechDraw::DrawViewPart* baseDVP = static_cast<TechDraw::DrawViewPart*>(base);
+        return baseDVP;
     }
-    return baseDVP;
+    return nullptr;
 }
 
 TechDraw::DrawProjGroupItem* DrawViewSection::getBaseDPGI() const
 {
-    TechDraw::DrawProjGroupItem* baseDPGI = nullptr;
     App::DocumentObject* base = BaseView.getValue();
-    if (base) {
-        if (base->getTypeId().isDerivedFrom(TechDraw::DrawProjGroupItem::getClassTypeId())) {
-            baseDPGI = static_cast<TechDraw::DrawProjGroupItem*>(base);
-        }
+    if (base && base->getTypeId().isDerivedFrom(TechDraw::DrawProjGroupItem::getClassTypeId())) {
+        TechDraw::DrawProjGroupItem* baseDPGI = static_cast<TechDraw::DrawProjGroupItem*>(base);
+        return baseDPGI;
     }
-    return baseDPGI;
+    return nullptr;
 }
 
 // setup / tear down routines
@@ -1053,8 +1129,8 @@ void DrawViewSection::makeLineSets(void)
         return;
     }
 
-    if ((ext == "pat") || (ext == "PAT")) {
-        if ((!fileSpec.empty()) && (!NameGeomPattern.isEmpty())) {
+    if (ext == "pat" || ext == "PAT") {
+        if (!fileSpec.empty() && !NameGeomPattern.isEmpty()) {
             m_lineSets.clear();
             m_lineSets = DrawGeomHatch::makeLineSets(fileSpec, NameGeomPattern.getValue());
         }
@@ -1098,47 +1174,25 @@ void DrawViewSection::replacePatIncluded(std::string newPatFile)
 void DrawViewSection::getParameters()
 {
     //    Base::Console().Message("DVS::getParameters()\n");
-    Base::Reference<ParameterGrp> hGrp = App::GetApplication()
-                                             .GetUserParameter()
-                                             .GetGroup("BaseApp")
-                                             ->GetGroup("Preferences")
-                                             ->GetGroup("Mod/TechDraw/General");
-
-    bool fuseFirst = hGrp->GetBool("SectionFuseFirst", false);
+    bool fuseFirst = Preferences::getPreferenceGroup("General")->GetBool("SectionFuseFirst", false);
     FuseBeforeCut.setValue(fuseFirst);
 }
 
 bool DrawViewSection::debugSection(void) const
 {
-    Base::Reference<ParameterGrp> hGrp = App::GetApplication()
-                                             .GetUserParameter()
-                                             .GetGroup("BaseApp")
-                                             ->GetGroup("Preferences")
-                                             ->GetGroup("Mod/TechDraw/debug");
-
-    return hGrp->GetBool("debugSection", false);
+    return Preferences::getPreferenceGroup("debug")->GetBool("debugSection", false);
 }
 
 int DrawViewSection::prefCutSurface(void) const
 {
     //    Base::Console().Message("DVS::prefCutSurface()\n");
-    Base::Reference<ParameterGrp> hGrp = App::GetApplication()
-                                             .GetUserParameter()
-                                             .GetGroup("BaseApp")
-                                             ->GetGroup("Preferences")
-                                             ->GetGroup("Mod/TechDraw/Decorations");
 
-    return hGrp->GetInt("CutSurfaceDisplay", 2);//default to SvgHatch
+    return Preferences::getPreferenceGroup("Decorations")->GetInt("CutSurfaceDisplay", 2);//default to SvgHatch
 }
 
 bool DrawViewSection::showSectionEdges(void)
 {
-    Base::Reference<ParameterGrp> hGrp = App::GetApplication()
-                                             .GetUserParameter()
-                                             .GetGroup("BaseApp")
-                                             ->GetGroup("Preferences")
-                                             ->GetGroup("Mod/TechDraw/General");
-    return (hGrp->GetBool("ShowSectionEdges", true));
+    return Preferences::getPreferenceGroup("General")->GetBool("ShowSectionEdges", true);
 }
 
 bool DrawViewSection::trimAfterCut() const { return TrimAfterCut.getValue(); }

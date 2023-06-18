@@ -79,6 +79,8 @@ DlgCustomToolbars::DlgCustomToolbars(DlgCustomToolbars::Type t, QWidget* parent)
     widgetStates->addSplitter(ui->splitter);
     widgetStates->addSplitter(ui->splitterVertical);
 
+    setupConnections();
+
     ui->moveActionRightButton->setIcon(BitmapFactory().iconFromTheme("button_right"));
     ui->moveActionLeftButton->setIcon(BitmapFactory().iconFromTheme("button_left"));
     ui->moveActionDownButton->setIcon(BitmapFactory().iconFromTheme("button_down"));
@@ -98,7 +100,7 @@ DlgCustomToolbars::DlgCustomToolbars(DlgCustomToolbars::Type t, QWidget* parent)
                                                     ui->buttonDown,
                                                     ui->editShortcut);
 
-    on_toolbarTreeWidget_currentItemChanged(nullptr, nullptr);
+    onToolbarTreeWidgetCurrentItemChanged(nullptr, nullptr);
 
     // fills the combo box with all available workbenches
     QStringList workbenches = Application::Instance->workbenches();
@@ -139,12 +141,44 @@ DlgCustomToolbars::DlgCustomToolbars(DlgCustomToolbars::Type t, QWidget* parent)
     } else
         ui->workbenchBox->setCurrentIndex(0);
 
-    on_workbenchBox_currentIndexChanged(ui->workbenchBox->currentIndex());
+    onWorkbenchBoxActivated(ui->workbenchBox->currentIndex());
 }
 
 /** Destroys the object and frees any allocated resources */
 DlgCustomToolbars::~DlgCustomToolbars()
 {
+}
+
+void DlgCustomToolbars::setupConnections()
+{
+    connect(ui->workbenchBox, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, &DlgCustomToolbars::onWorkbenchBoxActivated);
+    connect(ui->moveActionRightButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onMoveActionRightButtonClicked);
+    connect(ui->moveActionLeftButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onMoveActionLeftButtonClicked);
+    connect(ui->moveActionUpButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onMoveActionUpButtonClicked);
+    connect(ui->moveActionDownButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onMoveActionDownButtonClicked);
+    connect(ui->newButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onNewButtonClicked);
+    connect(ui->renameButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onRenameButtonClicked);
+    connect(ui->deleteButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onDeleteButtonClicked);
+    connect(ui->recentButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onRecentButtonClicked);
+    connect(ui->assignButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onAssignButtonClicked);
+    connect(ui->resetButton, &QPushButton::clicked,
+            this, &DlgCustomToolbars::onResetButtonClicked);
+    connect(ui->toolbarTreeWidget, &QTreeWidget::currentItemChanged,
+            this, &DlgCustomToolbars::onToolbarTreeWidgetCurrentItemChanged);
+    connect(ui->toolbarTreeWidget, &QTreeWidget::itemChanged,
+            this, &DlgCustomToolbars::onToolbarTreeWidgetItemChanged);
+    connect(ui->editShortcut, &QLineEdit::textChanged,
+            this, &DlgCustomToolbars::onEditShortcutTextChanged);
 }
 
 void DlgCustomToolbars::addCustomToolbar(QString, const QString&)
@@ -184,7 +218,7 @@ void DlgCustomToolbars::hideEvent(QHideEvent * event)
     CustomizeActionPage::hideEvent(event);
 }
 
-void DlgCustomToolbars::on_workbenchBox_currentIndexChanged(int index)
+void DlgCustomToolbars::onWorkbenchBoxActivated(int index)
 {
     QVariant data = ui->workbenchBox->itemData(index, Qt::UserRole);
     QString workbench = data.toString();
@@ -196,13 +230,13 @@ void DlgCustomToolbars::on_workbenchBox_currentIndexChanged(int index)
     importCustomToolbars(workbenchname);
 }
 
-void DlgCustomToolbars::on_recentButton_clicked()
+void DlgCustomToolbars::onRecentButtonClicked()
 {
     std::set<QTreeWidgetItem*> items;
     for (int i=0;i<ui->toolbarTreeWidget->topLevelItemCount();++i)
         items.insert(ui->toolbarTreeWidget->topLevelItem(i));
 
-    on_newButton_clicked();
+    onNewButtonClicked();
 
     for (int i=0;i<ui->toolbarTreeWidget->topLevelItemCount();++i) {
         QTreeWidgetItem *item = ui->toolbarTreeWidget->topLevelItem(i);
@@ -382,7 +416,7 @@ void DlgCustomToolbars::exportCustomToolbars(const QByteArray& workbench, QTreeW
 }
 
 /** Adds a new action */
-void DlgCustomToolbars::on_moveActionRightButton_clicked()
+void DlgCustomToolbars::onMoveActionRightButtonClicked()
 {
     QTreeWidgetItem* item = ui->commandTreeWidget->currentItem();
     if (item) {
@@ -409,7 +443,7 @@ void DlgCustomToolbars::on_moveActionRightButton_clicked()
 }
 
 /** Removes an action */
-void DlgCustomToolbars::on_moveActionLeftButton_clicked()
+void DlgCustomToolbars::onMoveActionLeftButtonClicked()
 {
     QTreeWidgetItem* item = ui->toolbarTreeWidget->currentItem();
     if (item && item->parent() && item->isSelected()) {
@@ -443,7 +477,7 @@ void DlgCustomToolbars::on_moveActionLeftButton_clicked()
 }
 
 /** Moves up an action */
-void DlgCustomToolbars::on_moveActionUpButton_clicked()
+void DlgCustomToolbars::onMoveActionUpButtonClicked()
 {
     QTreeWidgetItem* item = ui->toolbarTreeWidget->currentItem();
     if (item && item->parent() && item->isSelected()) {
@@ -481,7 +515,7 @@ void DlgCustomToolbars::on_moveActionUpButton_clicked()
 }
 
 /** Moves down an action */
-void DlgCustomToolbars::on_moveActionDownButton_clicked()
+void DlgCustomToolbars::onMoveActionDownButtonClicked()
 {
     QTreeWidgetItem* item = ui->toolbarTreeWidget->currentItem();
     if (item && item->parent() && item->isSelected()) {
@@ -518,7 +552,7 @@ void DlgCustomToolbars::on_moveActionDownButton_clicked()
     exportCustomToolbars(workbench.toUtf8());
 }
 
-void DlgCustomToolbars::on_newButton_clicked()
+void DlgCustomToolbars::onNewButtonClicked()
 {
     bool ok;
 
@@ -561,7 +595,7 @@ void DlgCustomToolbars::on_newButton_clicked()
     }
 }
 
-void DlgCustomToolbars::on_deleteButton_clicked()
+void DlgCustomToolbars::onDeleteButtonClicked()
 {
     QTreeWidgetItem* item = ui->toolbarTreeWidget->currentItem();
     if (item && !item->parent() && item->isSelected()) {
@@ -576,7 +610,7 @@ void DlgCustomToolbars::on_deleteButton_clicked()
     exportCustomToolbars(workbench.toUtf8());
 }
 
-void DlgCustomToolbars::on_renameButton_clicked()
+void DlgCustomToolbars::onRenameButtonClicked()
 {
     bool renamed = false;
     QTreeWidgetItem* item = ui->toolbarTreeWidget->currentItem();
@@ -609,7 +643,7 @@ void DlgCustomToolbars::on_renameButton_clicked()
     }
 }
 
-void DlgCustomToolbars::on_editShortcut_textChanged(const QString& sc)
+void DlgCustomToolbars::onEditShortcutTextChanged(const QString& sc)
 {
     QTreeWidgetItem* item = ui->toolbarTreeWidget->currentItem();
     if (!item || item->parent() == ui->toolbarTreeWidget->invisibleRootItem())
@@ -620,7 +654,7 @@ void DlgCustomToolbars::on_editShortcut_textChanged(const QString& sc)
     ui->resetButton->setEnabled(shortcut != sc);
 }
 
-void DlgCustomToolbars::on_toolbarTreeWidget_itemChanged(QTreeWidgetItem *item, int)
+void DlgCustomToolbars::onToolbarTreeWidgetItemChanged(QTreeWidgetItem *item, int)
 {
     if (item && !item->parent()) {
         QVariant data = ui->workbenchBox->itemData(ui->workbenchBox->currentIndex(), Qt::UserRole);
@@ -635,7 +669,7 @@ void DlgCustomToolbars::on_toolbarTreeWidget_itemChanged(QTreeWidgetItem *item, 
         toolbar->toggleViewAction()->trigger();
 }
 
-void DlgCustomToolbars::on_toolbarTreeWidget_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *)
+void DlgCustomToolbars::onToolbarTreeWidgetCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *)
 {
     bool enabled = current && !current->parent();
     ui->assignButton->setEnabled(enabled);
@@ -655,7 +689,7 @@ void DlgCustomToolbars::on_toolbarTreeWidget_currentItemChanged(QTreeWidgetItem 
         ui->editShortcut->clear();
 }
 
-void DlgCustomToolbars::on_assignButton_clicked()
+void DlgCustomToolbars::onAssignButtonClicked()
 {
     QTreeWidgetItem* item = ui->toolbarTreeWidget->currentItem();
     if (!item || item->parent() == ui->toolbarTreeWidget->invisibleRootItem())
@@ -686,10 +720,10 @@ void DlgCustomToolbars::on_assignButton_clicked()
     QString workbench = data.toString();
     exportCustomToolbars(workbench.toUtf8());
 
-    on_resetButton_clicked();
+    onResetButtonClicked();
 }
 
-void DlgCustomToolbars::on_resetButton_clicked()
+void DlgCustomToolbars::onResetButtonClicked()
 {
     QTreeWidgetItem* item = ui->toolbarTreeWidget->currentItem();
     if (!item || item->parent() == ui->toolbarTreeWidget->invisibleRootItem())
@@ -1021,7 +1055,7 @@ void DlgCustomToolbarsImp::createRecentToolbar()
     if (!wb)
         ui->workbenchBox->setCurrentIndex(0);
 
-    on_recentButton_clicked();
+    onRecentButtonClicked();
 }
 
 /* TRANSLATOR Gui::Dialog::DlgCustomToolBoxbarsImp */

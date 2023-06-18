@@ -352,7 +352,7 @@ std::vector<std::weak_ptr<const GeometryExtension>> Geometry::getExtensions() co
     return wp;
 }
 
-bool Geometry::hasExtension(Base::Type type) const
+bool Geometry::hasExtension(const Base::Type & type) const
 {
     for(const auto& ext : extensions) {
         if(ext->getTypeId() == type)
@@ -372,7 +372,7 @@ bool Geometry::hasExtension(const std::string & name) const
     return false;
 }
 
-std::weak_ptr<GeometryExtension> Geometry::getExtension(Base::Type type)
+std::weak_ptr<GeometryExtension> Geometry::getExtension(const Base::Type & type)
 {
     for(const auto& ext : extensions) {
         if(ext->getTypeId() == type)
@@ -392,7 +392,7 @@ std::weak_ptr<GeometryExtension> Geometry::getExtension(const std::string & name
     throw Base::ValueError("No geometry extension with the requested name.");
 }
 
-std::weak_ptr<const GeometryExtension> Geometry::getExtension(Base::Type type) const
+std::weak_ptr<const GeometryExtension> Geometry::getExtension(const Base::Type & type) const
 {
     return const_cast<Geometry*>(this)->getExtension(type).lock();
 }
@@ -424,7 +424,7 @@ void Geometry::setExtension(std::unique_ptr<GeometryExtension> && geoext )
     }
 }
 
-void Geometry::deleteExtension(Base::Type type)
+void Geometry::deleteExtension(const Base::Type & type)
 {
     extensions.erase(
         std::remove_if( extensions.begin(),
@@ -900,7 +900,7 @@ bool GeomCurve::intersect(const Handle(Geom_Curve) curve1, const Handle(Geom_Cur
                 std::vector<std::pair<Base::Vector3d, Base::Vector3d>>& points,
                 double tol)
 {
-    // https://forum.freecadweb.org/viewtopic.php?f=10&t=31700
+    // https://forum.freecad.org/viewtopic.php?f=10&t=31700
     if (curve1->IsKind(STANDARD_TYPE(Geom_BoundedCurve)) &&
         curve2->IsKind(STANDARD_TYPE(Geom_BoundedCurve))){
 
@@ -2143,6 +2143,28 @@ bool GeomConic::isSame(const Geometry &_other, double tol, double atol) const
         && conic->Position().YDirection().Angle(conic2->Position().YDirection()) <= atol
         && Base::DistanceP2(getLocation(),other.getLocation()) <= tol*tol;
 }
+
+GeomBSplineCurve* GeomConic::toNurbs(double first, double last) const
+{
+    Handle(Geom_Conic) conic =  Handle(Geom_Conic)::DownCast(handle());
+    Handle(Geom_Curve) curve = new Geom_TrimmedCurve(conic, first, last);
+
+    // pass the trimmed conic
+    Handle(Geom_BSplineCurve) bspline = GeomConvert::CurveToBSplineCurve(curve);
+    Standard_Real fnew = bspline->FirstParameter(), lnew = bspline->LastParameter(), UTol;
+    if (!bspline->IsPeriodic()) {
+        bspline->Resolution(Precision::Confusion(), UTol);
+        if (Abs(first - fnew) > UTol || Abs(last - lnew) > UTol) {
+            TColStd_Array1OfReal knots(1,bspline->NbKnots());
+            bspline->Knots(knots);
+            BSplCLib::Reparametrize(first, last, knots);
+            bspline->SetKnots(knots);
+        }
+    }
+
+    return new GeomBSplineCurve(bspline);
+}
+
 // -------------------------------------------------
 
 TYPESYSTEM_SOURCE(Part::GeomTrimmedCurve,Part::GeomBoundedCurve)
@@ -2507,29 +2529,28 @@ Geometry *GeomCircle::copy() const
 
 GeomBSplineCurve* GeomCircle::toNurbs(double first, double last) const
 {
-    double radius = getRadius();
-    Handle(Geom_Conic) conic =  Handle(Geom_Conic)::DownCast(handle());
-    gp_Ax1 axis = conic->Axis();
-  //gp_Dir xdir = conic->XAxis().Direction();
-  //Standard_Real angle = gp_Dir(1,0,0).Angle(xdir) + first;
-    Standard_Real angle = first;
-    const gp_Pnt& loc = axis.Location();
-    //Note: If the matching this way doesn't work reliably then we must compute the
-    //angle so that the point of the curve for 'first' matches the first pole
-    //gp_Pnt pnt = conic->Value(first);
+    // for an arc of circle use the generic method
+    if (first != 0 || last != 2*M_PI) {
+        return GeomConic::toNurbs(first, last);
+    }
+
+    Handle(Geom_Circle) conic =  Handle(Geom_Circle)::DownCast(handle());
+    double radius = conic->Radius();
 
     TColgp_Array1OfPnt poles(1, 7);
-    poles(1) = loc.Translated(gp_Vec(radius, 0, 0));
-    poles(2) = loc.Translated(gp_Vec(radius, 2*radius, 0));
-    poles(3) = loc.Translated(gp_Vec(-radius, 2*radius, 0));
-    poles(4) = loc.Translated(gp_Vec(-radius, 0, 0));
-    poles(5) = loc.Translated(gp_Vec(-radius, -2*radius, 0));
-    poles(6) = loc.Translated(gp_Vec(radius, -2*radius, 0));
-    poles(7) = loc.Translated(gp_Vec(radius, 0, 0));
+    poles(1) = gp_Pnt(radius, 0, 0);
+    poles(2) = gp_Pnt(radius, 2*radius, 0);
+    poles(3) = gp_Pnt(-radius, 2*radius, 0);
+    poles(4) = gp_Pnt(-radius, 0, 0);
+    poles(5) = gp_Pnt(-radius, -2*radius, 0);
+    poles(6) = gp_Pnt(radius, -2*radius, 0);
+    poles(7) = gp_Pnt(radius, 0, 0);
 
+    gp_Trsf trsf;
+    trsf.SetTransformation(conic->Position(), gp_Ax3());
     TColStd_Array1OfReal weights(1,7);
     for (int i=1; i<=7; i++) {
-        poles(i).Rotate(axis, angle);
+        poles(i).Transform(trsf);
         weights(i) = 1;
     }
     weights(1) = 3;
@@ -2548,7 +2569,6 @@ GeomBSplineCurve* GeomCircle::toNurbs(double first, double last) const
 
     Handle(Geom_BSplineCurve) spline = new Geom_BSplineCurve(poles, weights,knots, mults, 3,
         Standard_False, Standard_True);
-    spline->Segment(0, last-first);
     return new GeomBSplineCurve(spline);
 }
 
@@ -2940,29 +2960,27 @@ GeomBSplineCurve* GeomEllipse::toNurbs(double first, double last) const
 {
     // for an arc of ellipse use the generic method
     if (first != 0 || last != 2*M_PI) {
-        return GeomCurve::toNurbs(first, last);
+        return GeomConic::toNurbs(first, last);
     }
 
     Handle(Geom_Ellipse) conic =  Handle(Geom_Ellipse)::DownCast(handle());
-    gp_Ax1 axis = conic->Axis();
     Standard_Real majorRadius = conic->MajorRadius();
     Standard_Real minorRadius = conic->MinorRadius();
-    gp_Dir xdir = conic->XAxis().Direction();
-    Standard_Real angle = atan2(xdir.Y(), xdir.X());
-    const gp_Pnt& loc = axis.Location();
 
     TColgp_Array1OfPnt poles(1, 7);
-    poles(1) = loc.Translated(gp_Vec(majorRadius, 0, 0));
-    poles(2) = loc.Translated(gp_Vec(majorRadius, 2*minorRadius, 0));
-    poles(3) = loc.Translated(gp_Vec(-majorRadius, 2*minorRadius, 0));
-    poles(4) = loc.Translated(gp_Vec(-majorRadius, 0, 0));
-    poles(5) = loc.Translated(gp_Vec(-majorRadius, -2*minorRadius, 0));
-    poles(6) = loc.Translated(gp_Vec(majorRadius, -2*minorRadius, 0));
-    poles(7) = loc.Translated(gp_Vec(majorRadius, 0, 0));
+    poles(1) = gp_Pnt(majorRadius, 0, 0);
+    poles(2) = gp_Pnt(majorRadius, 2*minorRadius, 0);
+    poles(3) = gp_Pnt(-majorRadius, 2*minorRadius, 0);
+    poles(4) = gp_Pnt(-majorRadius, 0, 0);
+    poles(5) = gp_Pnt(-majorRadius, -2*minorRadius, 0);
+    poles(6) = gp_Pnt(majorRadius, -2*minorRadius, 0);
+    poles(7) = gp_Pnt(majorRadius, 0, 0);
 
+    gp_Trsf trsf;
+    trsf.SetTransformation(conic->Position(), gp_Ax3());
     TColStd_Array1OfReal weights(1,7);
     for (int i=1; i<=7; i++) {
-        poles(i).Rotate(axis, angle);
+        poles(i).Transform(trsf);
         weights(i) = 1;
     }
     weights(1) = 3;
@@ -3478,7 +3496,7 @@ Geometry *GeomHyperbola::copy() const
 
 GeomBSplineCurve* GeomHyperbola::toNurbs(double first, double last) const
 {
-    return GeomCurve::toNurbs(first, last);
+    return GeomConic::toNurbs(first, last);
 }
 
 double GeomHyperbola::getMajorRadius() const
@@ -5347,7 +5365,7 @@ gp_Vec GeomCone::getDN(double u, double v, int Nu, int Nv) const
     };
 
     // Workaround for cones to get the correct derivatives
-    // https://forum.freecadweb.org/viewtopic.php?f=10&t=66677
+    // https://forum.freecad.org/viewtopic.php?f=10&t=66677
     Handle(Geom_ConicalSurface) s = Handle(Geom_ConicalSurface)::DownCast(handle());
     Standard_RangeError_Raise_if (Nu + Nv < 1 || Nu < 0 || Nv < 0, " ");
     if (Nv > 1) {

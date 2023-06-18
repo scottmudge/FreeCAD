@@ -34,10 +34,15 @@ class PartDesignGuiExport ViewProviderScaled : public ViewProviderTransformed
     PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderScaled);
 public:
     ViewProviderScaled() {
-        featureName = std::string("Scaled");
-        menuName = tr("Scaled parameters");
         sPixmap = "PartDesign_Scaled.svg";
     }
+
+    QString getMenuName() const override {
+        return tr("Scaled parameters");
+    }
+
+    const std::string & featureName() const override;
+    void setupContextMenu(QMenu*, QObject*, const char*) override;
 
 protected:
     /// Returns a newly create dialog for the part to be placed in the task view

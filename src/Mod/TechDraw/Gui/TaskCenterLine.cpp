@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) 2019 WandererFan <wandererfan@gmail.com                 *
+ *   Copyright (c) 2019 WandererFan <wandererfan@gmail.com>                *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -47,6 +47,7 @@
 using namespace Gui;
 using namespace TechDraw;
 using namespace TechDrawGui;
+using DU = DrawUtil;
 
 //ctor for edit
 TaskCenterLine::TaskCenterLine(TechDraw::DrawViewPart* partFeat,
@@ -148,14 +149,18 @@ void TaskCenterLine::setUiConnect()
         ui->rbAligned->setEnabled(true);
 
     // now connection
-    connect(ui->cpLineColor, SIGNAL(changed()), this, SLOT(onColorChanged()));
-    connect(ui->dsbWeight, SIGNAL(valueChanged(double)), this, SLOT(onWeightChanged()));
-    connect(ui->cboxStyle, SIGNAL(currentIndexChanged(int)), this, SLOT(onStyleChanged()));
-    connect(ui->qsbVertShift, SIGNAL(valueChanged(double)), this, SLOT(onShiftVertChanged()));
-    connect(ui->qsbHorizShift, SIGNAL(valueChanged(double)), this, SLOT(onShiftHorizChanged()));
-    connect(ui->qsbExtend, SIGNAL(valueChanged(double)), this, SLOT(onExtendChanged()));
-    connect(ui->qsbRotate, SIGNAL(valueChanged(double)), this, SLOT(onRotationChanged()));
-    connect(ui->bgOrientation, SIGNAL(buttonClicked(int)), this, SLOT(onOrientationChanged()));
+    connect(ui->cpLineColor, &ColorButton::changed, this, &TaskCenterLine::onColorChanged);
+    connect(ui->dsbWeight, qOverload<double>(&QuantitySpinBox::valueChanged), this, &TaskCenterLine::onWeightChanged);
+    connect(ui->cboxStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &TaskCenterLine::onStyleChanged);
+    connect(ui->qsbVertShift, qOverload<double>(&QuantitySpinBox::valueChanged), this, &TaskCenterLine::onShiftVertChanged);
+    connect(ui->qsbHorizShift, qOverload<double>(&QuantitySpinBox::valueChanged), this, &TaskCenterLine::onShiftHorizChanged);
+    connect(ui->qsbExtend, qOverload<double>(&QuantitySpinBox::valueChanged), this, &TaskCenterLine::onExtendChanged);
+    connect(ui->qsbRotate, qOverload<double>(&QuantitySpinBox::valueChanged), this, &TaskCenterLine::onRotationChanged);
+#if QT_VERSION < QT_VERSION_CHECK(5,15,0)
+    connect(ui->bgOrientation, qOverload<int>(&QButtonGroup::buttonClicked), this, &TaskCenterLine::onOrientationChanged);
+#else
+    connect(ui->bgOrientation, &QButtonGroup::idClicked, this, &TaskCenterLine::onOrientationChanged);
+#endif
 }
 
 void TaskCenterLine::setUiPrimary()
@@ -186,6 +191,9 @@ void TaskCenterLine::setUiPrimary()
     ui->qsbRotate->setValue(qAngle);
     int precision = Base::UnitsApi::getDecimals();
     ui->qsbRotate->setDecimals(precision);
+
+    int orientation = checkPathologicalEdges(m_mode);
+    setUiOrientation(orientation);
 }
 
 void TaskCenterLine::setUiEdit()
@@ -288,28 +296,46 @@ void TaskCenterLine::onStyleChanged()
     m_partFeat->recomputeFeature();
 }
 
+// check that we are not trying to create an impossible centerline (ex a vertical centerline
+// between 2 horizontal edges)
+int TaskCenterLine::checkPathologicalEdges(int inMode)
+{
+    if (m_type != 1) {
+        // not an edge based centerline, this doesn't apply
+        return inMode;
+    }
+
+    TechDraw::BaseGeomPtr edge1 = m_partFeat->getEdge(m_subNames.front());
+    std::vector<Base::Vector3d> ends1 = edge1->findEndPoints();
+    bool edge1Vertical = DU::fpCompare(ends1.front().x, ends1.back().x, EWTOLERANCE);
+    bool edge1Horizontal = DU::fpCompare(ends1.front().y, ends1.back().y, EWTOLERANCE);
+
+    TechDraw::BaseGeomPtr edge2 = m_partFeat->getEdge(m_subNames.back());
+    std::vector<Base::Vector3d> ends2 = edge2->findEndPoints();
+    bool edge2Vertical = DU::fpCompare(ends2.front().x, ends2.back().x, EWTOLERANCE);
+    bool edge2Horizontal = DU::fpCompare(ends2.front().y, ends2.back().y, EWTOLERANCE);
+
+    if (edge1Vertical && edge2Vertical) {
+        return CenterLine::CLMODE::VERTICAL;
+    }
+    if (edge1Horizontal && edge2Horizontal) {
+        return CenterLine::CLMODE::HORIZONTAL;
+    }
+
+    // not pathological case, just return the input mode
+    return inMode;
+}
+
 //******************************************************************************
 void TaskCenterLine::createCenterLine()
 {
     Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Create CenterLine"));
 
+    m_mode = checkPathologicalEdges(m_mode);
+
     CenterLine* cl = CenterLine::CenterLineBuilder(m_partFeat, m_subNames, m_mode, false);
 
-    // the centerline creation can fail if m_type is edge and both selected edges are horizontal
-    // because we attempt by default to create a vertical centerline
-
-    if (!cl) { // try a horizontal line
-        cl = CenterLine::CenterLineBuilder(m_partFeat, m_subNames, CenterLine::CLMODE::HORIZONTAL, false);
-        if (cl) {
-            m_mode = CenterLine::CLMODE::HORIZONTAL;
-            ui->rbHorizontal->blockSignals(true);
-            ui->rbHorizontal->setChecked(true);
-            ui->rbHorizontal->blockSignals(false);
-        }
-    }
-
     if (!cl) {
-        Base::Console().Log("TCL::createCenterLine - CenterLine creation failed!\n");
         Gui::Command::abortCommand();
         return;
     }
@@ -341,52 +367,41 @@ void TaskCenterLine::createCenterLine()
 
 void TaskCenterLine::updateOrientation()
 {
+    if (!m_cl) {
+        return;
+    }
     // When the orientation was changed, it can be that the centerline becomes invalid
     // this can lead to a crash, see e.g.
-    // https://forum.freecadweb.org/viewtopic.php?f=35&t=44255&start=20#p503220
+    // https://forum.freecad.org/viewtopic.php?f=35&t=44255&start=20#p503220
     // The centerline creation can fail if m_type is edge and both selected edges are vertical or horizontal.
-    // To test the validity before an existing centerline is changed, we create a new one with the desired parameters.
     int orientation = m_cl->m_mode;
-    if (!m_edgeName.empty()) { // we have an existing centerline, not a freshly created one
-        // since m_subNames is then empty, fill it with two times the centerline
-        // because the result of CenterLineBuilder will then in case of success again be the centerline
-        m_subNames.resize(2);
-        m_subNames[0] = m_edgeName;
-        m_subNames[1] = m_edgeName;
+    if (!m_edgeName.empty() && !m_cl->m_edges.empty()) {
+         // we have an existing centerline, not a freshly created one, and it is a centerline between edges
+        m_subNames = m_cl->m_edges;
+        orientation = checkPathologicalEdges(orientation);
     }
 
-    CenterLine* cl = CenterLine::CenterLineBuilder(m_partFeat, m_subNames, orientation, m_cl->m_flip2Line);
+    setUiOrientation(orientation);
 
-    if (!cl) { // try another orientation
-        if (orientation == CenterLine::CLMODE::VERTICAL)
-            orientation = CenterLine::CLMODE::HORIZONTAL;
-        else if (orientation == CenterLine::CLMODE::HORIZONTAL)
-            orientation = CenterLine::CLMODE::VERTICAL;
-        cl = CenterLine::CenterLineBuilder(m_partFeat, m_subNames, orientation, m_cl->m_flip2Line);
-        if (cl) {
-            if (orientation == CenterLine::CLMODE::VERTICAL) {
-                m_cl->m_mode = CenterLine::CLMODE::VERTICAL;
-                ui->rbVertical->blockSignals(true);
-                ui->rbVertical->setChecked(true);
-                // we know now that only vertical is possible
-                ui->rbHorizontal->setEnabled(false);
-                ui->rbVertical->blockSignals(false);
-            }
-            else if (orientation == CenterLine::CLMODE::HORIZONTAL) {
-                m_cl->m_mode = CenterLine::CLMODE::HORIZONTAL;
-                ui->rbHorizontal->blockSignals(true);
-                ui->rbHorizontal->setChecked(true);
-                ui->rbVertical->setEnabled(false);
-                ui->rbHorizontal->blockSignals(false);
-            }
-        }
+    m_partFeat->recomputeFeature();
+}
+
+void TaskCenterLine::setUiOrientation(int orientation)
+{
+    ui->rbVertical->blockSignals(true);
+    ui->rbVertical->blockSignals(true);
+
+    if (orientation == CenterLine::CLMODE::VERTICAL) {
+        ui->rbVertical->setChecked(true);
+        ui->rbHorizontal->setChecked(false);
+    } else if (orientation == CenterLine::CLMODE::HORIZONTAL) {
+        ui->rbVertical->setChecked(false);
+        ui->rbHorizontal->setChecked(true);
     }
 
-    if (cl) { // we succeeded
-        // reset the flip for existing centerline that might use the flip feature (when created with FC 0.19)
-        m_cl->m_flip2Line = false;
-        m_partFeat->recomputeFeature();
-    }
+    ui->rbVertical->blockSignals(false);
+    ui->rbVertical->blockSignals(false);
+
 }
 
 void TaskCenterLine::saveButtons(QPushButton* btnOK,
@@ -414,9 +429,7 @@ double TaskCenterLine::getCenterWidth()
 
 Qt::PenStyle TaskCenterLine::getCenterStyle()
 {
-    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter().GetGroup("BaseApp")->
-                                         GetGroup("Preferences")->GetGroup("Mod/TechDraw/Decorations");
-    Qt::PenStyle centerStyle = static_cast<Qt::PenStyle> (hGrp->GetInt("CenterLine", 2));
+    Qt::PenStyle centerStyle = static_cast<Qt::PenStyle> (Preferences::getPreferenceGroup("Decorations")->GetInt("CenterLine", 2));
     return centerStyle;
 }
 
@@ -427,10 +440,7 @@ QColor TaskCenterLine::getCenterColor()
 
 double TaskCenterLine::getExtendBy()
 {
-    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter().GetGroup("BaseApp")->
-                                         GetGroup("Preferences")->GetGroup("Mod/TechDraw/Decorations");
-    double ext = hGrp->GetFloat("CosmoCLExtend", 3.0);
-    return ext;
+    return Preferences::getPreferenceGroup("Decorations")->GetFloat("CosmoCLExtend", 3.0);
 }
 
 //******************************************************************************

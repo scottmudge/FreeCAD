@@ -39,14 +39,12 @@ class ViewProvider;
 
 namespace PartDesignGui {
 
-
-
 class TaskRevolutionParameters : public TaskSketchBasedParameters
 {
     Q_OBJECT
 
 public:
-    explicit TaskRevolutionParameters(ViewProvider* RevolutionView,QWidget *parent = nullptr);
+    explicit TaskRevolutionParameters(ViewProvider* RevolutionView, QWidget* parent = nullptr);
     ~TaskRevolutionParameters() override;
 
     void apply() override;
@@ -78,7 +76,7 @@ protected:
     bool getReversed(void) const;
     void onAxisButton(bool checked);
 
-    bool eventFilter(QObject *o, QEvent *ev);
+    bool eventFilter(QObject *o, QEvent *ev) override;
 
     void refresh() override;
 
@@ -117,7 +115,9 @@ public:
     explicit TaskDlgRevolutionParameters(PartDesignGui::ViewProvider *RevolutionView);
 
     ViewProvider* getRevolutionView() const
-    { return vp; }
+    {
+        return vp;
+    }
 };
 
 } //namespace PartDesignGui

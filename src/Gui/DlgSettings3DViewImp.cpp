@@ -89,9 +89,7 @@ void DlgSettings3DViewImp::saveSettings()
     ui->CheckBox_CornerCoordSystem->onSave();
     ui->SpinBox_CornerCoordSystemSize->onSave();
     ui->CheckBox_ShowAxisCross->onSave();
-    ui->CheckBox_WbByTab->onSave();
     ui->CheckBox_ShowFPS->onSave();
-    ui->spinPickRadius->onSave();
     ui->CheckBox_use_SW_OpenGL->onSave();
     ui->CheckBox_useVBO->onSave();
     ui->FloatSpinBox_EyeDistance->onSave();
@@ -112,9 +110,7 @@ void DlgSettings3DViewImp::loadSettings()
     ui->CheckBox_CornerCoordSystem->onRestore();
     ui->SpinBox_CornerCoordSystemSize->onRestore();
     ui->CheckBox_ShowAxisCross->onRestore();
-    ui->CheckBox_WbByTab->onRestore();
     ui->CheckBox_ShowFPS->onRestore();
-    ui->spinPickRadius->onRestore();
     ui->CheckBox_use_SW_OpenGL->onRestore();
     ui->CheckBox_useVBO->onRestore();
     ui->FloatSpinBox_EyeDistance->onRestore();
@@ -129,6 +125,7 @@ void DlgSettings3DViewImp::loadSettings()
     ui->renderCacheMergeCountMax->onRestore();
     ui->comboAliasing->onRestore();
     ui->renderCache->onRestore();
+
     ui->comboTransparentRender->onRestore();
     ui->checkBoxEnhancedPick->onRestore();
 

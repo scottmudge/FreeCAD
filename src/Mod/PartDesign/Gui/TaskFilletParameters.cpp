@@ -106,7 +106,6 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
     ui->setupUi(proxy);
-
     this->groupLayout()->addWidget(proxy);
 
     PartDesign::Fillet* pcFillet = static_cast<PartDesign::Fillet*>(DressUpView->getObject());
@@ -121,8 +120,8 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
 
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->filletRadius, SIGNAL(valueChanged(double)),
-            this, SLOT(onLengthChanged(double)));
+    connect(ui->filletRadius, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+        this, &TaskFilletParameters::onLengthChanged);
 
     setup(ui->message, ui->treeWidgetReferences, ui->buttonRefAdd);
 

@@ -67,7 +67,8 @@ ComboView::ComboView(bool showModel, Gui::Document* pcDocument, QWidget *parent)
 #endif
 
     setShowModel(showModel);
-    connect(tabs, SIGNAL(currentChanged(int)), this, SLOT(onCurrentTabChanged(int)));
+    connect(tabs, qOverload<int>(&QTabWidget::currentChanged),
+            this, &ComboView::onCurrentTabChanged);
 
     // task panel
     taskPanel = new Gui::TaskView::TaskView(this);

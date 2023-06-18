@@ -468,6 +468,10 @@ Only available for holes without thread</string>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="toolTip">
+         <string>For countersinks this is the depth of
+the screw's top below the surface</string>
+        </property>
         <property name="minimumSize">
          <size>
           <width>100</width>

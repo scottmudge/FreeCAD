@@ -23,7 +23,6 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-# include <QDesktopWidget>
 # include <QColorDialog>
 # include <QDebug>
 # include <QDesktopServices>
@@ -43,6 +42,10 @@
 # include <QToolTip>
 # include <QToolBar>
 # include <QUrl>
+# include <QScreen>
+# if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+#   include <QDesktopWidget>
+# endif
 #endif
 
 #include <QCache>
@@ -80,8 +83,8 @@ using namespace Base;
 CommandIconView::CommandIconView ( QWidget * parent )
   : QListWidget(parent)
 {
-    connect(this, SIGNAL (currentItemChanged(QListWidgetItem *, QListWidgetItem *)),
-            this, SLOT (onSelectionChanged(QListWidgetItem *, QListWidgetItem *)) );
+    connect(this, &QListWidget::currentItemChanged,
+            this, &CommandIconView::onSelectionChanged);
 }
 
 /**
@@ -570,9 +573,8 @@ ClearLineEdit::ClearLineEdit (QWidget * parent)
 {
     clearAction = this->addAction(QIcon(QStringLiteral(":/icons/edit-cleartext.svg")),
                                         QLineEdit::TrailingPosition);
-    connect(clearAction, SIGNAL(triggered()), this, SLOT(clear()));
-    connect(this, SIGNAL(textChanged(const QString&)),
-            this, SLOT(updateClearButton(const QString&)));
+    connect(clearAction, &QAction::triggered, this, &ClearLineEdit::clear);
+    connect(this, &QLineEdit::textChanged, this, &ClearLineEdit::updateClearButton);
 
     LineEditStyle::setup(this);
 }
@@ -697,7 +699,7 @@ ColorButton::ColorButton(QWidget* parent)
 {
     d = new ColorButtonP();
     d->col = palette().color(QPalette::Active,QPalette::Midlight);
-    connect(this, SIGNAL(clicked()), SLOT(onChooseColor()));
+    connect(this, &ColorButton::clicked, this, &ColorButton::onChooseColor);
 
     int e = style()->pixelMetric(QStyle::PM_ButtonIconSize);
     setIconSize(QSize(2*e, e));
@@ -857,6 +859,7 @@ void ColorButton::showModeless()
         if (DialogOptions::dontUseNativeColorDialog())
             dlg->setOptions(QColorDialog::DontUseNativeDialog);
         dlg->setOption(QColorDialog::ColorDialogOption::ShowAlphaChannel, d->allowTransparency);
+        dlg->setCurrentColor(d->old);
         connect(dlg, &QColorDialog::rejected, this, &ColorButton::onRejected);
         connect(dlg, &QColorDialog::currentColorChanged, this, &ColorButton::onColorChosen);
         d->cd = dlg;
@@ -1081,7 +1084,7 @@ void StatefulLabel::setState(QString state)
 
     if (auto entry = _availableStates.find(state); entry != _availableStates.end()) {
         // Order of precedence: first, check if the user has set this in their preferences:
-        if (!entry->second.preferenceString.empty()) {            
+        if (!entry->second.preferenceString.empty()) {
             // First, try to see if it's just stored a color (as an unsigned int):
             auto availableColorPrefs = _parameterGroup->GetUnsignedMap();
             std::string lookingForGroup = entry->second.preferenceString;
@@ -1090,7 +1093,7 @@ void StatefulLabel::setState(QString state)
                 if (unsignedEntry.first == entry->second.preferenceString) {
                     // Convert the stored Uint into usable color data:
                     unsigned int col = unsignedEntry.second;
-                    QColor qcolor((col >> 24) & 0xff, (col >> 16) & 0xff, (col >> 8) & 0xff);
+                    QColor qcolor(App::Color::fromPackedRGB<QColor>(col));
                     this->setStyleSheet(QString::fromUtf8("Gui--StatefulLabel{ color : rgba(%1,%2,%3,%4) ;}").arg(qcolor.red()).arg(qcolor.green()).arg(qcolor.blue()).arg(qcolor.alpha()));
                     _styleCache[state] = this->styleSheet();
                     return;
@@ -1154,8 +1157,8 @@ LabelButton::LabelButton (QWidget * parent)
 #endif
     layout->addWidget(button);
 
-    connect(button, SIGNAL(clicked()), this, SLOT(browse()));
-    connect(button, SIGNAL(clicked()), this, SIGNAL(buttonClicked()));
+    connect(button, &QPushButton::clicked, this, &LabelButton::browse);
+    connect(button, &QPushButton::clicked, this, &LabelButton::buttonClicked);
 }
 
 LabelButton::~LabelButton()
@@ -1228,12 +1231,20 @@ void hideQtToolTips()
     }
 }
 
-int getTipScreen(const QPoint &pos, QWidget *w)
+QRect getScreenGeometry(const QPoint &pos, QWidget *w)
 {
+#if QT_VERSION < QT_VERSION_CHECK(5,14,0)
     if (QApplication::desktop()->isVirtualDesktop())
-        return QApplication::desktop()->screenNumber(pos);
+        return QApplication::screenAt(pos)->availableGeometry();
     else
-        return QApplication::desktop()->screenNumber(w);
+        return QApplication::desktop()->availableGeometry(w);
+#else
+    auto screen = w->screen();
+    if (auto sibling = screen->virtualSiblingAt(pos))
+        return sibling->availableGeometry();
+    else
+        return screen->availableGeometry();
+#endif
 }
 
 } // anonymous event filter
@@ -1263,8 +1274,9 @@ TipLabel *TipLabel::instance(QWidget *parent, const QPoint &pos, bool overlay)
 {
     if (!overlay) {
         if (!_TipLabel) {
+            (void)pos;
             _TipLabel = new TipLabel(
-                    QApplication::desktop()->screen(getTipScreen(pos, parent)),
+                    nullptr,
                     Qt::ToolTip | Qt::BypassGraphicsProxyWidget);
         }
         return _TipLabel;
@@ -1584,7 +1596,7 @@ void ToolTip::onShowTimer()
         else
             tipLabel->set(text, this->iconPixmap);
         if (!this->w || this->corner == NoCorner) {
-            QRect screen = QApplication::desktop()->screenGeometry(getTipScreen(pos, w));
+            QRect screen = getScreenGeometry(pos, w);
             pos += QPoint(2, 16);
             if (pos.x() + tipLabel->width() > screen.x() + screen.width())
                 pos.rx() -= 4 + tipLabel->width();
@@ -1775,7 +1787,7 @@ void StatusWidget::showText(int ms)
     show();
     QTimer timer;
     QEventLoop loop;
-    QObject::connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
+    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
     timer.start(ms);
     loop.exec(QEventLoop::ExcludeUserInputEvents);
     hide();
@@ -1822,12 +1834,12 @@ PropertyListEditor::PropertyListEditor(QWidget *parent) : QPlainTextEdit(parent)
     LineEditStyle::setup(this);
     lineNumberArea = new LineNumberArea(this);
 
-    connect(this, SIGNAL(blockCountChanged(int)),
-            this, SLOT(updateLineNumberAreaWidth(int)));
-    connect(this, SIGNAL(updateRequest(QRect,int)),
-            this, SLOT(updateLineNumberArea(QRect,int)));
-    connect(this, SIGNAL(cursorPositionChanged()),
-            this, SLOT(highlightCurrentLine()));
+    connect(this, &QPlainTextEdit::blockCountChanged,
+            this, &PropertyListEditor::updateLineNumberAreaWidth);
+    connect(this, &QPlainTextEdit::updateRequest,
+            this, &PropertyListEditor::updateLineNumberArea);
+    connect(this, &QPlainTextEdit::cursorPositionChanged,
+            this, &PropertyListEditor::highlightCurrentLine);
 
     updateLineNumberAreaWidth(0);
     highlightCurrentLine();
@@ -1974,8 +1986,8 @@ LabelEditor::LabelEditor (QWidget * parent)
     layout->addWidget(lineEdit);
     LineEditStyle::setup(lineEdit);
 
-    connect(lineEdit, SIGNAL(textChanged(const QString &)),
-            this, SLOT(validateText(const QString &)));
+    connect(lineEdit, &QLineEdit::textChanged,
+            this, &LabelEditor::validateText);
 
     button = new QPushButton(QStringLiteral("..."), this);
 #if defined (Q_OS_MAC)
@@ -1983,7 +1995,7 @@ LabelEditor::LabelEditor (QWidget * parent)
 #endif
     layout->addWidget(button);
 
-    connect(button, SIGNAL(clicked()), this, SLOT(changeText()));
+    connect(button, &QPushButton::clicked, this, &LabelEditor::changeText);
 
     setFocusProxy(lineEdit);
 }
@@ -2079,7 +2091,7 @@ ExpLineEdit::ExpLineEdit(QWidget* parent, bool expressionOnly)
 {
     makeLabel(this);
 
-    QObject::connect(iconLabel, SIGNAL(clicked()), this, SLOT(openFormulaDialog()));
+    QObject::connect(iconLabel, &ExpressionLabel::clicked, this, &ExpLineEdit::openFormulaDialog);
     if (expressionOnly)
         QMetaObject::invokeMethod(this, "openFormulaDialog", Qt::QueuedConnection, QGenericReturnArgument());
 }
@@ -2175,7 +2187,7 @@ void ExpLineEdit::openFormulaDialog()
 
     auto box = new Gui::Dialog::DlgExpressionInput(
             getPath(), getExpression(),Unit(), this);
-    connect(box, SIGNAL(finished(int)), this, SLOT(finishFormulaDialog()));
+    connect(box, &Dialog::DlgExpressionInput::finished, this, &ExpLineEdit::finishFormulaDialog);
     box->show();
 
     box->setExpressionInputSize(width(), height());

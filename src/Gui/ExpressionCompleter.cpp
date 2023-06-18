@@ -2085,11 +2085,12 @@ ExpressionCompleter::ExpressionCompleter(const App::DocumentObject * currentDocO
                                          char leadChar)
     : QCompleter(parent)
     , currentObj(currentDocObj)
-    , noProperty(noProperty)
     , checkInList(checkInList)
-    , searchUnit(false)
-    , leadChar(leadChar)
 {
+    tokenizer.setNoProperty(noProperty);
+    tokenizer.setSearchUnit(false);
+    tokenizer.setLeadChar(leadChar);
+
     setCaseSensitivity(ExprParams::getCompleterCaseSensitive()
             ? Qt::CaseSensitive : Qt::CaseInsensitive);
     setCompletionMode(ExprParams::getCompleterUnfiltered()
@@ -2102,9 +2103,9 @@ void ExpressionCompleter::init() {
     if(model())
         return;
 
-    auto m = new ExpressionCompleterModel(this,noProperty);
+    auto m = new ExpressionCompleterModel(this,tokenizer.getNoProperty());
     m->setDocumentObject(currentObj.getObject(),checkInList);
-    m->setSearchUnit(searchUnit);
+    m->setSearchUnit(tokenizer.getSearchUnit());
     setModel(m);
 }
 
@@ -2121,14 +2122,14 @@ void ExpressionCompleter::setDocumentObject(const App::DocumentObject *obj, bool
 }
 
 void ExpressionCompleter::setNoProperty(bool enabled) {
-    noProperty = enabled;
+    tokenizer.setNoProperty(enabled);
     auto m = model();
     if(m)
         static_cast<ExpressionCompleterModel*>(m)->setNoProperty(enabled);
 }
 
 void ExpressionCompleter::setSearchUnit(bool enabled) {
-    searchUnit = enabled;
+    tokenizer.setSearchUnit(enabled);
 }
 
 QString ExpressionCompleter::pathFromIndex ( const QModelIndex & index ) const
@@ -2157,7 +2158,7 @@ QString ExpressionCompleter::pathFromIndex ( const QModelIndex & index ) const
         parent = parent.parent();
     }while(parent.isValid());
 
-    if(closeString) {
+    if(tokenizer.isClosingString()) {
         if(!res.endsWith(QLatin1Char('.')))
             res += QStringLiteral(".<<");
         else
@@ -2201,7 +2202,7 @@ QStringList ExpressionCompleter::splitPath ( const QString & input ) const
     int retry = 0;
     const char *trim = nullptr;
 
-    if(closeString) {
+    if(tokenizer.isClosingString()) {
         retry = 2;
         path += ">>._self";
         if(ending.isEmpty())
@@ -2306,217 +2307,13 @@ QStringList ExpressionCompleter::splitPath ( const QString & input ) const
 void ExpressionCompleter::slotUpdate(const QString & prefix, int pos)
 {
     init();
-
-    std::string completionPrefix;
-
-    // Compute start; if prefix starts with =, start parsing from offset 1.
-    int start = (prefix.size() > 0 && prefix.at(0) == QChar::fromLatin1(leadChar ? leadChar : '=')) ? 1 : 0;
-
-    std::string expression = Base::Tools::toStdString(prefix.mid(start));
-
-    // Tokenize prefix
-    std::vector<std::tuple<int, int, std::string> > tokens = ExpressionParser::tokenize(expression);
-
-    // No tokens
-    if (tokens.empty()) {
-        if (auto p = popup())
-            p->setVisible(false);
-        return;
-    }
-
-    prefixEnd = expression.size();
-    pos -= start;
-
-    if ((int)expression.size() != prefix.size()-start) {
-        // account for differences in character size vs byte size
-        pos = prefix.mid(start, pos).toUtf8().size();
-    }
-
-    closeString = false;
-    insideString = false;
-
-    int tokenCount = (int)tokens.size();
-
-    // Pop those trailing tokens depending on the given position, which may be
-    // in the middle of a token, and we shall include that token.
-    for(auto it=tokens.begin();it!=tokens.end();++it) {
-
-        auto &tok = *it;
-        if(get<1>(tok) + (int)get<2>(tok).size() < pos)
-            continue;
-
-        int t = ExpressionParser::translateToken(get<0>(tok));
-
-        // In case we are in the middle of a string, search for the closest
-        // trailing '.' inside the string
-        if(it != tokens.begin()
-                && t == ExpressionParser::FC_TOK_STRING
-                && get<0>(*(it-1)) == '.')
-        {
-            insideString = true;
-            size_t index = expression.find('.',pos-1);
-            int end = get<1>(tok) + (int)get<2>(tok).size();
-            if(index!=std::string::npos && (int)index+1 >= pos && (int)index+1 < end) {
-                tokenCount = it-tokens.begin()+1;
-                prefixEnd = index+1;
-                closeString = true;
-                break;
-            }
-        }
-
-        // Include the immediately followed '#', because we
-        // consider it as part of the document name
-        if(it+1!=tokens.end() && get<0>(*(it+1))=='#')
-            ++it;
-        prefixEnd = get<1>(*it) + (int)get<2>(*it).size();
-        tokenCount = it-tokens.begin()+1;
-        break;
-    }
-
-    int trim = 0;
-    if (prefixEnd > pos)
-        trim = prefixEnd - pos;
-
-    // Extract last tokens that can be rebuilt to a variable
-    int i = tokenCount - 1;
-    if(i < 0) {
-        popup()->setVisible(false);
-        return;
-    }
-
-    bool stringing = false;
-    if(insideString)
-        stringing = true;
+    if (tokenizer.perform(prefix, pos).isEmpty())
+        popup()->hide();
     else {
-        // Check if we have unclosed string starting from the end. If the
-        // string is really unclosed, it won't be recognized as token STRING,
-        // hence, won't be detected as 'insideString'.
-        for(; i>=0; --i) {
-            int token = get<0>(tokens[i]);
-            int tok = ExpressionParser::translateToken(token);
-            if(tok == ExpressionParser::FC_TOK_STRING)
-                break;
-            if(tok==ExpressionParser::FC_TOK_OPERATOR
-                    && i && get<2>(tokens[i])=="<" && get<2>(tokens[i-1])=="<")
-            {
-                i-=2;
-                stringing = true;
-                break;
-            }
-        }
-        if(!stringing) {
-            // no string found, rewind
-            i = tokenCount - 1;
-        }
-    }
-
-    auto checkUnit = [&] (int t, int idx, const std::string &s) {
-        t = ExpressionParser::translateToken(t);
-        if(t != ExpressionParser::FC_TOK_NUMBER)
-            return false;
-
-        auto m = static_cast<ExpressionCompleterModel*>(model());
-        m->setSearchUnit(true);
-
-        // adjust prefix start/end to account for unicode
-        prefixEnd = QString::fromUtf8(expression.c_str(), prefixEnd).size() + start;
-        prefixStart = QString::fromUtf8(expression.c_str(), idx).size() + start;
-
-        currentPrefix = savedPrefix = QString::fromUtf8(s.c_str());
-        setCompletionPrefix(currentPrefix);
+        static_cast<ExpressionCompleterModel*>(model())->setSearchUnit(tokenizer.isSearchingUnit());
+        setCompletionPrefix(tokenizer.getCurrentPrefix());
         showPopup(true);
-        return true;
-    };
-
-    if(!stringing) {
-        // Not inside an unclosed string and the last character is a space
-        if(expression.back() == ' ') {
-            if(noProperty || !checkUnit(get<0>(tokens[tokenCount-1]), prefixEnd, std::string()))
-                popup()->hide();
-            return;
-        }
-
-        if(tokenCount>1) {
-            int t = ExpressionParser::translateToken(get<0>(tokens[tokenCount-1]));
-            if(t == ExpressionParser::FC_TOK_IDENTIFIER) {
-                auto &tok = tokens[tokenCount-2];
-                if(!noProperty && checkUnit(get<0>(tok),
-                                            get<1>(tokens[tokenCount-1]),
-                                            get<2>(tokens[tokenCount-1])))
-                    return;
-            }
-        }
     }
-
-    if(!searchUnit)
-        static_cast<ExpressionCompleterModel*>(model())->setSearchUnit(false);
-
-    // Now searching forward for the prefix start
-
-    int token = -1;
-    int brackets = 0;
-    for(;i>=0;--i) {
-        token = get<0>(tokens[i]);
-        if(token == ']') {
-            ++brackets;
-            continue;
-        } else if (token == '[') {
-            if(!brackets)
-                break;
-            --brackets;
-            continue;
-        } else if(brackets)
-            continue;
-
-        int tok = ExpressionParser::translateToken(token);
-        if(token == ')' || token == '}'
-            || tok == ExpressionParser::FC_TOK_NUMBER)
-        {
-            popup()->hide();
-            return;
-        }
-
-        if (token != '.' && token != '#' &&
-            tok != ExpressionParser::FC_TOK_IDENTIFIER &&
-            tok != ExpressionParser::FC_TOK_STRING)
-            break;
-    }
-
-    ++i;
-
-    // Set prefix start for use when replacing later
-    if (i == tokenCount)
-        prefixStart = prefixEnd;
-    else
-        prefixStart = get<1>(tokens[i]);
-
-    // Build prefix from tokens
-    while (i < tokenCount) {
-        completionPrefix += get<2>(tokens[i]);
-        ++i;
-    }
-
-    if(prefixEnd < (int)completionPrefix.size())
-        completionPrefix.resize(prefixEnd);
-
-    savedPrefix = Base::Tools::fromStdString(completionPrefix);
-
-    // adjust prefix start/end to account for unicode
-    prefixEnd = QString::fromUtf8(expression.c_str(), prefixEnd).size() + start;
-    prefixStart = QString::fromUtf8(expression.c_str(), prefixStart).size() + start;
-
-    if(trim && trim<(int)completionPrefix.size() ) {
-        completionPrefix.resize(completionPrefix.size()-trim);
-        currentPrefix = Base::Tools::fromStdString(completionPrefix);
-    } else
-        currentPrefix = savedPrefix;
-
-    FC_TRACE("completion prefix " << completionPrefix);
-
-    // Set completion prefix
-    setCompletionPrefix(currentPrefix);
-
-    showPopup(!completionPrefix.empty());
 }
 
 void ExpressionCompleter::showPopup(bool show) {
@@ -2547,12 +2344,12 @@ void ExpressionCompleter::showPopup(bool show) {
 
 void ExpressionCompleter::getPrefixRange(QString &prefix, int &start, int &end, int &offset) const
 {
-    start = prefixStart;
-    end = prefixEnd;
+    start = tokenizer.getPrefixStart();
+    end = tokenizer.getPrefixEnd();
     offset = 0;
-    if(prefix == currentPrefix) {
-        prefix = savedPrefix;
-        offset = (int)currentPrefix.size() - savedPrefix.size();
+    if(prefix == tokenizer.getCurrentPrefix()) {
+        prefix = tokenizer.getSavedPrefix();
+        offset = (int)tokenizer.getCurrentPrefix().size() - tokenizer.getSavedPrefix().size();
     }
 }
 

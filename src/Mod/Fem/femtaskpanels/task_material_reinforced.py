@@ -23,7 +23,7 @@
 
 __title__ = "FreeCAD FEM material reinforced task panel for the document object"
 __author__ = "Bernd Hahnebach"
-__url__ = "https://www.freecadweb.org"
+__url__ = "https://www.freecad.org"
 
 ## @package task_material_reinforced
 #  \ingroup FEM
@@ -122,7 +122,6 @@ class _TaskPanel:
                 self.card_path_m
             )
             index = self.parameterWidget.cb_materials_m.findData(self.card_path_m)
-            # print(index)
             # fill input fields and set the current material in the cb widget
             self.choose_material_m(index)
         else:
@@ -162,7 +161,6 @@ class _TaskPanel:
                 "We will use this material.\n"
             )
             index = self.parameterWidget.cb_materials_r.findData(self.card_path_r)
-            # print(index)
             # fill input fields and set the current material in the cb widget
             self.choose_material_r(index)
 
@@ -336,7 +334,6 @@ class _TaskPanel:
                         "The found material card will be used.\n"
                     )
                     index = self.parameterWidget.cb_materials_m.findData(self.card_path_m)
-                    # print(index)
                     # set the current material in the cb widget
                 self.choose_material_m(index)
             else:
@@ -389,7 +386,6 @@ class _TaskPanel:
                         "The found material card will be used.\n"
                     )
                     index = self.parameterWidget.cb_materials_r.findData(self.card_path_r)
-                    # print(index)
                     # set the current material in the cb widget
                 self.choose_material_r(index)
             else:

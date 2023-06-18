@@ -90,7 +90,7 @@ void ViewProviderSections::unsetEdit(int ModNum)
 {
     if (ModNum == ViewProvider::Default) {
         // when pressing ESC make sure to close the dialog
-        QTimer::singleShot(0, &Gui::Control(), SLOT(closeDialog()));
+        QTimer::singleShot(0, &Gui::Control(), &Gui::ControlSingleton::closeDialog);
     }
     else {
         PartGui::ViewProviderSpline::unsetEdit(ModNum);
@@ -249,6 +249,7 @@ private:
 SectionsPanel::SectionsPanel(ViewProviderSections* vp, Surface::Sections* obj) : ui(new Ui_Sections())
 {
     ui->setupUi(this);
+    setupConnections();
     ui->statusLabel->clear();
 
     selectionMode = None;
@@ -266,11 +267,10 @@ SectionsPanel::SectionsPanel(ViewProviderSections* vp, Surface::Sections* obj) :
     QAction* action = new QAction(tr("Remove"), this);
     action->setShortcut(QKeySequence::Delete);
     ui->listSections->addAction(action);
-    connect(action, SIGNAL(triggered()), this, SLOT(onDeleteEdge()));
+    connect(action, &QAction::triggered, this, &SectionsPanel::onDeleteEdge);
     ui->listSections->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    connect(ui->listSections->model(),
-        SIGNAL(rowsMoved(QModelIndex, int, int, QModelIndex, int)), this, SLOT(onIndexesMoved()));
+    connect(ui->listSections->model(), &QAbstractItemModel::rowsMoved, this, &SectionsPanel::onIndexesMoved);
 }
 
 /*
@@ -278,6 +278,15 @@ SectionsPanel::SectionsPanel(ViewProviderSections* vp, Surface::Sections* obj) :
  */
 SectionsPanel::~SectionsPanel()
 {
+}
+
+void SectionsPanel::setupConnections()
+{
+    connect(ui->buttonEdgeAdd, &QToolButton::toggled,
+            this, &SectionsPanel::onButtonEdgeAddToggled);
+    connect(ui->buttonEdgeRemove, &QToolButton::toggled,
+            this, &SectionsPanel::onButtonEdgeRemoveToggled);
+
 }
 
 // stores object pointer, its old fill type and adjusts radio buttons according to it.
@@ -405,7 +414,7 @@ bool SectionsPanel::reject()
     return true;
 }
 
-void SectionsPanel::on_buttonEdgeAdd_toggled(bool checked)
+void SectionsPanel::onButtonEdgeAddToggled(bool checked)
 {
     if (checked) {
         selectionMode = AppendEdge;
@@ -417,7 +426,7 @@ void SectionsPanel::on_buttonEdgeAdd_toggled(bool checked)
     }
 }
 
-void SectionsPanel::on_buttonEdgeRemove_toggled(bool checked)
+void SectionsPanel::onButtonEdgeRemoveToggled(bool checked)
 {
     if (checked) {
         selectionMode = RemoveEdge;
@@ -476,7 +485,7 @@ void SectionsPanel::onSelectionChanged(const Gui::SelectionChanges& msg)
         }
 
         editedObject->recomputeFeature();
-        QTimer::singleShot(50, this, SLOT(clearSelection()));
+        QTimer::singleShot(50, this, &SectionsPanel::clearSelection);
     }
 }
 

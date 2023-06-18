@@ -37,6 +37,7 @@
 #include "DlgSettingsNavigation.h"
 #include "ui_DlgSettingsNavigation.h"
 #include "MainWindow.h"
+#include "View3DSettings.h"
 #include "NavigationStyle.h"
 #include "View3DInventor.h"
 #include "View3DInventorViewer.h"
@@ -77,7 +78,8 @@ void DlgSettingsNavigation::saveSettings()
     // where we set some attributes afterwards
     ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath
         ("User parameter:BaseApp/Preferences/View");
-    QVariant data = ui->comboNavigationStyle->itemData(ui->comboNavigationStyle->currentIndex(), Qt::UserRole);
+    QVariant data = ui->comboNavigationStyle->itemData(ui->comboNavigationStyle->currentIndex(),
+        Qt::UserRole);
     hGrp->SetASCII("NavigationStyle", (const char*)data.toByteArray());
 
     int index = ui->comboOrbitStyle->currentIndex();
@@ -100,7 +102,8 @@ void DlgSettingsNavigation::saveSettings()
     bool showNaviCube = ui->groupBoxNaviCube->isChecked();
     hGrp->SetBool("ShowNaviCube", showNaviCube);
 
-    QVariant camera = ui->comboNewDocView->itemData(ui->comboNewDocView->currentIndex(), Qt::UserRole);
+    QVariant camera = ui->comboNewDocView->itemData(ui->comboNewDocView->currentIndex(),
+        Qt::UserRole);
     hGrp->SetASCII("NewDocumentCameraOrientation", (const char*)camera.toByteArray());
     if (camera == QByteArray("Custom")) {
         ParameterGrp::handle hCustom = hGrp->GetGroup("Custom");
@@ -127,7 +130,7 @@ void DlgSettingsNavigation::loadSettings()
 
     ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath
         ("User parameter:BaseApp/Preferences/View");
-    std::string model = hGrp->GetASCII("NavigationStyle",CADNavigationStyle::getClassTypeId().getName());
+    std::string model = hGrp->GetASCII("NavigationStyle", CADNavigationStyle::getClassTypeId().getName());
     int index = ui->comboNavigationStyle->findData(QByteArray(model.c_str()));
     if (index > -1) ui->comboNavigationStyle->setCurrentIndex(index);
 
@@ -162,20 +165,24 @@ void DlgSettingsNavigation::loadSettings()
         q3 = hCustom->GetFloat("Q3", q3);
     }
 
-    connect(ui->comboNewDocView, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(onNewDocViewChanged(int)));
+    connect(ui->comboNewDocView, qOverload<int>(&QComboBox::currentIndexChanged),
+        this, &DlgSettingsNavigation::onNewDocViewChanged);
+    connect(ui->mouseButton, &QPushButton::clicked,
+        this, &DlgSettingsNavigation::onMouseButtonClicked);
 }
 
-void DlgSettingsNavigation::on_mouseButton_clicked()
+void DlgSettingsNavigation::onMouseButtonClicked()
 {
     QDialog dlg(this);
     Ui_MouseButtons uimb;
     uimb.setupUi(&dlg);
 
-    QVariant data = ui->comboNavigationStyle->itemData(ui->comboNavigationStyle->currentIndex(), Qt::UserRole);
+    QVariant data =
+        ui->comboNavigationStyle->itemData(ui->comboNavigationStyle->currentIndex(), Qt::UserRole);
     void* instance = Base::Type::createInstanceByName((const char*)data.toByteArray());
     std::unique_ptr<UserNavigationStyle> ns(static_cast<UserNavigationStyle*>(instance));
-    uimb.groupBox->setTitle(uimb.groupBox->title()+QStringLiteral(" ")+ui->comboNavigationStyle->currentText());
+    uimb.groupBox->setTitle(uimb.groupBox->title() + QStringLiteral(" ")
+                            + ui->comboNavigationStyle->currentText());
     QString descr;
     descr = qApp->translate((const char*)data.toByteArray(),ns->mouseButtons(NavigationStyle::SELECTION));
     descr.replace(QStringLiteral("\n"), QStringLiteral("<p>"));
@@ -307,9 +314,10 @@ CameraDialog::CameraDialog(QWidget* parent)
     currentViewButton->setObjectName(QStringLiteral("currentView"));
     layout->addWidget(currentViewButton, 4, 1, 2, 1);
 
-    QObject::connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
-    QObject::connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
-    QMetaObject::connectSlotsByName(this);
+    connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(currentViewButton, &QPushButton::clicked, this,
+            &CameraDialog::onCurrentViewClicked);
 }
 
 CameraDialog::~CameraDialog()
@@ -332,7 +340,7 @@ void CameraDialog::getValues(double& q0, double& q1, double& q2, double& q3) con
     q3 = sb3->value();
 }
 
-void CameraDialog::on_currentView_clicked()
+void CameraDialog::onCurrentViewClicked()
 {
     auto mdi = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
     if (mdi) {

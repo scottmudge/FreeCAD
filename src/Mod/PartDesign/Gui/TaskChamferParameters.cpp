@@ -166,16 +166,16 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
 
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->chamferType, SIGNAL(currentIndexChanged(int)),
-        this, SLOT(onTypeChanged(int)));
-    connect(ui->chamferSize, SIGNAL(valueChanged(double)),
-        this, SLOT(onSizeChanged(double)));
-    connect(ui->chamferSize2, SIGNAL(valueChanged(double)),
-        this, SLOT(onSize2Changed(double)));
-    connect(ui->chamferAngle, SIGNAL(valueChanged(double)),
-        this, SLOT(onAngleChanged(double)));
-    connect(ui->flipDirection, SIGNAL(toggled(bool)),
-        this, SLOT(onFlipDirection(bool)));
+    connect(ui->chamferType, qOverload<int>(&QComboBox::currentIndexChanged),
+        this, &TaskChamferParameters::onTypeChanged);
+    connect(ui->chamferSize, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+        this, &TaskChamferParameters::onSizeChanged);
+    connect(ui->chamferSize2, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+        this, &TaskChamferParameters::onSize2Changed);
+    connect(ui->chamferAngle, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+        this, &TaskChamferParameters::onAngleChanged);
+    connect(ui->flipDirection, &QCheckBox::toggled,
+        this, &TaskChamferParameters::onFlipDirection);
 
     setup(ui->message, ui->treeWidgetReferences, ui->buttonRefAdd);
 
@@ -203,8 +203,8 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
 
     refresh();
 
-    connect(ui->checkBoxUseAllEdges, SIGNAL(toggled(bool)),
-            this, SLOT(onCheckBoxUseAllEdgesToggled(bool)));
+    connect(ui->checkBoxUseAllEdges, &QCheckBox::toggled,
+            this, &TaskChamferParameters::onCheckBoxUseAllEdgesToggled);
 
     createAddAllEdgesAction(ui->treeWidgetReferences);
     connect(addAllEdgesAction, &QAction::triggered, this, &TaskChamferParameters::onAddAllEdges);

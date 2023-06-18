@@ -26,6 +26,7 @@
 #include <CXX/Extensions.hxx>
 
 class SoEvent;
+class QWidget;
 
 namespace Gui {
 class View3DInventorViewer;

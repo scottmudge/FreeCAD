@@ -73,8 +73,8 @@ TaskScaledParameters::TaskScaledParameters(TaskMultiTransformParameters *parentT
 {
     proxy = new QWidget(parentTask);
     ui->setupUi(proxy);
-    connect(ui->buttonOK, SIGNAL(clicked(bool)),
-            parentTask, SLOT(onSubTaskButtonOK()));
+    connect(ui->buttonOK, &QPushButton::pressed,
+            parentTask, &TaskScaledParameters::onSubTaskButtonOK);
     QMetaObject::connectSlotsByName(this);
 
     layout->addWidget(proxy);
@@ -92,7 +92,7 @@ void TaskScaledParameters::setupUI()
 
     Base::connect(ui->spinFactor, QOverload<double>::of(&Gui::QuantitySpinBox::valueChanged),
             this, &TaskScaledParameters::onFactor);
-    Base::connect(ui->spinOccurrences, QOverload<uint>::of(&Gui::UIntSpinBox::valueChanged),
+    Base::connect(ui->spinOccurrences, QOverload<uint>::of(&Gui::UIntSpinBox::unsignedChanged),
             this, &TaskScaledParameters::onOccurrences);
     Base::connect(ui->checkBoxUpdateView, &QCheckBox::toggled,
             this, &TaskScaledParameters::onUpdateView);

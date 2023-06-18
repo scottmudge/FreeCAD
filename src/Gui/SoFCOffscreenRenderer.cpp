@@ -154,7 +154,7 @@ void SoFCOffscreenRenderer::writeToImageFile(const char* filename, const char* c
             // set keywords for PNG format
             if (file.hasExtension("PNG")) {
                 img.setText(QStringLiteral("Title"), QString::fromUtf8(filename));
-                img.setText(QStringLiteral("Author"), QStringLiteral("FreeCAD (http://www.freecadweb.org)"));
+                img.setText(QStringLiteral("Author"), QStringLiteral("FreeCAD (http://www.freecad.org)"));
                 if (strcmp(comment,"")==0)
                     img.setText(QStringLiteral("Description"), QStringLiteral("Screenshot created by FreeCAD"));
                 else if (strcmp(comment,"$MIBA")==0)

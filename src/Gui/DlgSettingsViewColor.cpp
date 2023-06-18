@@ -21,7 +21,6 @@
  ***************************************************************************/
 
 #include "PreCompiled.h"
-
 #ifndef _PreComp_
 # include <QPushButton>
 #endif
@@ -60,7 +59,20 @@ DlgSettingsViewColor::DlgSettingsViewColor(QWidget* parent)
     ui->TreeActiveColor->setColor(App::Color(
                 (uint32_t)TreeParams::getTreeActiveColor()).asValue<QColor>());
 
-    connect(ui->SwitchGradientColors, &QPushButton::pressed, this, &DlgSettingsViewColor::onSwitchGradientColorsPressed);
+    connect(ui->SwitchGradientColors, &QPushButton::pressed, this,
+        &DlgSettingsViewColor::onSwitchGradientColorsPressed);
+
+    connect(ui->radioButtonSimple, &QRadioButton::toggled, this,
+        &DlgSettingsViewColor::onRadioButtonSimpleToggled);
+
+    connect(ui->radioButtonGradient, &QRadioButton::toggled, this,
+        &DlgSettingsViewColor::onRadioButtonGradientToggled);
+
+    connect(ui->rbRadialGradient, &QRadioButton::toggled, this,
+        &DlgSettingsViewColor::onRadioButtonRadialGradientToggled);
+
+    connect(ui->checkMidColor, &QCheckBox::toggled, this,
+        &DlgSettingsViewColor::onCheckMidColorToggled);
 }
 
 /**
@@ -79,6 +91,7 @@ void DlgSettingsViewColor::saveSettings()
     ui->backgroundColorMid->onSave();
     ui->radioButtonSimple->onSave();
     ui->radioButtonGradient->onSave();
+    ui->rbRadialGradient->onSave();
     ui->checkMidColor->onSave();
     ui->checkBoxPreselection->onSave();
     ui->checkBoxSelection->onSave();
@@ -97,6 +110,7 @@ void DlgSettingsViewColor::loadSettings()
     ui->backgroundColorMid->onRestore();
     ui->radioButtonSimple->onRestore();
     ui->radioButtonGradient->onRestore();
+    ui->rbRadialGradient->onRestore();
     ui->checkMidColor->onRestore();
     ui->checkBoxPreselection->onRestore();
     ui->checkBoxSelection->onRestore();
@@ -105,6 +119,13 @@ void DlgSettingsViewColor::loadSettings()
     ui->TreeEditColor->onRestore();
     ui->TreeActiveColor->onRestore();
     ui->SelectingGroupColor->onRestore();
+
+    if (ui->radioButtonSimple->isChecked())
+        onRadioButtonSimpleToggled(true);
+    else if(ui->radioButtonGradient->isChecked())
+        onRadioButtonGradientToggled(true);
+    else
+        onRadioButtonRadialGradientToggled(true);
 }
 
 /**
@@ -125,6 +146,49 @@ void DlgSettingsViewColor::onSwitchGradientColorsPressed()
     QColor tempColor = ui->backgroundColorFrom->color();
     ui->backgroundColorFrom->setColor(ui->backgroundColorTo->color());
     ui->backgroundColorTo->setColor(tempColor);
+}
+
+void DlgSettingsViewColor::onCheckMidColorToggled(bool val)
+{
+    ui->color2Label->setEnabled(val);
+    ui->backgroundColorMid->setEnabled(val);
+}
+
+void DlgSettingsViewColor::onRadioButtonSimpleToggled(bool val)
+{
+    setGradientColorVisibility(!val);
+}
+
+void DlgSettingsViewColor::onRadioButtonGradientToggled(bool val)
+{
+    setGradientColorVisibility(val);
+    ui->color1Label->setText(tr("Top:"));
+    ui->color2Label->setText(tr("Middle:"));
+    ui->color3Label->setText(tr("Bottom:"));
+}
+
+void DlgSettingsViewColor::onRadioButtonRadialGradientToggled(bool val)
+{
+    setGradientColorVisibility(val);
+    ui->color1Label->setText(tr("Central:"));
+    ui->color2Label->setText(tr("Midway:"));
+    ui->color3Label->setText(tr("End:"));
+}
+
+void DlgSettingsViewColor::setGradientColorVisibility(bool val)
+{
+    ui->SelectionColor_Background->setVisible(!val);
+    ui->color1Label->setVisible(val);
+    ui->backgroundColorFrom->setVisible(val);
+    ui->color2Label->setVisible(val);
+    ui->backgroundColorMid->setVisible(val);
+    ui->color3Label->setVisible(val);
+    ui->backgroundColorTo->setVisible(val);
+    ui->checkMidColor->setVisible(val);
+    ui->SwitchGradientColors->setVisible(val);
+
+    if (val)
+        onCheckMidColorToggled(ui->checkMidColor->isChecked());
 }
 
 #include "moc_DlgSettingsViewColor.cpp"

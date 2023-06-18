@@ -23,6 +23,7 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <boost/core/ignore_unused.hpp>
 # include <QContextMenuEvent>
 # include <QMenu>
 # include <QShortcut>
@@ -31,15 +32,6 @@
 # include <QPixmap>
 #endif
 
-#include "TaskSketcherElements.h"
-#include "ui_TaskSketcherElements.h"
-#include "EditDatumDialog.h"
-#include "ViewProviderSketch.h"
-
-#include <Mod/Sketcher/App/SketchObject.h>
-#include <Mod/Sketcher/App/GeometryFacade.h>
-#include <Mod/Sketcher/App/ExternalGeometryFacade.h>
-
 #include <Base/Tools.h>
 #include <App/Application.h>
 #include <App/Document.h>
@@ -47,13 +39,22 @@
 #include <App/MappedElement.h>
 #include <Gui/Application.h>
 #include <Gui/Document.h>
-#include <Gui/Selection.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/ViewProvider.h>
-#include <Gui/BitmapFactory.h>
-
 #include <Gui/Command.h>
 #include <Gui/MenuManager.h>
+#include <Gui/Notifications.h>
+#include <Gui/Selection.h>
+#include <Gui/ViewProvider.h>
+
+#include <Mod/Sketcher/App/ExternalGeometryFacade.h>
+#include <Mod/Sketcher/App/GeometryFacade.h>
+#include <Mod/Sketcher/App/SketchObject.h>
+
+
+#include "TaskSketcherElements.h"
+#include "ui_TaskSketcherElements.h"
+#include "ViewProviderSketch.h"
+#include "Utils.h"
 
 using namespace Sketcher;
 using namespace SketcherGui;

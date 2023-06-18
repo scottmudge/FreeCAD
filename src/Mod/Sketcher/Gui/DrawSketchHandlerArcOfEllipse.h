@@ -188,6 +188,7 @@ public:
         if (Mode==STATUS_SEEK_First){
             EditCurve[0] = onSketchPos;
             centerPoint = onSketchPos;
+            setAngleSnapping(true, centerPoint);
             Mode = STATUS_SEEK_Second;
         }
         else if(Mode==STATUS_SEEK_Second) {
@@ -204,6 +205,7 @@ public:
         else { // Fourth
             endPoint = onSketchPos;
 
+            setAngleSnapping(false);
             Mode = STATUS_Close;
         }
     }

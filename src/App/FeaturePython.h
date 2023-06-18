@@ -54,6 +54,7 @@ public:
     bool onBeforeChangeLabel(std::string &newLabel);
     void onChanged(const Property* prop);
     void onDocumentRestored();
+    void unsetupObject();
     std::string getViewProviderName();
     void setupObject() {}
     PyObject *getPyObject();
@@ -101,6 +102,7 @@ private:
     FC_PY_ELEMENT(onBeforeChangeLabel)\
     FC_PY_ELEMENT(onChanged)\
     FC_PY_ELEMENT(onDocumentRestored)\
+    FC_PY_ELEMENT(unsetupObject)\
     FC_PY_ELEMENT(getViewProviderName)\
     FC_PY_ELEMENT(getSubObject)\
     FC_PY_ELEMENT(getSubObjects)\
@@ -370,6 +372,10 @@ protected:
     void setupObject() override {
         FeatureT::setupObject();
         imp->setupObject();
+    }
+    void unsetupObject() override {
+        imp->unsetupObject();
+        FeatureT::unsetupObject();
     }
 
 public:

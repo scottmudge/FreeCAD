@@ -337,7 +337,7 @@ def getDefaultIcon():
 
 def buildCard(filename,method,arg=None):
 
-    """builds an html <li> element representing a file. 
+    """builds an html <li> element representing a file.
     method is a script + a keyword, for ex. url.py?key="""
 
     global tempfolder
@@ -503,7 +503,7 @@ def handle():
     # get FreeCAD version
 
     v = FreeCAD.Version()
-    VERSIONSTRING = TranslationTexts.T_VERSION + " " + v[0] + "." + v[1] + " " + TranslationTexts.T_BUILD + " " + v[2]
+    VERSIONSTRING = TranslationTexts.T_VERSION + " " + v[0] + "." + v[1] + "." + v[2] +" " + TranslationTexts.T_BUILD + " " + v[3]
     HTML = HTML.replace("VERSIONSTRING",VERSIONSTRING)
 
     # translate texts
@@ -658,7 +658,7 @@ def handle():
             iconbank[wb] = img
         UL_WORKBENCHES += '<li>'
         UL_WORKBENCHES += '<img src="file:///'+img.replace('\\','/')+'" alt="'+wn+'">&nbsp;'
-        UL_WORKBENCHES += '<a href="https://www.freecadweb.org/wiki/'+wn+'_Workbench">'+wn.replace("Reverse_Engineering","ReverseEng")+'</a>'
+        UL_WORKBENCHES += '<a href="https://www.freecad.org/wiki/'+wn+'_Workbench">'+wn.replace("Reverse_Engineering","ReverseEng")+'</a>'
         UL_WORKBENCHES += '</li>'
     UL_WORKBENCHES += '</ul>'
     HTML = HTML.replace("UL_WORKBENCHES", UL_WORKBENCHES)
@@ -698,6 +698,7 @@ def handle():
     BOXCOLOR  = gethexcolor(p.GetUnsigned("BoxColor",3722305023))
     TEXTCOLOR = gethexcolor(p.GetUnsigned("PageTextColor",255))
     BGTCOLOR = gethexcolor(p.GetUnsigned("BackgroundTextColor",4294703103))
+    OVERFLOW = "" if p.GetBool("ShowScrollBars",True) else "body::-webkit-scrollbar {display: none;}"
     SHADOW = "#888888"
     if QtGui.QColor(BASECOLOR).valueF() < 0.5: # dark page - we need to make darker shadows
         SHADOW = "#000000"
@@ -714,6 +715,7 @@ def handle():
     HTML = HTML.replace("SHADOW",SHADOW)
     HTML = HTML.replace("FONTFAMILY",FONTFAMILY)
     HTML = HTML.replace("FONTSIZE",str(FONTSIZE)+"px")
+    HTML = HTML.replace("OVERFLOW",OVERFLOW)
 
     # enable web access if permitted
 

@@ -456,6 +456,42 @@ struct View3DInventorViewer::Private
  *
  * \section overview Overview
  * \todo Overview and complements for the 3D Viewer
+ *
+ * \section trouble Troubleshooting
+ * When it's needed to capture OpenGL function calls then the utility apitrace
+ * can be very useful: https://github.com/apitrace/apitrace/blob/master/docs/USAGE.markdown
+ *
+ * To better locate the problematic code it's possible to add custom log messages.
+ * For the prerequisites check:
+ * https://github.com/apitrace/apitrace/blob/master/docs/USAGE.markdown#
+ * emitting-annotations-to-the-trace
+ * \code
+ * #include <GL/glext.h>
+ * #include <Inventor/C/glue/gl.h>
+ *
+ * void GLRender(SoGLRenderAction* glra)
+ * {
+ *     int context = glra->getCacheContext();
+ *     const cc_glglue * glue = cc_glglue_instance(context);
+ *
+ *     PFNGLPUSHDEBUGGROUPPROC glPushDebugGroup = (PFNGLPUSHDEBUGGROUPPROC)
+ *     cc_glglue_getprocaddress(glue, "glPushDebugGroup");
+ *     PFNGLDEBUGMESSAGEINSERTARBPROC glDebugMessageInsert = (PFNGLDEBUGMESSAGEINSERTARBPROC)
+ *     cc_glglue_getprocaddress(glue, "glDebugMessageInsert");
+ *     PFNGLPOPDEBUGGROUPPROC glPopDebugGroup = (PFNGLPOPDEBUGGROUPPROC)
+ *     cc_glglue_getprocaddress(glue, "glPopDebugGroup");
+ *
+ *     glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, __FUNCTION__);
+ * ...
+ *     glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_OTHER,
+ *                          0, GL_DEBUG_SEVERITY_MEDIUM, -1, "begin_blabla");
+ * ...
+ *     glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_OTHER,
+ *                          0, GL_DEBUG_SEVERITY_MEDIUM, -1, "end_blabla");
+ * ...
+ *     glPopDebugGroup();
+ * }
+ * \endcode
  */
 
 
@@ -640,9 +676,9 @@ void View3DInventorViewer::init()
     // Important note:
     // When creating a new GL render action we have to copy over the cache context id
     // because otherwise we may get strange rendering behaviour. For more details see
-    // http://forum.freecadweb.org/viewtopic.php?f=10&t=7486&start=120#p74398 and for
+    // http://forum.freecad.org/viewtopic.php?f=10&t=7486&start=120#p74398 and for
     // the fix and some details what happens behind the scene have a look at this
-    // http://forum.freecadweb.org/viewtopic.php?f=10&t=7486&p=74777#p74736
+    // http://forum.freecad.org/viewtopic.php?f=10&t=7486&p=74777#p74736
     uint32_t id = this->getSoRenderManager()->getGLRenderAction()->getCacheContext();
     this->getSoRenderManager()->setGLRenderAction(new SoBoxSelectionRenderAction);
     this->getSoRenderManager()->getGLRenderAction()->setCacheContext(id);
@@ -660,7 +696,7 @@ void View3DInventorViewer::init()
     setViewing(false);
 
     setBackgroundColor(QColor(25, 25, 25));
-    setGradientBackground(true);
+    setGradientBackground(Background::LinearGradient);
 
     // set some callback functions for user interaction
     addStartCallback(interactionStartCB);
@@ -709,7 +745,7 @@ View3DInventorViewer::~View3DInventorViewer()
     // It can happen that a document has several MDI views and when the about to be
     // closed 3D view is in edit mode the corresponding view provider must be restored
     // because otherwise it might be left in a broken state
-    // See https://forum.freecadweb.org/viewtopic.php?f=3&t=39720
+    // See https://forum.freecad.org/viewtopic.php?f=3&t=39720
     if (restoreEditingRoot) {
         resetEditingRoot(false);
     }
@@ -1877,16 +1913,40 @@ void View3DInventorViewer::handleEventCB(void* ud, SoEventCallback* n)
     SoGLWidgetElement::set(action->getState(), qobject_cast<QtGLWidget*>(that->getGLWidget()));
 }
 
-void View3DInventorViewer::setGradientBackground(bool on)
+void View3DInventorViewer::setGradientBackground(View3DInventorViewer::Background grad)
 {
-    int whichChild = on?0:-1;
+    int whichChild = 0;
+    switch (grad) {
+    case Background::NoGradient:
+        whichChild = -1;
+        break;
+    case Background::LinearGradient:
+        pcBackGround->setGradient(SoFCBackgroundGradient::LINEAR);
+        break;
+    case Background::RadialGradient:
+        pcBackGround->setGradient(SoFCBackgroundGradient::RADIAL);
+        break;
+    }
     if(pcBackGroundSwitch->whichChild.getValue() != whichChild)
         pcBackGroundSwitch->whichChild.setValue(whichChild);
 }
 
 bool View3DInventorViewer::hasGradientBackground() const
 {
-    return pcBackGroundSwitch->whichChild.getValue() == 0;
+    return getGradientBackground() != Background::NoGradient;
+}
+
+View3DInventorViewer::Background View3DInventorViewer::getGradientBackground() const
+{
+    if (pcBackGroundSwitch->whichChild.getValue() == -1) {
+        return Background::NoGradient;
+    }
+
+    if (pcBackGround->getGradient() == SoFCBackgroundGradient::LINEAR) {
+        return Background::LinearGradient;
+    }
+
+    return Background::RadialGradient;
 }
 
 void View3DInventorViewer::setGradientBackgroundColor(const SbColor& fromColor,
@@ -1928,7 +1988,7 @@ void View3DInventorViewer::setRenderCache(int mode)
         // transparency type.
         //
         // For more details see:
-        // https://forum.freecadweb.org/viewtopic.php?f=18&t=43305&start=10#p412537
+        // https://forum.freecad.org/viewtopic.php?f=18&t=43305&start=10#p412537
         coin_setenv("COIN_AUTO_CACHING", "0", TRUE);
 
         int setting = ViewParams::getRenderCache();
@@ -1981,7 +2041,7 @@ void View3DInventorViewer::setNaviCubeCorner(int c)
         naviCube->setCorner(static_cast<NaviCube::Corner>(c));
 }
 
-NaviCube* View3DInventorViewer::getNavigationCube() const
+NaviCube* View3DInventorViewer::getNaviCube() const
 {
     return naviCube;
 }
@@ -2711,15 +2771,15 @@ void View3DInventorViewer::imageFromFramebuffer(int width, int height, int sampl
     QtGLFramebufferObject fbo(width, height, fboFormat);
 
     const QColor col = backgroundColor();
-    bool on = hasGradientBackground();
+    auto grad = getGradientBackground();
 
     if (bgcolor.isValid()) {
         setBackgroundColor(bgcolor);
-        setGradientBackground(false);
+        setGradientBackground(Background::NoGradient);
     }
     renderToFramebuffer(&fbo);
     setBackgroundColor(col);
-    setGradientBackground(on);
+    setGradientBackground(grad);
     img = fbo.toImage();
 }
 
@@ -2784,6 +2844,7 @@ void View3DInventorViewer::renderFramebuffer()
     const SbViewportRegion vp = this->getSoRenderManager()->getViewportRegion();
     SbVec2s size = vp.getViewportSizePixels();
 
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
     glDisable(GL_LIGHTING);
     glViewport(0, 0, size[0], size[1]);
     glMatrixMode(GL_PROJECTION);
@@ -2817,8 +2878,7 @@ void View3DInventorViewer::renderFramebuffer()
     if (naviCubeEnabled)
         naviCube->drawNaviCube();
 
-    glEnable(GL_LIGHTING);
-    glEnable(GL_DEPTH_TEST);
+    glPopAttrib();
 }
 
 void View3DInventorViewer::renderGLImage()
@@ -2826,6 +2886,7 @@ void View3DInventorViewer::renderGLImage()
     const SbViewportRegion vp = this->getSoRenderManager()->getViewportRegion();
     SbVec2s size = vp.getViewportSizePixels();
 
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
     glDisable(GL_LIGHTING);
     glViewport(0, 0, size[0], size[1]);
     glMatrixMode(GL_PROJECTION);
@@ -2849,8 +2910,7 @@ void View3DInventorViewer::renderGLImage()
     if (naviCubeEnabled)
         naviCube->drawNaviCube();
 
-    glEnable(GL_LIGHTING);
-    glEnable(GL_DEPTH_TEST);
+    glPopAttrib();
 }
 
 void View3DInventorViewer::onGetBoundingBox(SoGetBoundingBoxAction *action)
@@ -2875,7 +2935,7 @@ void View3DInventorViewer::setRendererType(const std::string &type)
 
 // #define ENABLE_GL_DEPTH_RANGE
 // The calls of glDepthRange inside renderScene() causes problems with transparent objects
-// so that's why it is disabled now: http://forum.freecadweb.org/viewtopic.php?f=3&t=6037&hilit=transparency
+// so that's why it is disabled now: http://forum.freecad.org/viewtopic.php?f=3&t=6037&hilit=transparency
 
 // Documented in superclass. Overrides this method to be able to draw
 // the axis cross, if selected, and to keep a continuous animation
@@ -2894,10 +2954,11 @@ void View3DInventorViewer::renderScene()
     bool restoreGradient = false;
 
     QColor col;
+    auto grad = getGradientBackground();
     if(overrideBGColor) {
         col = App::Color(overrideBGColor).asValue<QColor>();
         if(hasGradientBackground()) {
-            setGradientBackground(false);
+            setGradientBackground(Background::NoGradient);
             restoreGradient = true;
         }
     } else
@@ -2929,6 +2990,7 @@ void View3DInventorViewer::renderScene()
     SoGLWidgetElement::set(state, qobject_cast<QtGLWidget*>(this->getGLWidget()));
     SoGLRenderActionElement::set(state, glra);
     SoGLVBOActivatedElement::set(state, this->vboEnabled);
+    drawSingleBackground(col);
     glra->apply(this->backgroundroot);
 
     navigation->updateAnimation();
@@ -3003,7 +3065,7 @@ void View3DInventorViewer::renderScene()
         naviCube->drawNaviCube();
 
     if(restoreGradient)
-        setGradientBackground(true);
+        setGradientBackground(grad);
 }
 
 void View3DInventorViewer::setSeekMode(SbBool on)
@@ -3024,15 +3086,29 @@ void View3DInventorViewer::setSeekMode(SbBool on)
                                 NavigationStyle::IDLE : NavigationStyle::INTERACT));
 }
 
-void View3DInventorViewer::printDimension()
-{
+SbVec3f View3DInventorViewer::getCenterPointOnFocalPlane() const {
+    SoCamera* cam = getSoRenderManager()->getCamera();
+    if (!cam)
+        return SbVec3f(0. ,0. ,0. );
+
+    SbVec3f direction;
+    cam->orientation.getValue().multVec(SbVec3f(0, 0, -1), direction);
+    return cam->position.getValue() + cam->focalDistance.getValue() * direction;
+}
+
+float View3DInventorViewer::getMaxDimension() const {
+    float fHeight = -1.0;
+    float fWidth = -1.0;
+    getDimensions(fHeight, fWidth);
+    return std::max(fHeight, fWidth);
+}
+
+void View3DInventorViewer::getDimensions(float& fHeight, float& fWidth) const {
     SoCamera* camera = getSoRenderManager()->getCamera();
     if (!camera) // no camera there
         return;
 
     float aspectRatio = getViewportRegion().getViewportAspectRatio();
-    float fHeight = -1.0;
-    float fWidth = -1.0;
 
     SoType type = camera->getTypeId();
     if (type.isDerivedFrom(SoOrthographicCamera::getClassTypeId())) {
@@ -3051,6 +3127,13 @@ void View3DInventorViewer::printDimension()
     else {
         fHeight *= aspectRatio;
     }
+}
+
+void View3DInventorViewer::printDimension()
+{
+    float fHeight = -1.0;
+    float fWidth = -1.0;
+    getDimensions(fHeight, fWidth);
 
     QString dim;
 
@@ -3234,7 +3317,7 @@ SbVec3f View3DInventorViewer::getPointOnFocalPlane(const SbVec2s& pnt) const
     return pt;
 }
 
-SbVec2s View3DInventorViewer::getPointOnScreen(const SbVec3f& pnt) const
+SbVec2s View3DInventorViewer::getPointOnViewport(const SbVec3f& pnt) const
 {
     const SbViewportRegion& vp = this->getSoRenderManager()->getViewportRegion();
     float fRatio = vp.getViewportAspectRatio();
@@ -3248,6 +3331,34 @@ SbVec2s View3DInventorViewer::getPointOnScreen(const SbVec3f& pnt) const
     auto y = short(std::roundf(pt[1] * sp[1]));
 
     return SbVec2s(x, y);
+}
+
+QPoint View3DInventorViewer::toQPoint(const SbVec2s& pnt) const
+{
+    const SbViewportRegion& vp = this->getSoRenderManager()->getViewportRegion();
+    const SbVec2s& vps = vp.getViewportSizePixels();
+    int xpos = pnt[0];
+    int ypos = vps[1] - pnt[1] - 1;
+
+    qreal dev_pix_ratio = devicePixelRatio();
+    xpos = int(std::roundf(xpos / dev_pix_ratio));
+    ypos = int(std::roundf(ypos / dev_pix_ratio));
+
+    return QPoint(xpos, ypos);
+}
+
+SbVec2s View3DInventorViewer::fromQPoint(const QPoint& pnt) const
+{
+    const SbViewportRegion& vp = this->getSoRenderManager()->getViewportRegion();
+    const SbVec2s& vps = vp.getViewportSizePixels();
+    int xpos = pnt.x();
+    int ypos = pnt.y();
+
+    qreal dev_pix_ratio = devicePixelRatio();
+    xpos = int(std::roundf(xpos * dev_pix_ratio));
+    ypos = int(std::roundf(ypos * dev_pix_ratio));
+
+    return SbVec2s(short(xpos), vps[1] - short(ypos) - 1);
 }
 
 void View3DInventorViewer::getNearPlane(SbVec3f& rcPt, SbVec3f& rcNormal) const
@@ -3514,7 +3625,7 @@ void View3DInventorViewer::moveCameraTo(const SbRotation& rot, const SbVec3f& po
     anim.setEndValue(steps);
 
     QEventLoop loop;
-    QObject::connect(&anim, SIGNAL(finished()), &loop, SLOT(quit()));
+    QObject::connect(&anim, &CameraAnimation::finished, &loop, &QEventLoop::quit);
     anim.start();
     loop.exec(QEventLoop::ExcludeUserInputEvents);
 
@@ -3682,7 +3793,7 @@ void View3DInventorViewer::animatedViewAll(const SbBox3f &box, int steps, int ms
     QEventLoop loop;
     QTimer timer;
     timer.setSingleShot(true);
-    QObject::connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
+    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
 
     Base::StateLocker guard(_pimpl->animating);
     for (int i=0; i<steps; i++) {
@@ -4628,6 +4739,39 @@ void View3DInventorViewer::drawArrow()
     glEnd();
 }
 
+void View3DInventorViewer::drawSingleBackground(const QColor& col)
+{
+    // Note: After changing the NaviCube code the content of an image plane may appear black.
+    // A workaround is this function.
+    // See also: https://github.com/FreeCAD/FreeCAD/pull/9356#issuecomment-1529521654
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(-1, 1, -1, 1, -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glPushAttrib(GL_ENABLE_BIT);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glBegin(GL_TRIANGLE_STRIP);
+    glColor3f(col.redF(), col.greenF(), col.blueF());
+    glVertex2f(-1, 1);
+    glColor3f(col.redF(), col.greenF(), col.blueF());
+    glVertex2f(-1, -1);
+    glColor3f(col.redF(), col.greenF(), col.blueF());
+    glVertex2f(1, 1);
+    glColor3f(col.redF(), col.greenF(), col.blueF());
+    glVertex2f(1, -1);
+    glEnd();
+    glPopAttrib();
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+}
+
 // ************************************************************************
 
 // Set cursor graphics according to mode.
@@ -4735,7 +4879,9 @@ SoPath* View3DInventorViewer::pickFilterCB(void* viewer, const SoPickedPoint* pp
         std::string e = vp->getElement(pp->getDetail());
         vp->getSelectionShape(e.c_str());
         static char buf[513];
-        snprintf(buf,512,"Hovered: %s (%f,%f,%f)"
+        snprintf(buf,
+                 sizeof(buf),
+                 "Hovered: %s (%f,%f,%f)"
                  ,e.c_str()
                  ,pp->getPoint()[0]
                  ,pp->getPoint()[1]
@@ -4759,22 +4905,28 @@ void View3DInventorViewer::removeEventCallback(SoType eventtype, SoEventCallback
 
 ViewProvider* View3DInventorViewer::getViewProviderByPath(SoPath* path) const
 {
-    if (!guiDocument)
+    if (!guiDocument) {
+        Base::Console().Warning("View3DInventorViewer::getViewProviderByPath: No document set\n");
         return nullptr;
+    }
     return guiDocument->getViewProviderByPathFromHead(path);
 }
 
 ViewProvider* View3DInventorViewer::getViewProviderByPathFromTail(SoPath* path) const
 {
-    if (!guiDocument)
+    if (!guiDocument) {
+        Base::Console().Warning("View3DInventorViewer::getViewProviderByPathFromTail: No document set\n");
         return nullptr;
+    }
     return guiDocument->getViewProviderByPathFromTail(path);
 }
 
 std::vector<ViewProvider*> View3DInventorViewer::getViewProvidersOfType(const Base::Type& typeId) const
 {
-    if (!guiDocument)
+    if (!guiDocument) {
+        Base::Console().Warning("View3DInventorViewer::getViewProvidersOfType: No document set\n");
         return {};
+    }
     return guiDocument->getViewProvidersOfType(typeId);
 }
 

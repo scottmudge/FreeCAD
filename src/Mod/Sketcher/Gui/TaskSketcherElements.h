@@ -61,6 +61,8 @@ protected Q_SLOTS:
     void deleteSelectedItems();
 };
 
+class ElementFilterList;
+
 class TaskSketcherElements : public Gui::TaskView::TaskBox, public Gui::SelectionObserver
 {
     Q_OBJECT

@@ -52,7 +52,7 @@ else:
 
 __title__  = "FreeCAD Roof"
 __author__ = "Yorik van Havre", "Jonathan Wiedemann"
-__url__    = "https://www.freecadweb.org"
+__url__    = "https://www.freecad.org"
 
 
 def adjust_list_len (lst, newLn, val):
@@ -897,11 +897,10 @@ class _ViewProviderRoof(ArchComponent.ViewProviderComponent):
         self.Object = vobj.Object
         return
 
-    def unsetEdit(self, vobj, mode):
-        FreeCADGui.Control.closeDialog()
-        return
-
     def setEdit(self, vobj, mode=0):
+        if mode != 0:
+            return None
+
         if vobj.Object.Base.Shape.Solids:
             taskd = ArchComponent.ComponentTaskPanel()
             taskd.obj = self.Object

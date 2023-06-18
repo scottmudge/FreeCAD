@@ -275,8 +275,13 @@ Does the same as getObjectInfo() but returns a list of dictionaries or None.
     </Methode>
     <Methode Name="getPointOnScreen">
       <Documentation>
+        <UserDocu>Same as getPointOnViewport()</UserDocu>
+      </Documentation>
+    </Methode>
+    <Methode Name="getPointOnViewport">
+      <Documentation>
         <UserDocu>
-getPointOnScreen(3D vector) -> pixel coords (as integer)
+getPointOnViewport(3D vector) -> pixel coords (as integer)
 
 Return the projected 3D point (in pixel coordinates).
         </UserDocu>

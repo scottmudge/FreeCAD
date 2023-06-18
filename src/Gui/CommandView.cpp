@@ -38,6 +38,7 @@
 # include <QFileInfo>
 # include <QFont>
 # include <QFontMetrics>
+# include <QImageReader>
 # include <QMessageBox>
 # include <QPainter>
 # include <QPointer>
@@ -76,6 +77,7 @@
 #include "DlgSettingsImageImp.h"
 #include "Document.h"
 #include "FileDialog.h"
+#include "ImageView.h"
 #include "Macro.h"
 #include "MainWindow.h"
 #include "MouseSelection.h"
@@ -128,7 +130,7 @@ StdOrthographicCamera::StdOrthographicCamera()
 void StdOrthographicCamera::activated(int iMsg)
 {
     if (iMsg == 1) {
-        View3DInventor* view = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
+        auto view = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
         SoCamera* cam = view->getViewer()->getSoRenderManager()->getCamera();
         if (!cam || cam->getTypeId() != SoOrthographicCamera::getClassTypeId())
 
@@ -136,9 +138,9 @@ void StdOrthographicCamera::activated(int iMsg)
     }
 }
 
-bool StdOrthographicCamera::isActive(void)
+bool StdOrthographicCamera::isActive()
 {
-    View3DInventor* view = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
+    auto view = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
     if (view) {
         // update the action group if needed
         bool check = _pcAction->isChecked();
@@ -153,7 +155,7 @@ bool StdOrthographicCamera::isActive(void)
     return false;
 }
 
-Action * StdOrthographicCamera::createAction(void)
+Action * StdOrthographicCamera::createAction()
 {
     Action *pcAction = Command::createAction();
     pcAction->setCheckable(true);
@@ -186,7 +188,7 @@ void StdPerspectiveCamera::activated(int iMsg)
     }
 }
 
-bool StdPerspectiveCamera::isActive(void)
+bool StdPerspectiveCamera::isActive()
 {
     View3DInventor* view = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
     if (view) {
@@ -204,7 +206,7 @@ bool StdPerspectiveCamera::isActive(void)
     return false;
 }
 
-Action * StdPerspectiveCamera::createAction(void)
+Action * StdPerspectiveCamera::createAction()
 {
     Action *pcAction = Command::createAction();
     pcAction->setCheckable(true);
@@ -237,7 +239,7 @@ void StdCmdViewSaveCamera::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
 
-    Gui::View3DInventor* view = qobject_cast<Gui::View3DInventor*>(Gui::getMainWindow()->activeWindow());
+    auto view = qobject_cast<Gui::View3DInventor*>(Gui::getMainWindow()->activeWindow());
     if (view) {
         view->getViewer()->saveHomePosition();
     }
@@ -263,7 +265,7 @@ void StdCmdViewRestoreCamera::activated(int iMsg)
 {
     Q_UNUSED(iMsg);
 
-    Gui::View3DInventor* view = qobject_cast<Gui::View3DInventor*>(Gui::getMainWindow()->activeWindow());
+    auto view = qobject_cast<Gui::View3DInventor*>(Gui::getMainWindow()->activeWindow());
     if (view) {
         view->getViewer()->resetToHomePosition();
     }
@@ -285,8 +287,8 @@ public:
 
 protected:
     void activated(int iMsg) override;
-    bool isActive(void) override;
-    Action * createAction(void) override;
+    bool isActive() override;
+    Action * createAction() override;
     void languageChange() override;
 
 private:
@@ -322,7 +324,7 @@ StdCmdFreezeViews::StdCmdFreezeViews()
     eType         = Alter3DView;
 }
 
-Action * StdCmdFreezeViews::createAction(void)
+Action * StdCmdFreezeViews::createAction()
 {
     ActionGroup* pcAction = new ActionGroup(this, getMainWindow());
     pcAction->setDropDownMenu(true);
@@ -540,7 +542,7 @@ void StdCmdFreezeViews::onRestoreViews()
     }
 }
 
-bool StdCmdFreezeViews::isActive(void)
+bool StdCmdFreezeViews::isActive()
 {
     View3DInventor* view = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
     if (view) {
@@ -592,7 +594,7 @@ protected:
     virtual void setOption(bool checked) {
         ViewParams::setShowClipPlane(checked);
     }
-    virtual bool getOption(void) const {
+    virtual bool getOption() const {
         return ViewParams::getShowClipPlane();
     }
 };
@@ -627,7 +629,7 @@ StdCmdToggleClipPlane::StdCmdToggleClipPlane()
     eType         = Alter3DView;
 }
 
-Action * StdCmdToggleClipPlane::createAction(void)
+Action * StdCmdToggleClipPlane::createAction()
 {
     Action *pcAction = (Action*)Command::createAction();
 #if 0
@@ -642,7 +644,7 @@ void StdCmdToggleClipPlane::activated(int iMsg)
     Dialog::Clipping::toggle();
 }
 
-bool StdCmdToggleClipPlane::isActive(void)
+bool StdCmdToggleClipPlane::isActive()
 {
 #if 0
     View3DInventor* view = qobject_cast<View3DInventor*>(getMainWindow()->activeWindow());
@@ -685,7 +687,7 @@ public:
     }
 
 protected: 
-    bool isActive(void);
+    bool isActive();
     virtual void activated(int iMsg);
 };
 
@@ -707,7 +709,7 @@ const char* StdCmdDrawStyleBase::className() const
     return "StdCmdDrawStyleBase";
 }
 
-bool StdCmdDrawStyleBase::isActive(void)
+bool StdCmdDrawStyleBase::isActive()
 {
     return Gui::Application::Instance->activeDocument();
 }
@@ -754,7 +756,7 @@ public:
     StdCmdDrawStyle();
     virtual const char* className() const {return "StdCmdDrawStyle";}
     void updateIcon(const MDIView *);
-    virtual Action * createAction(void) {
+    virtual Action * createAction() {
         Action * action = GroupCommand::createAction();
         action->setCheckable(false);
         return action;
@@ -830,7 +832,7 @@ void StdCmdToggleVisibility::activated(int iMsg)
     Selection().setVisible(SelectionSingleton::VisToggle);
 }
 
-bool StdCmdToggleVisibility::isActive(void)
+bool StdCmdToggleVisibility::isActive()
 {
     return (Gui::Selection().size() != 0);
 }
@@ -882,7 +884,7 @@ void StdCmdToggleGroupVisibility::activated(int iMsg)
     Gui::Selection().setVisible(SelectionSingleton::VisToggle,sels);
 }
 
-bool StdCmdToggleGroupVisibility::isActive(void)
+bool StdCmdToggleGroupVisibility::isActive()
 {
     return (Gui::Selection().size() != 0);
 }
@@ -941,7 +943,7 @@ void StdCmdToggleShowOnTop::activated(int iMsg)
         viewer->clearGroupOnTop(true);
 }
 
-bool StdCmdToggleShowOnTop::isActive(void)
+bool StdCmdToggleShowOnTop::isActive()
 {
     auto gdoc = Application::Instance->activeDocument();
     return gdoc && Base::freecad_dynamic_cast<View3DInventor>(gdoc->getActiveView());
@@ -989,7 +991,7 @@ void StdCmdToggleSelectability::activated(int iMsg)
     }
 }
 
-bool StdCmdToggleSelectability::isActive(void)
+bool StdCmdToggleSelectability::isActive()
 {
     return (Gui::Selection().size() != 0);
 }
@@ -1017,7 +1019,7 @@ void StdCmdShowSelection::activated(int iMsg)
     Selection().setVisible(SelectionSingleton::VisShow);
 }
 
-bool StdCmdShowSelection::isActive(void)
+bool StdCmdShowSelection::isActive()
 {
     return (Gui::Selection().size() != 0);
 }
@@ -1045,7 +1047,7 @@ void StdCmdHideSelection::activated(int iMsg)
     Selection().setVisible(SelectionSingleton::VisHide);
 }
 
-bool StdCmdHideSelection::isActive(void)
+bool StdCmdHideSelection::isActive()
 {
     return (Gui::Selection().size() != 0);
 }
@@ -1087,7 +1089,7 @@ void StdCmdSelectVisibleObjects::activated(int iMsg)
     rSel.setSelection(visible);
 }
 
-bool StdCmdSelectVisibleObjects::isActive(void)
+bool StdCmdSelectVisibleObjects::isActive()
 {
     return App::GetApplication().getActiveDocument();
 }
@@ -1128,7 +1130,7 @@ void StdCmdToggleObjects::activated(int iMsg)
     }
 }
 
-bool StdCmdToggleObjects::isActive(void)
+bool StdCmdToggleObjects::isActive()
 {
     return App::GetApplication().getActiveDocument();
 }
@@ -1165,7 +1167,7 @@ void StdCmdShowObjects::activated(int iMsg)
     }
 }
 
-bool StdCmdShowObjects::isActive(void)
+bool StdCmdShowObjects::isActive()
 {
     return App::GetApplication().getActiveDocument();
 }
@@ -1202,7 +1204,7 @@ void StdCmdHideObjects::activated(int iMsg)
     }
 }
 
-bool StdCmdHideObjects::isActive(void)
+bool StdCmdHideObjects::isActive()
 {
     return App::GetApplication().getActiveDocument();
 }
@@ -1246,7 +1248,7 @@ void StdCmdSelectDependents::activated(int iMsg)
     Selection().setSelection(objs);
 }
 
-bool StdCmdSelectDependents::isActive(void)
+bool StdCmdSelectDependents::isActive()
 {
     return Gui::Selection().hasSelection();
 }
@@ -1292,7 +1294,7 @@ void StdCmdSelectDependentsRecursive::activated(int iMsg)
     Selection().setSelection(objs);
 }
 
-bool StdCmdSelectDependentsRecursive::isActive(void)
+bool StdCmdSelectDependentsRecursive::isActive()
 {
     return Gui::Selection().hasSelection();
 }
@@ -1330,7 +1332,7 @@ void StdCmdSetAppearance::activated(int iMsg)
 #endif
 }
 
-bool StdCmdSetAppearance::isActive(void)
+bool StdCmdSetAppearance::isActive()
 {
 #if 0
     return Gui::Selection().size() != 0;
@@ -1657,7 +1659,7 @@ void StdCmdViewFitAll::activated(int iMsg)
     doCommand(Command::Gui,"Gui.SendMsgToActiveView(\"ViewFit\")");
 }
 
-bool StdCmdViewFitAll::isActive(void)
+bool StdCmdViewFitAll::isActive()
 {
     //return isViewOfType(Gui::View3DInventor::getClassTypeId());
     return getGuiApplication()->sendHasMsgToActiveView("ViewFit");
@@ -1688,7 +1690,7 @@ void StdCmdViewFitSelection::activated(int iMsg)
     doCommand(Command::Gui,"Gui.SendMsgToActiveView(\"ViewSelection\")");
 }
 
-bool StdCmdViewFitSelection::isActive(void)
+bool StdCmdViewFitSelection::isActive()
 {
   //return isViewOfType(Gui::View3DInventor::getClassTypeId());
   return getGuiApplication()->sendHasMsgToActiveView("ViewSelection");
@@ -1718,7 +1720,7 @@ void StdCmdViewSelectionExtend::activated(int iMsg)
     doCommand(Command::Gui,"Gui.SendMsgToActiveView(\"ViewSelectionExtend\")");
 }
 
-bool StdCmdViewSelectionExtend::isActive(void)
+bool StdCmdViewSelectionExtend::isActive()
 {
   return getGuiApplication()->sendHasMsgToActiveView("ViewSelectionExtend");
 }
@@ -1747,7 +1749,7 @@ void StdCmdRotationCenterSelection::activated(int iMsg)
     doCommand(Command::Gui,"Gui.SendMsgToActiveView(\"RotationCenterSelection\")");
 }
 
-bool StdCmdRotationCenterSelection::isActive(void)
+bool StdCmdRotationCenterSelection::isActive()
 {
   return getGuiApplication()->sendHasMsgToActiveView("RotationCenterSelection");
 }
@@ -1813,7 +1815,7 @@ void StdViewDock::activated(int iMsg)
     Q_UNUSED(iMsg);
 }
 
-bool StdViewDock::isActive(void)
+bool StdViewDock::isActive()
 {
     MDIView* view = getMainWindow()->activeWindow();
     return (qobject_cast<MDIView*>(view) ? true : false);
@@ -1842,7 +1844,7 @@ void StdViewUndock::activated(int iMsg)
     Q_UNUSED(iMsg);
 }
 
-bool StdViewUndock::isActive(void)
+bool StdViewUndock::isActive()
 {
     MDIView* view = getMainWindow()->activeWindow();
     return (qobject_cast<MDIView*>(view) ? true : false);
@@ -1904,7 +1906,7 @@ void StdViewFullscreen::activated(int iMsg)
     Q_UNUSED(iMsg);
 }
 
-bool StdViewFullscreen::isActive(void)
+bool StdViewFullscreen::isActive()
 {
     MDIView* view = getMainWindow()->activeWindow();
     return (qobject_cast<MDIView*>(view) ? true : false);
@@ -1931,7 +1933,7 @@ StdViewDockUndockFullscreen::StdViewDockUndockFullscreen()
     rcCmdMgr.addCommand(new StdViewFullscreen());
 }
 
-Action * StdViewDockUndockFullscreen::createAction(void)
+Action * StdViewDockUndockFullscreen::createAction()
 {
     ActionGroup* pcAction = new ActionGroup(this, getMainWindow());
     pcAction->setDropDownMenu(true);
@@ -2023,7 +2025,7 @@ void StdViewDockUndockFullscreen::activated(int iMsg)
 #endif
 }
 
-bool StdViewDockUndockFullscreen::isActive(void)
+bool StdViewDockUndockFullscreen::isActive()
 {
     MDIView* view = getMainWindow()->activeWindow();
     if (qobject_cast<MDIView*>(view)) {
@@ -2068,7 +2070,7 @@ void StdCmdViewVR::activated(int iMsg)
    doCommand(Command::Gui,"Gui.SendMsgToActiveView(\"ViewVR\")");
 }
 
-bool StdCmdViewVR::isActive(void)
+bool StdCmdViewVR::isActive()
 {
    return getGuiApplication()->sendHasMsgToActiveView("ViewVR");
 }
@@ -2275,11 +2277,56 @@ void StdViewScreenShot::activated(int iMsg)
     }
 }
 
-bool StdViewScreenShot::isActive(void)
+bool StdViewScreenShot::isActive()
 {
     return isViewOfType(Gui::View3DInventor::getClassTypeId());
 }
 
+//===========================================================================
+// Std_ViewLoadImage
+//===========================================================================
+DEF_STD_CMD(StdViewLoadImage)
+
+StdViewLoadImage::StdViewLoadImage()
+  : Command("Std_ViewLoadImage")
+{
+    sGroup      = "Standard-View";
+    sMenuText   = QT_TR_NOOP("Load image...");
+    sToolTipText= QT_TR_NOOP("Loads an image");
+    sWhatsThis  = "Std_ViewLoadImage";
+    sStatusTip  = QT_TR_NOOP("Loads an image");
+    sPixmap     = "image-open";
+    eType       = 0;
+}
+
+void StdViewLoadImage::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+
+    // add all supported QImage formats
+    QStringList mimeTypeFilters;
+    QList<QByteArray> supportedMimeTypes = QImageReader::supportedMimeTypes();
+    for (const auto& mimeTypeName : supportedMimeTypes) {
+        mimeTypeFilters.append(QString::fromLatin1(mimeTypeName));
+    }
+
+    // Reading an image
+    QFileDialog dialog(Gui::getMainWindow());
+    dialog.setWindowTitle(QObject::tr("Choose an image file to open"));
+    dialog.setMimeTypeFilters(mimeTypeFilters);
+    dialog.selectMimeTypeFilter(QString::fromLatin1("image/png"));
+    dialog.setDefaultSuffix(QString::fromLatin1("png"));
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    dialog.setOption(QFileDialog::DontUseNativeDialog);
+
+    if (dialog.exec()) {
+        QString fileName = dialog.selectedFiles().constFirst();
+        ImageView* view = new ImageView(Gui::getMainWindow());
+        view->loadFile(fileName);
+        view->resize(400, 300);
+        Gui::getMainWindow()->addWindow(view);
+    }
+}
 
 //===========================================================================
 // Std_ViewCreate
@@ -2305,7 +2352,7 @@ void StdCmdViewCreate::activated(int iMsg)
     getActiveGuiDocument()->getActiveView()->viewAll();
 }
 
-bool StdCmdViewCreate::isActive(void)
+bool StdCmdViewCreate::isActive()
 {
     return (getActiveGuiDocument()!=NULL);
 }
@@ -2340,7 +2387,7 @@ void StdCmdToggleNavigation::activated(int iMsg)
     }
 }
 
-bool StdCmdToggleNavigation::isActive(void)
+bool StdCmdToggleNavigation::isActive()
 {
     //#0001087: Inventor Navigation continues with released Mouse Button
     //This happens because 'Esc' is also used to close the task dialog.
@@ -2385,7 +2432,7 @@ public:
     const char* className() const
     { return "StdCmdAxisCross"; }
 
-    Action * createAction(void)
+    Action * createAction()
     {
         axisCross = new Gui::SoShapeScale;
         axisCross->ref();
@@ -2424,7 +2471,7 @@ protected:
         }
     }
 
-    bool isActive(void)
+    bool isActive()
     {
         Gui::View3DInventor* view = qobject_cast<View3DInventor*>(Gui::getMainWindow()->activeWindow());
         if (view) {
@@ -2476,7 +2523,7 @@ void StdCmdAxisCross::activated(int iMsg)
     }
 }
 
-bool StdCmdAxisCross::isActive(void)
+bool StdCmdAxisCross::isActive()
 {
     Gui::View3DInventor* view = qobject_cast<View3DInventor*>(Gui::getMainWindow()->activeWindow());
     if (view && view->getViewer()->hasAxisCross()) {
@@ -2517,7 +2564,7 @@ void StdCmdViewExample1::activated(int iMsg)
     doCommand(Command::Gui,"Gui.SendMsgToActiveView(\"Example1\")");
 }
 
-bool StdCmdViewExample1::isActive(void)
+bool StdCmdViewExample1::isActive()
 {
     return getGuiApplication()->sendHasMsgToActiveView("Example1");
 }
@@ -2545,7 +2592,7 @@ void StdCmdViewExample2::activated(int iMsg)
     doCommand(Command::Gui,"Gui.SendMsgToActiveView(\"Example2\")");
 }
 
-bool StdCmdViewExample2::isActive(void)
+bool StdCmdViewExample2::isActive()
 {
     return getGuiApplication()->sendHasMsgToActiveView("Example2");
 }
@@ -2573,7 +2620,7 @@ void StdCmdViewExample3::activated(int iMsg)
     doCommand(Command::Gui,"Gui.SendMsgToActiveView(\"Example3\")");
 }
 
-bool StdCmdViewExample3::isActive(void)
+bool StdCmdViewExample3::isActive()
 {
     return getGuiApplication()->sendHasMsgToActiveView("Example3");
 }
@@ -2602,7 +2649,7 @@ void StdCmdViewIvStereoOff::activated(int iMsg)
     doCommand(Command::Gui,"Gui.activeDocument().activeView().setStereoType(\"None\")");
 }
 
-bool StdCmdViewIvStereoOff::isActive(void)
+bool StdCmdViewIvStereoOff::isActive()
 {
     return getGuiApplication()->sendHasMsgToActiveView("SetStereoOff");
 }
@@ -2631,7 +2678,7 @@ void StdCmdViewIvStereoRedGreen::activated(int iMsg)
     doCommand(Command::Gui,"Gui.activeDocument().activeView().setStereoType(\"Anaglyph\")");
 }
 
-bool StdCmdViewIvStereoRedGreen::isActive(void)
+bool StdCmdViewIvStereoRedGreen::isActive()
 {
     return getGuiApplication()->sendHasMsgToActiveView("SetStereoRedGreen");
 }
@@ -2659,7 +2706,7 @@ void StdCmdViewIvStereoQuadBuff::activated(int iMsg)
     doCommand(Command::Gui,"Gui.activeDocument().activeView().setStereoType(\"QuadBuffer\")");
 }
 
-bool StdCmdViewIvStereoQuadBuff::isActive(void)
+bool StdCmdViewIvStereoQuadBuff::isActive()
 {
     return getGuiApplication()->sendHasMsgToActiveView("SetStereoQuadBuff");
 }
@@ -2687,7 +2734,7 @@ void StdCmdViewIvStereoInterleavedRows::activated(int iMsg)
     doCommand(Command::Gui,"Gui.activeDocument().activeView().setStereoType(\"InterleavedRows\")");
 }
 
-bool StdCmdViewIvStereoInterleavedRows::isActive(void)
+bool StdCmdViewIvStereoInterleavedRows::isActive()
 {
     return getGuiApplication()->sendHasMsgToActiveView("SetStereoInterleavedRows");
 }
@@ -2715,7 +2762,7 @@ void StdCmdViewIvStereoInterleavedColumns::activated(int iMsg)
     doCommand(Command::Gui,"Gui.activeDocument().activeView().setStereoType(\"InterleavedColumns\")");
 }
 
-bool StdCmdViewIvStereoInterleavedColumns::isActive(void)
+bool StdCmdViewIvStereoInterleavedColumns::isActive()
 {
     return getGuiApplication()->sendHasMsgToActiveView("SetStereoInterleavedColumns");
 }
@@ -2765,7 +2812,7 @@ void StdCmdViewIvIssueCamPos::activated(int iMsg)
     getGuiApplication()->macroManager()->addLine(MacroManager::Gui,Temp.c_str());
 }
 
-bool StdCmdViewIvIssueCamPos::isActive(void)
+bool StdCmdViewIvIssueCamPos::isActive()
 {
     return getGuiApplication()->sendHasMsgToActiveView("GetCamera");
 }
@@ -2799,7 +2846,7 @@ void StdViewZoomIn::activated(int iMsg)
     }
 }
 
-bool StdViewZoomIn::isActive(void)
+bool StdViewZoomIn::isActive()
 {
     return (qobject_cast<View3DInventor*>(getMainWindow()->activeWindow()));
 }
@@ -2832,7 +2879,7 @@ void StdViewZoomOut::activated(int iMsg)
     }
 }
 
-bool StdViewZoomOut::isActive(void)
+bool StdViewZoomOut::isActive()
 {
     return (qobject_cast<View3DInventor*>(getMainWindow()->activeWindow()));
 }
@@ -3304,7 +3351,7 @@ StdCmdTreeSelectAllInstances::StdCmdTreeSelectAllInstances()
     eType         = AlterSelection;
 }
 
-bool StdCmdTreeSelectAllInstances::isActive(void)
+bool StdCmdTreeSelectAllInstances::isActive()
 {
     SelectionObject sel;
     if (!Selection().getSingleSelection(sel))
@@ -3410,7 +3457,7 @@ void StdCmdMeasureDistance::activated(int iMsg)
      }
 }
 
-bool StdCmdMeasureDistance::isActive(void)
+bool StdCmdMeasureDistance::isActive()
 {
     App::Document* doc = App::GetApplication().getActiveDocument();
     if (!doc || doc->countObjectsOfType(App::GeoFeature::getClassTypeId()) == 0)
@@ -3484,7 +3531,7 @@ void StdCmdTextureMapping::activated(int iMsg)
     Gui::Control().showDialog(new Gui::Dialog::TaskTextureMapping);
 }
 
-bool StdCmdTextureMapping::isActive(void)
+bool StdCmdTextureMapping::isActive()
 {
     Gui::MDIView* view = getMainWindow()->activeWindow();
     return view && view->isDerivedFrom(Gui::View3DInventor::getClassTypeId())
@@ -3593,7 +3640,7 @@ StdCmdSelUp::StdCmdSelUp()
   eType         = NoTransaction | AlterSelection | NoHistory;
 }
 
-bool StdCmdSelUp::isActive(void)
+bool StdCmdSelUp::isActive()
 {
     return App::GetApplication().getActiveDocument();
 }
@@ -3605,7 +3652,7 @@ void StdCmdSelUp::activated(int iMsg)
         static_cast<SelUpAction*>(_pcAction)->popup(QCursor::pos());
 }
 
-Action * StdCmdSelUp::createAction(void)
+Action * StdCmdSelUp::createAction()
 {
     Action *pcAction;
     pcAction = new SelUpAction(this, getMainWindow());
@@ -3640,12 +3687,12 @@ void StdCmdSelBack::activated(int iMsg)
     Selection().selStackGoBack();
 }
 
-bool StdCmdSelBack::isActive(void)
+bool StdCmdSelBack::isActive()
 {
     return Selection().selStackBackSize()>0;
 }
 
-Action * StdCmdSelBack::createAction(void)
+Action * StdCmdSelBack::createAction()
 {
     Action *pcAction;
     pcAction = new SelStackAction(this, SelStackAction::Type::Backward, getMainWindow());
@@ -3680,12 +3727,12 @@ void StdCmdSelForward::activated(int iMsg)
     Selection().selStackGoForward();
 }
 
-bool StdCmdSelForward::isActive(void)
+bool StdCmdSelForward::isActive()
 {
   return !!Selection().selStackForwardSize();
 }
 
-Action * StdCmdSelForward::createAction(void)
+Action * StdCmdSelForward::createAction()
 {
     Action *pcAction;
     pcAction = new SelStackAction(this, SelStackAction::Type::Forward, getMainWindow());
@@ -3738,7 +3785,7 @@ void StdCmdPickGeometry::activated(int iMsg)
     menu.doPick(sels);
 }
 
-bool StdCmdPickGeometry::isActive(void)
+bool StdCmdPickGeometry::isActive()
 {
     auto view = Application::Instance->activeView();
     return view && view->isDerivedFrom(View3DInventor::getClassTypeId());
@@ -3763,7 +3810,7 @@ StdCmdItemMenu::StdCmdItemMenu()
   eType         = NoTransaction | AlterSelection | NoHistory;
 }
 
-bool StdCmdItemMenu::isActive(void)
+bool StdCmdItemMenu::isActive()
 {
     return App::GetApplication().getActiveDocument();
 }
@@ -3788,7 +3835,7 @@ void StdTree##_name::activated(int){ \
     TreeParams::setDocumentMode(_v);\
     if(_pcAction) _pcAction->setChecked(true,true);\
 }\
-Action * StdTree##_name::createAction(void) {\
+Action * StdTree##_name::createAction() {\
     Action *pcAction = Command::createAction();\
     pcAction->setCheckable(true);\
     pcAction->setIcon(QIcon());\
@@ -3864,7 +3911,7 @@ protected: \
     virtual void setOption(bool checked) {\
         TreeParams::set##_name(checked);\
     }\
-    virtual bool getOption(void) const {\
+    virtual bool getOption() const {\
         return TreeParams::get##_name();\
     }\
 };\
@@ -4091,7 +4138,7 @@ protected: \
     virtual void setOption(bool checked) {\
         ViewParams::set##_option(checked);\
     }\
-    virtual bool getOption(void) const {\
+    virtual bool getOption() const {\
         return ViewParams::get##_option();\
     }\
 };\
@@ -4603,7 +4650,7 @@ void StdCmdDockOverlayMouseTransparent::activated(int iMsg)
         _pcAction->setChecked(checked,true);
 }
 
-Action * StdCmdDockOverlayMouseTransparent::createAction(void) {
+Action * StdCmdDockOverlayMouseTransparent::createAction() {
     Action *pcAction = Command::createAction();
     pcAction->setCheckable(true);
     pcAction->setIcon(QIcon());
@@ -4675,14 +4722,14 @@ void StdCmdBindViewCamera::activated(int iMsg)
     Q_UNUSED(iMsg); 
 }
 
-bool StdCmdBindViewCamera::isActive(void)
+bool StdCmdBindViewCamera::isActive()
 {
     if(Base::freecad_dynamic_cast<View3DInventor>(Application::Instance->activeView()))
         return true;
     return false;
 }
 
-Action * StdCmdBindViewCamera::createAction(void)
+Action * StdCmdBindViewCamera::createAction()
 {
     Action *pcAction;
     pcAction = new ViewCameraBindingAction(this, getMainWindow());
@@ -4723,7 +4770,7 @@ void StdCmdCloseLinkedView::activated(int iMsg)
     }
 }
 
-bool StdCmdCloseLinkedView::isActive(void)
+bool StdCmdCloseLinkedView::isActive()
 {
   return App::GetApplication().getActiveDocument() != nullptr;
 }
@@ -4812,7 +4859,7 @@ bool StdRecallWorkingView::isActive()
 
 namespace Gui {
 
-void CreateViewStdCommands(void)
+void CreateViewStdCommands()
 {
     CommandManager &rcCmdMgr = Application::Instance->commandManager();
 
@@ -4839,6 +4886,7 @@ void CreateViewStdCommands(void)
 
     rcCmdMgr.addCommand(new StdCmdViewCreate());
     rcCmdMgr.addCommand(new StdViewScreenShot());
+    rcCmdMgr.addCommand(new StdViewLoadImage());
     rcCmdMgr.addCommand(new StdCmdSaveView());
     rcCmdMgr.addCommand(new StdMainFullscreen());
     rcCmdMgr.addCommand(new StdViewDockUndockFullscreen());

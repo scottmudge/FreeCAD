@@ -31,7 +31,6 @@
 
 #include <App/Application.h>
 #include <App/Document.h>
-#include <Base/Console.h>
 #include <Base/Reader.h>
 #include <Mod/TechDraw/App/DrawViewPy.h>  // generated from DrawViewPy.xml
 
@@ -216,13 +215,11 @@ void DrawView::handleXYLock()
 
 short DrawView::mustExecute() const
 {
-    short result = 0;
     if (!isRestoring()) {
-        result  =  (Scale.isTouched()  ||
-                    ScaleType.isTouched());
-    }
-    if ((bool) result) {
-        return result;
+        if (Scale.isTouched() ||
+            ScaleType.isTouched()) {
+            return true;
+        }
     }
     return App::DocumentObject::mustExecute();
 }
@@ -230,8 +227,7 @@ short DrawView::mustExecute() const
 ////you must override this in derived class
 QRectF DrawView::getRect() const
 {
-    QRectF result(0, 0,1, 1);
-    return result;
+    return QRectF(0, 0,1, 1);
 }
 
 //get the rectangle centered on the position
@@ -367,16 +363,15 @@ DrawViewClip* DrawView::getClipGroup()
 {
     std::vector<App::DocumentObject*> parent = getInList();
     App::DocumentObject* obj = nullptr;
-    DrawViewClip* result = nullptr;
     for (std::vector<App::DocumentObject*>::iterator it = parent.begin(); it != parent.end(); ++it) {
         if ((*it)->getTypeId().isDerivedFrom(DrawViewClip::getClassTypeId())) {
             obj = (*it);
-            result = dynamic_cast<DrawViewClip*>(obj);
-            break;
+            DrawViewClip* result = dynamic_cast<DrawViewClip*>(obj);
+            return result;
 
         }
     }
-    return result;
+    return nullptr;
 }
 
 double DrawView::autoScale() const
@@ -465,7 +460,6 @@ double DrawView::getScale() const
     }
     if (!(result > 0.0)) {
         result = 1.0;
-        Base::Console().Log("DrawView - %s - bad scale found (%.3f) using 1.0\n", getNameInDocument(), Scale.getValue());
     }
     return result;
 }
@@ -497,10 +491,6 @@ void DrawView::handleChangedPropertyType(Base::XMLReader &reader, const char * T
             } else {
                 Scale.setValue(1.0);
             }
-        } else {
-            // has Scale prop that isn't Float!
-            Base::Console().Log("DrawPage::Restore - old Document Scale is Not Float!\n");
-            // no idea
         }
     }
     else if (prop->isDerivedFrom(App::PropertyLinkList::getClassTypeId())
@@ -585,24 +575,18 @@ void DrawView::setScaleAttribute()
 
 int DrawView::prefScaleType()
 {
-    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
-          .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/General");
-    int result = hGrp->GetInt("DefaultScaleType", 0);
-    return result;
+    return Preferences::getPreferenceGroup("General")->GetInt("DefaultScaleType", 0);
 }
 
 double DrawView::prefScale()
 {
-    Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetUserParameter()
-          .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/TechDraw/General");
-    double result = hGrp->GetFloat("DefaultViewScale", 1.0);
     if (ScaleType.isValue("Page")) {
         auto page = findParentPage();
         if (page) {
-            result = page->Scale.getValue();
+            return page->Scale.getValue();
         }
     }
-    return result;
+    return Preferences::getPreferenceGroup("General")->GetFloat("DefaultViewScale", 1.0);
 }
 
 void DrawView::requestPaint()

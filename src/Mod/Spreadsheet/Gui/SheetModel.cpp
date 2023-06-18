@@ -23,8 +23,8 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
-# include <QFont>
-# include <QLocale>
+#include <QFont>
+#include <QLocale>
 #endif
 
 #include <App/AutoTransaction.h>
@@ -35,6 +35,7 @@
 #include <Gui/Application.h>
 #include <Gui/Command.h>
 #include <Mod/Spreadsheet/App/Sheet.h>
+#include <Mod/Spreadsheet/App/SheetParams.h>
 #include <Mod/Spreadsheet/App/Cell.h>
 #include <Mod/Spreadsheet/App/Utils.h>
 
@@ -46,9 +47,7 @@ using namespace Spreadsheet;
 using namespace App;
 namespace bp = boost::placeholders;
 
-SheetModel::SheetModel(Sheet *_sheet, QObject *parent)
-    : QAbstractTableModel(parent)
-    , sheet(_sheet)
+SheetModel::SheetModel(Sheet* _sheet, QObject* parent) : QAbstractTableModel(parent), sheet(_sheet)
 {
     cellUpdatedConnection = sheet->cellUpdated.connect(bind(&SheetModel::cellUpdated, this, bp::_1));
     rangeUpdatedConnection = sheet->rangeUpdated.connect(bind(&SheetModel::rangeUpdated, this, bp::_1));
@@ -57,10 +56,9 @@ SheetModel::SheetModel(Sheet *_sheet, QObject *parent)
         endResetModel();
     });
 
-    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Spreadsheet");
-    aliasBgColor = QColor(Base::Tools::fromStdString(hGrp->GetASCII("AliasedCellBackgroundColor", "#feff9e")));
-    lockedAliasColor = QColor(Base::Tools::fromStdString(hGrp->GetASCII("LockedAliasedCellColor", "#9effff")));
-    setForegroundColor(QColor(Base::Tools::fromStdString(hGrp->GetASCII("TextColor", "#000000"))));
+    aliasBgColor = QColor(Base::Tools::fromStdString(SheetParams::getAliasedCellBackgroundColor()));
+    lockedAliasColor = QColor(Base::Tools::fromStdString(SheetParams::getLockedAliasedCellColor()));
+    setForegroundColor(QColor(Base::Tools::fromStdString(SheetParams::getTextColor())));
 }
 
 SheetModel::~SheetModel()
@@ -92,10 +90,9 @@ QColor SheetModel::getForeground(const Spreadsheet::Cell *cell, int number) cons
 void SheetModel::setForegroundColor(const QColor &c)
 {
     textFgColor = c;
-    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Spreadsheet");
-    std::string color = hGrp->GetASCII("PositiveNumberColor", "");
+    std::string color = SheetParams::getPositiveNumberColor();
     positiveFgColor = color.empty() ? textFgColor : QColor(Base::Tools::fromStdString(color));
-    color = hGrp->GetASCII("NegativeNumberColor", "");
+    color = SheetParams::getNegativeNumberColor();
     negativeFgColor = color.empty() ? textFgColor: QColor(Base::Tools::fromStdString(color));
 }
 
@@ -109,25 +106,41 @@ void SheetModel::setAliasForegroundColor(const QColor &c)
     aliasFgColor = c;
 }
 
-int SheetModel::rowCount(const QModelIndex &parent) const
+int SheetModel::rowCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
     return 16384;
 }
 
-int SheetModel::columnCount(const QModelIndex &parent) const
+int SheetModel::columnCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
     return 26 * 26 + 26;
 }
 
-
-QVariant SheetModel::data(const QModelIndex &index, int role) const
+namespace
 {
-    static const Cell * emptyCell = new Cell(CellAddress(0, 0), nullptr);
+QVariant formatCellDisplay(QString value, const Cell* cell)
+{
+    std::string alias;
+    if (cell->getAlias(alias) && SheetParams::getshowAliasName()) {
+        QString formatStr = QString::fromStdString(SheetParams::getDisplayAliasFormatString());
+        if (formatStr.contains(QStringLiteral("%V")) || formatStr.contains(QStringLiteral("%A"))) {
+            formatStr.replace(QStringLiteral("%A"), QString::fromStdString(alias));
+            formatStr.replace(QStringLiteral("%V"), value);
+            return QVariant(formatStr);
+        }
+    }
+    return QVariant(value);
+}
+}// namespace
+
+QVariant SheetModel::data(const QModelIndex& index, int role) const
+{
+    static const Cell* emptyCell = new Cell(CellAddress(0, 0), nullptr);
     int row = index.row();
     int col = index.column();
-    const Cell * cell = sheet->getCell(CellAddress(row, col));
+    const Cell* cell = sheet->getCell(CellAddress(row, col));
 
     if (!cell)
         cell = emptyCell;
@@ -150,7 +163,8 @@ QVariant SheetModel::data(const QModelIndex &index, int role) const
         }
         if (provides.size() > 0) {
             v += QString::fromUtf8("Used by:");
-            for (std::set<std::string>::const_iterator i = provides.begin(); i != provides.end(); ++i)
+            for (std::set<std::string>::const_iterator i = provides.begin(); i != provides.end();
+                 ++i)
                 v += QString::fromUtf8("\n\t") + Tools::fromStdString(*i);
             v += QString::fromUtf8("\n");
         }
@@ -166,26 +180,27 @@ QVariant SheetModel::data(const QModelIndex &index, int role) const
 
     if (cell->hasException()) {
         switch (role) {
-        case Qt::ToolTipRole: {
-            QString txt(Base::Tools::fromStdString(cell->getException()).toHtmlEscaped());
-            return QVariant(QStringLiteral("<pre>%1</pre>").arg(txt));
-        }
-        case Qt::DisplayRole: {
+            case Qt::ToolTipRole: {
+                QString txt(Base::Tools::fromStdString(cell->getException()).toHtmlEscaped());
+                return QVariant(QStringLiteral("<pre>%1</pre>").arg(txt));
+            }
+            case Qt::DisplayRole: {
 #ifdef DEBUG_DEPS
-            return QVariant::fromValue(QString::fromUtf8("#ERR: %1").arg(Tools::fromStdString(cell->getException())));
+                return QVariant::fromValue(
+                    QString::fromUtf8("#ERR: %1").arg(Tools::fromStdString(cell->getException())));
 #else
-            std::string str;
-            if(cell->getStringContent(str))
-                return QVariant::fromValue(QString::fromUtf8(str.c_str()));
-            return QVariant::fromValue(QString::fromUtf8("#ERR"));
+                std::string str;
+                if (cell->getStringContent(str))
+                    return QVariant::fromValue(QString::fromUtf8(str.c_str()));
+                return QVariant::fromValue(QString::fromUtf8("#ERR"));
 #endif
-        }
-        case Qt::ForegroundRole:
-            return QVariant::fromValue(QColor(255.0, 0, 0));
-        case Qt::TextAlignmentRole:
-            return QVariant(Qt::AlignVCenter | Qt::AlignLeft);
-        default:
-            break;
+            }
+            case Qt::ForegroundRole:
+                return QVariant::fromValue(QColor(255.0, 0, 0));
+            case Qt::TextAlignmentRole:
+                return QVariant(Qt::AlignVCenter | Qt::AlignLeft);
+            default:
+                break;
         }
     }
 
@@ -204,7 +219,7 @@ QVariant SheetModel::data(const QModelIndex &index, int role) const
 
     // Get display value as computed property
     std::string address = CellAddress(row, col).toString();
-    Property * prop = sheet->getPropertyByName(address.c_str());
+    Property* prop = sheet->getPropertyByName(address.c_str());
 
     if (role == Qt::BackgroundRole) {
         Color color;
@@ -252,125 +267,130 @@ QVariant SheetModel::data(const QModelIndex &index, int role) const
     }
 
     auto dirtyCells = sheet->getCells()->getDirty();
-    auto dirty = (dirtyCells.find(CellAddress(row,col)) != dirtyCells.end());
+    auto dirty = (dirtyCells.find(CellAddress(row, col)) != dirtyCells.end());
 
     if (!prop || dirty) {
         switch (role) {
-        case  Qt::ForegroundRole: {
-            return QColor(0, 0, 255.0); // TODO: Remove this hardcoded color, replace with preference
-        }
-        case Qt::TextAlignmentRole: {
-            qtAlignment = Qt::AlignHCenter | Qt::AlignVCenter;
-            return QVariant::fromValue(qtAlignment);
-        }
-        case Qt::DisplayRole:
-            if(cell->getExpression()) {
-                std::string str;
-                if (cell->getStringContent(str))
-                    if (!str.empty() && str[0] == '=')
-                        // If this is a real computed value, indicate that a recompute is
-                        // needed before we can display it
-                        return QVariant(QStringLiteral("#PENDING"));
+            case  Qt::ForegroundRole: {
+                return QColor(0, 0, 255.0); // TODO: Remove this hardcoded color, replace with preference
+            }
+            case Qt::TextAlignmentRole: {
+                qtAlignment = Qt::AlignHCenter | Qt::AlignVCenter;
+                return QVariant::fromValue(qtAlignment);
+            }
+            case Qt::DisplayRole:
+                if(cell->getExpression()) {
+                    std::string str;
+                    if (cell->getStringContent(str)) {
+                        if (!str.empty() && str[0] == '=')
+                            // If this is a real computed value, indicate that a recompute is
+                            // needed before we can display it
+                            return QVariant(QStringLiteral("#PENDING"));
+                        else
+                            // If it's just a simple value, display the new value, but still
+                            // format it as a pending value to indicate to the user that
+                            // a recompute is needed
+                            return QVariant(QString::fromUtf8(str.c_str()));
+                    }
                     else
-                        // If it's just a simple value, display the new value, but still
-                        // format it as a pending value to indicate to the user that
-                        // a recompute is needed
-                        return QVariant(QString::fromUtf8(str.c_str()));
+                        return QVariant();
+                }
                 else
                     return QVariant();
-            } 
-            else
+            default:
                 return QVariant();
-        default:
-            return QVariant();
         }
-    } else if (prop->isDerivedFrom(App::PropertyString::getClassTypeId())) {
+    }
+    else if (prop->isDerivedFrom(App::PropertyString::getClassTypeId())) {
         /* String */
-        const App::PropertyString * stringProp = static_cast<const App::PropertyString*>(prop);
+        const App::PropertyString* stringProp = static_cast<const App::PropertyString*>(prop);
 
         switch (role) {
-        case Qt::ForegroundRole:
-            return getForeground(cell);
-        case Qt::DisplayRole:
-            return QVariant(QString::fromUtf8(stringProp->getValue()));
-        case Qt::TextAlignmentRole: {
-            if (alignment & Cell::ALIGNMENT_HIMPLIED) {
-                qtAlignment &= ~(Qt::AlignLeft | Qt::AlignHCenter | Qt::AlignRight);
-                qtAlignment |= Qt::AlignLeft;
+            case Qt::ForegroundRole:
+                return getForeground(cell);
+            case Qt::TextAlignmentRole: {
+                if (alignment & Cell::ALIGNMENT_HIMPLIED) {
+                    qtAlignment &= ~(Qt::AlignLeft | Qt::AlignHCenter | Qt::AlignRight);
+                    qtAlignment |= Qt::AlignLeft;
+                }
+                if (alignment & Cell::ALIGNMENT_VIMPLIED) {
+                    qtAlignment &= ~(Qt::AlignTop | Qt::AlignVCenter | Qt::AlignBottom);
+                    qtAlignment |= Qt::AlignVCenter;
+                }
+                return QVariant::fromValue(qtAlignment);
             }
-            if (alignment & Cell::ALIGNMENT_VIMPLIED) {
-                qtAlignment &= ~(Qt::AlignTop | Qt::AlignVCenter | Qt::AlignBottom);
-                qtAlignment |= Qt::AlignVCenter;
+            case Qt::DisplayRole: {
+                QString v = QString::fromUtf8(stringProp->getValue());
+                return formatCellDisplay(v, cell);
             }
-            return QVariant::fromValue(qtAlignment);
-        }
-        default:
-            return QVariant();
+            default:
+                return QVariant();
         }
     }
     else if (prop->isDerivedFrom(App::PropertyQuantity::getClassTypeId())) {
         /* Number */
-        const App::PropertyQuantity * floatProp = static_cast<const App::PropertyQuantity*>(prop);
+        const App::PropertyQuantity* floatProp = static_cast<const App::PropertyQuantity*>(prop);
 
         switch (role) {
-        case  Qt::ForegroundRole: {
-            const Base::Unit & computedUnit = floatProp->getUnit();
-            DisplayUnit displayUnit;
-            if (cell->getDisplayUnit(displayUnit) &&
-                    !computedUnit.isEmpty() && computedUnit != displayUnit.unit) {
-                return QVariant::fromValue(QColor(255.0, 0, 0));
+            case  Qt::ForegroundRole: {
+                const Base::Unit & computedUnit = floatProp->getUnit();
+                DisplayUnit displayUnit;
+                if (cell->getDisplayUnit(displayUnit) &&
+                        !computedUnit.isEmpty() && computedUnit != displayUnit.unit) {
+                    return QVariant::fromValue(QColor(255.0, 0, 0));
+                }
+                return getForeground(cell, floatProp->getValue() < 0 ? -1 : 1);
             }
-            return getForeground(cell, floatProp->getValue() < 0 ? -1 : 1);
-        }
-        case Qt::TextAlignmentRole: {
-            if (alignment & Cell::ALIGNMENT_HIMPLIED) {
-                qtAlignment &= ~(Qt::AlignLeft | Qt::AlignHCenter | Qt::AlignRight);
-                qtAlignment |= Qt::AlignRight;
+            case Qt::TextAlignmentRole: {
+                if (alignment & Cell::ALIGNMENT_HIMPLIED) {
+                    qtAlignment &= ~(Qt::AlignLeft | Qt::AlignHCenter | Qt::AlignRight);
+                    qtAlignment |= Qt::AlignRight;
+                }
+                if (alignment & Cell::ALIGNMENT_VIMPLIED) {
+                    qtAlignment &= ~(Qt::AlignTop | Qt::AlignVCenter | Qt::AlignBottom);
+                    qtAlignment |= Qt::AlignVCenter;
+                }
+                return QVariant::fromValue(qtAlignment);
             }
-            if (alignment & Cell::ALIGNMENT_VIMPLIED) {
-                qtAlignment &= ~(Qt::AlignTop | Qt::AlignVCenter | Qt::AlignBottom);
-                qtAlignment |= Qt::AlignVCenter;
-            }
-            return QVariant::fromValue(qtAlignment);
-        }
-        case Qt::DisplayRole: {
-            QString v;
-            const Base::Unit & computedUnit = floatProp->getUnit();
-            DisplayUnit displayUnit;
+            case Qt::DisplayRole: {
+                QString v;
+                const Base::Unit& computedUnit = floatProp->getUnit();
+                DisplayUnit displayUnit;
 
-            // Display locale specific decimal separator (#0003875,#0003876)
-            if (cell->getDisplayUnit(displayUnit)) {
-                if (computedUnit.isEmpty() || computedUnit == displayUnit.unit) {
-                    QString number = QLocale().toString(floatProp->getValue() / displayUnit.scaler,'f',Base::UnitsApi::getDecimals());
-                    //QString number = QString::number(floatProp->getValue() / displayUnit.scaler);
-                    v = number + Base::Tools::fromStdString(" " + displayUnit.stringRep);
+                // Display locale specific decimal separator (#0003875,#0003876)
+                if (cell->getDisplayUnit(displayUnit)) {
+                    if (computedUnit.isEmpty() || computedUnit == displayUnit.unit) {
+                        QString number =
+                            QLocale().toString(floatProp->getValue() / displayUnit.scaler, 'f',
+                                               Base::UnitsApi::getDecimals());
+                        //QString number = QString::number(floatProp->getValue() / displayUnit.scaler);
+                        v = number + Base::Tools::fromStdString(" " + displayUnit.stringRep);
+                    }
+                    else {
+                        v = QString::fromUtf8("#ERR: display unit mismatch");
+                        return QVariant(v);
+                    }
                 }
                 else {
-                    v = QString::fromUtf8("#ERR: display unit mismatch");
+
+                    // When displaying a quantity then use the globally set scheme
+                    // See: https://forum.freecad.org/viewtopic.php?f=3&t=50078
+                    Base::Quantity value = floatProp->getQuantityValue();
+                    v = value.getUserString();
                 }
+                return formatCellDisplay(v, cell);
             }
-            else {
-
-                // When displaying a quantity then use the globally set scheme
-                // See: https://forum.freecadweb.org/viewtopic.php?f=3&t=50078
-                Base::Quantity value = floatProp->getQuantityValue();
-                v = value.getUserString();
-            }
-
-            return QVariant(v);
-        }
-        default:
-            return QVariant();
+            default:
+                return QVariant();
         }
     }
     else if (prop->isDerivedFrom(App::PropertyFloat::getClassTypeId())
-                || prop->isDerivedFrom(App::PropertyInteger::getClassTypeId()))
-    {
+             || prop->isDerivedFrom(App::PropertyInteger::getClassTypeId())) {
         /* Number */
         double d;
         long l;
         bool isInteger = false;
-        if(prop->isDerivedFrom(App::PropertyFloat::getClassTypeId()))
+        if (prop->isDerivedFrom(App::PropertyFloat::getClassTypeId()))
             d = static_cast<const App::PropertyFloat*>(prop)->getValue();
         else {
             isInteger = true;
@@ -379,78 +399,85 @@ QVariant SheetModel::data(const QModelIndex &index, int role) const
         }
 
         switch (role) {
-        case  Qt::ForegroundRole:
-            return getForeground(cell, d < 0 ? -1 : 1);
-        case Qt::TextAlignmentRole: {
-            if (alignment & Cell::ALIGNMENT_HIMPLIED) {
-                qtAlignment &= ~(Qt::AlignLeft | Qt::AlignHCenter | Qt::AlignRight);
-                qtAlignment |= Qt::AlignRight;
+            case  Qt::ForegroundRole:
+                return getForeground(cell, d < 0 ? -1 : 1);
+            case Qt::TextAlignmentRole: {
+                if (alignment & Cell::ALIGNMENT_HIMPLIED) {
+                    qtAlignment &= ~(Qt::AlignLeft | Qt::AlignHCenter | Qt::AlignRight);
+                    qtAlignment |= Qt::AlignRight;
+                }
+                if (alignment & Cell::ALIGNMENT_VIMPLIED) {
+                    qtAlignment &= ~(Qt::AlignTop | Qt::AlignVCenter | Qt::AlignBottom);
+                    qtAlignment |= Qt::AlignVCenter;
+                }
+                return QVariant::fromValue(qtAlignment);
             }
-            if (alignment & Cell::ALIGNMENT_VIMPLIED) {
-                qtAlignment &= ~(Qt::AlignTop | Qt::AlignVCenter | Qt::AlignBottom);
-                qtAlignment |= Qt::AlignVCenter;
-            }
-            return QVariant::fromValue(qtAlignment);
-        }
-        case Qt::DisplayRole: {
-            QString v;
-            DisplayUnit displayUnit;
+            case Qt::DisplayRole: {
+                QString v;
+                DisplayUnit displayUnit;
 
-            // Display locale specific decimal separator (#0003875,#0003876)
-            if (cell->getDisplayUnit(displayUnit)) {
-                QString number = QLocale().toString(d / displayUnit.scaler,'f',Base::UnitsApi::getDecimals());
-                //QString number = QString::number(d / displayUnit.scaler);
-                v = number + Base::Tools::fromStdString(" " + displayUnit.stringRep);
+                // Display locale specific decimal separator (#0003875,#0003876)
+                if (cell->getDisplayUnit(displayUnit)) {
+                    QString number = QLocale().toString(d / displayUnit.scaler, 'f',
+                                                        Base::UnitsApi::getDecimals());
+                    //QString number = QString::number(d / displayUnit.scaler);
+                    v = number + Base::Tools::fromStdString(" " + displayUnit.stringRep);
+                }
+                else if (!isInteger) {
+                    v = QLocale::system().toString(d, 'f', Base::UnitsApi::getDecimals());
+                    //v = QString::number(d);
+                }
+                else
+                    v = QString::number(l);
+                return formatCellDisplay(v, cell);
             }
-            else if (!isInteger) {
-                v = QLocale::system().toString(d,'f',Base::UnitsApi::getDecimals());
-                //v = QString::number(d);
-            } else
-                v = QString::number(l);
-            return QVariant(v);
-        }
-        default:
-            return QVariant();
+            default:
+                return QVariant();
         }
     }
     else {
         switch (role) {
-        case  Qt::ForegroundRole:
-            return getForeground(cell);
-        case Qt::TextAlignmentRole: {
-            if (alignment & Cell::ALIGNMENT_HIMPLIED) {
-                qtAlignment &= ~(Qt::AlignLeft | Qt::AlignHCenter | Qt::AlignRight);
-                qtAlignment |= Qt::AlignHCenter;
+            case  Qt::ForegroundRole:
+                return getForeground(cell);
+            case Qt::TextAlignmentRole: {
+                if (alignment & Cell::ALIGNMENT_HIMPLIED) {
+                    qtAlignment &= ~(Qt::AlignLeft | Qt::AlignHCenter | Qt::AlignRight);
+                    qtAlignment |= Qt::AlignHCenter;
+                }
+                if (alignment & Cell::ALIGNMENT_VIMPLIED) {
+                    qtAlignment &= ~(Qt::AlignTop | Qt::AlignVCenter | Qt::AlignBottom);
+                    qtAlignment |= Qt::AlignVCenter;
+                }
+                return QVariant::fromValue(qtAlignment);
             }
-            if (alignment & Cell::ALIGNMENT_VIMPLIED) {
-                qtAlignment &= ~(Qt::AlignTop | Qt::AlignVCenter | Qt::AlignBottom);
-                qtAlignment |= Qt::AlignVCenter;
+            case Qt::DisplayRole: {
+                Base::PyGILStateLocker lock;
+                std::string value;
+                try {
+                    if(cell->getEditMode())
+                        return cell->getDisplayData(true);
+                    PropertyString tmp;
+                    tmp.setPyObject(Py::asObject(prop->getPyObject()).ptr());
+                    value = tmp.getValue();
+                    QString v = QString::fromUtf8(value.c_str());
+                    return formatCellDisplay(v, cell);
+                }
+                catch (Py::Exception&) {
+                    Base::PyException e;
+                    value = "#ERR: ";
+                    value += e.what();
+                }
+                catch (Base::Exception& e) {
+                    value = "#ERR: ";
+                    value += e.what();
+                }
+                catch (...) {
+                    value = "#ERR: unknown exception";
+                }
+                return QVariant(QString::fromUtf8(value.c_str()));
             }
-            return QVariant::fromValue(qtAlignment);
-        }
-        case Qt::DisplayRole: {
-            Base::PyGILStateLocker lock;
-            std::string value;
-            try {
-                if(cell->getEditMode())
-                    return cell->getDisplayData(true);
-                PropertyString tmp;
-                tmp.setPyObject(Py::asObject(prop->getPyObject()).ptr());
-                value = tmp.getValue();
-            } catch (Py::Exception &) {
-                Base::PyException e;
-                value = "#ERR: ";
-                value += e.what();
-            } catch (Base::Exception &e) {
-                value = "#ERR: ";
-                value += e.what();
-            } catch (...) {
-                value = "#ERR: unknown exception";
-            }
-            return QVariant(QString::fromUtf8(value.c_str()));
-        }
-        default:
-            return QVariant();
+            default:
+                return QVariant();
         }
     }
 
@@ -458,12 +485,14 @@ QVariant SheetModel::data(const QModelIndex &index, int role) const
 }
 
 QVariant SheetModel::headerData(int section, Qt::Orientation orientation, int role) const
- {
+{
     if (role == Qt::SizeHintRole) {
         if (orientation == Qt::Horizontal)
-            return QVariant(QSize(sheet->getColumnWidth(section), PropertyRowHeights::defaultHeight));
+            return QVariant(
+                QSize(sheet->getColumnWidth(section), PropertyRowHeights::defaultHeight));
         else
-            return QVariant(QSize(PropertyColumnWidths::defaultHeaderWidth, sheet->getRowHeight(section)));
+            return QVariant(
+                QSize(PropertyColumnWidths::defaultHeaderWidth, sheet->getRowHeight(section)));
     }
     if (role == Qt::DisplayRole) {
         if (orientation == Qt::Horizontal) {
@@ -514,9 +543,9 @@ bool SheetModel::setData(const QModelIndex & index, const QVariant & value, int 
     return true;
 }
 
-Qt::ItemFlags SheetModel::flags(const QModelIndex & /*index*/) const
+Qt::ItemFlags SheetModel::flags(const QModelIndex& /*index*/) const
 {
-    return Qt::ItemIsSelectable |  Qt::ItemIsEditable | Qt::ItemIsEnabled;
+    return Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled;
 }
 
 void SheetModel::cellUpdated(CellAddress address)
@@ -526,7 +555,7 @@ void SheetModel::cellUpdated(CellAddress address)
     Q_EMIT dataChanged(i, i);
 }
 
-void SheetModel::rangeUpdated(const Range &range)
+void SheetModel::rangeUpdated(const Range& range)
 {
     QModelIndex i = index(range.from().row(), range.from().col());
     QModelIndex j = index(range.to().row(), range.to().col());

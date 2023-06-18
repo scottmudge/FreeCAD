@@ -39,6 +39,7 @@
 class SoGLCoordinateElement;
 class SoTextureCoordinateBundle;
 
+
 namespace PartGui {
 
 /**

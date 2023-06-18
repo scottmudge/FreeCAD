@@ -22,6 +22,7 @@
 
 
 #include "PreCompiled.h"
+#include <memory>
 
 #ifndef _PreComp_
 # include <cfloat>
@@ -75,7 +76,10 @@
 # include <QPainter>
 # include <QTextStream>
 # include <QKeyEvent>
-# include <QDesktopWidget>
+# include <QScreen>
+# if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#   include <QDesktopWidget>
+# endif
 # include <QTimer>
 
 # include <boost/scoped_ptr.hpp>
@@ -109,6 +113,7 @@
 #include <Gui/View3DInventorViewer.h>
 #include <Gui/ViewParams.h>
 #include <Gui/DlgEditFileIncludePropertyExternal.h>
+#include <Gui/SoDatumLabel.h>
 #include <Gui/SoFCBoundingBox.h>
 #include <Gui/SoFCUnifiedSelection.h>
 #include <Gui/Inventor/MarkerBitmaps.h>
@@ -126,10 +131,10 @@
 #include <Mod/Sketcher/App/ExternalGeometryFacade.h>
 
 #include "SoZoomTranslation.h"
-#include "SoDatumLabel.h"
 #include "EditDatumDialog.h"
 #include "ViewProviderSketch.h"
 #include "DrawSketchHandler.h"
+#include "SnapManager.h"
 #include "TaskDlgEditSketch.h"
 #include "TaskSketcherValidation.h"
 #include "TaskSketcherConstraints.h"
@@ -419,18 +424,18 @@ const Part::Geometry* GeoById(const std::vector<Part::Geometry*> GeoList, int Id
 
 /* TRANSLATOR SketcherGui::ViewProviderSketch */
 
-PROPERTY_SOURCE_WITH_EXTENSIONS(SketcherGui::ViewProviderSketch, PartGui::ViewProvider2DObjectGrid)
+PROPERTY_SOURCE_WITH_EXTENSIONS(SketcherGui::ViewProviderSketch, PartGui::ViewProvider2DObject)
 
 
 ViewProviderSketch::ViewProviderSketch()
   : SelectionObserver(false),
-    edit(0),
     _Mode(STATUS_NONE),
     visibleInformationChanged(true),
     combrepscalehyst(0),
     isShownVirtualSpace(false)
 {
     PartGui::ViewProviderAttachExtension::initExtension(this);
+    PartGui::ViewProviderGridExtension::initExtension(this);
 
     ADD_PROPERTY_TYPE(Autoconstraints,(true),"Auto Constraints",(App::PropertyType)(App::Prop_None),"Create auto constraints");
     ADD_PROPERTY_TYPE(AvoidRedundant,(true),"Auto Constraints",(App::PropertyType)(App::Prop_None),"Avoid redundant autoconstraint");
@@ -455,10 +460,9 @@ ViewProviderSketch::ViewProviderSketch()
         // well it is not visibility automation but a good place nevertheless
         this->ShowGrid.setValue(hGrp->GetBool("ShowGrid", false));
         this->GridSize.setValue(Base::Quantity::parse(QString::fromUtf8(hGrp->GetGroup("GridSize")->GetASCII("Hist0", "10.0").c_str())).getValue());
-        this->GridSnap.setValue(hGrp->GetBool("GridSnap", false));
+        this->GridAuto.setValue(hGrp->GetBool("GridAuto", false));
         this->Autoconstraints.setValue(hGrp->GetBool("AutoConstraints", true));
         this->AvoidRedundant.setValue(hGrp->GetBool("AvoidRedundantAutoconstraints", true));
-        this->GridAutoSize.setValue(false); //Grid size is managed by this class
 
         unsigned long shcol = hGrp->GetUnsigned("FaceColor", 0x54abff80);
         float r = ((shcol >> 24) & 0xff) / 255.0;
@@ -523,13 +527,11 @@ ViewProviderSketch::ViewProviderSketch()
     PointColor.setValue(vertexColor);
 
     //rubberband selection
-    rubberband = new Gui::Rubberband();
+    rubberband.reset(new Gui::Rubberband());
 }
 
 ViewProviderSketch::~ViewProviderSketch()
 {
-    delete edit;
-    delete rubberband;
 }
 
 void ViewProviderSketch::setSketchMode(SketchMode mode)
@@ -626,8 +628,7 @@ void ViewProviderSketch::purgeHandler(void)
     Gui::Selection().clearSelection();
 
     if (edit && edit->viewer) {
-        SoNode* root = edit->viewer->getSceneGraph();
-        static_cast<Gui::SoFCUnifiedSelection*>(root)->selectionRole.setValue(false);
+        edit->viewer->setSelectionEnabled(false);
     }
 }
 
@@ -649,7 +650,7 @@ void ViewProviderSketch::moveCursorToSketchPoint(Base::Vector2d point) {
 
     auto viewer = edit->viewer;
 
-    SbVec2s screencoords = viewer->getPointOnScreen(sbpoint);
+    SbVec2s screencoords = viewer->getPointOnViewport(sbpoint);
 
     short x,y; screencoords.getValue(x,y);
 
@@ -681,7 +682,7 @@ void ViewProviderSketch::preselectAtPoint(Base::Vector2d point)
             return;
 
         auto viewer = edit->viewer;
-        SbVec2s screencoords = viewer->getPointOnScreen(sbpoint);
+        SbVec2s screencoords = viewer->getPointOnViewport(sbpoint);
 
         std::unique_ptr<SoPickedPoint> Point(this->getPointOnRay(screencoords, viewer));
 
@@ -742,7 +743,7 @@ bool ViewProviderSketch::keyPressed(bool pressed, int key)
                 edit->buttonPress = pressed;
 
                 // More control over Sketcher edit mode Esc key behavior
-                // https://forum.freecadweb.org/viewtopic.php?f=3&t=42207
+                // https://forum.freecad.org/viewtopic.php?f=3&t=42207
                 return edit->handleEscapeButton;
             }
             return false;
@@ -757,33 +758,10 @@ bool ViewProviderSketch::keyPressed(bool pressed, int key)
     return true; // handle all other key events
 }
 
-void ViewProviderSketch::snapToGrid(double &x, double &y)
+void ViewProviderSketch::setAngleSnapping(bool enable, Base::Vector2d referencePoint)
 {
-    if (GridSnap.getValue()
-            && !(QApplication::queryKeyboardModifiers() & Qt::ShiftModifier))
-    {
-        // Snap Tolerance in pixels
-        const double snapTol = GridSize.getValue() * std::clamp(_SnapTolerance, 0.01, 0.5);
-
-        double tmpX = x, tmpY = y;
-
-        // Find Nearest Snap points
-        tmpX = tmpX / GridSize.getValue();
-        tmpX = tmpX < 0.0 ? ceil(tmpX - 0.5) : floor(tmpX + 0.5);
-        tmpX *= GridSize.getValue();
-
-        tmpY = tmpY / GridSize.getValue();
-        tmpY = tmpY < 0.0 ? ceil(tmpY - 0.5) : floor(tmpY + 0.5);
-        tmpY *= GridSize.getValue();
-
-        // Check if x within snap tolerance
-        if (x < tmpX + snapTol && x > tmpX - snapTol)
-            x = tmpX; // Snap X Mouse Position
-
-         // Check if y within snap tolerance
-        if (y < tmpY + snapTol && y > tmpY - snapTol)
-            y = tmpY; // Snap Y Mouse Position
-    }
+    assert(snapManager);
+    snapManager->setAngleSnapping(enable, referencePoint);
 }
 
 void ViewProviderSketch::getProjectingLine(const SbVec2s& pnt, const Gui::View3DInventorViewer *viewer, SbLine& line) const
@@ -884,7 +862,7 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
 
     try {
         getCoordsOnSketchPlane(x,y,pos,normal);
-        snapToGrid(x, y);
+        snapManager->snap(x, y);
         prvPickedPoint[0] = x;
         prvPickedPoint[1] = y;
     }
@@ -1504,7 +1482,7 @@ bool ViewProviderSketch::mouseMove(const SbVec2s &cursorPos, Gui::View3DInventor
     double x,y;
     try {
         getCoordsOnSketchPlane(x,y,line.getPosition(),line.getDirection());
-        snapToGrid(x, y);
+        snapManager->snap(x, y);
     }
     catch (const Base::ZeroDivisionError&) {
         return false;
@@ -1631,6 +1609,7 @@ bool ViewProviderSketch::mouseMove(const SbVec2s &cursorPos, Gui::View3DInventor
                     // calculate the click position and use it as initial point.
                     xInit = prvPickedPoint[0];
                     yInit = prvPickedPoint[1];
+                    snapManager->snap(xInit, yInit);
                 } else {
                     relative = false;
                     xInit = 0;
@@ -3521,7 +3500,7 @@ void ViewProviderSketch::updateColor(void)
         }
         if (highlightColor) {
             if (hasDatumLabel) {
-                SoDatumLabel *l = static_cast<SoDatumLabel *>(s->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
+                Gui::SoDatumLabel *l = static_cast<Gui::SoDatumLabel *>(s->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
                 l->textColor = *highlightColor;
             } else if (hasMaterial) {
                 m->diffuseColor = *highlightColor;
@@ -3601,7 +3580,7 @@ void ViewProviderSketch::updateColor(void)
             }
         } else {
             if (hasDatumLabel) {
-                SoDatumLabel *l = static_cast<SoDatumLabel *>(s->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
+                Gui::SoDatumLabel *l = static_cast<Gui::SoDatumLabel *>(s->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
 
                 l->textColor = constraint->isActive ?
                                     (getSketchObject()->constraintHasExpression(i) ?
@@ -4508,9 +4487,16 @@ void ViewProviderSketch::initParams()
     int defaultFontSizePixels = QApplication::fontMetrics().height(); // returns height in pixels, not points
     int sketcherfontSize = hGrp->GetInt("EditSketcherFontSize", defaultFontSizePixels);
 
-    int dpi = QApplication::desktop()->logicalDpiX();
-
     if(edit) {
+        int dpi;
+#if QT_VERSION < QT_VERSION_CHECK(5,14,0)
+        dpi = QApplication::desktop()->logicalDpiX();
+#else
+        if (edit->viewer)
+            dpi = edit->viewer->screen()->logicalDotsPerInchX();
+        else
+            dpi = getMainWindow()->screen()->logicalDotsPerInchX();
+#endif
         // simple scaling factor for hardcoded pixel values in the Sketcher
         edit->pixelScalingFactor = viewScalingFactor * dpi / 96; // 96 ppi is the standard pixel density for which pixel quantities were calculated
 
@@ -4520,8 +4506,8 @@ void ViewProviderSketch::initParams()
         // For 2D rendered bitmap fonts (like for SoText2), this value is the height of a character in screen pixels. For 3D text, this value is the world-space coordinates height of a character in the current units setting (see documentation for SoUnits node).
         //
         // However, with hdpi monitors, the coin font labels do not respect the size passed in pixels:
-        // https://forum.freecadweb.org/viewtopic.php?f=3&t=54347&p=467610#p467610
-        // https://forum.freecadweb.org/viewtopic.php?f=10&t=49972&start=40#p467471
+        // https://forum.freecad.org/viewtopic.php?f=3&t=54347&p=467610#p467610
+        // https://forum.freecad.org/viewtopic.php?f=10&t=49972&start=40#p467471
         //
         // Because I (abdullah) have  96 dpi logical, 82 dpi physical, and I see a 35px font setting for a "1" in a datum label as 34px,
         // and I see kilsore and Elyas screenshots showing 41px and 61px in higher resolution monitors for the same configuration, I think
@@ -5709,8 +5695,6 @@ void ViewProviderSketch::draw(bool temp /*=false*/, bool rebuildinformationlayer
 
     float dMagF = exp(ceil(log(std::abs(dMg))));
 
-    updateGridExtent(-dMagF, dMagF, -dMagF, dMagF);
-
     edit->RootCrossCoordinate->point.set1Value(0,SbVec3f(-dMagF, 0.0f, zCross));
     edit->RootCrossCoordinate->point.set1Value(1,SbVec3f(dMagF, 0.0f, zCross));
     edit->RootCrossCoordinate->point.set1Value(2,SbVec3f(0.0f, -dMagF, zCross));
@@ -6260,17 +6244,17 @@ Restart:
                         } else
                             break;
 
-                        SoDatumLabel *asciiText = static_cast<SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
+                        Gui::SoDatumLabel *asciiText = static_cast<Gui::SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
 
                         // Get presentation string (w/o units if option is set)
                         asciiText->string = SbString( getPresentationString(Constr).toUtf8().constData() );
 
                         if (Constr->Type == Distance)
-                            asciiText->datumtype = SoDatumLabel::DISTANCE;
+                            asciiText->datumtype = Gui::SoDatumLabel::DISTANCE;
                         else if (Constr->Type == DistanceX)
-                            asciiText->datumtype = SoDatumLabel::DISTANCEX;
+                            asciiText->datumtype = Gui::SoDatumLabel::DISTANCEX;
                         else if (Constr->Type == DistanceY)
-                             asciiText->datumtype = SoDatumLabel::DISTANCEY;
+                             asciiText->datumtype = Gui::SoDatumLabel::DISTANCEY;
 
                         // Assign the Datum Points
                         asciiText->pnts.setNum(2);
@@ -6453,8 +6437,8 @@ Restart:
                         dir.normalize();
                         SbVec3f norm (-dir[1],dir[0],0);
 
-                        SoDatumLabel *asciiText = static_cast<SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
-                        asciiText->datumtype    = SoDatumLabel::SYMMETRIC;
+                        Gui::SoDatumLabel *asciiText = static_cast<Gui::SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
+                        asciiText->datumtype    = Gui::SoDatumLabel::SYMMETRIC;
 
                         asciiText->pnts.setNum(2);
                         SbVec3f *verts = asciiText->pnts.startEditing();
@@ -6566,9 +6550,9 @@ Restart:
                         } else
                             break;
 
-                        SoDatumLabel *asciiText = static_cast<SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
+                        Gui::SoDatumLabel *asciiText = static_cast<Gui::SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
                         asciiText->string    = SbString( getPresentationString(Constr).toUtf8().constData() );
-                        asciiText->datumtype = SoDatumLabel::ANGLE;
+                        asciiText->datumtype = Gui::SoDatumLabel::ANGLE;
                         asciiText->param1    = Constr->LabelDistance;
                         asciiText->param2    = startangle;
                         asciiText->param3    = range;
@@ -6623,12 +6607,12 @@ Restart:
                         SbVec3f p1(pnt1.x,pnt1.y,zDatum);
                         SbVec3f p2(pnt2.x,pnt2.y,zDatum);
 
-                        SoDatumLabel *asciiText = static_cast<SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
+                        Gui::SoDatumLabel *asciiText = static_cast<Gui::SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
 
                         // Get display string with units hidden if so requested
                         asciiText->string = SbString( getPresentationString(Constr).toUtf8().constData() );
 
-                        asciiText->datumtype    = SoDatumLabel::DIAMETER;
+                        asciiText->datumtype    = Gui::SoDatumLabel::DIAMETER;
                         asciiText->param1       = Constr->LabelDistance;
                         asciiText->param2       = Constr->LabelPosition;
 
@@ -6701,7 +6685,7 @@ Restart:
                         SbVec3f p1(pnt1.x,pnt1.y,zDatum);
                         SbVec3f p2(pnt2.x,pnt2.y,zDatum);
 
-                        SoDatumLabel *asciiText = static_cast<SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
+                        Gui::SoDatumLabel *asciiText = static_cast<Gui::SoDatumLabel *>(sep->getChild(CONSTRAINT_SEPARATOR_INDEX_MATERIAL_OR_DATUMLABEL));
 
                         // Get display string with units hidden if so requested
                         if(Constr->Type == Weight)
@@ -6709,7 +6693,7 @@ Restart:
                         else
                             asciiText->string = SbString( getPresentationString(Constr).toUtf8().constData() );
 
-                        asciiText->datumtype    = SoDatumLabel::RADIUS;
+                        asciiText->datumtype    = Gui::SoDatumLabel::RADIUS;
                         asciiText->param1       = Constr->LabelDistance;
                         asciiText->param2       = Constr->LabelPosition;
 
@@ -6802,7 +6786,7 @@ void ViewProviderSketch::rebuildConstraintsVisual(void)
             case Weight:
             case Angle:
             {
-                SoDatumLabel *text = new SoDatumLabel();
+                Gui::SoDatumLabel *text = new Gui::SoDatumLabel();
                 text->norm.setValue(norm);
                 text->string = "";
                 text->textColor = (*it)->isActive ?
@@ -6911,7 +6895,7 @@ void ViewProviderSketch::rebuildConstraintsVisual(void)
             break;
             case Symmetric:
             {
-                SoDatumLabel *arrows = new SoDatumLabel();
+                Gui::SoDatumLabel *arrows = new Gui::SoDatumLabel();
                 arrows->norm.setValue(norm);
                 arrows->string = "";
                 arrows->textColor = ConstrDimColor;
@@ -7219,7 +7203,7 @@ bool ViewProviderSketch::setEdit(int ModNum)
     Gui::TaskView::TaskDialog *dlg = Gui::Control().activeDialog();
     TaskDlgEditSketch *sketchDlg = qobject_cast<TaskDlgEditSketch *>(dlg);
     if (sketchDlg && sketchDlg->getSketchView() != this)
-        sketchDlg = 0; // another sketch left open its task panel
+        sketchDlg = nullptr; // another sketch left open its task panel
     if (dlg && !sketchDlg && !dlg->tryClose())
         return false;
 
@@ -7249,12 +7233,15 @@ bool ViewProviderSketch::setEdit(int ModNum)
 
     this->attachSelection();
 
+    auto gridnode = getGridNode();
+    Base::Placement plm = getEditingPlacement();
+    setGridOrientation(plm.getPosition(), plm.getRotation());
+    addNodeToRoot(gridnode);
+    setGridEnabled(true);
     // create the container for the additional edit data
     assert(!edit);
-    edit = new EditData(this);
-
-    // Init icon, font and marker sizes
-    initParams();
+    edit = std::make_unique<EditData>(this);
+    snapManager = std::make_unique<SnapManager>(*this);
 
     ParameterGrp::handle hSketch = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher");
     edit->handleEscapeButton = !hSketch->GetBool("LeaveSketchWithEscape", true);
@@ -7304,10 +7291,6 @@ bool ViewProviderSketch::setEdit(int ModNum)
         Base::Console().Warning("ViewProviderSketch::setEdit: could not import Show module. Visibility automation will not work.\n");
     }
 
-    TightGrid.setValue(false);
-
-    inherited::setEdit(ModNum); // notify to handle grid according to edit mode property
-
     // start the edit dialog
     if (sketchDlg)
         Gui::Control().showDialog(sketchDlg);
@@ -7337,6 +7320,7 @@ bool ViewProviderSketch::setEdit(int ModNum)
 
     Gui::getMainWindow()->installEventFilter(listener);
 
+    Workbench::enterEditMode();
     return true;
 }
 
@@ -7739,12 +7723,16 @@ void ViewProviderSketch::unsetEdit(int ModNum)
     if (ModNum == Transform || ModNum == TransformAt)
         return inherited::unsetEdit(ModNum);
 
-    TightGrid.setValue(true);
+    Workbench::leaveEditMode();
 
     if(listener) {
         Gui::getMainWindow()->removeEventFilter(listener);
         delete listener;
     }
+
+    setGridEnabled(false);
+    auto gridnode = getGridNode();
+    pcRoot->removeChild(gridnode);
 
     if (edit) {
         if (edit->sketchHandler)
@@ -7754,8 +7742,8 @@ void ViewProviderSketch::unsetEdit(int ModNum)
         pcRoot->removeChild(edit->EditRoot);
         edit->EditRoot->unref();
 
-        delete edit;
-        edit = 0;
+        edit = nullptr;
+        snapManager = nullptr;
         this->detachSelection();
 
         if (getSketchObject()->isTouched()) {
@@ -7889,14 +7877,16 @@ void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int Mo
     }
 
     viewer->setEditing(true);
-    SoNode* root = viewer->getSceneGraph();
-    static_cast<Gui::SoFCUnifiedSelection*>(root)->selectionRole.setValue(false);
+    viewer->setSelectionEnabled(false);
 
-    viewer->addGraphicsItem(rubberband);
+    viewer->addGraphicsItem(rubberband.get());
     rubberband->setViewer(viewer);
 
     viewer->setupEditingRoot();
     edit->viewer = viewer;
+
+    // Init icon, font and marker sizes
+    initParams();
 
     // There are geometry extensions introduced by the solver and geometry extensions introduced by the viewprovider.
     // 1. It is important that the solver has geometry with updated extensions.
@@ -7910,19 +7900,21 @@ void ViewProviderSketch::setEditViewer(Gui::View3DInventorViewer* viewer, int Mo
     // with the solver information, including solver extensions, and triggers a draw(true) via ViewProvider::UpdateData.
     getSketchObject()->solve(true);
 
+    attachViewer(viewer);
+
     inherited::setEditViewer(viewer, ModNum);
 }
 
 void ViewProviderSketch::unsetEditViewer(Gui::View3DInventorViewer* viewer)
 {
     if (edit) {
-        viewer->removeGraphicsItem(rubberband);
+        viewer->removeGraphicsItem(rubberband.get());
         viewer->setEditing(false);
-        SoNode* root = viewer->getSceneGraph();
-        static_cast<Gui::SoFCUnifiedSelection*>(root)->selectionRole.setValue(true);
+        viewer->setSelectionEnabled(true);
         edit->viewer = nullptr;
     }
 
+    detachViewer();
     inherited::unsetEditViewer(viewer);
 }
 
@@ -8433,3 +8425,12 @@ void ViewProviderSketchExport::updateData(const App::Property *prop)
 }
 
 
+void ViewProviderSketch::addNodeToRoot(SoSeparator * node)
+{
+    pcRoot->addChild(node);
+}
+
+void ViewProviderSketch::removeNodeFromRoot(SoSeparator * node)
+{
+    pcRoot->removeChild(node);
+}

@@ -96,7 +96,7 @@ using namespace Gui;
  * Q_INIT_RESOURCE(resource);
  *
  * \endcode
- * 
+ *
  * where \a resource is the name of the .qrc file. That's all!
  */
 
@@ -161,6 +161,7 @@ Translator::Translator()
     d->mapLanguageTopLevelDomain[QT_TR_NOOP("Afrikaans"            )] = "af";
     d->mapLanguageTopLevelDomain[QT_TR_NOOP("Arabic"               )] = "ar";
     d->mapLanguageTopLevelDomain[QT_TR_NOOP("Basque"               )] = "eu";
+    d->mapLanguageTopLevelDomain[QT_TR_NOOP("Belarusian"           )] = "be";
     d->mapLanguageTopLevelDomain[QT_TR_NOOP("Bulgarian"            )] = "bg";
     d->mapLanguageTopLevelDomain[QT_TR_NOOP("Catalan"              )] = "ca";
     d->mapLanguageTopLevelDomain[QT_TR_NOOP("Chinese Simplified"   )] = "zh-CN";
@@ -299,10 +300,14 @@ bool Translator::eventFilter(QObject *obj, QEvent *ev)
         QKeyEvent *kev = static_cast<QKeyEvent *>(ev);
         Qt::KeyboardModifiers mod = kev->modifiers();
         int key = kev->key();
-        if ((mod & Qt::KeypadModifier) && (key == Qt::Key_Period || key == Qt::Key_Comma)) {
+        if (convertDecimalPoint && (mod & Qt::KeypadModifier) && (key == Qt::Key_Period || key == Qt::Key_Comma)) {
             if (ev->spontaneous()) {
                 auto dp = QString(QLocale().decimalPoint());
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
                 int dpcode = QKeySequence(dp)[0];
+#else
+                int dpcode = QKeySequence(dp)[0].key();
+#endif
                 if (kev->text() != dp) {
                     QKeyEvent modifiedKeyEvent(kev->type(), dpcode, mod, dp, kev->isAutoRepeat(), kev->count());
                     qApp->sendEvent(obj, &modifiedKeyEvent);
@@ -369,7 +374,7 @@ void Translator::setLocale(const std::string& language) const
 
 void Translator::updateLocaleChange() const
 {
-    for (auto &topLevelWidget: qApp->topLevelWidgets()) {
+    for (auto &topLevelWidget : qApp->topLevelWidgets()) {
         topLevelWidget->setLocale(QLocale());
     }
 }
@@ -456,23 +461,12 @@ void Translator::removeTranslators()
 
 void Translator::enableDecimalPointConversion(bool on)
 {
-    if (!on) {
-        decimalPointConverter.reset();
-        return;
-    }
-#if FC_DEBUG
-    if (on && decimalPointConverter) {
-        Base::Console().Instance().Warning("Translator: decimal point converter is already installed\n");
-    }
-#endif
-    if (on && !decimalPointConverter) {
-        decimalPointConverter = std::unique_ptr<Translator, std::function<void(Translator*)>>(this,
-            [](Translator* evFilter) {
-                qApp->removeEventFilter(evFilter);
-            }
-        );
-        qApp->installEventFilter(decimalPointConverter.get());
-    }
+    convertDecimalPoint = on;
+}
+
+bool Translator::isEnabledDecimalPointConversion() const
+{
+    return convertDecimalPoint;
 }
 
 #include "moc_Translator.cpp"

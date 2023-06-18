@@ -201,6 +201,45 @@ void PropertyGeometryList::setPyObject(PyObject *value)
     }
 }
 
+void PropertyGeometryList::trySaveGeometry(Geometry * geom, Base::Writer &writer) const
+{
+    // Not all geometry classes implement Save() and throw an exception instead
+    try {
+        geom->Save(writer);
+        for( auto &e : geom->getExtensions() ) {
+            auto ext = e.lock();
+            auto gpe = freecad_dynamic_cast<GeometryMigrationPersistenceExtension>(ext.get());
+            if (gpe)
+                gpe->postSave(writer);
+        }
+    }
+    catch (const Base::NotImplementedError& e) {
+        Base::Console().Warning(std::string("PropertyGeometryList"), "Not yet implemented: %s\n", e.what());
+    }
+}
+
+void PropertyGeometryList::tryRestoreGeometry(Geometry * geom, Base::XMLReader &reader)
+{
+    // Not all geometry classes implement Restore() and throw an exception instead
+    try {
+        if (!reader.getAttributeAsInteger("migrated","0") && reader.hasAttribute("id")) {
+            auto ext = std::make_unique<GeometryMigrationExtension>();
+            ext->setId(reader.getAttributeAsInteger("id"));
+            if(reader.hasAttribute("ref")) {
+                const char *ref = reader.getAttribute("ref");
+                int index = reader.getAttributeAsInteger("refIndex", "-1");
+                unsigned long flags = (unsigned long)reader.getAttributeAsUnsigned("flags", "0");
+                ext->setReference(ref, index, flags);
+            }
+            geom->setExtension(std::move(ext));
+        }
+        geom->Restore(reader);
+    }
+    catch (const Base::NotImplementedError& e) {
+        Base::Console().Warning(std::string("PropertyGeometryList"), "Not yet implemented: %s\n", e.what());
+    }
+}
+
 void PropertyGeometryList::Save(Writer &writer) const
 {
     writer.Stream() << writer.ind() << "<GeometryList count=\"" << getSize() <<"\">\n";
@@ -217,13 +256,7 @@ void PropertyGeometryList::Save(Writer &writer) const
         writer.Stream() << " migrated=\"1\">\n";
 
         writer.incInd();
-        _lValueList[i]->Save(writer);
-        for( auto &e : _lValueList[i]->getExtensions() ) {
-            auto ext = e.lock();
-            auto gpe = freecad_dynamic_cast<GeometryMigrationPersistenceExtension>(ext.get());
-            if (gpe)
-                gpe->postSave(writer);
-        }
+        trySaveGeometry(_lValueList[i], writer);
         writer.decInd();
         writer.Stream() << writer.ind() << "</Geometry>\n";
     }
@@ -243,20 +276,8 @@ void PropertyGeometryList::Restore(Base::XMLReader &reader)
     for (int i = 0; i < count; i++) {
         reader.readElement("Geometry");
         const char* TypeName = reader.getAttribute("type");
-        auto newG = static_cast<Geometry *>(Base::Type::fromName(TypeName).createInstance());
-        
-        if (!reader.getAttributeAsInteger("migrated","0") && reader.hasAttribute("id")) {
-            auto ext = std::make_unique<GeometryMigrationExtension>();
-            ext->setId(reader.getAttributeAsInteger("id"));
-            if(reader.hasAttribute("ref")) {
-                const char *ref = reader.getAttribute("ref");
-                int index = reader.getAttributeAsInteger("refIndex", "-1");
-                unsigned long flags = (unsigned long)reader.getAttributeAsUnsigned("flags", "0");
-                ext->setReference(ref, index, flags);
-            }
-            newG->setExtension(std::move(ext));
-        }
-        newG->Restore(reader);
+        Geometry *newG = static_cast<Geometry *>(Base::Type::fromName(TypeName).createInstance());
+        tryRestoreGeometry(newG, reader);
 
         if(reader.testStatus(Base::XMLReader::ReaderStatus::PartialRestoreInObject)) {
             Base::Console().Error("Geometry \"%s\" within a PropertyGeometryList was subject to a partial restore.\n",reader.localName());

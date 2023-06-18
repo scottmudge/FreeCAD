@@ -29,11 +29,17 @@ namespace PartDesignGui {
 
 class PartDesignGuiExport ViewProviderGenericPattern : public ViewProviderTransformed
 {
+    Q_DECLARE_TR_FUNCTIONS(PartDesignGuii::ViewProviderGenericPattern)
     PROPERTY_HEADER(PartDesignGui::ViewProviderGenericPattern);
 public:
     ViewProviderGenericPattern()
-        { featureName = std::string("GenericPattern");
-          sPixmap = "PartDesign_GenericPattern.svg"; }
+        { sPixmap = "PartDesign_GenericPattern.svg"; }
+
+    const std::string & featureName() const override;
+
+    QString getMenuName() const override {
+        return tr("GenericPattern parameters");
+    }
 
 protected:
     /// Returns a newly create dialog for the part to be placed in the task view

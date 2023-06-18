@@ -35,3 +35,9 @@ PROPERTY_SOURCE(PartDesignGui::ViewProviderGenericPattern,PartDesignGui::ViewPro
 TaskDlgFeatureParameters *ViewProviderGenericPattern::getEditDialog() {
     return new TaskDlgGenericPatternParameters (this);
 }
+
+const std::string & ViewProviderGenericPattern::featureName() const
+{
+    static const std::string name = "Generic";
+    return name;
+}

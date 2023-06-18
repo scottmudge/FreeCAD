@@ -89,31 +89,32 @@ public:
 
     void activateParameterSet(const char*);
 
-protected Q_SLOTS:
+protected:
+    void setupConnections();
     void onChangeParameterSet(int);
-    void on_buttonFind_clicked();
-    void on_findGroupLE_textChanged(const QString &SearchStr);
-    void on_buttonSaveToDisk_clicked();
-    void on_btnExport_clicked();
-    void on_btnImport_clicked();
-    void on_btnAdd_clicked();
-    void on_btnCopy_clicked();
-    void on_btnRemove_clicked();
-    void on_btnRename_clicked();
-    void on_btnRefresh_clicked();
-    void on_btnToolTip_clicked();
-    void on_btnRestart_clicked();
-    void on_btnReset_clicked();
-    void on_checkBoxPreset_toggled(bool);
-    void on_checkBoxMonitor_toggled(bool);
+    void onButtonFindClicked();
+    void onFindGroupTextChanged(const QString &SearchStr);
+    void onButtonSaveToDiskClicked();
+    void onButtonExportClicked();
+    void onButtonImportClicked();
+    void onButtonAddClicked();
+    void onButtonCopyClicked();
+    void onButtonRemoveClicked();
+    void onButtonRenameClicked();
+    void onButtonRefreshClicked();
+    void onButtonToolTipClicked();
+    void onButtonRestartClicked();
+    void onButtonResetClicked();
+    void onCheckBoxPresetToggled(bool);
+    void onCheckBoxMonitorToggled(bool);
     void onParameterSetNameChanged();
 
     void onGroupItemChanged(QTreeWidgetItem *item, int col);
     void onValueItemChanged(QTreeWidgetItem *item, int col);
 
     void onGroupSelected(QTreeWidgetItem *);
-    void on_closeButton_clicked();
-    void on_checkSort_toggled(bool);
+    void onCloseButtonClicked();
+    void onCheckSortToggled(bool);
 
 protected:
     void changeEvent(QEvent *e) override;

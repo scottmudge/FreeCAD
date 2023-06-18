@@ -43,7 +43,6 @@
 #include <Gui/Document.h>
 #include <Gui/MainWindow.h>
 #include <Gui/SelectionFilter.h>
-#include <Gui/SoFCUnifiedSelection.h>
 #include <Gui/View3DInventor.h>
 #include <Gui/View3DInventorViewer.h>
 #include <Mod/Part/App/DatumFeature.h>
@@ -70,6 +69,7 @@
 #include "DrawSketchHandlerArcOfHyperbola.h"
 #include "DrawSketchHandlerArcOfParabola.h"
 #include "DrawSketchHandlerBSpline.h"
+#include "DrawSketchHandlerBSplineByInterpolation.h"
 #include "DrawSketchHandlerCarbonCopy.h"
 #include "DrawSketchHandlerCircle.h"
 #include "DrawSketchHandlerEllipse.h"
@@ -649,6 +649,67 @@ bool CmdSketcherCreatePeriodicBSpline::isActive()
     return isCommandActive(getActiveGuiDocument());
 }
 
+/// @brief Macro that declares a new sketcher command class 'CmdSketcherCreateBSplineByInterpolation'
+DEF_STD_CMD_AU(CmdSketcherCreateBSplineByInterpolation)
+
+CmdSketcherCreateBSplineByInterpolation::CmdSketcherCreateBSplineByInterpolation()
+: Command("Sketcher_CreateBSplineByInterpolation")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = "Sketcher";
+    sMenuText       = QT_TR_NOOP("Interpolate B-spline");
+    sToolTipText    = QT_TR_NOOP("Create a B-spline by interpolation, i.e. via knots in the sketch.");
+    sWhatsThis      = "Sketcher_CreateBSplineByInterpolation";
+    sStatusTip      = sToolTipText;
+    sPixmap         = "Sketcher_CreateBSplineByInterpolation";
+    sAccel          = "G, B, I";
+    eType           = ForEdit;
+}
+
+CONSTRUCTION_UPDATE_ACTION(CmdSketcherCreateBSplineByInterpolation,"Sketcher_CreateBSplineByInterpolation")
+
+void CmdSketcherCreateBSplineByInterpolation::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+    ActivateHandler(getActiveGuiDocument(),new DrawSketchHandlerBSplineByInterpolation(0) );
+}
+
+bool CmdSketcherCreateBSplineByInterpolation::isActive()
+{
+    return isCommandActive(getActiveGuiDocument());
+}
+
+/// @brief Macro that declares a new sketcher command class 'CmdSketcherCreatePeriodicBSplineByInterpolation'
+DEF_STD_CMD_AU(CmdSketcherCreatePeriodicBSplineByInterpolation)
+
+CmdSketcherCreatePeriodicBSplineByInterpolation::CmdSketcherCreatePeriodicBSplineByInterpolation()
+: Command("Sketcher_CreatePeriodicBSplineByInterpolation")
+{
+    sAppModule      = "Sketcher";
+    sGroup          = "Sketcher";
+    sMenuText       = QT_TR_NOOP("Interpolate periodic B-spline");
+    sToolTipText    = QT_TR_NOOP("Create a periodic B-spline by interpolation, i.e. via knots in the sketch.");
+    sWhatsThis      = "Sketcher_Create_Periodic_BSplineByInterpolation";
+    sStatusTip      = sToolTipText;
+    sPixmap         = "Sketcher_Create_Periodic_BSplineByInterpolation";
+    sAccel          = "G, B, O";
+    eType           = ForEdit;
+}
+
+CONSTRUCTION_UPDATE_ACTION(CmdSketcherCreatePeriodicBSplineByInterpolation,"Sketcher_CreatePeriodicBSplineByInterpolation")
+
+void CmdSketcherCreatePeriodicBSplineByInterpolation::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+    ActivateHandler(getActiveGuiDocument(),new DrawSketchHandlerBSplineByInterpolation(1) );
+}
+
+bool CmdSketcherCreatePeriodicBSplineByInterpolation::isActive()
+{
+    return isCommandActive(getActiveGuiDocument());
+}
+
+
 class CmdSketcherCompCreateBSpline: public Gui::GroupCommand
 {
 public:
@@ -672,6 +733,8 @@ CmdSketcherCompCreateBSpline::CmdSketcherCompCreateBSpline()
     eType           = ForEdit;
     addCommand(new CmdSketcherCreateBSpline());
     addCommand(new CmdSketcherCreatePeriodicBSpline());
+    addCommand(new CmdSketcherCreateBSplineByInterpolation());
+    addCommand(new CmdSketcherCreatePeriodicBSplineByInterpolation());
 }
 
 // ======================================================================================
@@ -935,7 +998,7 @@ CmdSketcherExternal::CmdSketcherExternal()
 {
     sAppModule      = "Sketcher";
     sGroup          = "Sketcher";
-    sMenuText       = QT_TR_NOOP("Add external geometry");
+    sMenuText       = QT_TR_NOOP("Create an external geometry");
     sToolTipText    = QT_TR_NOOP("Create an edge linked to an external geometry");
     sWhatsThis      = "Sketcher_External";
     sStatusTip      = sToolTipText;
@@ -1314,8 +1377,8 @@ CmdSketcherCarbonCopy::CmdSketcherCarbonCopy()
 {
     sAppModule      = "Sketcher";
     sGroup          = "Sketcher";
-    sMenuText       = QT_TR_NOOP("Carbon copy");
-    sToolTipText    = QT_TR_NOOP("Copies the geometry of another sketch");
+    sMenuText       = QT_TR_NOOP("Create a carbon copy");
+    sToolTipText    = QT_TR_NOOP("Copy the geometry of another sketch");
     sWhatsThis      = "Sketcher_CarbonCopy";
     sStatusTip      = sToolTipText;
     sPixmap         = "Sketcher_CarbonCopy";

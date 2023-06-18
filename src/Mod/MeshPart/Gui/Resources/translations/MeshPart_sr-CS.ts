@@ -170,7 +170,7 @@ Ova komanda radi samo sa objektom koji je mreža.</translation>
       <translation>Poveži ivice ako je rastojanje manje od</translation>
     </message>
     <message>
-      <location filename="../../CrossSections.cpp" line="343"/>
+      <location filename="../../CrossSections.cpp" line="366"/>
       <source>Failure</source>
       <translation>Neuspeh</translation>
     </message>
@@ -195,7 +195,7 @@ Ova komanda radi samo sa objektom koji je mreža.</translation>
     <message>
       <location filename="../../CurveOnMesh.cpp" line="369"/>
       <source>Cancel</source>
-      <translation>Poništi</translation>
+      <translation>Otkaži</translation>
     </message>
     <message>
       <location filename="../../CurveOnMesh.cpp" line="615"/>
@@ -220,9 +220,9 @@ Ova komanda radi samo sa objektom koji je mreža.</translation>
       <source>Press 'Start', then pick points on the mesh; when enough points have been set, right-click and choose 'Create'. Repeat this process to create more splines. Close this task panel to complete the operation.
 
 This command only works with a 'mesh' object, not a regular face or surface. To convert an object to a mesh use the tools of the Mesh Workbench.</source>
-      <translation>Pritisnite 'Početak', a zatim izaberite tačke na mreži; kada je izabrano dovoljno tačaka, kliknite desnim tasterom miša i izaberite „Napravi“. Ponovite ovaj proces da biste napravili više splajnova. Zatvorite panel zadataka da biste dovršili operaciju.
+      <translation>Pritisni 'Početak', a zatim izaberi tačke na mreži; kada je izabrano dovoljno tačaka, klikni desnim tasterom miša i izaberi „Napravi“. Ponovi ovaj proces da biste napravio više splajnova. Zatvori panel zadataka da bi dovršio operaciju.
 
-Ova komanda radi samo sa objektom koji je mreža, a ne sa običnom stranicom ili površinom. Da biste pretvorili objekat u mrežu, koristite alatke Mesh radnog okruženja.</translation>
+Ova komanda radi samo sa objektom koji je mreža, a ne sa običnom stranicom ili površinom. Da bi pretvorio objekat u mrežu, koristi alatke Mesh radnog okruženja.</translation>
     </message>
     <message>
       <location filename="../../TaskCurveOnMesh.ui" line="38"/>
@@ -491,27 +491,27 @@ Vrednost u opsegu od 0,2-10.</translation>
       <translation>Gmsh</translation>
     </message>
     <message>
-      <location filename="../../Tessellation.cpp" line="212"/>
-      <location filename="../../Tessellation.cpp" line="218"/>
+      <location filename="../../Tessellation.cpp" line="225"/>
+      <location filename="../../Tessellation.cpp" line="231"/>
       <source>No active document</source>
       <translation>Nema aktivnog dokumenta</translation>
     </message>
     <message>
-      <location filename="../../Tessellation.cpp" line="246"/>
+      <location filename="../../Tessellation.cpp" line="259"/>
       <source>You have selected a body without tip.
 Either set the tip of the body or select a different shape, please.</source>
-      <translation>Izabrali ste telo koje nema krajnji tipski oblik.
-Ili zadajte krajnji tipski oblik ili izaberite drugo telo.</translation>
+      <translation>Izabrao si telo koje nema krajnji tipski oblik.
+Ili zadaj krajnji tipski oblik ili izaberi drugo telo.</translation>
     </message>
     <message>
-      <location filename="../../Tessellation.cpp" line="250"/>
+      <location filename="../../Tessellation.cpp" line="263"/>
       <source>You have selected a shape without faces.
 Select a different shape, please.</source>
-      <translation>Izabrali ste oblik bez stranica.
-Izaberite drugi oblik.</translation>
+      <translation>Izabrao si oblik bez stranica.
+Izaberi drugi oblik.</translation>
     </message>
     <message>
-      <location filename="../../Tessellation.cpp" line="254"/>
+      <location filename="../../Tessellation.cpp" line="267"/>
       <source>Select a shape for meshing, first.</source>
       <translation>Prvo izaberi oblik za pravljenje mreže.</translation>
     </message>
@@ -564,7 +564,7 @@ Izaberite drugi oblik.</translation>
     <message>
       <location filename="../../Command.cpp" line="106"/>
       <source>Split</source>
-      <translation>Razdelite</translation>
+      <translation>Podeli</translation>
     </message>
   </context>
   <context>
@@ -573,6 +573,32 @@ Izaberite drugi oblik.</translation>
       <location filename="../../Workbench.cpp" line="36"/>
       <source>MeshPart</source>
       <translation>Mreža Dela</translation>
+    </message>
+  </context>
+  <context>
+    <name>MeshPart_CreateFlatMesh</name>
+    <message>
+      <location filename="../../MeshFlatteningCommand.py" line="47"/>
+      <source>Unwrap Mesh</source>
+      <translation type="unfinished">Unwrap Mesh</translation>
+    </message>
+    <message>
+      <location filename="../../MeshFlatteningCommand.py" line="50"/>
+      <source>Find a flat representation of a mesh.</source>
+      <translation type="unfinished">Find a flat representation of a mesh.</translation>
+    </message>
+  </context>
+  <context>
+    <name>MeshPart_CreateFlatFace</name>
+    <message>
+      <location filename="../../MeshFlatteningCommand.py" line="79"/>
+      <source>Unwrap Face</source>
+      <translation type="unfinished">Unwrap Face</translation>
+    </message>
+    <message>
+      <location filename="../../MeshFlatteningCommand.py" line="82"/>
+      <source>Find a flat representation of a face.</source>
+      <translation type="unfinished">Find a flat representation of a face.</translation>
     </message>
   </context>
 </TS>

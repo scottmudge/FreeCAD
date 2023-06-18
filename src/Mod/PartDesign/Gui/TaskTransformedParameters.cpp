@@ -82,8 +82,8 @@ using namespace Gui::Dialog;
 /* TRANSLATOR PartDesignGui::TaskTransformedParameters */
 
 TaskTransformedParameters::TaskTransformedParameters(ViewProviderTransformed *TransformedView, QWidget *parent)
-    : TaskBox(Gui::BitmapFactory().pixmap((std::string("PartDesign_") + TransformedView->featureName).c_str()),
-              QString::fromUtf8((TransformedView->featureName + " parameters").c_str()), true, parent)
+    : TaskBox(Gui::BitmapFactory().pixmap(TransformedView->featureIcon().c_str()),
+              TransformedView->getMenuName(), true, parent)
     , proxy(nullptr)
     , TransformedView(TransformedView)
     , parentTask(nullptr)

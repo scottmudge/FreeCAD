@@ -28,9 +28,7 @@ Internally it uses IfcOpenShell, which must be installed before using.
 #
 #  This module provides tools to import IFC files.
 
-from __future__ import print_function
 
-import six
 import os
 import math
 import time
@@ -51,7 +49,7 @@ if FreeCAD.GuiUp:
 
 __title__  = "FreeCAD IFC importer - Enhanced IfcOpenShell-only version"
 __author__ = ("Yorik van Havre", "Jonathan Wiedemann", "Bernd Hahnebach")
-__url__    = "https://www.freecadweb.org"
+__url__    = "https://www.freecad.org"
 
 DEBUG = False  # Set to True to see debug messages. Otherwise, totally silent
 ZOOMOUT = True  # Set to False to not zoom extents after import
@@ -207,7 +205,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
     except ModuleNotFoundError:
         _err("IfcOpenShell was not found on this system. "
              "IFC support is disabled.\n"
-             "Visit https://wiki.freecadweb.org/IfcOpenShell "
+             "Visit https://wiki.freecad.org/IfcOpenShell "
              "to learn about installing it.")
         return
 
@@ -308,7 +306,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
     # For the following tables it might be better to use inverse attributes
     # to find the properties, otherwise a lot of loops
     # and if testing is needed.
-    # See https://forum.freecadweb.org/viewtopic.php?f=39&t=37892
+    # See https://forum.freecad.org/viewtopic.php?f=39&t=37892
     prodrepr = importIFCHelper.buildRelProductRepresentation(ifcfile)
     additions = importIFCHelper.buildRelAdditions(ifcfile)
     groups = importIFCHelper.buildRelGroups(ifcfile)
@@ -348,7 +346,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
             projectImporter = importIFCHelper.ProjectImporter(ifcfile, objects)
             projectImporter.execute()
         else:
-            # https://forum.freecadweb.org/viewtopic.php?f=39&t=40624
+            # https://forum.freecad.org/viewtopic.php?f=39&t=40624
             print("No IfcProject found in the ifc file. Nothing imported")
             return doc
 
@@ -612,7 +610,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
                                     baseobj.Dir = ex[1]
                                 if FreeCAD.GuiUp:
                                     baseface.ViewObject.hide()
-                        if (not baseobj):
+                        if not baseobj:
                             baseobj = doc.addObject("Part::Feature",name+"_body")
                             baseobj.Shape = shape
         else:
@@ -923,7 +921,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
                     # of the (twodimensional) direction vector for TrueNorth shall be greater than zero.
                     (x, y) = modelRC.TrueNorth.DirectionRatios[:2]
                     obj.Declination = ((math.degrees(math.atan2(y,x))-90+180) % 360)-180
-                    if (FreeCAD.GuiUp):
+                    if FreeCAD.GuiUp:
                         obj.ViewObject.CompassRotation.Value = obj.Declination
 
         try:
@@ -1122,8 +1120,10 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
         if preferences['DEBUG']: print(count,"/",len(annotations),"object #"+str(aid),":",annotation.is_a(),end="")
 
         if aid in skip:
+            if preferences['DEBUG']: print(", skipped.")
             continue  # user given id skip list
         if annotation.is_a() in preferences['SKIP']:
+            if preferences['DEBUG']: print(", skipped.")
             continue  # preferences-set type skip list
 
         anno = importIFCHelper.createAnnotation(annotation,doc,ifcscale,preferences)
@@ -1137,6 +1137,8 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
                 for host,children in additions.items():
                     if (aid in children) and (host in objects.keys()):
                         Arch.addComponents(anno,objects[host])
+
+        if preferences['DEBUG']: print("")  # add newline for 2D objects debug prints
 
     doc.recompute()
 
@@ -1161,7 +1163,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
         if material.Name:
             name = material.Name
         # mdict["Name"] = name on duplicate material names in IFC this could result in crash
-        # https://forum.freecadweb.org/viewtopic.php?f=23&t=63260
+        # https://forum.freecad.org/viewtopic.php?f=23&t=63260
         # thus use "Description"
         mdict["Description"] = name
 
@@ -1187,15 +1189,26 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
         if preferences["MERGE_MATERIALS"]:
             for added_mat in added_mats:
                 if (
-                    "Description" in added_mat.Material
-                    and "DiffuseColor" in added_mat.Material
-                    and "DiffuseColor" in mdict  # Description has been set thus it is in mdict
+                    "Description" in added_mat.Material  # Description has been set thus it is in mdict
                     and added_mat.Material["Description"] == mdict["Description"]
-                    and added_mat.Material["DiffuseColor"] == mdict["DiffuseColor"]
                 ):
-                    matobj = added_mat
-                    add_material = False
-                    break
+                    if (
+                        (
+                            "DiffuseColor" in added_mat.Material
+                            and "DiffuseColor" in mdict
+                            and added_mat.Material["DiffuseColor"] == mdict["DiffuseColor"]
+                        )  # color in added mat with the same matname and new mat is the same
+                        or
+                        (
+                            "DiffuseColor" not in added_mat.Material
+                            and "DiffuseColor" not in mdict
+                        )  # there is no color in added mat with the same matname and new mat
+                        # on model imported from ArchiCAD color was not found for all IFC material objects,
+                        # thus DiffuseColor was not set for created materials, workaround to merge these too
+                    ):
+                        matobj = added_mat
+                        add_material = False
+                        break
 
         # add a new material object
         if add_material is True:
@@ -1214,7 +1227,7 @@ def insert(srcfile, docname, skip=[], only=[], root=None, preferences=None):
                             # all viewers use the shape color whereas in FreeCAD the shape color will be
                             # overwritten by the material color (if there is a material with a color).
                             # In such a case FreeCAD shows a different color than all common ifc viewers
-                            # https://forum.freecadweb.org/viewtopic.php?f=39&t=38440
+                            # https://forum.freecad.org/viewtopic.php?f=39&t=38440
                             col = objects[o].ViewObject.ShapeColor[:3]
                             dig = 5
                             ma_color = sh_color = round(col[0], dig), round(col[1], dig), round(col[2], dig)

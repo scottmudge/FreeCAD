@@ -78,10 +78,8 @@ PythonEditor::PythonEditor(QWidget* parent)
     auto uncomment = new QShortcut(this);
     uncomment->setKey(QKeySequence(QStringLiteral("ALT+U")));
 
-    connect(comment, SIGNAL(activated()),
-            this, SLOT(onComment()));
-    connect(uncomment, SIGNAL(activated()),
-            this, SLOT(onUncomment()));
+    connect(comment, &QShortcut::activated, this, &PythonEditor::onComment);
+    connect(uncomment, &QShortcut::activated, this, &PythonEditor::onUncomment);
 }
 
 /** Destroys the object and frees any allocated resources */
@@ -152,8 +150,8 @@ void PythonEditor::contextMenuEvent ( QContextMenuEvent * e )
     QMenu* menu = createStandardContextMenu();
     if (!isReadOnly()) {
         menu->addSeparator();
-        menu->addAction( tr("Comment"), this, SLOT( onComment() ), QKeySequence(QStringLiteral("ALT+C")));
-        menu->addAction( tr("Uncomment"), this, SLOT( onUncomment() ), QKeySequence(QStringLiteral("ALT+U")));
+        menu->addAction( tr("Comment"), this, &PythonEditor::onComment, QKeySequence(QStringLiteral("ALT+C")));
+        menu->addAction( tr("Uncomment"), this, &PythonEditor::onUncomment, QKeySequence(QStringLiteral("ALT+U")));
     }
 
     menu->exec(e->globalPos());

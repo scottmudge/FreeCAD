@@ -85,11 +85,16 @@
     </message>
     <message>
       <location filename="../../NavigationIndicatorGui.py" line="336"/>
-      <source>Trackball</source>
-      <translation>Trackball</translation>
+      <source>Free Turntable</source>
+      <translation>Свободное вращение</translation>
     </message>
     <message>
       <location filename="../../NavigationIndicatorGui.py" line="337"/>
+      <source>Trackball</source>
+      <translation>Трекбол</translation>
+    </message>
+    <message>
+      <location filename="../../NavigationIndicatorGui.py" line="338"/>
       <source>Undefined</source>
       <translation>Не определено</translation>
     </message>

@@ -262,9 +262,9 @@ void UnifiedDatumCommand(Gui::Command &cmd, Base::Type type, std::string name)
         Gui::cmdSetEdit(Feat);
 
     } catch (Base::Exception &e) {
-        QMessageBox::warning(Gui::getMainWindow(),QObject::tr("Error"),QString::fromUtf8(e.what()));
+        QMessageBox::warning(Gui::getMainWindow(),QObject::tr("Error"),QApplication::translate("Exception", e.what()));
     } catch (Standard_Failure &e) {
-        QMessageBox::warning(Gui::getMainWindow(),QObject::tr("Error"),QString::fromUtf8(e.GetMessageString()));
+        QMessageBox::warning(Gui::getMainWindow(),QObject::tr("Error"),QApplication::translate("Exception", e.GetMessageString()));
     }
 }
 
@@ -508,33 +508,46 @@ void CmdPartDesignClone::activated(int iMsg)
     std::vector<App::DocumentObject*> objs = getSelection().getObjectsOfType
             (Part::Feature::getClassTypeId());
     if (objs.size() == 1) {
-        // As suggested in https://forum.freecadweb.org/viewtopic.php?f=3&t=25265&p=198547#p207336
+        // As suggested in https://forum.freecad.org/viewtopic.php?f=3&t=25265&p=198547#p207336
         // put the clone into its own new body.
         // This also fixes bug #3447 because the clone is a PD feature and thus
         // requires a body where it is part of.
         openCommand(QT_TRANSLATE_NOOP("Command", "Create Clone"));
+
         auto obj = objs[0];
-        std::string FeatName = getUniqueObjectName("Clone",obj);
-        std::string BodyName = getUniqueObjectName("Body",obj);
-        FCMD_OBJ_DOC_CMD(obj,"addObject('PartDesign::Body','" << BodyName << "')");
-        FCMD_OBJ_DOC_CMD(obj,"addObject('PartDesign::FeatureBase','" << FeatName << "')");
-        auto Feat = obj->getDocument()->getObject(FeatName.c_str());
         auto objCmd = getObjectCmd(obj);
-        Gui::cmdAppObject(Feat, std::ostringstream() <<"BaseFeature = " << objCmd);
-        Gui::cmdAppObject(Feat, std::ostringstream() <<"Placement = " << objCmd << ".Placement");
-        Gui::cmdAppObject(Feat, std::ostringstream() <<"setEditorMode('Placement',0)");
+        std::string cloneName = getUniqueObjectName("Clone", obj);
+        std::string bodyName = getUniqueObjectName("Body", obj);
 
-        auto Body = obj->getDocument()->getObject(BodyName.c_str());
-        Gui::cmdAppObject(Body, std::ostringstream() <<"Group = [" << getObjectCmd(Feat) << "]");
+        // Create body and clone
+        Gui::cmdAppDocument(obj, std::stringstream()
+                            << "addObject('PartDesign::Body','" << bodyName << "')");
+        Gui::cmdAppDocument(obj, std::stringstream()
+                            << "addObject('PartDesign::FeatureBase','" << cloneName << "')");
 
-        // Set the tip of the body
-        Gui::cmdAppObject(Body, std::ostringstream() <<"Tip = " << getObjectCmd(Feat));
+        auto bodyObj = obj->getDocument()->getObject(bodyName.c_str());
+        auto cloneObj = obj->getDocument()->getObject(cloneName.c_str());
+
+        // In the first step set the group link and tip of the body
+        Gui::cmdAppObject(bodyObj, std::stringstream()
+                          << "Group = [" << getObjectCmd(cloneObj) << "]");
+        Gui::cmdAppObject(bodyObj, std::stringstream()
+                          << "Tip = " << getObjectCmd(cloneObj));
+
+        // In the second step set the link of the base feature
+        Gui::cmdAppObject(cloneObj, std::stringstream()
+                          << "BaseFeature = " << objCmd);
+        Gui::cmdAppObject(cloneObj, std::stringstream()
+                          << "Placement = " << objCmd << ".Placement");
+        Gui::cmdAppObject(cloneObj, std::stringstream()
+                          << "setEditorMode('Placement', 0)");
+
         updateActive();
-        copyVisual(Feat, "ShapeColor", obj);
-        copyVisual(Feat, "LineColor", obj);
-        copyVisual(Feat, "PointColor", obj);
-        copyVisual(Feat, "Transparency", obj);
-        copyVisual(Feat, "DisplayMode", obj);
+        copyVisual(cloneObj, "ShapeColor", obj);
+        copyVisual(cloneObj, "LineColor", obj);
+        copyVisual(cloneObj, "PointColor", obj);
+        copyVisual(cloneObj, "Transparency", obj);
+        copyVisual(cloneObj, "DisplayMode", obj);
         commitCommand();
     }
 }
@@ -1720,7 +1733,7 @@ bool CmdPartDesignSubtractiveHelix::isActive()
 //===========================================================================
 
 bool dressupGetSelected(Gui::Command* cmd, const std::string& which,
-        Gui::SelectionObject &selected, bool &useAllEdges)
+        Gui::SelectionObject &selected, bool &useAllEdges, bool& noSelection)
 {
     // No PartDesign feature without Body past FreeCAD 0.16
     App::Document *doc = cmd->getDocument();
@@ -1735,10 +1748,10 @@ bool dressupGetSelected(Gui::Command* cmd, const std::string& which,
     std::vector<Gui::SelectionObject> selection = cmd->getSelection().getSelectionEx();
 
     if (selection.empty()) {
-        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
-            QObject::tr("Select an edge, face, or body."));
-        return false;
-    } else if (selection.size() != 1) {
+        noSelection = true;
+        return true;
+    }
+    else if (selection.size() != 1) {
         QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
             QObject::tr("Select an edge, face, or body from a single body."));
         return false;
@@ -1798,12 +1811,6 @@ bool dressupGetSelected(Gui::Command* cmd, const std::string& which,
 void finishDressupFeature(const Gui::Command* cmd, const std::string& which,
         Part::Feature *base, const std::vector<std::string> & SubNames, const bool useAllEdges)
 {
-    if (SubNames.empty()) {
-        QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
-        QString::fromStdString(which) + QObject::tr(" not possible on selected faces/edges."));
-        return;
-    }
-
     std::ostringstream str;
     str << '(' << Gui::Command::getObjectCmd(base) << ",[";
     for (std::vector<std::string>::const_iterator it = SubNames.begin();it!=SubNames.end();++it){
@@ -1841,13 +1848,20 @@ void finishDressupFeature(const Gui::Command* cmd, const std::string& which,
 void makeChamferOrFillet(Gui::Command* cmd, const std::string& which)
 {
     bool useAllEdges = false;
+    bool noSelection = false;
     Gui::SelectionObject selected;
-    if (!dressupGetSelected ( cmd, which, selected, useAllEdges))
+    if (!dressupGetSelected ( cmd, which, selected, useAllEdges, noSelection))
         return;
 
-    Part::Feature *base = static_cast<Part::Feature*>(selected.getObject());
-
-    std::vector<std::string> SubNames = std::vector<std::string>(selected.getSubNames());
+    Part::Feature *base;
+    std::vector<std::string> SubNames;
+    if (noSelection) {
+        base = static_cast<Part::Feature*>(PartDesignGui::getBody(true)->Tip.getValue());
+    }
+    else {
+        base = static_cast<Part::Feature*>(selected.getObject());
+        SubNames = std::vector<std::string>(selected.getSubNames());
+    }
 
     finishDressupFeature (cmd, which, base, SubNames, useAllEdges);
 }
@@ -1937,31 +1951,41 @@ void CmdPartDesignDraft::activated(int iMsg)
     Q_UNUSED(iMsg);
     Gui::SelectionObject selected;
     bool useAllEdges = false;
-    if (!dressupGetSelected ( this, "Draft", selected, useAllEdges))
+    bool noSelection = false;
+    if (!dressupGetSelected ( this, "Draft", selected, useAllEdges, noSelection))
         return;
 
-    Part::Feature *base = static_cast<Part::Feature*>(selected.getObject());
-    std::vector<std::string> SubNames = std::vector<std::string>(selected.getSubNames());
-    const Part::TopoShape& TopShape = base->Shape.getShape();
-    size_t i = 0;
+    Part::Feature* base;
+    std::vector<std::string> SubNames;
+    if (noSelection) {
+        base = static_cast<Part::Feature*>(PartDesignGui::getBody(true)->Tip.getValue());
+    }
+    else {
+        base = static_cast<Part::Feature*>(selected.getObject());
+        SubNames = std::vector<std::string>(selected.getSubNames());
 
-    // filter out the edges
-    while(i < SubNames.size())
-    {
-        std::string aSubName = static_cast<std::string>(SubNames.at(i));
+        const Part::TopoShape& TopShape = base->Shape.getShape();
 
-        if (aSubName.compare(0, 4, "Face") == 0) {
-            // Check for valid face types
-            TopoDS_Face face = TopoDS::Face(TopShape.getSubShape(aSubName.c_str()));
-            BRepAdaptor_Surface sf(face);
-            if ((sf.GetType() != GeomAbs_Plane) && (sf.GetType() != GeomAbs_Cylinder) && (sf.GetType() != GeomAbs_Cone))
-                SubNames.erase(SubNames.begin()+i);
-        } else {
-            // empty name or any other sub-element
-            SubNames.erase(SubNames.begin()+i);
+        // filter out the edges
+        size_t i = 0;
+        while (i < SubNames.size())
+        {
+            std::string aSubName = SubNames.at(i);
+
+            if (aSubName.compare(0, 4, "Face") == 0) {
+                // Check for valid face types
+                TopoDS_Face face = TopoDS::Face(TopShape.getSubShape(aSubName.c_str()));
+                BRepAdaptor_Surface sf(face);
+                if ((sf.GetType() != GeomAbs_Plane) && (sf.GetType() != GeomAbs_Cylinder) && (sf.GetType() != GeomAbs_Cone))
+                    SubNames.erase(SubNames.begin() + i);
+            }
+            else {
+                // empty name or any other sub-element
+                SubNames.erase(SubNames.begin() + i);
+            }
+
+            i++;
         }
-
-        i++;
     }
 
     finishDressupFeature (this, "Draft", base, SubNames, useAllEdges);
@@ -1998,23 +2022,32 @@ void CmdPartDesignThickness::activated(int iMsg)
     Q_UNUSED(iMsg);
     Gui::SelectionObject selected;
     bool useAllEdges = false;
-    if (!dressupGetSelected ( this, "Thickness", selected, useAllEdges))
+    bool noSelection = false;
+    if (!dressupGetSelected ( this, "Thickness", selected, useAllEdges, noSelection))
         return;
 
-    Part::Feature *base = static_cast<Part::Feature*>(selected.getObject());
-    std::vector<std::string> SubNames = std::vector<std::string>(selected.getSubNames());
-    size_t i = 0;
 
-    // filter out the edges
-    while(i < SubNames.size())
-    {
-        std::string aSubName = static_cast<std::string>(SubNames.at(i));
+    Part::Feature* base;
+    std::vector<std::string> SubNames;
+    if (noSelection) {
+        base = static_cast<Part::Feature*>(PartDesignGui::getBody(true)->Tip.getValue());
+    }
+    else {
+        base = static_cast<Part::Feature*>(selected.getObject());
+        SubNames = std::vector<std::string>(selected.getSubNames());
 
-        if (aSubName.compare(0, 4, "Face") != 0) {
-            // empty name or any other sub-element
-            SubNames.erase(SubNames.begin()+i);
+        // filter out the edges
+        size_t i = 0;
+        while (i < SubNames.size())
+        {
+            std::string aSubName = SubNames.at(i);
+
+            if (aSubName.compare(0, 4, "Face") != 0) {
+                // empty name or any other sub-element
+                SubNames.erase(SubNames.begin() + i);
+            }
+            i++;
         }
-        i++;
     }
 
     finishDressupFeature (this, "Thickness", base, SubNames, useAllEdges);

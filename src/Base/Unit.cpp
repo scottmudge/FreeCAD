@@ -22,6 +22,8 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <cmath>
+# include <limits>
 # include <sstream>
 #endif
 
@@ -33,6 +35,23 @@
 
 
 using namespace Base;
+
+static inline void checkPow(UnitSignature sig, double exp)
+{
+    auto isInt = [](double value) {
+        return std::fabs(std::round(value) - value) < std::numeric_limits<double>::epsilon();
+    };
+    if (!isInt(sig.Length * exp) ||
+        !isInt(sig.Mass * exp) ||
+        !isInt(sig.Time * exp) ||
+        !isInt(sig.ElectricCurrent * exp) ||
+        !isInt(sig.ThermodynamicTemperature * exp) ||
+        !isInt(sig.AmountOfSubstance * exp) ||
+        !isInt(sig.LuminousIntensity * exp) ||
+        !isInt(sig.Angle * exp)) {
+        throw Base::UnitsMismatchError("pow() of unit not possible");
+    }
+}
 
 static inline void checkRange(const char * op, int length, int mass, int time, int electricCurrent,
                               int thermodynamicTemperature, int amountOfSubstance, int luminousIntensity, int angle)
@@ -54,7 +73,7 @@ static inline void checkRange(const char * op, int length, int mass, int time, i
          ( amountOfSubstance        <  -(1 << (UnitSignatureAmountOfSubstanceBits        - 1)) ) ||
          ( luminousIntensity        <  -(1 << (UnitSignatureLuminousIntensityBits        - 1)) ) ||
          ( angle                    <  -(1 << (UnitSignatureAngleBits                    - 1)) ) )
-        throw Base::OverflowError((std::string("Unit underflow in ") + std::string(op)).c_str());
+        throw Base::UnderflowError((std::string("Unit underflow in ") + std::string(op)).c_str());
 }
 
 Unit::Unit(int8_t Length,
@@ -121,27 +140,28 @@ Unit::Unit(const QString& expr)
     }
 }
 
-Unit Unit::pow(signed char exp) const
+Unit Unit::pow(double exp) const
 {
+    checkPow(Sig, exp);
     checkRange("pow()",
-               Sig.Length * exp,
-               Sig.Mass * exp,
-               Sig.Time * exp,
-               Sig.ElectricCurrent * exp,
-               Sig.ThermodynamicTemperature * exp,
-               Sig.AmountOfSubstance * exp,
-               Sig.LuminousIntensity * exp,
-               Sig.Angle * exp);
+               static_cast<int>(Sig.Length * exp),
+               static_cast<int>(Sig.Mass * exp),
+               static_cast<int>(Sig.Time * exp),
+               static_cast<int>(Sig.ElectricCurrent * exp),
+               static_cast<int>(Sig.ThermodynamicTemperature * exp),
+               static_cast<int>(Sig.AmountOfSubstance * exp),
+               static_cast<int>(Sig.LuminousIntensity * exp),
+               static_cast<int>(Sig.Angle * exp));
 
     Unit result;
-    result.Sig.Length                   = Sig.Length                    * exp;
-    result.Sig.Mass                     = Sig.Mass                      * exp;
-    result.Sig.Time                     = Sig.Time                      * exp;
-    result.Sig.ElectricCurrent          = Sig.ElectricCurrent           * exp;
-    result.Sig.ThermodynamicTemperature = Sig.ThermodynamicTemperature  * exp;
-    result.Sig.AmountOfSubstance        = Sig.AmountOfSubstance         * exp;
-    result.Sig.LuminousIntensity        = Sig.LuminousIntensity         * exp;
-    result.Sig.Angle                    = Sig.Angle                     * exp;
+    result.Sig.Length                   = static_cast<int8_t>(Sig.Length                    * exp);
+    result.Sig.Mass                     = static_cast<int8_t>(Sig.Mass                      * exp);
+    result.Sig.Time                     = static_cast<int8_t>(Sig.Time                      * exp);
+    result.Sig.ElectricCurrent          = static_cast<int8_t>(Sig.ElectricCurrent           * exp);
+    result.Sig.ThermodynamicTemperature = static_cast<int8_t>(Sig.ThermodynamicTemperature  * exp);
+    result.Sig.AmountOfSubstance        = static_cast<int8_t>(Sig.AmountOfSubstance         * exp);
+    result.Sig.LuminousIntensity        = static_cast<int8_t>(Sig.LuminousIntensity         * exp);
+    result.Sig.Angle                    = static_cast<int8_t>(Sig.Angle                     * exp);
 
     return result;
 }
@@ -449,52 +469,59 @@ QString Unit::getTypeString(void) const {
 
 const std::vector<std::pair<Unit, const char *> > &Unit::unitTypes() {
     static std::vector<std::pair<Unit, const char*> > units = {
-        {Unit::Length,"Length"},
-        {Unit::Area,"Area"},
-        {Unit::Volume,"Volume"},
-        {Unit::Mass,"Mass"},
-        {Unit::Angle,"Angle"},
-        {Unit::AngleOfFriction,"AngleOfFriction"},
-        {Unit::Density,"Density"},
-        {Unit::TimeSpan,"TimeSpan"},
-        {Unit::Frequency,"Frequency"},
-        {Unit::Velocity,"Velocity"},
-        {Unit::Acceleration,"Acceleration"},
-        {Unit::Temperature,"Temperature"},
-        {Unit::ElectricCurrent,"ElectricCurrent"},
-        {Unit::ElectricPotential,"ElectricPotential"},
-        {Unit::ElectricCharge,"ElectricCharge"},
-        {Unit::MagneticFieldStrength,"MagneticFieldStrength"},
-        {Unit::MagneticFlux,"MagneticFlux"},
-        {Unit::MagneticFluxDensity,"MagneticFluxDensity"},
-        {Unit::ElectricalCapacitance,"ElectricalCapacitance"},
-        {Unit::ElectricalInductance,"ElectricalInductance"},
-        {Unit::ElectricalConductance,"ElectricalConductance"},
-        {Unit::ElectricalResistance,"ElectricalResistance"},
-        {Unit::ElectricalConductivity,"ElectricalConductivity"},
-        {Unit::AmountOfSubstance,"AmountOfSubstance"},
-        {Unit::LuminousIntensity,"LuminousIntensity"},
-        {Unit::Pressure,"Pressure"},
-        {Unit::CompressiveStrength,"CompressiveStrength"},
-        {Unit::ShearModulus,"ShearModulus"},
-        {Unit::Stress,"Stress"},
-        {Unit::UltimateTensileStrength,"UltimateTensileStrength"},
-        {Unit::YieldStrength,"YieldStrength"},
-        {Unit::YoungsModulus,"YoungsModulus"},
-        {Unit::Stiffness,"Stiffness"},
-        {Unit::Force,"Force"},
-        {Unit::Work,"Work"},
-        {Unit::Power,"Power"},
-        {Unit::SpecificEnergy,"SpecificEnergy"},
-        {Unit::ThermalConductivity,"ThermalConductivity"},
-        {Unit::ThermalExpansionCoefficient,"ThermalExpansionCoefficient"},
-        {Unit::VolumetricThermalExpansionCoefficient,"VolumetricThermalExpansionCoefficient"},
-        {Unit::SpecificHeat,"SpecificHeat"},
-        {Unit::ThermalTransferCoefficient,"ThermalTransferCoefficient"},
-        {Unit::HeatFlux,"HeatFlux"},
-        {Unit::DynamicViscosity,"DynamicViscosity"},
-        {Unit::KinematicViscosity,"KinematicViscosity"},
-        {Unit::VacuumPermittivity,"VacuumPermittivity"},
+        {Unit::AmountOfSubstance, "AmountOfSubstance"},
+        {Unit::ElectricCurrent, "ElectricCurrent"},
+        {Unit::Length, "Length"},
+        {Unit::LuminousIntensity, "LuminousIntensity"},
+        {Unit::Mass, "Mass"},
+        {Unit::Temperature, "Temperature"},
+        {Unit::TimeSpan, "TimeSpan"},
+        {Unit::Acceleration, "Acceleration"},
+        {Unit::Angle, "Angle"},
+        {Unit::AngleOfFriction, "AngleOfFriction"},
+        {Unit::Area, "Area"},
+        {Unit::CompressiveStrength, "CompressiveStrength"},
+        {Unit::CurrentDensity, "CurrentDensity"},
+        {Unit::Density, "Density"},
+        {Unit::DissipationRate, "DissipationRate"},
+        {Unit::DynamicViscosity, "DynamicViscosity"},
+        {Unit::ElectricalCapacitance, "ElectricalCapacitance"},
+        {Unit::ElectricalConductance, "ElectricalConductance"},
+        {Unit::ElectricalConductivity, "ElectricalConductivity"},
+        {Unit::ElectricalInductance, "ElectricalInductance"},
+        {Unit::ElectricalResistance, "ElectricalResistance"},
+        {Unit::ElectricCharge, "ElectricCharge"},
+        {Unit::ElectricPotential, "ElectricPotential"},
+        {Unit::Force, "Force"},
+        {Unit::Frequency, "Frequency"},
+        {Unit::HeatFlux, "HeatFlux"},
+        {Unit::InverseArea, "InverseArea"},
+        {Unit::InverseLength, "InverseLength"},
+        {Unit::InverseVolume, "InverseVolume"},
+        {Unit::KinematicViscosity, "KinematicViscosity"},
+        {Unit::MagneticFieldStrength, "MagneticFieldStrength"},
+        {Unit::MagneticFlux, "MagneticFlux"},
+        {Unit::MagneticFluxDensity, "MagneticFluxDensity"},
+        {Unit::Magnetization, "Magnetization"},
+        {Unit::Pressure, "Pressure"},
+        {Unit::Power, "Power"},
+        {Unit::ShearModulus, "ShearModulus"},
+        {Unit::SpecificEnergy, "SpecificEnergy"},
+        {Unit::SpecificHeat, "SpecificHeat"},
+        {Unit::Stiffness, "Stiffness"},
+        {Unit::Stress, "Stress"},
+        {Unit::ThermalConductivity, "ThermalConductivity"},
+        {Unit::ThermalExpansionCoefficient, "ThermalExpansionCoefficient"},
+        {Unit::ThermalTransferCoefficient, "ThermalTransferCoefficient"},
+        {Unit::UltimateTensileStrength, "UltimateTensileStrength"},
+        {Unit::VacuumPermittivity, "VacuumPermittivity"},
+        {Unit::Velocity, "Velocity"},
+        {Unit::Volume, "Volume"},
+        {Unit::VolumeFlowRate, "VolumeFlowRate"},
+        {Unit::VolumetricThermalExpansionCoefficient, "VolumetricThermalExpansionCoefficient"},
+        {Unit::Work, "Work"},
+        {Unit::YieldStrength, "YieldStrength"},
+        {Unit::YoungsModulus, "YoungsModulus"},
     };
     return units;
 }
@@ -512,60 +539,59 @@ const char *Unit::getType() const {
     return iter->second;
 }
 
-Unit Unit::Length(1);
-Unit Unit::Area(2);
-Unit Unit::Volume(3);
-Unit Unit::Mass(0,1);
+// SI base units
+Unit Unit::AmountOfSubstance          (0, 0, 0, 0, 0, 1);
+Unit Unit::ElectricCurrent            (0, 0, 0, 1);
+Unit Unit::Length                     (1);
+Unit Unit::LuminousIntensity          (0, 0, 0, 0, 0, 0, 1);
+Unit Unit::Mass                       (0, 1);
+Unit Unit::Temperature                (0, 0, 0, 0, 1);
+Unit Unit::TimeSpan                   (0, 0, 1);
 
-// Angle, deg
-Unit Unit::Angle           (0,0,0,0,0,0,0,1);
-Unit Unit::AngleOfFriction (0,0,0,0,0,0,0,1);
-
-Unit Unit::Density(-3,1);
-
-Unit Unit::TimeSpan(0,0,1);
-Unit Unit::Frequency(0,0,-1);
-Unit Unit::Velocity(1,0,-1);
-Unit Unit::Acceleration(1,0,-2);
-Unit Unit::Temperature(0,0,0,0,1);
-
-Unit Unit::ElectricCurrent(0,0,0,1);
-Unit Unit::ElectricPotential(2,1,-3,-1);
-Unit Unit::ElectricCharge(0,0,1,1);
-Unit Unit::MagneticFieldStrength(-1,0,0,1);
-Unit Unit::MagneticFlux(2,1,-2,-1);
-Unit Unit::MagneticFluxDensity(0,1,-2,-1);
-Unit Unit::ElectricalCapacitance(-2,-1,4,2);
-Unit Unit::ElectricalInductance(2,1,-2,-2);
-Unit Unit::ElectricalConductance(-2,-1,3,2);
-Unit Unit::ElectricalResistance(2,1,-3,-2);
-Unit Unit::ElectricalConductivity(-3,-1,3,2);
-Unit Unit::AmountOfSubstance(0,0,0,0,0,1);
-Unit Unit::LuminousIntensity(0,0,0,0,0,0,1);
-
-// Pressure, kg/m*s^2 or N/m^2 or PSI or MPa
-Unit Unit::CompressiveStrength     (-1,1,-2);
-Unit Unit::Pressure                (-1,1,-2);
-Unit Unit::ShearModulus            (-1,1,-2);
-Unit Unit::Stress                  (-1,1,-2);
-Unit Unit::UltimateTensileStrength (-1,1,-2);
-Unit Unit::YieldStrength           (-1,1,-2);
-Unit Unit::YoungsModulus           (-1,1,-2);
-
-// Stiffness [kg/s^-2]
-Unit Unit::Stiffness               (0,1,-2);
-
-Unit Unit::Force   (1,1,-2);
-Unit Unit::Work    (2,1,-2);
-Unit Unit::Power   (2,1,-3);
-
-Unit Unit::SpecificEnergy              (2,0,-2);
-Unit Unit::ThermalConductivity         (1,1,-3,0,-1);
-Unit Unit::ThermalExpansionCoefficient (0,0,0,0,-1);
-Unit Unit::VolumetricThermalExpansionCoefficient (0,0,0,0,-1);
-Unit Unit::SpecificHeat                (2,0,-2,0,-1);
-Unit Unit::ThermalTransferCoefficient  (0,1,-3,0,-1);
-Unit Unit::HeatFlux                    (0,1,-3,0,0);
-Unit Unit::DynamicViscosity            (-1,1,-1);  // SI unit: kg/m/s
-Unit Unit::KinematicViscosity          (2,0,-1);  // SI unit: m^2/s, https://en.wikipedia.org/wiki/Viscosity#Kinematic_viscosity
-Unit Unit::VacuumPermittivity          (-3,-1,4,2); // SI unit: A²*s⁴/kg/m³ https://en.wikipedia.org/wiki/Permittivity#Vacuum_permittivity
+// all other units
+Unit Unit::Acceleration               (1, 0, -2);
+Unit Unit::Angle                      (0, 0, 0, 0, 0, 0, 0, 1);
+Unit Unit::AngleOfFriction            (0, 0, 0, 0, 0, 0, 0, 1);
+Unit Unit::Area                       (2);
+Unit Unit::CompressiveStrength        (-1, 1, -2);
+Unit Unit::CurrentDensity             (-2, 0, 0, 1);
+Unit Unit::Density                    (-3, 1);
+Unit Unit::DissipationRate   (2, 0, -3); // https://cfd-online.com/Wiki/Turbulence_dissipation_rate
+Unit Unit::DynamicViscosity           (-1, 1, -1);
+Unit Unit::ElectricalCapacitance      (-2, -1, 4, 2);
+Unit Unit::ElectricalConductance      (-2, -1, 3, 2);
+Unit Unit::ElectricalConductivity     (-3, -1, 3, 2);
+Unit Unit::ElectricalInductance       (2, 1, -2, -2);
+Unit Unit::ElectricalResistance       (2, 1, -3, -2);
+Unit Unit::ElectricCharge             (0, 0, 1, 1);
+Unit Unit::ElectricPotential          (2, 1, -3, -1);
+Unit Unit::Force                      (1, 1, -2);
+Unit Unit::Frequency                  (0, 0, -1);
+Unit Unit::HeatFlux                   (0, 1, -3, 0, 0);
+Unit Unit::InverseArea                (-2, 0, 0);
+Unit Unit::InverseLength              (-1, 0, 0);
+Unit Unit::InverseVolume              (-3, 0, 0);
+Unit Unit::KinematicViscosity         (2, 0, -1);
+Unit Unit::MagneticFieldStrength      (-1,0,0,1);
+Unit Unit::MagneticFlux               (2,1,-2,-1);
+Unit Unit::MagneticFluxDensity        (0,1,-2,-1);
+Unit Unit::Magnetization              (-1,0,0,1);
+Unit Unit::Pressure                   (-1,1,-2);
+Unit Unit::Power                      (2, 1, -3);
+Unit Unit::ShearModulus               (-1,1,-2);
+Unit Unit::SpecificEnergy             (2, 0, -2);
+Unit Unit::SpecificHeat               (2, 0, -2, 0, -1);
+Unit Unit::Stiffness                  (0, 1, -2);
+Unit Unit::Stress                     (-1,1,-2);
+Unit Unit::ThermalConductivity        (1, 1, -3, 0, -1);
+Unit Unit::ThermalExpansionCoefficient(0, 0, 0, 0, -1);
+Unit Unit::ThermalTransferCoefficient (0, 1, -3, 0, -1);
+Unit Unit::UltimateTensileStrength    (-1,1,-2);
+Unit Unit::VacuumPermittivity         (-3, -1, 4,  2);
+Unit Unit::Velocity                   (1, 0, -1);
+Unit Unit::Volume                     (3);
+Unit Unit::VolumeFlowRate             (3, 0, -1);
+Unit Unit::VolumetricThermalExpansionCoefficient(0, 0, 0, 0, -1);
+Unit Unit::Work                       (2, 1, -2);
+Unit Unit::YieldStrength              (-1,1,-2);
+Unit Unit::YoungsModulus              (-1,1,-2);

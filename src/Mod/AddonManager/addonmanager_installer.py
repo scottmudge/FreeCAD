@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
 # ***************************************************************************
 # *                                                                         *
 # *   Copyright (c) 2022 FreeCAD Project Association                        *
@@ -52,7 +53,7 @@ translate = FreeCAD.Qt.translate
 class InstallationMethod(IntEnum):
     """For packages installed from a git repository, in most cases it is possible to either use git
     or to download a zip archive of the addon. For a local repository, a direct copy may be used
-    instead. If "ANY" is given, the the internal code decides which to use."""
+    instead. If "ANY" is given, the internal code decides which to use."""
 
     GIT = auto()
     COPY = auto()
@@ -115,7 +116,7 @@ class AddonInstaller(QtCore.QObject):
 
     allowed_packages = set()
 
-    def __init__(self, addon: object, allow_list: List[str] = None):
+    def __init__(self, addon: Addon, allow_list: List[str] = None):
         """Initialize the installer with an optional list of addons. If provided, then installation
         by name is supported, as long as the objects in the list contain a "name" and "url"
         property. In most use cases it is expected that addons is a List of Addon objects, but that
@@ -127,9 +128,7 @@ class AddonInstaller(QtCore.QObject):
         self.git_manager = initialize_git()
 
         if allow_list is not None:
-            AddonInstaller.allowed_packages = set(
-                allow_list if allow_list is not None else []
-            )
+            AddonInstaller.allowed_packages = set(allow_list if allow_list is not None else [])
         elif not AddonInstaller.allowed_packages:
             AddonInstaller._load_local_allowed_packages_list()
             AddonInstaller._update_allowed_packages_list()
@@ -152,8 +151,16 @@ class AddonInstaller(QtCore.QObject):
                 success = self._install_by_git()
             elif method_to_use == InstallationMethod.COPY:
                 success = self._install_by_copy()
+            if (
+                hasattr(self.addon_to_install, "contains_workbench")
+                and self.addon_to_install.contains_workbench()
+            ):
+                self.addon_to_install.enable_workbench()
         except utils.ProcessInterrupted:
             pass
+        except Exception as e:
+            FreeCAD.Console.PrintLog(e + "\n")
+            success = False
         if success:
             if (
                 hasattr(self.addon_to_install, "contains_workbench")
@@ -169,9 +176,7 @@ class AddonInstaller(QtCore.QObject):
     def _load_local_allowed_packages_list(cls) -> None:
         """Read in the local allow-list, in case the remote one is unavailable."""
         cls.allowed_packages.clear()
-        allow_file = os.path.join(
-            os.path.dirname(__file__), "ALLOWED_PYTHON_PACKAGES.txt"
-        )
+        allow_file = os.path.join(os.path.dirname(__file__), "ALLOWED_PYTHON_PACKAGES.txt")
         if os.path.exists(allow_file):
             with open(allow_file, encoding="utf8") as f:
                 lines = f.readlines()
@@ -193,7 +198,7 @@ class AddonInstaller(QtCore.QObject):
             FreeCAD.Console.PrintLog(
                 "Overriding local ALLOWED_PYTHON_PACKAGES.txt with newer remote version\n"
             )
-            p = p.data().decode("utf8")
+            p = p.decode("utf8")
             lines = p.split("\n")
             cls.allowed_packages.clear()  # Unset the locally-defined list
             for line in lines:
@@ -265,9 +270,7 @@ class AddonInstaller(QtCore.QObject):
         if addon_url.startswith("file://"):
             addon_url = addon_url[len("file://") :]  # Strip off the file:// part
         name = self.addon_to_install.name
-        shutil.copytree(
-            addon_url, os.path.join(self.installation_path, name), dirs_exist_ok=True
-        )
+        shutil.copytree(addon_url, os.path.join(self.installation_path, name), dirs_exist_ok=True)
         self._finalize_successful_installation()
         return True
 
@@ -297,20 +300,13 @@ class AddonInstaller(QtCore.QObject):
         else:
             zip_url = utils.get_zip_url(self.addon_to_install)
 
+        FreeCAD.Console.PrintLog(f"Downloading ZIP file from {zip_url}...\n")
         parse_result = urlparse(zip_url)
         is_remote = parse_result.scheme in ["http", "https"]
 
         if is_remote:
             if FreeCAD.GuiUp:
-                NetworkManager.AM_NETWORK_MANAGER.progress_made.connect(
-                    self._update_zip_status
-                )
-                NetworkManager.AM_NETWORK_MANAGER.progress_complete.connect(
-                    self._finish_zip
-                )
-                self.zip_download_index = (
-                    NetworkManager.AM_NETWORK_MANAGER.submit_monitored_get(zip_url)
-                )
+                self._run_zip_downloader_in_event_loop(zip_url)
             else:
                 zip_data = utils.blocking_get(zip_url)
                 with tempfile.NamedTemporaryFile(delete=False) as f:
@@ -321,26 +317,42 @@ class AddonInstaller(QtCore.QObject):
             self._finalize_zip_installation(zip_url)
         return True
 
+    def _run_zip_downloader_in_event_loop(self, zip_url: str):
+        """Runs the zip downloader in a private event loop. This function does not exit until the
+        ZIP download is complete. It requires the GUI to be up, and should not be run on the main
+        GUI thread."""
+        NetworkManager.AM_NETWORK_MANAGER.progress_made.connect(self._update_zip_status)
+        NetworkManager.AM_NETWORK_MANAGER.progress_complete.connect(self._finish_zip)
+        self.zip_download_index = NetworkManager.AM_NETWORK_MANAGER.submit_monitored_get(zip_url)
+        while self.zip_download_index is not None:
+            if QtCore.QThread.currentThread().isInterruptionRequested():
+                break
+            QtCore.QCoreApplication.processEvents(QtCore.QEventLoop.AllEvents, 50)
+
     def _update_zip_status(self, index: int, bytes_read: int, data_size: int):
         """Called periodically when downloading a zip file, emits a signal to display the
         download progress."""
         if index == self.zip_download_index:
             self.progress_update.emit(bytes_read, data_size)
 
-    def _finish_zip(self, _: int, response_code: int, filename: os.PathLike):
+    def _finish_zip(self, index: int, response_code: int, filename: os.PathLike):
         """Once the zip download is finished, unzip it into the correct location. Only called if
         the GUI is up, and the NetworkManager was responsible for the download. Do not call
         directly."""
+        if index != self.zip_download_index:
+            return
+        self.zip_download_index = None
         if response_code != 200:
             self.failure.emit(
                 self.addon_to_install,
-                translate(
-                    "AddonsInstaller", "Received {} response code from server"
-                ).format(response_code),
+                translate("AddonsInstaller", "Received {} response code from server").format(
+                    response_code
+                ),
             )
             return
         QtCore.QCoreApplication.processEvents(QtCore.QEventLoop.AllEvents)
 
+        FreeCAD.Console.PrintLog("ZIP download complete. Installing...\n")
         self._finalize_zip_installation(filename)
 
     def _finalize_zip_installation(self, filename: os.PathLike):
@@ -348,7 +360,6 @@ class AddonInstaller(QtCore.QObject):
         location. Has special handling for GitHub's zip structure, which places the data in a
         subdirectory of the main directory."""
 
-        subdirectory = ""
         destination = os.path.join(self.installation_path, self.addon_to_install.name)
         with zipfile.ZipFile(filename, "r") as zfile:
             zfile.extractall(destination)
@@ -356,23 +367,30 @@ class AddonInstaller(QtCore.QObject):
         # GitHub (and possibly other hosts) put all files in the zip into a subdirectory named
         # after the branch. If that is the setup that we just extracted, move all files out of
         # that subdirectory.
-        subdirectories = os.listdir(destination)
-        if (
-            len(subdirectories) == 1
-            and subdirectories[0] == self.addon_to_install.branch
-        ):
-            subdirectory = subdirectories[0]
+        if self._code_in_branch_subdirectory(destination):
+            self._move_code_out_of_subdirectory(destination)
 
-        if subdirectory:
-            for extracted_filename in os.listdir(
-                os.path.join(destination, subdirectory)
-            ):
-                shutil.move(
-                    os.path.join(destination, subdirectory, extracted_filename),
-                    os.path.join(destination, extracted_filename),
-                )
-            os.rmdir(os.path.join(destination, subdirectory))
+        FreeCAD.Console.PrintLog("ZIP installation complete.\n")
         self._finalize_successful_installation()
+
+    def _code_in_branch_subdirectory(self, destination: str) -> bool:
+        subdirectories = os.listdir(destination)
+        if len(subdirectories) == 1:
+            subdir_name = subdirectories[0]
+            if subdir_name.endswith(os.path.sep):
+                subdir_name = subdir_name[:-1]  # Strip trailing slash if present
+            if subdir_name.endswith(self.addon_to_install.branch):
+                return True
+        return False
+
+    def _move_code_out_of_subdirectory(self, destination):
+        subdirectory = os.listdir(destination)[0]
+        for extracted_filename in os.listdir(os.path.join(destination, subdirectory)):
+            shutil.move(
+                os.path.join(destination, subdirectory, extracted_filename),
+                os.path.join(destination, extracted_filename),
+            )
+        os.rmdir(os.path.join(destination, subdirectory))
 
     def _finalize_successful_installation(self):
         """Perform any necessary additional steps after installing the addon."""
@@ -388,9 +406,7 @@ class AddonInstaller(QtCore.QObject):
 
         if hasattr(self.addon_to_install, "metadata") and os.path.isfile(package_xml):
             self.addon_to_install.load_metadata_file(package_xml)
-            self.addon_to_install.installed_version = (
-                self.addon_to_install.metadata.Version
-            )
+            self.addon_to_install.installed_version = self.addon_to_install.metadata.version
             self.addon_to_install.updated_timestamp = os.path.getmtime(package_xml)
 
     def _install_macros(self):
@@ -439,11 +455,7 @@ class AddonInstaller(QtCore.QObject):
         """Make sure the object has the necessary attributes (name, url, and branch) to be
         installed."""
 
-        if (
-            not hasattr(addon, "name")
-            or not hasattr(addon, "url")
-            or not hasattr(addon, "branch")
-        ):
+        if not hasattr(addon, "name") or not hasattr(addon, "url") or not hasattr(addon, "branch"):
             raise RuntimeError(
                 "Provided object does not provide a name, url, and/or branch attribute"
             )
@@ -482,9 +494,7 @@ class MacroInstaller(QtCore.QObject):
             temp_install_succeeded, error_list = macro.install(temp_dir)
             if not temp_install_succeeded:
                 FreeCAD.Console.PrintError(
-                    translate("AddonsInstaller", "Failed to install macro {}").format(
-                        macro.name
-                    )
+                    translate("AddonsInstaller", "Failed to install macro {}").format(macro.name)
                     + "\n"
                 )
                 for e in error_list:
@@ -513,6 +523,4 @@ class MacroInstaller(QtCore.QObject):
             or not hasattr(addon.macro, "install")
             or not callable(addon.macro.install)
         ):
-            raise RuntimeError(
-                "Provided object does not provide a macro with an install method"
-            )
+            raise RuntimeError("Provided object does not provide a macro with an install method")

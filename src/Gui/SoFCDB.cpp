@@ -48,6 +48,7 @@
 #include <zipios++/gzipoutputstream.h>
 
 #include "SoFCDB.h"
+#include "Camera.h"
 #include "Flag.h"
 #include "GestureNavigationStyle.h"
 #include "NavigationStyle.h"
@@ -68,6 +69,7 @@
 #include "SoMouseWheelEvent.h"
 #include "SoNavigationDragger.h"
 #include "SoTextLabel.h"
+#include "SoDatumLabel.h"
 #include "Inventor/MarkerBitmaps.h"
 #include "Inventor/SmSwitchboard.h"
 #include "Inventor/SoFCVertexCache.h"
@@ -142,6 +144,7 @@ void Gui::SoFCDB::init()
     SoSkipBoundingGroup             ::initClass();
     SoSkipBoundingBoxElement        ::initClass();
     SoTextLabel                     ::initClass();
+    SoDatumLabel                    ::initClass();
     SoColorBarLabel                 ::initClass();
     SoStringLabel                   ::initClass();
     SoFrameLabel                    ::initClass();

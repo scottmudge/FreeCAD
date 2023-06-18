@@ -49,7 +49,7 @@ from draftutils.messages import _msg
 
 __title__ = "FreeCAD Draft Trackers"
 __author__ = "Yorik van Havre"
-__url__ = "https://www.freecadweb.org"
+__url__ = "https://www.freecad.org"
 
 
 class Tracker:
@@ -58,7 +58,8 @@ class Tracker:
     def __init__(self, dotted=False, scolor=None, swidth=None,
                  children=[], ontop=False, name=None):
         global Part, DraftGeomUtils
-        import Part, DraftGeomUtils
+        import Part
+        import DraftGeomUtils
         self.ontop = ontop
         self.color = coin.SoBaseColor()
         self.color.rgb = scolor or FreeCADGui.draftToolBar.getDefaultColor("line")
@@ -549,7 +550,6 @@ class arcTracker(Tracker):
             self.normal = normal
         else:
             self.normal = FreeCAD.DraftWorkingPlane.axis
-        self.basevector = self.getDeviation()
         self.recompute()
         super().__init__(dotted, scolor, swidth,
                          [self.trans, self.sep], name="arcTracker")
@@ -587,7 +587,7 @@ class arcTracker(Tracker):
         c = self.trans.translation.getValue()
         center = Vector(c[0], c[1], c[2])
         rad = pt.sub(center)
-        a = DraftVecUtils.angle(rad, self.basevector, self.normal)
+        a = DraftVecUtils.angle(rad, self.getDeviation(), self.normal)
         # print(a)
         return a
 
@@ -619,7 +619,6 @@ class arcTracker(Tracker):
         e = arc.toShape()
         self.autoinvert = False
         self.normal = e.Curve.Axis.negative()  # axis is always in wrong direction
-        self.basevector = self.getDeviation()
         self.setCenter(e.Curve.Center)
         self.setRadius(e.Curve.Radius)
         self.setStartPoint(p1)
@@ -813,6 +812,7 @@ class editTracker(Tracker):
         self.marker.markerIndex = marker
         self.coords = coin.SoCoordinate3()  # this is the coordinate
         self.coords.point.setValue((pos.x, pos.y, pos.z))
+        self.position = pos
         if inactive:
             self.selnode = coin.SoSeparator()
         else:
@@ -835,11 +835,11 @@ class editTracker(Tracker):
     def set(self, pos):
         """Set the point to the position."""
         self.coords.point.setValue((pos.x, pos.y, pos.z))
+        self.position = pos
 
     def get(self):
         """Get a vector from the point."""
-        p = self.coords.point.getValues()[0]
-        return Vector(p[0], p[1], p[2])
+        return self.position
 
     def get_doc_name(self):
         """Get the document name."""
@@ -1231,7 +1231,7 @@ class gridTracker(Tracker):
         self.numlines = Draft.getParam("gridSize", 100)
         self.update()
 
-    def set(self):
+    def set(self,tool=False):
         """Move and rotate the grid according to the current working plane."""
         self.reset()
         Q = FreeCAD.DraftWorkingPlane.getRotation().Rotation.Q
@@ -1240,7 +1240,8 @@ class gridTracker(Tracker):
         self.trans.translation.setValue([P.x, P.y, P.z])
         self.displayHumanFigure()
         self.setAxesColor()
-        self.on()
+        if tool:
+            self.on()
 
     def getClosestNode(self, point):
         """Return the closest node from the given point."""
@@ -1279,7 +1280,8 @@ class boxTracker(Tracker):
 
     def update(self, line=None, normal=None):
         """Update the tracker."""
-        import WorkingPlane, DraftGeomUtils
+        import WorkingPlane
+        import DraftGeomUtils
         if not normal:
             normal = FreeCAD.DraftWorkingPlane.axis
         if line:

@@ -19,9 +19,12 @@
 #*                                                                         *
 #***************************************************************************
 
-import six
+import math
 
-import FreeCAD, Part, Draft, math, ArchCommands
+import FreeCAD
+import ArchCommands
+import Draft
+import Part
 from FreeCAD import Vector
 if FreeCAD.GuiUp:
     import FreeCADGui, re
@@ -42,7 +45,7 @@ else:
 
 __title__  = "FreeCAD Axis System"
 __author__ = "Yorik van Havre"
-__url__    = "https://www.freecadweb.org"
+__url__    = "https://www.freecad.org"
 
 ## @package ArchAxis
 #  \ingroup ARCH
@@ -271,7 +274,7 @@ class _ViewProviderAxis:
         return []
 
     def attach(self, vobj):
-
+        self.Object = vobj.Object
         self.bubbles = None
         self.bubbletexts = []
         self.bubbledata = []
@@ -610,7 +613,9 @@ class _ViewProviderAxis:
 
         return self.bubbledata
 
-    def setEdit(self,vobj,mode=0):
+    def setEdit(self, vobj, mode):
+        if mode == 1 or mode == 2:
+            return None
 
         taskd = _AxisTaskPanel()
         taskd.obj = vobj.Object
@@ -618,14 +623,40 @@ class _ViewProviderAxis:
         FreeCADGui.Control.showDialog(taskd)
         return True
 
-    def unsetEdit(self,vobj,mode):
+    def unsetEdit(self, vobj, mode):
+        if mode == 1 or mode == 2:
+            return None
 
         FreeCADGui.Control.closeDialog()
-        return
+        return True
 
-    def doubleClicked(self,vobj):
+    def setupContextMenu(self, vobj, menu):
+        actionEdit = QtGui.QAction(translate("Arch", "Edit"),
+                                   menu)
+        QtCore.QObject.connect(actionEdit,
+                               QtCore.SIGNAL("triggered()"),
+                               self.edit)
+        menu.addAction(actionEdit)
 
-        self.setEdit(vobj)
+        # The default Part::FeaturePython context menu contains a `Set colors`
+        # option. This option makes no sense for Axis objects. We therefore
+        # override this menu and have to add our own `Transform` item.
+        # To override the default menu this function must return `True`.
+        action_transform = QtGui.QAction(FreeCADGui.getIcon("Std_TransformManip.svg"),
+                                         translate("Command", "Transform"), # Context `Command` instead of `Arch`.
+                                         menu)
+        QtCore.QObject.connect(action_transform,
+                               QtCore.SIGNAL("triggered()"),
+                               self.transform)
+        menu.addAction(action_transform)
+
+        return True
+
+    def edit(self):
+        FreeCADGui.ActiveDocument.setEdit(self.Object, 0)
+
+    def transform(self):
+        FreeCADGui.ActiveDocument.setEdit(self.Object, 1)
 
     def __getstate__(self):
 

@@ -109,11 +109,15 @@ public:
     App::PropertyBool IsoHidden;
     App::PropertyInteger IsoCount;
 
+    App::PropertyInteger ScrubCount;
+
     short mustExecute() const override;
     App::DocumentObjectExecReturn* execute() override;
     const char* getViewProviderName() const override { return "TechDrawGui::ViewProviderViewPart"; }
     PyObject* getPyObject() override;
 
+    static TopoDS_Shape centerScaleRotate(DrawViewPart* dvp, TopoDS_Shape& inOutShape,
+                                          Base::Vector3d centroid);
     std::vector<TechDraw::DrawHatch*> getHatches() const;
     std::vector<TechDraw::DrawGeomHatch*> getGeomHatches() const;
     std::vector<TechDraw::DrawViewDimension*> getDimensions() const;
@@ -127,10 +131,15 @@ public:
     bool hasGeometry() const;
     TechDraw::GeometryObjectPtr getGeometryObject() const { return geometryObject; }
 
+    TechDraw::VertexPtr getVertex(std::string vertexName) const;
+    TechDraw::BaseGeomPtr getEdge(std::string edgeName) const;
+    TechDraw::FacePtr getFace(std::string faceName) const;
+
     TechDraw::BaseGeomPtr
     getGeomByIndex(int idx) const;//get existing geom for edge idx in projection
     TechDraw::VertexPtr
     getProjVertexByIndex(int idx) const;//get existing geom for vertex idx in projection
+
     TechDraw::VertexPtr getProjVertexByCosTag(std::string cosTag);
     std::vector<TechDraw::BaseGeomPtr>
     getFaceEdgesByIndex(int idx) const;//get edges for face idx in projection
@@ -151,6 +160,7 @@ public:
     virtual gp_Ax2 getViewAxis(const Base::Vector3d& pt, const Base::Vector3d& direction,
                                const bool flip = true) const;
     virtual gp_Ax2 getProjectionCS(Base::Vector3d pt = Base::Vector3d(0.0, 0.0, 0.0)) const;
+    virtual gp_Ax2 getRotatedCS(Base::Vector3d basePoint = Base::Vector3d(0.0, 0.0, 0.0)) const;
     virtual Base::Vector3d getXDirection() const;//don't use XDirection.getValue()
     virtual Base::Vector3d getOriginalCentroid() const;
     virtual Base::Vector3d getCurrentCentroid() const;
@@ -158,6 +168,9 @@ public:
                                       const bool flip = true) const;
     gp_Ax2 localVectorToCS(const Base::Vector3d localUnit) const;
     Base::Vector3d localVectorToDirection(const Base::Vector3d localUnit) const;
+
+    Base::Vector3d getLocalOrigin3d() const;
+    Base::Vector3d getLocalOrigin2d() const;
 
     bool handleFaces();
     bool newFaceFinder();
@@ -274,6 +287,7 @@ private:
     QMetaObject::Connection connectFaceWatcher;
     QFutureWatcher<void> m_faceWatcher;
     QFuture<void> m_faceFuture;
+
 };
 
 using DrawViewPartPython = App::FeaturePythonT<DrawViewPart>;

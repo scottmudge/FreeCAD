@@ -19,11 +19,16 @@
 #*                                                                         *
 #***************************************************************************
 
+import os
+import FreeCAD
 import FreeCADGui
+
 # MRU will be given before this script is run
-rf=FreeCAD.ParamGet("User parameter:BaseApp/Preferences/RecentFiles")
-FreeCADGui.loadFile(rf.GetString("MRU"+str(MRU)), interactive=True)
+rf = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/RecentFiles")
+filename = rf.GetString("MRU"+str(MRU))
+ext = os.path.splitext(filename)[1].lower().strip(".")
+mod = FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Start").GetString("DefaultImport"+ext, "")
+FreeCADGui.loadFile(filename, mod, interactive=True)
 
 from StartPage import StartPage
 StartPage.postStart()
-

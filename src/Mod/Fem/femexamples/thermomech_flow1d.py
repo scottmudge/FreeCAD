@@ -43,7 +43,7 @@ def get_information():
         "constraints": ["self weight"],
         "solvers": ["calculix", "ccxtools"],
         "material": "fluid",
-        "equation": "thermomechanical"
+        "equations": ["thermomechanical"]
     }
 
 
@@ -56,7 +56,7 @@ setup()
 
 
 See forum topic post:
-https://forum.freecadweb.org/viewtopic.php?f=18&t=20076
+https://forum.freecad.org/viewtopic.php?f=18&t=20076
 
 
 """
@@ -130,7 +130,7 @@ def setup(doc=None, solvertype="ccxtools"):
         solver_obj.WorkingDir = u""
     else:
         FreeCAD.Console.PrintWarning(
-            "Not known or not supported solver type: {}. "
+            "Unknown or unsupported solver type: {}. "
             "No solver object was created.\n".format(solvertype)
         )
     if solvertype == "calculix" or solvertype == "ccxtools":
@@ -148,9 +148,9 @@ def setup(doc=None, solvertype="ccxtools"):
     mat = material_obj.Material
     mat["Name"] = "Water"
     mat["Density"] = "998 kg/m^3"
-    mat["SpecificHeat"] = "4.182 J/kg/K"
+    mat["SpecificHeat"] = "4182 J/kg/K"
     mat["DynamicViscosity"] = "1.003e-3 kg/m/s"
-    mat["VolumetricThermalExpansionCoefficient"] = "2.07e-4 m/m/K"
+    mat["ThermalExpansionCoefficient"] = "2.07e-4 m/m/K"
     mat["ThermalConductivity"] = "0.591 W/m/K"
     material_obj.Material = mat
     analysis.addObject(material_obj)

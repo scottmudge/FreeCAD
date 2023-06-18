@@ -24,6 +24,7 @@
 
 #ifndef _PreComp_
 # include <boost_signals2.hpp>
+# include <boost/core/ignore_unused.hpp>
 # include <QApplication>
 # include <QEvent>
 # include <QCloseEvent>
@@ -111,7 +112,7 @@ void MDIView::deleteSelf()
     // Use deleteLater() instead of delete operator.
     QWidget* parent = this->parentWidget();
     if (qobject_cast<QMdiSubWindow*>(parent)) {
-        // https://forum.freecadweb.org/viewtopic.php?f=22&t=23070
+        // https://forum.freecad.org/viewtopic.php?f=22&t=23070
         parent->close();
     }
     else {
@@ -173,12 +174,12 @@ void MDIView::onRelabel(Gui::Document *pDoc)
         QRegularExpression rx(QStringLiteral("(\\s\\:\\s\\d+\\[\\*\\])$"));
         QRegularExpressionMatch match;
         //int pos =
-        cap.lastIndexOf(rx, -1, &match);
+        boost::ignore_unused(cap.lastIndexOf(rx, -1, &match));
         if (!match.hasMatch()) {
             // ... or not
             rx.setPattern(QStringLiteral("(\\s\\:\\s\\d+)$"));
             //pos =
-            cap.lastIndexOf(rx, -1, &match);
+            boost::ignore_unused(cap.lastIndexOf(rx, -1, &match));
         }
         if (match.hasMatch()) {
             cap = QString::fromUtf8(pDoc->getDocument()->Label.getValue());
@@ -321,15 +322,21 @@ void MDIView::printPreview()
 {
     QPrinter printer(QPrinter::ScreenResolution);
     QPrintPreviewDialog dlg(&printer, this);
-    connect(&dlg, SIGNAL(paintRequested (QPrinter *)),
-            this, SLOT(print(QPrinter *)));
+    connect(&dlg, &QPrintPreviewDialog::paintRequested,
+            this, qOverload<QPrinter*>(&MDIView::print));
     dlg.exec();
 }
 
 void MDIView::savePrinterSettings(QPrinter* printer)
 {
     auto hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Printer");
-    hGrp = hGrp->GetGroup(printer->printerName().toUtf8());
+    QString printerName = printer->printerName();
+    if (printerName.isEmpty()) {
+        // no printer defined
+        return;
+    }
+
+    hGrp = hGrp->GetGroup(printerName.toUtf8());
 
     hGrp->SetInt("DefaultPageSize", printer->pageLayout().pageSize().id());
     hGrp->SetInt("DefaultPageOrientation", static_cast<int>(printer->pageLayout().orientation()));
@@ -339,7 +346,13 @@ void MDIView::savePrinterSettings(QPrinter* printer)
 void MDIView::restorePrinterSettings(QPrinter* printer)
 {
     auto hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Printer");
-    hGrp = hGrp->GetGroup(printer->printerName().toUtf8());
+    QString printerName = printer->printerName();
+    if (printerName.isEmpty()) {
+        // no printer defined
+        return;
+    }
+
+    hGrp = hGrp->GetGroup(printerName.toUtf8());
 
     QPrinterInfo info = QPrinterInfo::defaultPrinter();
     int initialDefaultPageSize = info.isNull() ? QPageSize::A4 : info.defaultPageSize().id();

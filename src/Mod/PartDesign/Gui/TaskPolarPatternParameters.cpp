@@ -87,8 +87,8 @@ TaskPolarPatternParameters::TaskPolarPatternParameters(TaskMultiTransformParamet
 {
     proxy = new QWidget(parentTask);
     ui->setupUi(proxy);
-    connect(ui->buttonOK, SIGNAL(clicked(bool)),
-            parentTask, SLOT(onSubTaskButtonOK()));
+    connect(ui->buttonOK, &QToolButton::pressed,
+            parentTask, &TaskMultiTransformParameters::onSubTaskButtonOK);
     QMetaObject::connectSlotsByName(this);
 
     layout->addWidget(proxy);
@@ -110,7 +110,7 @@ void TaskPolarPatternParameters::connectSignals()
     Base::connect(ui->checkReverse, &QCheckBox::toggled, this, &TaskPolarPatternParameters::onCheckReverse);
     Base::connect(ui->polarAngle, QOverload<double>::of(&Gui::QuantitySpinBox::valueChanged),
                   this, &TaskPolarPatternParameters::onAngle);
-    Base::connect(ui->spinOccurrences, QOverload<uint>::of(&Gui::UIntSpinBox::valueChanged),
+    Base::connect(ui->spinOccurrences, QOverload<uint>::of(&Gui::UIntSpinBox::unsignedChanged),
                   this, &TaskPolarPatternParameters::onOccurrences);
     Base::connect(ui->checkBoxUpdateView, &QCheckBox::toggled, this, &TaskPolarPatternParameters::onUpdateView);
 }
@@ -251,7 +251,7 @@ void TaskPolarPatternParameters::onAxisChanged(int /*num*/)
             pcPolarPattern->Axis.Paste(axesLinks.getCurrentLink());
         }
     } catch (Base::Exception &e) {
-        QMessageBox::warning(nullptr,tr("Error"),QString::fromUtf8(e.what()));
+        QMessageBox::warning(nullptr,tr("Error"),QApplication::translate("Exception", e.what()));
     }
 
     kickUpdateViewTimer();

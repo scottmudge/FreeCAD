@@ -98,7 +98,7 @@ void ViewProviderFemConstraintPulley::updateData(const App::Property* prop)
     // Gets called whenever a property of the attached object changes
     Fem::ConstraintPulley* pcConstraint = static_cast<Fem::ConstraintPulley*>(this->getObject());
 
-    if (strcmp(prop->getName(), "BasePoint") == 0) {
+    if (prop == &pcConstraint->BasePoint) {
         if (pcConstraint->Height.getValue() > Precision::Confusion()) {
             // Remove and recreate the symbol
             Gui::coinRemoveAllChildren(pShapeSep);
@@ -148,7 +148,7 @@ void ViewProviderFemConstraintPulley::updateData(const App::Property* prop)
             pShapeSep->addChild(sep);// child 4
         }
     }
-    else if (strcmp(prop->getName(), "Diameter") == 0) {
+    else if (prop == &pcConstraint->Diameter) {
         if (pShapeSep->getNumChildren() > 0) {
             // Change the symbol
             double radius = pcConstraint->Radius.getValue();
@@ -189,8 +189,7 @@ void ViewProviderFemConstraintPulley::updateData(const App::Property* prop)
             updateArrow(subsep, 0, dia / 8 + dia / 2 * rat2, dia / 8);
         }
     }
-    else if ((strcmp(prop->getName(), "ForceAngle") == 0)
-             || (strcmp(prop->getName(), "BeltAngle") == 0)) {
+    else if ((prop == &pcConstraint->ForceAngle) || (prop == &pcConstraint->BeltAngle)) {
         if (pShapeSep->getNumChildren() > 0) {
             double radius = pcConstraint->Radius.getValue();
             double dia = pcConstraint->Diameter.getValue();
@@ -215,8 +214,7 @@ void ViewProviderFemConstraintPulley::updateData(const App::Property* prop)
                                                -cos(forceAngle - beltAngle - M_PI_2))));
         }
     }
-    else if ((strcmp(prop->getName(), "BeltForce1") == 0)
-             || (strcmp(prop->getName(), "BeltForce2") == 0)) {
+    else if ((prop == &pcConstraint->BeltForce1) || (prop == &pcConstraint->BeltForce2)) {
         if (pShapeSep->getNumChildren() > 0) {
             double radius = pcConstraint->Radius.getValue();
             double dia = pcConstraint->Diameter.getValue();

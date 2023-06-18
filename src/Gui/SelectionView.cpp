@@ -25,8 +25,6 @@
 # include <QCheckBox>
 # include <QLabel>
 # include <QLineEdit>
-# include <QListWidget>
-# include <QListWidgetItem>
 # include <QMenu>
 # include <QTextStream>
 # include <QToolButton>
@@ -140,21 +138,20 @@ SelectionView::SelectionView(Gui::Document* pcDocument, QWidget *parent)
 
     resize(200, 200);
 
-    connect(clearButton, SIGNAL(clicked()), searchBox, SLOT(clear()));
-    connect(searchBox, SIGNAL(textChanged(QString)), this, SLOT(search(QString)));
-
+    connect(clearButton, &QToolButton::clicked, searchBox, &QLineEdit::clear);
+    connect(searchBox, &QLineEdit::textChanged, this, &SelectionView::search);
     // editingFinished() will fire on lost of focus, which may cause undesired
     // effect. Use returnPressed() instead for clearer user intention.
     //
-    // connect(searchBox, SIGNAL(editingFinished()), this, SLOT(validateSearch()));
-    connect(searchBox, SIGNAL(returnPressed()), this, SLOT(validateSearch()));
+    // connect(searchBox, &QLineEdit::editingFinished, this, &SelectionView::validateSearch);
+    connect(searchBox, &QLineEdit::returnPressed, this, &SelectionView::validateSearch);
 
-    connect(selectionView, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), this, SLOT(toggleSelect(QTreeWidgetItem*)));
-    connect(selectionView, SIGNAL(itemEntered(QTreeWidgetItem*, int)), this, SLOT(preselect(QTreeWidgetItem*)));
-    connect(pickList, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), this, SLOT(toggleSelect(QTreeWidgetItem*)));
-    connect(pickList, SIGNAL(itemEntered(QTreeWidgetItem*, int)), this, SLOT(preselect(QTreeWidgetItem*)));
-    connect(selectionView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onItemContextMenu(QPoint)));
-    connect(enablePickList, SIGNAL(stateChanged(int)), this, SLOT(onEnablePickList()));
+    connect(selectionView, &QTreeWidget::itemDoubleClicked, this, &SelectionView::toggleSelect);
+    connect(selectionView, &QTreeWidget::itemEntered, this, &SelectionView::preselect);
+    connect(pickList, &QTreeWidget::itemDoubleClicked, this, &SelectionView::toggleSelect);
+    connect(pickList, &QTreeWidget::itemEntered, this, &SelectionView::preselect);
+    connect(selectionView, &QTreeWidget::customContextMenuRequested, this, &SelectionView::onItemContextMenu);
+    connect(enablePickList, &QCheckBox::stateChanged, this, &SelectionView::onEnablePickList);
 
     QObject::connect(selectionView, &QTreeWidget::currentItemChanged,
         [&](QTreeWidgetItem *current, QTreeWidgetItem*) {
@@ -482,27 +479,34 @@ void SelectionView::onItemContextMenu(const QPoint& point)
         return;
 
     QMenu menu;
-    QAction *selectAction = menu.addAction(tr("Select only"),this,SLOT(select()));
+    QAction *selectAction = menu.addAction(tr("Select only"), this, [&]{
+        this->select(nullptr);
+    });
     selectAction->setIcon(QIcon::fromTheme(QStringLiteral("view-select")));
     selectAction->setToolTip(tr("Selects only this object"));
-    QAction *deselectAction = menu.addAction(tr("Deselect"),this,SLOT(deselect()));
+
+    QAction *deselectAction = menu.addAction(tr("Deselect"), this, &SelectionView::deselect);
     deselectAction->setIcon(QIcon::fromTheme(QStringLiteral("view-unselectable")));
     deselectAction->setToolTip(tr("Deselects this object"));
-    QAction *zoomAction = menu.addAction(tr("Zoom fit"),this,SLOT(zoom()));
+
+    QAction *zoomAction = menu.addAction(tr("Zoom fit"), this, &SelectionView::zoom);
     zoomAction->setIcon(QIcon::fromTheme(QStringLiteral("zoom-fit-best")));
     zoomAction->setToolTip(tr("Selects and fits this object in the 3D window"));
-    QAction *gotoAction = menu.addAction(tr("Go to selection"),this,SLOT(treeSelect()));
+
+    QAction *gotoAction = menu.addAction(tr("Go to selection"), this, &SelectionView::treeSelect);
     gotoAction->setToolTip(tr("Selects and locates this object in the tree view"));
-    QAction *touchAction = menu.addAction(tr("Mark to recompute"),this,SLOT(touch()));
+
+    QAction *touchAction = menu.addAction(tr("Mark to recompute"), this, &SelectionView::touch);
     touchAction->setIcon(QIcon::fromTheme(QStringLiteral("view-refresh")));
     touchAction->setToolTip(tr("Mark this object to be recomputed"));
-    QAction *toPythonAction = menu.addAction(tr("To python console"),this,SLOT(toPython()));
+
+    QAction *toPythonAction = menu.addAction(tr("To python console"), this, &SelectionView::toPython);
     toPythonAction->setIcon(QIcon::fromTheme(QStringLiteral("applications-python")));
     toPythonAction->setToolTip(tr("Reveals this object and its subelements in the python console."));
 
     if (objT.getOldElementName().size()) {
         // subshape-specific entries
-        QAction *showPart = menu.addAction(tr("Duplicate subshape"),this,SLOT(showPart()));
+        QAction *showPart = menu.addAction(tr("Duplicate subshape"), this, &SelectionView::showPart);
         showPart->setIcon(QIcon(QStringLiteral(":/icons/ClassBrowser/member.svg")));
         showPart->setToolTip(tr("Creates a standalone copy of this subshape in the document"));
     }

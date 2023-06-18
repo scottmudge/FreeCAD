@@ -21,7 +21,11 @@
 
 import os
 
-import FreeCAD, Draft, ArchComponent, DraftVecUtils, ArchCommands
+import FreeCAD
+import ArchCommands
+import ArchComponent
+import Draft
+import DraftVecUtils
 import ArchWindowPresets
 from FreeCAD import Units
 from FreeCAD import Vector
@@ -52,7 +56,7 @@ else:
 
 __title__  = "FreeCAD Window"
 __author__ = "Yorik van Havre"
-__url__    = "https://www.freecadweb.org"
+__url__    = "https://www.freecad.org"
 
 # presets
 WindowPartTypes = ["Frame","Solid panel","Glass panel","Louvre"]
@@ -524,17 +528,18 @@ class _CommandWindow:
                     path = self.librarypresets[i-len(WindowPresets)][1]
                     if path.lower().endswith(".fcstd"):
                         try:
-                            import zipfile,tempfile
+                            import tempfile
+                            import zipfile
                         except Exception:
                             pass
                         else:
-                            zfile=zipfile.ZipFile(path)
-                            files=zfile.namelist()
+                            zfile = zipfile.ZipFile(path)
+                            files = zfile.namelist()
                             # check for meta-file if it's really a FreeCAD document
                             if files[0] == "Document.xml":
                                 image="thumbnails/Thumbnail.png"
                                 if image in files:
-                                    image=zfile.read(image)
+                                    image = zfile.read(image)
                                     thumbfile = tempfile.mkstemp(suffix='.png')[1]
                                     thumb = open(thumbfile,"wb")
                                     thumb.write(image)
@@ -667,7 +672,9 @@ class _Window(ArchComponent.Component):
 
     def buildShapes(self,obj):
 
-        import Part,DraftGeomUtils,math
+        import Part
+        import DraftGeomUtils
+        import math
         self.sshapes = []
         self.vshapes = []
         shapes = []
@@ -877,7 +884,9 @@ class _Window(ArchComponent.Component):
                 self.boxes = clonedProxy.boxes
             return
 
-        import Part,DraftGeomUtils,math
+        import Part
+        import DraftGeomUtils
+        import math
         pl = obj.Placement
         base = None
         self.sshapes = []
@@ -937,7 +946,7 @@ class _Window(ArchComponent.Component):
         try:
             import ArchSketchObject  # Why needed ? Should have try: addSketchArchFeatures() before !  Need 'per method' ?
             # Execute SketchArch Feature - Intuitive Automatic Placement for Arch Windows/Doors, Equipment etc.
-            # see https://forum.freecadweb.org/viewtopic.php?f=23&t=50802
+            # see https://forum.freecad.org/viewtopic.php?f=23&t=50802
             ArchSketchObject.updateAttachmentOffset(obj, linkObj)
         except:
             pass
@@ -945,7 +954,7 @@ class _Window(ArchComponent.Component):
     def appLinkExecute(self, obj, linkObj, index, linkElement):
         '''
             Default Link Execute method() -
-            See https://forum.freecadweb.org/viewtopic.php?f=22&t=42184&start=10#p361124
+            See https://forum.freecad.org/viewtopic.php?f=22&t=42184&start=10#p361124
             @realthunder added support to Links to run Linked Scripted Object's methods()
         '''
 
@@ -1114,29 +1123,6 @@ class _ViewProviderWindow(ArchComponent.ViewProviderComponent):
             self.colorize(vobj.Object,force=True)
         ArchComponent.ViewProviderComponent.onChanged(self,vobj,prop)
 
-    def setEdit(self,vobj,mode):
-
-        taskd = _ArchWindowTaskPanel()
-        taskd.obj = self.Object
-        self.sets = [vobj.DisplayMode,vobj.Transparency]
-        vobj.DisplayMode = "Shaded"
-        vobj.Transparency = 80
-        if self.Object.Base:
-            self.Object.Base.ViewObject.show()
-        taskd.update()
-        FreeCADGui.Control.showDialog(taskd)
-        return True
-
-    def unsetEdit(self,vobj,mode):
-
-        vobj.DisplayMode = self.sets[0]
-        vobj.Transparency = self.sets[1]
-        vobj.DiffuseColor = vobj.DiffuseColor # reset face colors
-        if self.Object.Base:
-            self.Object.Base.ViewObject.hide()
-        FreeCADGui.Control.closeDialog()
-        return
-
     def colorize(self,obj,force=False):
 
         "setting different part colors"
@@ -1211,17 +1197,74 @@ class _ViewProviderWindow(ArchComponent.ViewProviderComponent):
                                 ccol = (ccol[0],ccol[1],ccol[2],t)
         return ccol
 
-    def setupContextMenu(self,vobj,menu):
+    def getHingeEdgeIndices(self):
 
-        if hasattr(self,"Object"):
-            from PySide import QtCore,QtGui
-            import Draft_rc
-            action1 = QtGui.QAction(QtGui.QIcon(":/icons/Arch_Window_Tree.svg"),"Invert opening direction",menu)
-            QtCore.QObject.connect(action1,QtCore.SIGNAL("triggered()"),self.invertOpening)
-            menu.addAction(action1)
-            action2 = QtGui.QAction(QtGui.QIcon(":/icons/Arch_Window_Tree.svg"),"Invert hinge position",menu)
-            QtCore.QObject.connect(action2,QtCore.SIGNAL("triggered()"),self.invertHinge)
-            menu.addAction(action2)
+        """returns a list of hinge edge indices (0-based)"""
+
+        # WindowParts example:
+        # ["OuterFrame", "Frame",       "Wire0,Wire1",             "100.0+V", "0.00+V",
+        #  "InnerFrame", "Frame",       "Wire2,Wire3,Edge8,Mode1", "100.0",   "100.0+V",
+        #  "InnerGlass", "Glass panel", "Wire3",                   "10.0",    "150.0+V"]
+
+        idxs = []
+        parts = self.Object.WindowParts
+        for i in range(len(parts) // 5):
+            for s in parts[(i * 5) + 2].split(","):
+                if "Edge" in s:
+                    idxs.append(int(s[4:]) - 1) # Edge indices in string are 1-based.
+        return idxs
+
+    def setEdit(self, vobj, mode):
+        if mode != 0:
+            return None
+
+        taskd = _ArchWindowTaskPanel()
+        taskd.obj = self.Object
+        self.sets = [vobj.DisplayMode,vobj.Transparency]
+        vobj.DisplayMode = "Shaded"
+        vobj.Transparency = 80
+        if self.Object.Base:
+            self.Object.Base.ViewObject.show()
+        taskd.update()
+        FreeCADGui.Control.showDialog(taskd)
+        return True
+
+    def unsetEdit(self, vobj, mode):
+        if mode != 0:
+            return None
+
+        vobj.DisplayMode = self.sets[0]
+        vobj.Transparency = self.sets[1]
+        vobj.DiffuseColor = vobj.DiffuseColor # reset face colors
+        if self.Object.Base:
+            self.Object.Base.ViewObject.hide()
+        FreeCADGui.Control.closeDialog()
+        return True
+
+    def setupContextMenu(self, vobj, menu):
+        hingeIdxs = self.getHingeEdgeIndices()
+
+        super().contextMenuAddEdit(menu)
+
+        if len(hingeIdxs) > 0:
+            actionInvertOpening = QtGui.QAction(QtGui.QIcon(":/icons/Arch_Window_Tree.svg"),
+                                                translate("Arch", "Invert opening direction"),
+                                                menu)
+            QtCore.QObject.connect(actionInvertOpening,
+                                   QtCore.SIGNAL("triggered()"),
+                                   self.invertOpening)
+            menu.addAction(actionInvertOpening)
+
+        if len(hingeIdxs) == 1:
+            actionInvertHinge = QtGui.QAction(QtGui.QIcon(":/icons/Arch_Window_Tree.svg"),
+                                              translate("Arch", "Invert hinge position"),
+                                              menu)
+            QtCore.QObject.connect(actionInvertHinge,
+                                   QtCore.SIGNAL("triggered()"),
+                                   self.invertHinge)
+            menu.addAction(actionInvertHinge)
+
+        super().contextMenuAddToggleSubcomponents(menu)
 
     def invertOpening(self):
 
@@ -1232,9 +1275,24 @@ class _ViewProviderWindow(ArchComponent.ViewProviderComponent):
 
     def invertHinge(self):
 
-        """swaps the hinges found in this window"""
+        """swaps the hinge edge of a single hinge edge window"""
 
-        pairs = [["Edge6","Edge8"],["Edge5","Edge7"]]
+        idxs = self.getHingeEdgeIndices()
+        if len(idxs) != 1:
+            return
+
+        idx = idxs[0]
+        end = 0
+        for wire in self.Object.Base.Shape.Wires:
+            sta = end
+            end += len(wire.Edges)
+            if sta <= idx < end:
+                new = idx + 2 # A rectangular wire is assumed.
+                if not (sta <= new < end):
+                    new = idx - 2
+                break
+
+        pairs = [["Edge" + str(idx + 1), "Edge" + str(new + 1)]]
         self.invertPairs(pairs)
         # Also invert opening direction, so the door still opens towards
         # the same side of the wall

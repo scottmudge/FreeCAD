@@ -85,7 +85,7 @@ App::DocumentObjectExecReturn *Thickness::execute()
             face = baseShape.getSubShape(it->c_str());
         }catch(...){}
         if(face.IsNull())
-            return new App::DocumentObjectExecReturn("Invalid face reference");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Invalid face reference"));
         int index = baseShape.findAncestor(face,TopAbs_SOLID);
         if(!index) {
             FC_WARN(getFullName() << ": Ignore non-solid face  " << *it);

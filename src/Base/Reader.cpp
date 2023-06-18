@@ -24,6 +24,7 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+#include <memory>
 # include <xercesc/sax2/XMLReaderFactory.hpp>
 #endif
 
@@ -45,6 +46,7 @@
 #include <zipios++/zipios-config.h>
 #endif
 #include <zipios++/zipinputstream.h>
+#include <boost/iostreams/filtering_stream.hpp>
 
 
 FC_LOG_LEVEL_INIT("Base",true,true);

@@ -36,7 +36,7 @@
       <source>Creates an approximated curve on top of a mesh.
 This command only works with a 'mesh' object.</source>
       <translation>Crée une courbe approximative au dessus d'un maillage.
-Cette commande ne fonctionne qu'avec un objet 'mesh'.</translation>
+Cette commande ne fonctionne qu'avec un objet "mesh".</translation>
     </message>
   </context>
   <context>
@@ -170,7 +170,7 @@ Cette commande ne fonctionne qu'avec un objet 'mesh'.</translation>
       <translation>Racorder les arêtes si la distance est inférieure à</translation>
     </message>
     <message>
-      <location filename="../../CrossSections.cpp" line="343"/>
+      <location filename="../../CrossSections.cpp" line="366"/>
       <source>Failure</source>
       <translation>Échec</translation>
     </message>
@@ -222,7 +222,7 @@ Cette commande ne fonctionne qu'avec un objet 'mesh'.</translation>
 This command only works with a 'mesh' object, not a regular face or surface. To convert an object to a mesh use the tools of the Mesh Workbench.</source>
       <translation>Appuyez sur "Démarrer", puis sélectionnez les points sur le maillage ; lorsque suffisamment de points ont été définis, faites un clic droit et choisissez "Créer". Répétez ce processus pour créer plus de splines. Fermez ce panneau de tâches pour terminer l'opération.
 
-Cette commande ne fonctionne qu'avec un objet 'Mesh', pas avec une face ou une surface régulière. Pour convertir un objet en maillage, utilisez les outils de l'atelier Mesh.</translation>
+Cette commande ne fonctionne qu'avec un objet "Mesh", pas avec une face ou une surface régulière. Pour convertir un objet en maillage, utilisez les outils de l'atelier Mesh.</translation>
     </message>
     <message>
       <location filename="../../TaskCurveOnMesh.ui" line="38"/>
@@ -247,7 +247,7 @@ Cette commande ne fonctionne qu'avec un objet 'Mesh', pas avec une face ou une s
     <message>
       <location filename="../../TaskCurveOnMesh.ui" line="87"/>
       <source>Spline Approximation</source>
-      <translation>Approximation de Spline</translation>
+      <translation>Approximation d'une spline</translation>
     </message>
     <message>
       <location filename="../../TaskCurveOnMesh.ui" line="96"/>
@@ -473,12 +473,12 @@ Une valeur dans la plage de 0.2-10.</translation>
     <message>
       <location filename="../../Tessellation.ui" line="393"/>
       <source>Whether meshes will be arranged preferably using quadrilateral faces</source>
-      <translation>Si les maillages seront arrangés de préférence en utilisant des faces quadrilatères</translation>
+      <translation>Si les maillages seront arrangés de préférence en utilisant des faces de quadrilatères</translation>
     </message>
     <message>
       <location filename="../../Tessellation.ui" line="396"/>
       <source>Quad dominated</source>
-      <translation>Dominé par quadrilatères</translation>
+      <translation>Principalement des quadrilatères</translation>
     </message>
     <message>
       <location filename="../../Tessellation.ui" line="422"/>
@@ -491,27 +491,27 @@ Une valeur dans la plage de 0.2-10.</translation>
       <translation>Gmsh</translation>
     </message>
     <message>
-      <location filename="../../Tessellation.cpp" line="212"/>
-      <location filename="../../Tessellation.cpp" line="218"/>
+      <location filename="../../Tessellation.cpp" line="225"/>
+      <location filename="../../Tessellation.cpp" line="231"/>
       <source>No active document</source>
       <translation>Aucun document actif</translation>
     </message>
     <message>
-      <location filename="../../Tessellation.cpp" line="246"/>
+      <location filename="../../Tessellation.cpp" line="259"/>
       <source>You have selected a body without tip.
 Either set the tip of the body or select a different shape, please.</source>
       <translation>Vous avez sélectionné un corps sans fonction résultante.
 Définissez la fonction résultante du corps ou sélectionnez une forme différente, s'il vous plaît.</translation>
     </message>
     <message>
-      <location filename="../../Tessellation.cpp" line="250"/>
+      <location filename="../../Tessellation.cpp" line="263"/>
       <source>You have selected a shape without faces.
 Select a different shape, please.</source>
       <translation>Vous avez sélectionné une forme sans face.
 Merci de sélectionner une forme différente.</translation>
     </message>
     <message>
-      <location filename="../../Tessellation.cpp" line="254"/>
+      <location filename="../../Tessellation.cpp" line="267"/>
       <source>Select a shape for meshing, first.</source>
       <translation>Sélectionner d'abord une forme pour le maillage.</translation>
     </message>
@@ -573,6 +573,32 @@ Merci de sélectionner une forme différente.</translation>
       <location filename="../../Workbench.cpp" line="36"/>
       <source>MeshPart</source>
       <translation>Maillage</translation>
+    </message>
+  </context>
+  <context>
+    <name>MeshPart_CreateFlatMesh</name>
+    <message>
+      <location filename="../../MeshFlatteningCommand.py" line="47"/>
+      <source>Unwrap Mesh</source>
+      <translation>Développer un maillage</translation>
+    </message>
+    <message>
+      <location filename="../../MeshFlatteningCommand.py" line="50"/>
+      <source>Find a flat representation of a mesh.</source>
+      <translation>Rechercher une représentation plane d’un maillage.</translation>
+    </message>
+  </context>
+  <context>
+    <name>MeshPart_CreateFlatFace</name>
+    <message>
+      <location filename="../../MeshFlatteningCommand.py" line="79"/>
+      <source>Unwrap Face</source>
+      <translation>Développer une face</translation>
+    </message>
+    <message>
+      <location filename="../../MeshFlatteningCommand.py" line="82"/>
+      <source>Find a flat representation of a face.</source>
+      <translation>Rechercher une représentation plane d’une face.</translation>
     </message>
   </context>
 </TS>

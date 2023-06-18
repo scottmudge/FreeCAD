@@ -135,8 +135,8 @@ public:
 
     /** @name boost iostream device interface */
     //@{
-    typedef boost::iostreams::source_tag category;
-    typedef char char_type;
+    using category = boost::iostreams::source_tag;
+    using char_type = char;
     std::streamsize read(char_type* s, std::streamsize n);
     //@}
 
@@ -207,7 +207,7 @@ public:
      *  auto destroyed when you call with readElement() or readEndElement(), or
      *  you can end it explicitly with endCharStream().
      */
-    std::istream &beginCharStream(bool base64);
+    std::istream &beginCharStream(bool base64=false);
     /// Manually end the current character stream
     void endCharStream();
     /// Obtain the current character stream

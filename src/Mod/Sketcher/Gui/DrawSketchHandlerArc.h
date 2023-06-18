@@ -143,6 +143,7 @@ public:
             CenterPoint = onSketchPos;
             EditCurve.resize(34);
             EditCurve[0] = onSketchPos;
+            setAngleSnapping(true, EditCurve[0]);
             Mode = STATUS_SEEK_Second;
         }
         else if (Mode==STATUS_SEEK_Second){
@@ -170,6 +171,7 @@ public:
 
             sketchgui->drawEdit(EditCurve);
             applyCursor();
+            setAngleSnapping(false);
             Mode = STATUS_End;
         }
     }

@@ -248,10 +248,10 @@ GraphvizView::GraphvizView(App::Document & _doc, QWidget* parent)
 
     // Create worker thread
     thread = new GraphvizWorker(this);
-    connect(thread, SIGNAL(emitFinished()), this, SLOT(done()));
-    connect(thread, SIGNAL(finished()), this, SLOT(done()));
-    connect(thread, SIGNAL(error()), this, SLOT(error()));
-    connect(thread, SIGNAL(svgFileRead(const QByteArray &)), this, SLOT(svgFileRead(const QByteArray &)));
+    connect(thread, &GraphvizWorker::emitFinished, this, &GraphvizView::done);
+    connect(thread, &GraphvizWorker::finished, this, &GraphvizView::done);
+    connect(thread, &GraphvizWorker::error, this, &GraphvizView::error);
+    connect(thread, &GraphvizWorker::svgFileRead, this, &GraphvizView::svgFileRead);
 
     // Connect signal from document
     recomputeConnection = _doc.signalRecomputed.connect(boost::bind(&GraphvizView::updateSvgItem, this, bp::_1));
@@ -306,7 +306,7 @@ void GraphvizView::updateSvgItem(const App::Document &doc)
             int ret = QMessageBox::warning(Gui::getMainWindow(),
                                            tr("Graphviz not found"),
                                            QStringLiteral("<html><head/><body>%1 "
-                                                               "<a href=\"https://www.freecadweb.org/wiki/Std_DependencyGraph\">%2"
+                                                               "<a href=\"https://www.freecad.org/wiki/Std_DependencyGraph\">%2"
                                                                "</a><p>%3</p></body></html>")
                                            .arg(tr("Graphviz couldn't be found on your system."),
                                                 tr("Read more about it here."),
@@ -556,8 +556,8 @@ void GraphvizView::printPreview()
     printer.setPageOrientation(QPageLayout::Landscape);
 
     QPrintPreviewDialog dlg(&printer, this);
-    connect(&dlg, SIGNAL(paintRequested (QPrinter *)),
-            this, SLOT(print(QPrinter *)));
+    connect(&dlg, &QPrintPreviewDialog::paintRequested,
+            this, qOverload<QPrinter*>(&GraphvizView::print));
     dlg.exec();
 }
 

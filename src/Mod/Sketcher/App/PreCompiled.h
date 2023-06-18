@@ -43,16 +43,17 @@
 #include <boost/uuid/uuid_io.hpp>
 
 // OpenCasCade
-#include <BRep_Builder.hxx>
-#include <BRep_Tool.hxx>
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepOffsetAPI_NormalProjection.hxx>
-#include <ElCLib.hxx>
+#include <BRep_Builder.hxx>
+#include <BRep_Tool.hxx>
 #include <GC_MakeCircle.hxx>
+#include <GeomAPI_ProjectPointOnSurf.hxx>
+#include <GeomConvert_BSplineCurveKnotSplitting.hxx>
 #include <Geom_BSplineCurve.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_Ellipse.hxx>
@@ -61,23 +62,15 @@
 #include <Geom_Parabola.hxx>
 #include <Geom_Plane.hxx>
 #include <Geom_TrimmedCurve.hxx>
-#include <GeomAPI_ProjectPointOnSurf.hxx>
-#include <GeomConvert_BSplineCurveKnotSplitting.hxx>
-#include <gp_Ax3.hxx>
-#include <gp_Circ.hxx>
-#include <gp_Elips.hxx>
-#include <gp_Hypr.hxx>
-#include <gp_Parab.hxx>
-#include <gp_Pln.hxx>
-#include <gp_Pnt.hxx>
 #include <Precision.hxx>
 #include <ShapeFix_Wire.hxx>
 #include <Standard_Version.hxx>
 #include <TColStd_Array1OfInteger.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
-#include <TopoDS_Compound.hxx>
+#include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
 #include <TopoDS.hxx>
+#include <TopoDS_Compound.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
@@ -94,12 +87,19 @@
 #include <GeomLProp_CLProps.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <GeomAPI_ProjectPointOnCurve.hxx>
+#include <gp_Ax3.hxx>
+#include <gp_Circ.hxx>
+#include <gp_Elips.hxx>
+#include <gp_Hypr.hxx>
+#include <gp_Parab.hxx>
+#include <gp_Pln.hxx>
+#include <gp_Pnt.hxx>
 
 #elif defined(FC_OS_WIN32)
 #ifndef NOMINMAX
-# define NOMINMAX
+#define NOMINMAX
 #endif
-# include <windows.h>
-#endif // _PreComp_
+#include <windows.h>
+#endif// _PreComp_
 
 #endif

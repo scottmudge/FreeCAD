@@ -464,29 +464,14 @@ ElementColors::ElementColors(ViewProviderDocumentObject* vp, bool noHide)
 {
     d->ui->setupUi(this);
 
-    std::array<const char *, 4> names = {"MapFaceColor", "MapLineColor", "MapPointColor", "ForceMapColors"};
-    for (auto name : names) {
-        auto checkbox = findChild<QCheckBox*>(QString::fromUtf8(name));
-        if (checkbox) {
-            if (auto prop = Base::freecad_dynamic_cast<App::PropertyBool>(vp->getPropertyByName(name))) {
-                checkbox->setChecked(prop->getValue());
-                QObject::connect(checkbox, &QCheckBox::toggled, [this, name](bool checked) {
-                    auto prop = Base::freecad_dynamic_cast<App::PropertyBool>(d->vp->getPropertyByName(name));
-                    if (prop) {
-                        prop->setValue(checked);
-                        d->touched = true;
-                    }
-                });
-            } else
-                checkbox->hide();
-        }
-    }
+    setupConnections();
 
     d->ui->objectLabel->setText(QString::fromUtf8(vp->getObject()->Label.getValue()));
     d->ui->elementList->setMouseTracking(true); // needed for itemEntered() to work
 
-    if(noHide)
+    if (noHide) {
         d->ui->hideSelection->setVisible(false);
+    }
 
     d->ui->onTop->setChecked(ViewParams::getColorOnTop());
 
@@ -510,7 +495,47 @@ void ElementColors::checkEdit() {
     d->edit(this, true);
 }
 
-void ElementColors::on_onTop_clicked(bool checked) {
+void ElementColors::setupConnections()
+{
+    std::array<const char *, 4> names = {"MapFaceColor", "MapLineColor", "MapPointColor", "ForceMapColors"};
+    for (auto name : names) {
+        auto checkbox = findChild<QCheckBox*>(QString::fromUtf8(name));
+        if (checkbox) {
+            if (auto prop = Base::freecad_dynamic_cast<App::PropertyBool>(d->vp->getPropertyByName(name))) {
+                checkbox->setChecked(prop->getValue());
+                QObject::connect(checkbox, &QCheckBox::toggled, [this, name](bool checked) {
+                    auto prop = Base::freecad_dynamic_cast<App::PropertyBool>(d->vp->getPropertyByName(name));
+                    if (prop) {
+                        prop->setValue(checked);
+                        d->touched = true;
+                    }
+                });
+            } else
+                checkbox->hide();
+        }
+    }
+
+    connect(d->ui->removeSelection, &QPushButton::clicked,
+            this, &ElementColors::onRemoveSelectionClicked);
+    connect(d->ui->addSelection, &QPushButton::clicked,
+            this, &ElementColors::onAddSelectionClicked);
+    connect(d->ui->removeAll, &QPushButton::clicked,
+            this, &ElementColors::onRemoveAllClicked);
+    connect(d->ui->elementList, &QListWidget::itemDoubleClicked,
+            this, &ElementColors::onElementListItemDoubleClicked);
+    connect(d->ui->elementList, &QListWidget::itemSelectionChanged,
+            this, &ElementColors::onElementListItemSelectionChanged);
+    connect(d->ui->elementList, &QListWidget::itemEntered,
+            this, &ElementColors::onElementListItemEntered);
+    connect(d->ui->onTop, &QCheckBox::clicked,
+            this, &ElementColors::onTopClicked);
+    connect(d->ui->hideSelection, &QPushButton::clicked,
+            this, &ElementColors::onHideSelectionClicked);
+    connect(d->ui->boxSelect, &QPushButton::clicked,
+            this, &ElementColors::onBoxSelectClicked);
+}
+
+void ElementColors::onTopClicked(bool checked) {
     ViewParams::setColorOnTop(checked);
     d->setOnTop();
 }
@@ -531,19 +556,19 @@ void ElementColors::slotDeleteObject(const ViewProvider& obj)
     }
 }
 
-void ElementColors::on_removeSelection_clicked()
+void ElementColors::onRemoveSelectionClicked()
 {
     d->removeItems();
 }
 
-void ElementColors::on_boxSelect_clicked()
+void ElementColors::onBoxSelectClicked()
 {
     auto cmd = Application::Instance->commandManager().getCommandByName("Std_BoxElementSelection");
     if(cmd)
         cmd->invoke(0);
 }
 
-void ElementColors::on_hideSelection_clicked() {
+void ElementColors::onHideSelectionClicked() {
     auto sels = Selection().getSelectionEx(d->editDoc.c_str(), App::DocumentObject::getClassTypeId(), ResolveMode::NoResolve);
     for(auto &sel : sels) {
         if(d->editObj!=sel.getFeatName())
@@ -563,7 +588,7 @@ void ElementColors::on_hideSelection_clicked() {
     }
 }
 
-void ElementColors::on_addSelection_clicked()
+void ElementColors::onAddSelectionClicked()
 {
     d->edit(this, false);
 }
@@ -623,7 +648,7 @@ void ElementColors::Private::edit(QWidget *parent, bool elementOnly)
     }
 }
 
-void ElementColors::on_removeAll_clicked()
+void ElementColors::onRemoveAllClicked()
 {
     d->removeAll();
 }
@@ -655,7 +680,7 @@ void ElementColors::leaveEvent(QEvent *e) {
     Selection().rmvPreselect();
 }
 
-void ElementColors::on_elementList_itemEntered(QListWidgetItem *item) {
+void ElementColors::onElementListItemEntered(QListWidgetItem *item) {
     std::string name(qPrintable(item->data(Qt::UserRole+1).value<QString>()));
     const char *hidden = ViewProvider::hasHiddenMarker(name.c_str());
     if(hidden)
@@ -666,7 +691,7 @@ void ElementColors::on_elementList_itemEntered(QListWidgetItem *item) {
                                       : Gui::SelectionChanges::MsgSource::Internal);
 }
 
-void ElementColors::on_elementList_itemSelectionChanged() {
+void ElementColors::onElementListItemSelectionChanged() {
     d->onSelectionChanged();
 }
 
@@ -675,7 +700,7 @@ void ElementColors::onSelectionChanged(const SelectionChanges& msg)
     d->onSelectionChanged(msg);
 }
 
-void ElementColors::on_elementList_itemDoubleClicked(QListWidgetItem *item) {
+void ElementColors::onElementListItemDoubleClicked(QListWidgetItem *item) {
     d->editItem(this,item);
 }
 

@@ -48,6 +48,8 @@ DlgSettingsSelection::~DlgSettingsSelection()
 
 void DlgSettingsSelection::saveSettings()
 {
+    ui->spinPickRadius->onSave();
+
     TreeParams::setSyncView(ui->checkBoxAutoSwitch->isChecked());
     TreeParams::setSyncSelection(ui->checkBoxAutoExpand->isChecked());
     TreeParams::setPreSelection(ui->checkBoxPreselect->isChecked());
@@ -71,6 +73,8 @@ void DlgSettingsSelection::saveSettings()
 
 void DlgSettingsSelection::loadSettings()
 {
+    ui->spinPickRadius->onRestore();
+
     ui->checkBoxAutoSwitch->setChecked(TreeParams::getSyncView());
     ui->checkBoxAutoExpand->setChecked(TreeParams::getSyncSelection());
     ui->checkBoxPreselect->setChecked(TreeParams::getPreSelection());

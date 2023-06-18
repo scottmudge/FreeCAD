@@ -62,13 +62,23 @@
 using namespace PartDesignGui;
 using namespace PartDesign;
 
-PROPERTY_SOURCE(PartDesignGui::ViewProviderTransformed,PartDesignGui::ViewProviderAddSub)
+PROPERTY_SOURCE_ABSTRACT(PartDesignGui::ViewProviderTransformed,PartDesignGui::ViewProviderAddSub)
+
+const std::string & ViewProviderTransformed::featureName() const
+{
+    static const std::string name = "undefined";
+    return name;
+}
+
+std::string ViewProviderTransformed::featureIcon() const
+{
+    return std::string("PartDesign_") + featureName();
+}
 
 void ViewProviderTransformed::setupContextMenu(QMenu* menu, QObject* receiver, const char* member)
 {
-    QAction* act;
-    act = menu->addAction(QObject::tr("Edit %1").arg(QString::fromStdString(featureName)), receiver, member);
-    act->setData(QVariant((int)ViewProvider::Default));
+    QString text = QString::fromStdString(getObject()->Label.getStrValue());
+    addDefaultAction(menu, QObject::tr("Edit %1").arg(text));
     PartDesignGui::ViewProvider::setupContextMenu(menu, receiver, member);
 }
 

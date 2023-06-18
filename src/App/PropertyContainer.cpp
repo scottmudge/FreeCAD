@@ -708,6 +708,7 @@ void PropertyData::getPropertyNamedList(OffsetBase offsetBase,
 }
 
 
+
 /** \defgroup PropFrame Property framework
     \ingroup APP
     \brief System to access object properties

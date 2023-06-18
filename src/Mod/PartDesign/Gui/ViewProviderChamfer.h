@@ -36,12 +36,17 @@ class PartDesignGuiExport ViewProviderChamfer : public ViewProviderDressUp
 
 public:
     /// constructor
-    ViewProviderChamfer()
-        { sPixmap = "PartDesign_Chamfer.svg";
-          menuName = tr("Chamfer parameters");}
+    ViewProviderChamfer() {
+        sPixmap = "PartDesign_Chamfer.svg";
+    }
+
+    QString getMenuName() const override {
+        return tr("Chamfer parameters");
+    }
 
     /// return "Chamfer"
     const std::string & featureName() const override;
+    void setupContextMenu(QMenu*, QObject*, const char*) override;
 
 protected:
     /// Returns a newly create dialog for the part to be placed in the task view

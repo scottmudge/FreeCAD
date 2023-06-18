@@ -32,6 +32,7 @@
 # include <QContextMenuEvent>
 # include <QMenu>
 # include <QPixmap>
+# include <QThread>
 # include <QTimer>
 # include <QToolTip>
 # include <QHeaderView>
@@ -83,11 +84,11 @@ FC_LOG_LEVEL_INIT("Tree",false,true,true)
 
 #define _TREE_PRINT(_level,_func,_msg) \
     _FC_PRINT(FC_LOG_INSTANCE,_level,_func, '['<<getTreeName()<<"] " << _msg)
-#define TREE_MSG(_msg) _TREE_PRINT(FC_LOGLEVEL_MSG,NotifyMessage,_msg)
-#define TREE_WARN(_msg) _TREE_PRINT(FC_LOGLEVEL_WARN,NotifyWarning,_msg)
-#define TREE_ERR(_msg) _TREE_PRINT(FC_LOGLEVEL_ERR,NotifyError,_msg)
-#define TREE_LOG(_msg) _TREE_PRINT(FC_LOGLEVEL_LOG,NotifyLog,_msg)
-#define TREE_TRACE(_msg) _TREE_PRINT(FC_LOGLEVEL_TRACE,NotifyLog,_msg)
+#define TREE_MSG(_msg) _TREE_PRINT(FC_LOGLEVEL_MSG,Notify<Base::LogStyle::Message>,_msg)
+#define TREE_WARN(_msg) _TREE_PRINT(FC_LOGLEVEL_WARN,Notify<Base::LogStyle::Warning>,_msg)
+#define TREE_ERR(_msg) _TREE_PRINT(FC_LOGLEVEL_ERR,Notify<Base::LogStyle::Error>,_msg)
+#define TREE_LOG(_msg) _TREE_PRINT(FC_LOGLEVEL_LOG,Notify<Base::LogStyle::Log>,_msg)
+#define TREE_TRACE(_msg) _TREE_PRINT(FC_LOGLEVEL_TRACE,Notify<Base::LogStyle::Log>,_msg)
 
 using namespace Gui;
 namespace bp = boost::placeholders;
@@ -1058,39 +1059,38 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
 
     this->showHiddenAction = new QAction(this);
     this->showHiddenAction->setCheckable(true);
-    connect(this->showHiddenAction, SIGNAL(toggled(bool)),
-            this, SLOT(onShowHidden()));
+    connect(this->showHiddenAction, &QAction::triggered,
+            this, &TreeWidget::onShowHidden);
     this->showHiddenAction->setShortcut(QKeySequence(QStringLiteral("T, S")));
     addAction(this->showHiddenAction);
 
+    this->toggleVisibilityInTreeAction = new QAction(this);
+    connect(this->toggleVisibilityInTreeAction, &QAction::triggered,
+            this, &TreeWidget::onToggleVisibilityInTree);
+
     this->showTempDocAction = new QAction(this);
     this->showTempDocAction->setCheckable(true);
-    connect(this->showTempDocAction, SIGNAL(toggled(bool)),
-            this, SLOT(onShowTempDoc()));
-
-    this->hideInTreeAction = new QAction(this);
-    this->hideInTreeAction->setCheckable(true);
-    connect(this->hideInTreeAction, SIGNAL(toggled(bool)),
-            this, SLOT(onHideInTree()));
+    connect(this->showTempDocAction, &QAction::triggered,
+            this, &TreeWidget::onShowTempDoc);
 
     this->relabelObjectAction = new QAction(this);
 #ifndef Q_OS_MAC
     this->relabelObjectAction->setShortcut(Qt::Key_F2);
 #endif
-    connect(this->relabelObjectAction, SIGNAL(triggered()),
-            this, SLOT(onRelabelObject()));
+    connect(this->relabelObjectAction, &QAction::triggered,
+            this, &TreeWidget::onRelabelObject);
 
     this->finishEditingAction = new QAction(this);
-    connect(this->finishEditingAction, SIGNAL(triggered()),
-            this, SLOT(onFinishEditing()));
+    connect(this->finishEditingAction, &QAction::triggered,
+            this, &TreeWidget::onFinishEditing);
 
     this->closeDocAction = new QAction(this);
-    connect(this->closeDocAction, SIGNAL(triggered()),
-            this, SLOT(onCloseDoc()));
+    connect(this->closeDocAction, &QAction::triggered,
+            this, &TreeWidget::onCloseDoc);
 
     this->reloadDocAction = new QAction(this);
-    connect(this->reloadDocAction, SIGNAL(triggered()),
-            this, SLOT(onReloadDoc()));
+    connect(this->reloadDocAction, &QAction::triggered,
+            this, &TreeWidget::onReloadDoc);
 
     pimpl->reloadAllDocAction = new QAction(this);
     connect(pimpl->reloadAllDocAction, &QAction::triggered, this, [this]() {
@@ -1102,26 +1102,26 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
 
     this->skipRecomputeAction = new QAction(this);
     this->skipRecomputeAction->setCheckable(true);
-    connect(this->skipRecomputeAction, SIGNAL(toggled(bool)),
-            this, SLOT(onSkipRecompute(bool)));
+    connect(this->skipRecomputeAction, &QAction::toggled,
+            this, &TreeWidget::onSkipRecompute);
 
     this->allowPartialRecomputeAction = new QAction(this);
     this->allowPartialRecomputeAction->setCheckable(true);
-    connect(this->allowPartialRecomputeAction, SIGNAL(toggled(bool)),
-            this, SLOT(onAllowPartialRecompute(bool)));
+    connect(this->allowPartialRecomputeAction, &QAction::toggled,
+            this, &TreeWidget::onAllowPartialRecompute);
 
     this->markRecomputeAction = new QAction(this);
-    connect(this->markRecomputeAction, SIGNAL(triggered()),
-            this, SLOT(onMarkRecompute()));
+    connect(this->markRecomputeAction, &QAction::triggered,
+            this, &TreeWidget::onMarkRecompute);
 
     this->recomputeObjectAction = new QAction(this);
-    connect(this->recomputeObjectAction, SIGNAL(triggered()),
-            this, SLOT(onRecomputeObject()));
+    connect(this->recomputeObjectAction, &QAction::triggered,
+            this, &TreeWidget::onRecomputeObject);
     this->searchObjectsAction = new QAction(this);
     this->searchObjectsAction->setText(tr("Search..."));
     this->searchObjectsAction->setStatusTip(tr("Search for objects"));
-    connect(this->searchObjectsAction, SIGNAL(triggered()),
-            this, SLOT(onSearchObjects()));
+    connect(this->searchObjectsAction, &QAction::triggered,
+            this, &TreeWidget::onSearchObjects);
 
     // Setup connections
     connectNewDocument = Application::Instance->signalNewDocument.connect(boost::bind(&TreeWidget::slotNewDocument, this, bp::_1, bp::_2));
@@ -1150,8 +1150,8 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
 
     setupResizableColumn(this);
     this->header()->setStretchLastSection(false);
-    connect(this->header(), SIGNAL(sectionResized(int,int,int)),
-            this, SLOT(onColumnResized(int,int,int)));
+    connect(this->header(), &QHeaderView::sectionResized,
+            this, &TreeWidget::onColumnResized);
 
     // Add the first main label
     this->rootItem = new QTreeWidgetItem(this);
@@ -1173,25 +1173,17 @@ TreeWidget::TreeWidget(const char *name, QWidget* parent)
     this->selectTimer = new QTimer(this);
     this->selectTimer->setSingleShot(true);
 
-    connect(this->statusTimer, SIGNAL(timeout()),
-            this, SLOT(onUpdateStatus()));
-    connect(this, SIGNAL(itemEntered(QTreeWidgetItem*, int)),
-            this, SLOT(onItemEntered(QTreeWidgetItem*)));
-    connect(this, SIGNAL(itemCollapsed(QTreeWidgetItem*)),
-            this, SLOT(onItemCollapsed(QTreeWidgetItem*)));
-    connect(this, SIGNAL(itemExpanded(QTreeWidgetItem*)),
-            this, SLOT(onItemExpanded(QTreeWidgetItem*)));
-    connect(this, SIGNAL(itemSelectionChanged()),
-            this, SLOT(onItemSelectionChanged()));
-    connect(this, SIGNAL(itemChanged(QTreeWidgetItem*, int)),
-            this, SLOT(onItemChanged(QTreeWidgetItem*, int)));
-    connect(this->preselectTimer, SIGNAL(timeout()),
-            this, SLOT(onPreSelectTimer()));
-    connect(this->selectTimer, SIGNAL(timeout()),
-            this, SLOT(onSelectTimer()));
-    connect(this, SIGNAL(pressed(const QModelIndex &)), SLOT(onItemPressed()));
-    connect(this->toolTipTimer, SIGNAL(timeout()),
-            this, SLOT(onToolTipTimer()));
+    connect(this->statusTimer, &QTimer::timeout, this, &TreeWidget::onUpdateStatus);
+    connect(this, &QTreeWidget::itemEntered, this, &TreeWidget::onItemEntered);
+    connect(this, &QTreeWidget::itemCollapsed, this, &TreeWidget::onItemCollapsed);
+    connect(this, &QTreeWidget::itemExpanded, this, &TreeWidget::onItemExpanded);
+    connect(this, &QTreeWidget::itemSelectionChanged,
+            this, &TreeWidget::onItemSelectionChanged);
+    connect(this, &QTreeWidget::itemChanged, this, &TreeWidget::onItemChanged);
+    connect(this->preselectTimer, &QTimer::timeout, this, &TreeWidget::onPreSelectTimer);
+    connect(this->selectTimer, &QTimer::timeout, this, &TreeWidget::onSelectTimer);
+    connect(this, &QTreeWidget::pressed, this, &TreeWidget::onItemPressed);
+    connect(this->toolTipTimer, &QTimer::timeout, this, &TreeWidget::onToolTipTimer);
     preselectTime.start();
 
     setupText();
@@ -1608,8 +1600,8 @@ void TreeWidget::contextMenuEvent (QContextMenuEvent * e)
     contextMenu.setToolTipsVisible(true);
     QActionGroup subMenuGroup(&subMenu);
     subMenuGroup.setExclusive(true);
-    connect(&subMenuGroup, SIGNAL(triggered(QAction*)),
-            this, SLOT(onActivateDocument(QAction*)));
+    connect(&subMenuGroup, &QActionGroup::triggered,
+            this, &TreeWidget::onActivateDocument);
     MenuManager::getInstance()->setupContextMenu(&view, contextMenu);
 
     // get the current item
@@ -1631,8 +1623,7 @@ void TreeWidget::contextMenuEvent (QContextMenuEvent * e)
         showHiddenAction->setChecked(doc->ShowHidden.getValue());
         contextMenu.addAction(this->showHiddenAction);
 
-        hideInTreeAction->setChecked(!objitem->object()->showInTree());
-        contextMenu.addAction(this->hideInTreeAction);
+        contextMenu.addAction(this->toggleVisibilityInTreeAction);
 
         contextMenu.addSeparator();
         contextMenu.addAction(this->markRecomputeAction);
@@ -4562,8 +4553,8 @@ void TreeWidget::setupText()
     this->showTempDocAction->setText(tr("Show temporary document"));
     this->showTempDocAction->setToolTip(tr("Show hidden temporary document items"));
 
-    this->hideInTreeAction->setText(tr("Hide item"));
-    this->hideInTreeAction->setToolTip(tr("Hide the item in tree"));
+    this->toggleVisibilityInTreeAction->setText(tr("Toggle visibility in tree view"));
+    this->toggleVisibilityInTreeAction->setStatusTip(tr("Toggles the visibility of selected items in the tree view"));
 
     this->relabelObjectAction->setText(tr("Rename"));
     this->relabelObjectAction->setToolTip(tr("Rename object"));
@@ -4649,11 +4640,28 @@ void TreeWidget::onShowTempDoc()
     }
 }
 
-void TreeWidget::onHideInTree()
+void TreeWidget::onToggleVisibilityInTree()
 {
-    if (this->contextItem && this->contextItem->type() == ObjectType) {
-        auto item = static_cast<DocumentObjectItem*>(contextItem);
-        item->object()->ShowInTree.setValue(!hideInTreeAction->isChecked());
+    const auto items = selectedItems();
+    for (auto item : items) {
+        if (item->type() == ObjectType) {
+            auto objectItem = static_cast<DocumentObjectItem*>(item);
+            auto object = objectItem->object();
+
+            // toggle value
+            bool showInTree = !object->showInTree();
+
+            // update object
+            object->ShowInTree.setValue(showInTree);
+
+            // update GUI
+            auto ownerDocument = objectItem->getOwnerDocument();
+            bool hidden = !ownerDocument->showHidden() && !showInTree;
+            objectItem->setHidden(hidden);
+            if (hidden) {
+                objectItem->setSelected(false);
+            }
+        }
     }
 }
 
@@ -4839,6 +4847,12 @@ void TreeWidget::onSelectTimer() {
 
 void TreeWidget::onSelectionChanged(const SelectionChanges& msg)
 {
+    // When running from a different thread Qt will raise a warning
+    // when trying to start the QTimer
+    if (Q_UNLIKELY(thread() != QThread::currentThread())) {
+        return;
+    }
+
     switch (msg.Type)
     {
     case SelectionChanges::HideSelection: {
@@ -4895,8 +4909,8 @@ TreePanel::TreePanel(const char *name, QWidget* parent)
     pLayout->setSpacing(0);
     pLayout->setMargin (0);
     pLayout->addWidget(this->treeWidget);
-    connect(this->treeWidget, SIGNAL(emitSearchObjects()),
-            this, SLOT(showEditor()));
+    connect(this->treeWidget, &TreeWidget::emitSearchObjects,
+            this, &TreePanel::showEditor);
 
     this->searchBox = new Gui::ExpressionLineEdit(this,true);
     pLayout->addWidget(this->searchBox);
@@ -4904,10 +4918,10 @@ TreePanel::TreePanel(const char *name, QWidget* parent)
     this->searchBox->installEventFilter(this);
     this->treeWidget->installEventFilter(this);
     this->searchBox->setPlaceholderText(tr("Search"));
-    connect(this->searchBox, SIGNAL(returnPressed()),
-            this, SLOT(accept()));
-    connect(this->searchBox, SIGNAL(textChanged(QString)),
-            this, SLOT(itemSearch(QString)));
+    connect(this->searchBox, &QLineEdit::returnPressed,
+            this, &TreePanel::accept);
+    connect(this->searchBox, &QLineEdit::textChanged,
+            this, &TreePanel::itemSearch);
 }
 
 TreePanel::~TreePanel()
@@ -5557,7 +5571,7 @@ void DocumentItem::slotInEdit(const Gui::ViewProviderDocumentObject& v)
     (void)v;
 
     unsigned long col = TreeParams::getTreeEditColor();
-    QColor color((col >> 24) & 0xff,(col >> 16) & 0xff,(col >> 8) & 0xff);
+    QColor color(App::Color::fromPackedRGB<QColor>(col));
 
     auto doc = Application::Instance->editDocument();
     if(!doc)
@@ -7234,7 +7248,7 @@ void DocumentObjectItem::setHighlight(bool set, Gui::HighlightMode high) {
         f.setUnderline(TreeParams::getTreeActiveUnderlined());
         f.setOverline(TreeParams::getTreeActiveOverlined());
         unsigned long col = TreeParams::getTreeActiveColor();
-        QColor color = QColor((col >> 24) & 0xff,(col >> 16) & 0xff,(col >> 8) & 0xff);
+        QColor color = App::Color::fromPackedRGB<QColor>(col);
         highlight(color);
     }   break;
     default:

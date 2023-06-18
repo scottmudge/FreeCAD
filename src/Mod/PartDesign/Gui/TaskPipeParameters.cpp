@@ -20,7 +20,6 @@
  *                                                                         *
  ***************************************************************************/
 
-
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
@@ -58,6 +57,7 @@
 #include "ui_TaskPipeScaling.h"
 
 #include "Utils.h"
+
 
 Q_DECLARE_METATYPE(App::PropertyLinkSubList::SubSet)
 

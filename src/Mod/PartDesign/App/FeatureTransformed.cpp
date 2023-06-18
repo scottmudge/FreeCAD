@@ -118,10 +118,10 @@ Part::Feature* Transformed::getBaseObject(bool silent) const {
         if(firstOriginal->isDerivedFrom(Part::Feature::getClassTypeId())) {
             rv = static_cast<Part::Feature*>(firstOriginal);
         } else {
-            err = "Transformation feature Linked object is not a Part object";
+            err = QT_TRANSLATE_NOOP("Exception", "Transformation feature Linked object is not a Part object");
         }
     } else {
-        err = "No originals linked to the transformed feature.";
+        err = QT_TRANSLATE_NOOP("Exception", "No originals linked to the transformed feature.");
     }
 
     if (!silent && err) {
@@ -694,7 +694,8 @@ App::DocumentObjectExecReturn *Transformed::execute()
                     maker = Part::OpCodes::Common;
                     break;
                 default:
-                    return new App::DocumentObjectExecReturn("Unknown operation type");
+                    return new App::DocumentObjectExecReturn(
+                            QT_TRANSLATE_NOOP("Exception", "Unknown operation type"));
                 }
                 result.makEBoolean(maker, {support, shapeCopy});
                 this->fixShape(result);
@@ -704,7 +705,7 @@ App::DocumentObjectExecReturn *Transformed::execute()
                 support = _Version.getValue()>1 ? result : getSolid(result);
                 // lets check if the result is a solid
                 if (support.isNull()) {
-                    std::string msg("Resulting shape is not a solid: ");
+                    std::string msg(QT_TRANSLATE_NOOP("Exception", "Resulting shape is not a solid: "));
                     msg += sub;
                     return new App::DocumentObjectExecReturn(msg.c_str());
                 }
@@ -714,7 +715,7 @@ App::DocumentObjectExecReturn *Transformed::execute()
                 // fuse operation of the transformation result will also fail
 
                 rejected.emplace_back(shape,std::vector<gp_Trsf>(t,t+1));
-                std::string msg("Transformation: Intersection check failed");
+                std::string msg(QT_TRANSLATE_NOOP("Exception", "Transformation: Intersection check failed"));
                 if (e.GetMessageString() != NULL)
                     msg += std::string(": ") + e.GetMessageString();
                 return new App::DocumentObjectExecReturn(msg.c_str());
@@ -796,7 +797,7 @@ App::DocumentObjectExecReturn *Transformed::execute()
     }
 
     if (rejected.size() > 0) {
-        return new App::DocumentObjectExecReturn("Transformation failed");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Transformation failed"));
     }
 
     return App::DocumentObject::StdReturn;

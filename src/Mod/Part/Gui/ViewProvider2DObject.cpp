@@ -108,9 +108,6 @@ SoSeparator* ViewProvider2DObjectGrid::createGrid()
             || this->getEditingMode() == TransformAt)
         return GridRoot;
 
-    //double dx = 10 * GridSize.getValue();                       // carpet size
-    //double dy = 10 * GridSize.getValue();
-    // float Size = (MaxX-MinX > MaxY-MinY) ? MaxX-MinX : MaxY-MinY;
     float Step = GridSize.getValue(); //pow(10,floor(log10(Size/5.0)));
     float MiX, MaX, MiY, MaY;
     if (TightGrid.getValue()) {
@@ -149,26 +146,6 @@ SoSeparator* ViewProvider2DObjectGrid::createGrid()
     SoBaseColor *mycolor;
     SoVertexProperty *vts;
 
-   // carpet
- /* mycolor = new SoBaseColor;
-    mycolor->rgb.setValue(0.2f, 0.7f, 0.7f);
-    parent->addChild(mycolor);
-
-    vts = new SoVertexProperty;
-    vts->vertex.set1Value(0, -0.5*dx, -1.5*dy,  0.5*zGrid);
-    vts->vertex.set1Value(1, -0.5*dx, -1.5*dy, -0.5*zGrid);
-    vts->vertex.set1Value(2,  0.5*dx, -1.5*dy,  0.5*zGrid);
-    vts->vertex.set1Value(3,  0.5*dx, -1.5*dy, -0.5*zGrid);
-
-    SoQuadMesh *carpet = new SoQuadMesh;
-    carpet->verticesPerColumn = 2;
-    carpet->verticesPerRow = 2;
-    carpet->vertexProperty = vts;
-    parent->addChild(carpet);*/
-
-    SoDepthBuffer *depth = new SoDepthBuffer;
-    depth->function = SoDepthBuffer::ALWAYS;
-    parent->addChild(depth);
 
     // gridlines
     mycolor = new SoBaseColor;

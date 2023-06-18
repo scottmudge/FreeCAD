@@ -37,9 +37,11 @@
 #include <Gui/GLPainter.h>
 #include <Gui/Selection.h>
 #include <Mod/Part/Gui/ViewProvider2DObject.h>
+#include <Mod/Part/Gui/ViewProviderGridExtension.h>
 #include <Mod/Part/Gui/ViewProviderAttachExtension.h>
 #include <Mod/Part/App/BodyBase.h>
 #include <Mod/Sketcher/App/GeoList.h>
+#include <memory>
 
 #include "ShortcutListener.h"
 
@@ -80,6 +82,7 @@ namespace Sketcher {
 
 namespace SketcherGui {
 
+class SnapManager;
 class DrawSketchHandler;
 
 /** The Sketch ViewProvider
@@ -88,12 +91,13 @@ class DrawSketchHandler;
   * It uses the class DrawSketchHandler to facilitate the creation
   * of new geometry while editing.
   */
-class SketcherGuiExport ViewProviderSketch : public PartGui::ViewProvider2DObjectGrid
+class SketcherGuiExport ViewProviderSketch : public PartGui::ViewProvider2DObject
+                                            , public PartGui::ViewProviderGridExtension
                                             , public PartGui::ViewProviderAttachExtension
                                             , public Gui::SelectionObserver
                                             , public ParameterGrp::ObserverType
 {
-    typedef PartGui::ViewProvider2DObjectGrid inherited;
+    typedef PartGui::ViewProvider2DObject inherited;
 
     Q_DECLARE_TR_FUNCTIONS(SketcherGui::ViewProviderSketch)
     /// generates a warning message about constraint conflicts and appends it to the given message
@@ -148,6 +152,9 @@ public:
     bool isSelectable() const override;
     /// Observer message from the Selection
     virtual void onSelectionChanged(const Gui::SelectionChanges& msg) override;
+
+    /// Toggle angle snapping and set the reference point
+    void setAngleSnapping(bool enable, Base::Vector2d referencePoint = Base::Vector2d(0., 0.));
 
     /// Show/Hide nodes from information layer
     void showRestoreInformationLayer();
@@ -235,8 +242,6 @@ public:
      */
     const Sketcher::Sketch &getSolvedSketch() const;
 
-    /// snap points x,y (mouse coordinates) onto grid if enabled
-    void snapToGrid(double &x, double &y);
 
     /// moves a selected constraint
     void moveConstraint(int constNum, const Base::Vector2d &toPos);
@@ -338,7 +343,7 @@ protected:
     /// set up the edition data structure EditData
     void createEditInventorNodes();
     /// pointer to the edit data structure if the ViewProvider is in edit.
-    EditData *edit;
+    std::unique_ptr<EditData> edit;
     /// build up the visual of the constraints
     void rebuildConstraintsVisual();
 
@@ -448,6 +453,9 @@ protected:
     SbVec3s getDisplayedSize(const SoImage *) const;
     //@}
 
+    void addNodeToRoot(SoSeparator * node);
+
+    void removeNodeFromRoot(SoSeparator * node);
     void setConstraintSelectability(bool enabled = true);
     void setPositionText(const Base::Vector2d &Pos, const SbString &txt);
     void setPositionText(const Base::Vector2d &Pos);
@@ -518,7 +526,7 @@ protected:
     double xInit,yInit;
     bool relative;
 
-    Gui::Rubberband* rubberband;
+    std::unique_ptr<Gui::Rubberband> rubberband;
 
     // information layer variables
     bool visibleInformationChanged;
@@ -535,6 +543,8 @@ protected:
     std::unique_ptr<PartGui::ViewProviderPart> pInternalView;
 
     ShortcutListener* listener;
+
+    std::unique_ptr<SnapManager> snapManager;
 };
 
 // ---------------------------------------------------------
@@ -555,4 +565,3 @@ public:
 
 
 #endif // SKETCHERGUI_VIEWPROVIDERSKETCH_H
-

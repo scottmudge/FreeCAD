@@ -863,7 +863,7 @@ QVariant PropertyStringItem::toolTip(const App::Property* prop) const
 void PropertyStringItem::setValue(const QVariant& value)
 {
     if(!hasExpression())  {
-        if (!value.canConvert(QVariant::String))
+        if (!value.canConvert<QString>())
             return;
         QString val = value.toString();
         val = QString::fromUtf8(Base::Interpreter().strToPython(val.toUtf8()).c_str());
@@ -916,7 +916,7 @@ QVariant PropertyFontItem::value(const App::Property* prop) const
 
 void PropertyFontItem::setValue(const QVariant& value)
 {
-    if (hasExpression() || !value.canConvert(QVariant::String))
+    if (hasExpression() || !value.canConvert<QString>())
         return;
     QString val = value.toString();
     QString data = QStringLiteral("\"%1\"").arg(val);
@@ -935,8 +935,11 @@ QWidget* PropertyFontItem::createEditor(QWidget* parent, const QObject* receiver
 void PropertyFontItem::setEditorData(QWidget *editor, const QVariant& data) const
 {
     auto cb = qobject_cast<QComboBox*>(editor);
-    QFontDatabase fdb;
-    QStringList familyNames = fdb.families(QFontDatabase::Any);
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+    QStringList familyNames = QFontDatabase().families(QFontDatabase::Any);
+#else
+    QStringList familyNames = QFontDatabase::families(QFontDatabase::Any);
+#endif
     cb->addItems(familyNames);
     int index = familyNames.indexOf(data.toString());
     cb->setCurrentIndex(index);
@@ -981,7 +984,7 @@ void PropertyIntegerItem::setValue(const QVariant& value)
 {
     //if the item has an expression it issues the python code
     if (!hasExpression()) {
-        if (!value.canConvert(QVariant::Int))
+        if (!value.canConvert<int>())
             return;
         int val = value.toInt();
         QString data = QStringLiteral("%1").arg(val);
@@ -1050,7 +1053,7 @@ void PropertyIntegerConstraintItem::setValue(const QVariant& value)
 {
     //if the item has an expression it issues the python code
     if (!hasExpression()) {
-        if (!value.canConvert(QVariant::Int))
+        if (!value.canConvert<int>())
             return;
         int val = value.toInt();
         QString data = QStringLiteral("%1").arg(val);
@@ -1146,7 +1149,7 @@ void PropertyFloatItem::setValue(const QVariant& value)
 {
     //if the item has an expression it issues the python code
     if (!hasExpression()) {
-        if (!value.canConvert(QVariant::Double))
+        if (!value.canConvert<double>())
             return;
         double val = value.toDouble();
         QString data = QStringLiteral("%1").arg(val,0,'f',decimals());
@@ -1329,7 +1332,7 @@ void PropertyFloatConstraintItem::setValue(const QVariant& value)
 {
     //if the item has an expression it issues the python code
     if (!hasExpression()) {
-        if (!value.canConvert(QVariant::Double))
+        if (!value.canConvert<double>())
             return;
         double val = value.toDouble();
         QString data = QStringLiteral("%1").arg(val,0,'f',decimals());
@@ -1431,7 +1434,7 @@ QVariant PropertyBoolItem::value(const App::Property* prop) const
 
 void PropertyBoolItem::setValue(const QVariant& value)
 {
-    if (hasExpression() || !value.canConvert(QVariant::Bool))
+    if (hasExpression() || !value.canConvert<bool>())
         return;
     bool val = value.toBool();
     QString data = (val ? QStringLiteral("True") : QStringLiteral("False"));
@@ -1642,7 +1645,7 @@ PropertyEditorWidget::PropertyEditorWidget (QWidget * parent)
 #endif
     layout->addWidget(button);
 
-    connect(button, SIGNAL(clicked()), this, SIGNAL(buttonClick()));
+    connect(button, &QPushButton::clicked, this, &PropertyEditorWidget::buttonClick);
 
     // QAbstractItemView will call selectAll() if a QLineEdit is the focus
     // proxy. Since the QLineEdit here is read-only and not meant for editing,
@@ -1687,7 +1690,7 @@ VectorListWidget::VectorListWidget(int decimals, QWidget *parent)
   : PropertyEditorWidget(parent)
   , decimals(decimals)
 {
-    connect(button, SIGNAL(clicked()), this, SLOT(buttonClicked()));
+    connect(button, &QPushButton::clicked, this, &VectorListWidget::buttonClicked);
 }
 
 void VectorListWidget::buttonClicked()
@@ -2451,7 +2454,7 @@ void PropertyRotationItem::setAxis(const Base::Vector3d& axis)
 void PropertyRotationItem::assignProperty(const App::Property* prop)
 {
     // Choose an adaptive epsilon to avoid changing the axis when they are considered to
-    // be equal. See https://forum.freecadweb.org/viewtopic.php?f=10&t=24662&start=10
+    // be equal. See https://forum.freecad.org/viewtopic.php?f=10&t=24662&start=10
     double eps = std::pow(10.0, -2*(decimals()+1));
     if (prop->getTypeId().isDerivedFrom(App::PropertyRotation::getClassTypeId())) {
         const Base::Rotation& value = static_cast<const App::PropertyRotation*>(prop)->getValue();
@@ -2611,8 +2614,8 @@ void PlacementEditor::browse()
     }
     if (!_task) {
         _task = task;
-        connect(task, SIGNAL(placementChanged(const QVariant &, bool, bool)),
-                this, SLOT(updateValue(const QVariant&, bool, bool)));
+        connect(task, &TaskPlacement::placementChanged,
+                this, &PlacementEditor::updateValue);
     }
     task->setPlacement(value().value<Base::Placement>());
     task->setPropertyName(propertyname);
@@ -2749,7 +2752,7 @@ void PropertyPlacementItem::setPosition(const Base::Vector3d& pos)
 void PropertyPlacementItem::assignProperty(const App::Property* prop)
 {
     // Choose an adaptive epsilon to avoid changing the axis when they are considered to
-    // be equal. See https://forum.freecadweb.org/viewtopic.php?f=10&t=24662&start=10
+    // be equal. See https://forum.freecad.org/viewtopic.php?f=10&t=24662&start=10
     double eps = std::pow(10.0, -2*(decimals()+1));
     if (prop->getTypeId().isDerivedFrom(App::PropertyPlacement::getClassTypeId())) {
         const Base::Placement& value = static_cast<const App::PropertyPlacement*>(prop)->getValue();
@@ -2960,7 +2963,7 @@ void PropertyEnumItem::setValue(const QVariant& value)
 
     QString data;
 
-    if (value.type() == QVariant::StringList) {
+    if (value.userType() == QMetaType::QStringList) {
         QStringList values = value.toStringList();
         QTextStream str(&data);
         str << "[";
@@ -3184,7 +3187,7 @@ QVariant PropertyStringListItem::value(const App::Property* prop) const
 
 void PropertyStringListItem::setValue(const QVariant& value)
 {
-    if (hasExpression() || !value.canConvert(QVariant::StringList))
+    if (hasExpression() || !value.canConvert<QStringList>())
         return;
     QStringList values = value.toStringList();
     QString data;
@@ -3264,7 +3267,7 @@ QVariant PropertyFloatListItem::value(const App::Property* prop) const
 
 void PropertyFloatListItem::setValue(const QVariant& value)
 {
-    if (hasExpression() || !value.canConvert(QVariant::StringList))
+    if (hasExpression() || !value.canConvert<QStringList>())
         return;
     QStringList values = value.toStringList();
     QString data;
@@ -3339,7 +3342,7 @@ QVariant PropertyIntegerListItem::value(const App::Property* prop) const
 
 void PropertyIntegerListItem::setValue(const QVariant& value)
 {
-    if (hasExpression() || !value.canConvert(QVariant::StringList))
+    if (hasExpression() || !value.canConvert<QStringList>())
         return;
     QStringList values = value.toStringList();
     QString data;
@@ -3394,11 +3397,10 @@ void PropertyColorItem::setValue(const QVariant& value)
     if (hasExpression() || !value.canConvert<QColor>())
         return;
     auto col = value.value<QColor>();
-    App::Color val; val.setValue<QColor>(col);
     QString data = QStringLiteral("(%1,%2,%3)")
-                    .arg(val.r,0,'f',decimals())
-                    .arg(val.g,0,'f',decimals())
-                    .arg(val.b,0,'f',decimals());
+                       .arg(col.red())
+                       .arg(col.green())
+                       .arg(col.blue());
     setPropertyValue(data);
 }
 
@@ -4236,7 +4238,7 @@ QVariant PropertyFileItem::value(const App::Property* prop) const
 
 void PropertyFileItem::setValue(const QVariant& value)
 {
-    if (hasExpression() || !value.canConvert(QVariant::String))
+    if (hasExpression() || !value.canConvert<QString>())
         return;
     QString val = value.toString();
     QString data = QStringLiteral("\"%1\"").arg(val);
@@ -4295,7 +4297,7 @@ QVariant PropertyPathItem::value(const App::Property* prop) const
 
 void PropertyPathItem::setValue(const QVariant& value)
 {
-    if (hasExpression() || !value.canConvert(QVariant::String))
+    if (hasExpression() || !value.canConvert<QString>())
         return;
     QString val = value.toString();
     QString data = QStringLiteral("\"%1\"").arg(val);
@@ -4347,7 +4349,7 @@ QVariant PropertyTransientFileItem::value(const App::Property* prop) const
 
 void PropertyTransientFileItem::setValue(const QVariant& value)
 {
-    if (hasExpression() || !value.canConvert(QVariant::String))
+    if (hasExpression() || !value.canConvert<QString>())
         return;
     QString val = value.toString();
     QString data = QStringLiteral("\"%1\"").arg(val);
@@ -4443,11 +4445,11 @@ LinkLabel::LinkLabel (QWidget * parent, const App::Property *prop)
     this->setFocusProxy(label);
     
     // setLayout(layout);
-
-    connect(label, SIGNAL(linkActivated(const QString&)),
-            this, SLOT(onLinkActivated(const QString&)));
-    connect(editButton, SIGNAL(clicked()),
-            this, SLOT(onEditClicked()));
+    
+    connect(label, &QLabel::linkActivated,
+            this, &LinkLabel::onLinkActivated);
+    connect(editButton, &QPushButton::clicked,
+            this, &LinkLabel::onEditClicked);
 }
 
 LinkLabel::~LinkLabel()
@@ -4520,7 +4522,7 @@ void LinkLabel::onLinkActivated (const QString& s)
 {
     Q_UNUSED(s);
     auto select = new LinkSelection(qvariant_cast<App::SubObjectT>(link));
-    QTimer::singleShot(50, select, SLOT(select()));
+    QTimer::singleShot(50, select, &LinkSelection::select);
 }
 
 void LinkLabel::onEditClicked ()

@@ -23,7 +23,7 @@
 
 import FreeCAD, FreeCADGui
 import Part,  PartDesignGui
-from PyQt4 import QtCore, QtGui
+from PySide import QtCore, QtGui
 import Standards
 import os, sys
 _string_type = str if sys.version_info[0] >= 3 else basestring

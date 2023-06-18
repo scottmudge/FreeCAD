@@ -32,11 +32,11 @@
 
 #include "PropertyConstraintListItem.h"
 #include "SketcherSettings.h"
-#include "SoDatumLabel.h"
 #include "SoZoomTranslation.h"
 #include "ViewProviderPython.h"
 #include "ViewProviderSketch.h"
 #include "ViewProviderSketchGeometryExtension.h"
+#include "ViewProviderSketchGeometryExtensionPy.h"
 #include "Workbench.h"
 
 
@@ -53,6 +53,7 @@ void loadSketcherResource()
 {
     // add resources and reloads the translators
     Q_INIT_RESOURCE(Sketcher);
+    Q_INIT_RESOURCE(Sketcher_translation);
     Gui::Translator::instance()->refresh();
 }
 
@@ -93,7 +94,7 @@ PyMOD_INIT_FUNC(SketcherGui)
         PyMOD_Return(nullptr);
     }
 
-    PyObject* mod = SketcherGui::initModule();
+    PyObject* sketcherGuiModule = SketcherGui::initModule();
     Base::Console().Log("Loading GUI of Sketcher module... done\n");
 
     Gui::BitmapFactory().addPath(QStringLiteral(":/icons/constraints"));
@@ -116,23 +117,26 @@ PyMOD_INIT_FUNC(SketcherGui)
 
     SketcherGui::Workbench::init();
 
+    // Add Types to module
+    Base::Interpreter().addType(&SketcherGui::ViewProviderSketchGeometryExtensionPy    ::Type,sketcherGuiModule,"ViewProviderSketchGeometryExtension");
+
     // init objects
     SketcherGui::ViewProviderSketch         		  ::init();
     SketcherGui::ViewProviderSketchExport             ::init();
     SketcherGui::ViewProviderPython         		  ::init();
     SketcherGui::ViewProviderCustom         		  ::init();
     SketcherGui::ViewProviderCustomPython   		  ::init();
-    SketcherGui::SoDatumLabel               		  ::initClass();
     SketcherGui::SoZoomTranslation          		  ::initClass();
     SketcherGui::PropertyConstraintListItem 		  ::init();
-    SketcherGui::ViewProviderSketchGeometryExtension  ::init();
+    SketcherGui::ViewProviderSketchGeometryExtension      ::init();
 
     (void)new Gui::PrefPageProducer<SketcherGui::SketcherSettings>        ( QT_TRANSLATE_NOOP("QObject","Sketcher") );
+    (void)new Gui::PrefPageProducer<SketcherGui::SketcherSettingsGrid>    ( QT_TRANSLATE_NOOP("QObject","Sketcher") );
     (void)new Gui::PrefPageProducer<SketcherGui::SketcherSettingsDisplay> ( QT_TRANSLATE_NOOP("QObject","Sketcher") );
     (void)new Gui::PrefPageProducer<SketcherGui::SketcherSettingsColors>  ( QT_TRANSLATE_NOOP("QObject","Sketcher") );
 
      // add resources and reloads the translators
     loadSketcherResource();
 
-    PyMOD_Return(mod);
+    PyMOD_Return(sketcherGuiModule);
 }

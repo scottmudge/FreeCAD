@@ -382,16 +382,13 @@ public:
         mainSplitter = new QSplitter(Qt::Horizontal, this);
         if (glformat) {
             _viewer.push_back(new View3DInventorViewer(f, mainSplitter));
-            _viewer.back()->setDocument(pcDocument);
             _viewer.push_back(new View3DInventorViewer(f, mainSplitter));
-            _viewer.back()->setDocument(pcDocument);
         }
         else {
             _viewer.push_back(new View3DInventorViewer(mainSplitter));
-            _viewer.back()->setDocument(pcDocument);
             _viewer.push_back(new View3DInventorViewer(mainSplitter));
-            _viewer.back()->setDocument(pcDocument);
         }
+        setDocumentOfViewers(pcDocument);
 
         auto vbox = new QFrame(this);
         auto layout = new QVBoxLayout();
@@ -824,7 +821,7 @@ void ManualAlignment::startAlignment(Base::Type mousemodel)
         : tr("Please, select at least %1 points in the left and the right view").arg(n);
     myViewer->myLabel->setText(msg);
 
-    connect(myViewer, SIGNAL(destroyed()), this, SLOT(reset()));
+    connect(myViewer, &QObject::destroyed, this, &ManualAlignment::reset);
 
     // show all aligned views in the 2nd view
     myFixedGroup.addToViewer(myViewer->getViewer(1));
@@ -1136,8 +1133,8 @@ SoNode* ManualAlignment::pickedPointsSubGraph(const SbVec3f& p, const SbVec3f& n
     probe->base.setValue(p);
     probe->normal.setValue(n);
     probe->color.setValue(color_table[index][0],color_table[index][1],color_table[index][2]);
-    SbString s;
-    probe->text.setValue(s.sprintf("RegPoint_%d", id));
+    SbString s(tr("Point_%1").arg(id).toStdString().c_str());
+    probe->text.setValue(s);
     return probe;
 }
 
@@ -1264,35 +1261,35 @@ void ManualAlignment::probePickedCallback(void * ud, SoEventCallback * n)
             else
                 nPoints = self->myFixedGroup.countPoints();
             QMenu menu;
-            QAction* fi = menu.addAction(QStringLiteral("&Align"));
-            QAction* rem = menu.addAction(QStringLiteral("&Remove last point"));
+            QAction* fi = menu.addAction(tr("&Align"));
+            QAction* rem = menu.addAction(tr("&Remove last point"));
             //QAction* cl = menu.addAction("C&lear");
-            QAction* ca = menu.addAction(QStringLiteral("&Cancel"));
+            QAction* ca = menu.addAction(tr("&Cancel"));
             fi->setEnabled(self->canAlign());
             rem->setEnabled(nPoints > 0);
             menu.addSeparator();
-            QAction* sync = menu.addAction(QStringLiteral("&Synchronize views"));
+            QAction* sync = menu.addAction(tr("&Synchronize views"));
             sync->setCheckable(true);
             if (self->d->sensorCam1->getAttachedNode())
                 sync->setChecked(true);
             QAction* id = menu.exec(QCursor::pos());
             if (id == fi) {
                 // call align->align();
-                QTimer::singleShot(300, self, SLOT(onAlign()));
+                QTimer::singleShot(300, self, &ManualAlignment::onAlign);
             }
             else if ((id == rem) && (view == self->myViewer->getViewer(0))) {
-                QTimer::singleShot(300, self, SLOT(onRemoveLastPointMoveable()));
+                QTimer::singleShot(300, self, &ManualAlignment::onRemoveLastPointMoveable);
             }
             else if ((id == rem) && (view == self->myViewer->getViewer(1))) {
-                QTimer::singleShot(300, self, SLOT(onRemoveLastPointFixed()));
+                QTimer::singleShot(300, self, &ManualAlignment::onRemoveLastPointFixed);
             }
             //else if (id == cl) {
             //    // call align->clear();
-            //    QTimer::singleShot(300, self, SLOT(onClear()));
+            //    QTimer::singleShot(300, self, &ManualAlignment::onClear);
             //}
             else if (id == ca) {
                 // call align->cancel();
-                QTimer::singleShot(300, self, SLOT(onCancel()));
+                QTimer::singleShot(300, self, &ManualAlignment::onCancel);
             }
             else if (id == sync) {
                 // setup sensor connection

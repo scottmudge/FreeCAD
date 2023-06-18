@@ -27,21 +27,21 @@ import ReportViewParams
 ReportViewParams.define()
 ]]]*/
 
-// Auto generated code (Tools/params_utils.py:162)
+// Auto generated code (Tools/params_utils.py:196)
 #include <unordered_map>
 #include <App/Application.h>
 #include <App/DynamicProperty.h>
 #include "ReportViewParams.h"
 using namespace Gui;
 
-// Auto generated code (Tools/params_utils.py:171)
+// Auto generated code (Tools/params_utils.py:207)
 namespace {
 class ReportViewParamsP: public ParameterGrp::ObserverType {
 public:
     ParameterGrp::handle handle;
     std::unordered_map<const char *,void(*)(ReportViewParamsP*),App::CStringHasher,App::CStringHasher> funcs;
 
-    // Auto generated code (Tools/params_utils.py:181)
+    // Auto generated code (Tools/params_utils.py:219)
     boost::signals2::signal<void (const char*)> signalParamChanged;
     void signalAll()
     {
@@ -49,21 +49,23 @@ public:
         signalParamChanged("checkShowReportViewOnError");
         signalParamChanged("checkShowReportViewOnNormalMessage");
         signalParamChanged("checkShowReportViewOnLogMessage");
+        signalParamChanged("checkShowReportViewOnCritical");
         signalParamChanged("checkShowReportTimecode");
         signalParamChanged("LogMessageSize");
         signalParamChanged("CommandRedirect");
 
-    // Auto generated code (Tools/params_utils.py:190)
+    // Auto generated code (Tools/params_utils.py:232)
     }
     bool checkShowReportViewOnWarning;
     bool checkShowReportViewOnError;
     bool checkShowReportViewOnNormalMessage;
     bool checkShowReportViewOnLogMessage;
+    bool checkShowReportViewOnCritical;
     bool checkShowReportTimecode;
     long LogMessageSize;
     QString CommandRedirect;
 
-    // Auto generated code (Tools/params_utils.py:199)
+    // Auto generated code (Tools/params_utils.py:245)
     ReportViewParamsP() {
         handle = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/OutputWindow");
         handle->Attach(this);
@@ -76,6 +78,8 @@ public:
         funcs["checkShowReportViewOnNormalMessage"] = &ReportViewParamsP::updatecheckShowReportViewOnNormalMessage;
         checkShowReportViewOnLogMessage = handle->GetBool("checkShowReportViewOnLogMessage", false);
         funcs["checkShowReportViewOnLogMessage"] = &ReportViewParamsP::updatecheckShowReportViewOnLogMessage;
+        checkShowReportViewOnCritical = handle->GetBool("checkShowReportViewOnCritical", false);
+        funcs["checkShowReportViewOnCritical"] = &ReportViewParamsP::updatecheckShowReportViewOnCritical;
         checkShowReportTimecode = handle->GetBool("checkShowReportTimecode", true);
         funcs["checkShowReportTimecode"] = &ReportViewParamsP::updatecheckShowReportTimecode;
         LogMessageSize = handle->GetInt("LogMessageSize", 0);
@@ -84,11 +88,11 @@ public:
         funcs["CommandRedirect"] = &ReportViewParamsP::updateCommandRedirect;
     }
 
-    // Auto generated code (Tools/params_utils.py:213)
+    // Auto generated code (Tools/params_utils.py:263)
     ~ReportViewParamsP() {
     }
 
-    // Auto generated code (Tools/params_utils.py:218)
+    // Auto generated code (Tools/params_utils.py:270)
     void OnChange(Base::Subject<const char*> &, const char* sReason) {
         if(!sReason)
             return;
@@ -100,37 +104,41 @@ public:
     }
 
 
-    // Auto generated code (Tools/params_utils.py:234)
+    // Auto generated code (Tools/params_utils.py:288)
     static void updatecheckShowReportViewOnWarning(ReportViewParamsP *self) {
         self->checkShowReportViewOnWarning = self->handle->GetBool("checkShowReportViewOnWarning", true);
     }
-    // Auto generated code (Tools/params_utils.py:234)
+    // Auto generated code (Tools/params_utils.py:288)
     static void updatecheckShowReportViewOnError(ReportViewParamsP *self) {
         self->checkShowReportViewOnError = self->handle->GetBool("checkShowReportViewOnError", true);
     }
-    // Auto generated code (Tools/params_utils.py:234)
+    // Auto generated code (Tools/params_utils.py:288)
     static void updatecheckShowReportViewOnNormalMessage(ReportViewParamsP *self) {
         self->checkShowReportViewOnNormalMessage = self->handle->GetBool("checkShowReportViewOnNormalMessage", false);
     }
-    // Auto generated code (Tools/params_utils.py:234)
+    // Auto generated code (Tools/params_utils.py:288)
     static void updatecheckShowReportViewOnLogMessage(ReportViewParamsP *self) {
         self->checkShowReportViewOnLogMessage = self->handle->GetBool("checkShowReportViewOnLogMessage", false);
     }
-    // Auto generated code (Tools/params_utils.py:234)
+    // Auto generated code (Tools/params_utils.py:288)
+    static void updatecheckShowReportViewOnCritical(ReportViewParamsP *self) {
+        self->checkShowReportViewOnCritical = self->handle->GetBool("checkShowReportViewOnCritical", false);
+    }
+    // Auto generated code (Tools/params_utils.py:288)
     static void updatecheckShowReportTimecode(ReportViewParamsP *self) {
         self->checkShowReportTimecode = self->handle->GetBool("checkShowReportTimecode", true);
     }
-    // Auto generated code (Tools/params_utils.py:234)
+    // Auto generated code (Tools/params_utils.py:288)
     static void updateLogMessageSize(ReportViewParamsP *self) {
         self->LogMessageSize = self->handle->GetInt("LogMessageSize", 0);
     }
-    // Auto generated code (Tools/params_utils.py:234)
+    // Auto generated code (Tools/params_utils.py:288)
     static void updateCommandRedirect(ReportViewParamsP *self) {
         self->CommandRedirect = QString::fromUtf8(self->handle->GetASCII("CommandRedirect", "").c_str());
     }
 };
 
-// Auto generated code (Tools/params_utils.py:252)
+// Auto generated code (Tools/params_utils.py:310)
 ReportViewParamsP *instance() {
     static ReportViewParamsP *inst = new ReportViewParamsP;
     return inst;
@@ -138,209 +146,236 @@ ReportViewParamsP *instance() {
 
 } // Anonymous namespace
 
-// Auto generated code (Tools/params_utils.py:261)
+// Auto generated code (Tools/params_utils.py:321)
 ParameterGrp::handle ReportViewParams::getHandle() {
     return instance()->handle;
 }
 
-// Auto generated code (Tools/params_utils.py:269)
+// Auto generated code (Tools/params_utils.py:331)
 boost::signals2::signal<void (const char*)> &
 ReportViewParams::signalParamChanged() {
     return instance()->signalParamChanged;
 }
 
-// Auto generated code (Tools/params_utils.py:276)
+// Auto generated code (Tools/params_utils.py:340)
 void signalAll() {
     instance()->signalAll();
 }
 
-// Auto generated code (Tools/params_utils.py:284)
+// Auto generated code (Tools/params_utils.py:350)
 const char *ReportViewParams::doccheckShowReportViewOnWarning() {
     return "";
 }
 
-// Auto generated code (Tools/params_utils.py:290)
+// Auto generated code (Tools/params_utils.py:358)
 const bool & ReportViewParams::getcheckShowReportViewOnWarning() {
     return instance()->checkShowReportViewOnWarning;
 }
 
-// Auto generated code (Tools/params_utils.py:296)
+// Auto generated code (Tools/params_utils.py:366)
 const bool & ReportViewParams::defaultcheckShowReportViewOnWarning() {
     const static bool def = true;
     return def;
 }
 
-// Auto generated code (Tools/params_utils.py:303)
+// Auto generated code (Tools/params_utils.py:375)
 void ReportViewParams::setcheckShowReportViewOnWarning(const bool &v) {
     instance()->handle->SetBool("checkShowReportViewOnWarning",v);
     instance()->checkShowReportViewOnWarning = v;
 }
 
-// Auto generated code (Tools/params_utils.py:310)
+// Auto generated code (Tools/params_utils.py:384)
 void ReportViewParams::removecheckShowReportViewOnWarning() {
     instance()->handle->RemoveBool("checkShowReportViewOnWarning");
 }
 
-// Auto generated code (Tools/params_utils.py:284)
+// Auto generated code (Tools/params_utils.py:350)
 const char *ReportViewParams::doccheckShowReportViewOnError() {
     return "";
 }
 
-// Auto generated code (Tools/params_utils.py:290)
+// Auto generated code (Tools/params_utils.py:358)
 const bool & ReportViewParams::getcheckShowReportViewOnError() {
     return instance()->checkShowReportViewOnError;
 }
 
-// Auto generated code (Tools/params_utils.py:296)
+// Auto generated code (Tools/params_utils.py:366)
 const bool & ReportViewParams::defaultcheckShowReportViewOnError() {
     const static bool def = true;
     return def;
 }
 
-// Auto generated code (Tools/params_utils.py:303)
+// Auto generated code (Tools/params_utils.py:375)
 void ReportViewParams::setcheckShowReportViewOnError(const bool &v) {
     instance()->handle->SetBool("checkShowReportViewOnError",v);
     instance()->checkShowReportViewOnError = v;
 }
 
-// Auto generated code (Tools/params_utils.py:310)
+// Auto generated code (Tools/params_utils.py:384)
 void ReportViewParams::removecheckShowReportViewOnError() {
     instance()->handle->RemoveBool("checkShowReportViewOnError");
 }
 
-// Auto generated code (Tools/params_utils.py:284)
+// Auto generated code (Tools/params_utils.py:350)
 const char *ReportViewParams::doccheckShowReportViewOnNormalMessage() {
     return "";
 }
 
-// Auto generated code (Tools/params_utils.py:290)
+// Auto generated code (Tools/params_utils.py:358)
 const bool & ReportViewParams::getcheckShowReportViewOnNormalMessage() {
     return instance()->checkShowReportViewOnNormalMessage;
 }
 
-// Auto generated code (Tools/params_utils.py:296)
+// Auto generated code (Tools/params_utils.py:366)
 const bool & ReportViewParams::defaultcheckShowReportViewOnNormalMessage() {
     const static bool def = false;
     return def;
 }
 
-// Auto generated code (Tools/params_utils.py:303)
+// Auto generated code (Tools/params_utils.py:375)
 void ReportViewParams::setcheckShowReportViewOnNormalMessage(const bool &v) {
     instance()->handle->SetBool("checkShowReportViewOnNormalMessage",v);
     instance()->checkShowReportViewOnNormalMessage = v;
 }
 
-// Auto generated code (Tools/params_utils.py:310)
+// Auto generated code (Tools/params_utils.py:384)
 void ReportViewParams::removecheckShowReportViewOnNormalMessage() {
     instance()->handle->RemoveBool("checkShowReportViewOnNormalMessage");
 }
 
-// Auto generated code (Tools/params_utils.py:284)
+// Auto generated code (Tools/params_utils.py:350)
 const char *ReportViewParams::doccheckShowReportViewOnLogMessage() {
     return "";
 }
 
-// Auto generated code (Tools/params_utils.py:290)
+// Auto generated code (Tools/params_utils.py:358)
 const bool & ReportViewParams::getcheckShowReportViewOnLogMessage() {
     return instance()->checkShowReportViewOnLogMessage;
 }
 
-// Auto generated code (Tools/params_utils.py:296)
+// Auto generated code (Tools/params_utils.py:366)
 const bool & ReportViewParams::defaultcheckShowReportViewOnLogMessage() {
     const static bool def = false;
     return def;
 }
 
-// Auto generated code (Tools/params_utils.py:303)
+// Auto generated code (Tools/params_utils.py:375)
 void ReportViewParams::setcheckShowReportViewOnLogMessage(const bool &v) {
     instance()->handle->SetBool("checkShowReportViewOnLogMessage",v);
     instance()->checkShowReportViewOnLogMessage = v;
 }
 
-// Auto generated code (Tools/params_utils.py:310)
+// Auto generated code (Tools/params_utils.py:384)
 void ReportViewParams::removecheckShowReportViewOnLogMessage() {
     instance()->handle->RemoveBool("checkShowReportViewOnLogMessage");
 }
 
-// Auto generated code (Tools/params_utils.py:284)
+// Auto generated code (Tools/params_utils.py:350)
+const char *ReportViewParams::doccheckShowReportViewOnCritical() {
+    return "";
+}
+
+// Auto generated code (Tools/params_utils.py:358)
+const bool & ReportViewParams::getcheckShowReportViewOnCritical() {
+    return instance()->checkShowReportViewOnCritical;
+}
+
+// Auto generated code (Tools/params_utils.py:366)
+const bool & ReportViewParams::defaultcheckShowReportViewOnCritical() {
+    const static bool def = false;
+    return def;
+}
+
+// Auto generated code (Tools/params_utils.py:375)
+void ReportViewParams::setcheckShowReportViewOnCritical(const bool &v) {
+    instance()->handle->SetBool("checkShowReportViewOnCritical",v);
+    instance()->checkShowReportViewOnCritical = v;
+}
+
+// Auto generated code (Tools/params_utils.py:384)
+void ReportViewParams::removecheckShowReportViewOnCritical() {
+    instance()->handle->RemoveBool("checkShowReportViewOnCritical");
+}
+
+// Auto generated code (Tools/params_utils.py:350)
 const char *ReportViewParams::doccheckShowReportTimecode() {
     return "";
 }
 
-// Auto generated code (Tools/params_utils.py:290)
+// Auto generated code (Tools/params_utils.py:358)
 const bool & ReportViewParams::getcheckShowReportTimecode() {
     return instance()->checkShowReportTimecode;
 }
 
-// Auto generated code (Tools/params_utils.py:296)
+// Auto generated code (Tools/params_utils.py:366)
 const bool & ReportViewParams::defaultcheckShowReportTimecode() {
     const static bool def = true;
     return def;
 }
 
-// Auto generated code (Tools/params_utils.py:303)
+// Auto generated code (Tools/params_utils.py:375)
 void ReportViewParams::setcheckShowReportTimecode(const bool &v) {
     instance()->handle->SetBool("checkShowReportTimecode",v);
     instance()->checkShowReportTimecode = v;
 }
 
-// Auto generated code (Tools/params_utils.py:310)
+// Auto generated code (Tools/params_utils.py:384)
 void ReportViewParams::removecheckShowReportTimecode() {
     instance()->handle->RemoveBool("checkShowReportTimecode");
 }
 
-// Auto generated code (Tools/params_utils.py:284)
+// Auto generated code (Tools/params_utils.py:350)
 const char *ReportViewParams::docLogMessageSize() {
     return "";
 }
 
-// Auto generated code (Tools/params_utils.py:290)
+// Auto generated code (Tools/params_utils.py:358)
 const long & ReportViewParams::getLogMessageSize() {
     return instance()->LogMessageSize;
 }
 
-// Auto generated code (Tools/params_utils.py:296)
+// Auto generated code (Tools/params_utils.py:366)
 const long & ReportViewParams::defaultLogMessageSize() {
     const static long def = 0;
     return def;
 }
 
-// Auto generated code (Tools/params_utils.py:303)
+// Auto generated code (Tools/params_utils.py:375)
 void ReportViewParams::setLogMessageSize(const long &v) {
     instance()->handle->SetInt("LogMessageSize",v);
     instance()->LogMessageSize = v;
 }
 
-// Auto generated code (Tools/params_utils.py:310)
+// Auto generated code (Tools/params_utils.py:384)
 void ReportViewParams::removeLogMessageSize() {
     instance()->handle->RemoveInt("LogMessageSize");
 }
 
-// Auto generated code (Tools/params_utils.py:284)
+// Auto generated code (Tools/params_utils.py:350)
 const char *ReportViewParams::docCommandRedirect() {
     return QT_TRANSLATE_NOOP("ReportViewParams",
 "Prefix for marking python command in message to be redirected to Python console\n"
 "This is used as a debug help for output command from external libraries");
 }
 
-// Auto generated code (Tools/params_utils.py:290)
+// Auto generated code (Tools/params_utils.py:358)
 const QString & ReportViewParams::getCommandRedirect() {
     return instance()->CommandRedirect;
 }
 
-// Auto generated code (Tools/params_utils.py:296)
+// Auto generated code (Tools/params_utils.py:366)
 const QString & ReportViewParams::defaultCommandRedirect() {
     const static QString def = QStringLiteral("");
     return def;
 }
 
-// Auto generated code (Tools/params_utils.py:303)
+// Auto generated code (Tools/params_utils.py:375)
 void ReportViewParams::setCommandRedirect(const QString &v) {
     instance()->handle->SetASCII("CommandRedirect",v.toUtf8().constData());
     instance()->CommandRedirect = v;
 }
 
-// Auto generated code (Tools/params_utils.py:310)
+// Auto generated code (Tools/params_utils.py:384)
 void ReportViewParams::removeCommandRedirect() {
     instance()->handle->RemoveASCII("CommandRedirect");
 }

@@ -215,7 +215,7 @@ protected Q_SLOTS:
     void onSelectTimer();
     void onShowHidden();
     void onShowTempDoc();
-    void onHideInTree();
+    void onToggleVisibilityInTree();
     void onSearchObjects();
     void onToolTipTimer();
     void onColumnResized(int idx, int oldsize, int newsize);
@@ -270,7 +270,7 @@ private:
     QAction* recomputeObjectAction;
     QAction* showHiddenAction;
     QAction* showTempDocAction;
-    QAction* hideInTreeAction;
+    QAction* toggleVisibilityInTreeAction;
     QAction* reloadDocAction;
     QAction* closeDocAction;
     QAction* searchObjectsAction;

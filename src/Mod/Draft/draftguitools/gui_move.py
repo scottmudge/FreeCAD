@@ -248,7 +248,7 @@ class Move(gui_base_original.Modifier):
                 arguments.append(_cmd)
 
         all_args = ', '.join(arguments)
-        command.append('Draft.copyMovedEdges([' + all_args + '])')
+        command.append('Draft.copy_moved_edges([' + all_args + '])')
         command.append('FreeCAD.ActiveDocument.recompute()')
         return command
 
@@ -264,11 +264,11 @@ class Move(gui_base_original.Modifier):
             if not isinstance(item, tuple):
                 continue
             sub, _, subelement = Part.splitSubname(item[1])
-            print('%s, %s' % (sub, subelement))
+            #  print('%s, %s' % (sub, subelement))
             obj = item[0].getSubObject(sub, retType=1)
             if subelement.startswith('Vertex'):
                 _vertex_index = int(subelement[V:]) - 1
-                _cmd = 'Draft.moveVertex'
+                _cmd = 'Draft.move_vertex'
                 _cmd += '('
                 _cmd += 'FreeCAD.getDocument("%s").getObject("%s"), ' %\
                         (obj.Document.Name, obj.Name)
@@ -278,7 +278,7 @@ class Move(gui_base_original.Modifier):
                 command.append(_cmd)
             elif subelement.startswith('Edge'):
                 _edge_index = int(subelement[E:]) - 1
-                _cmd = 'Draft.moveEdge'
+                _cmd = 'Draft.move_edge'
                 _cmd += '('
                 _cmd += 'FreeCAD.getDocument("%s").getObject("%s"), ' %\
                         (obj.Document.Name, obj.Name)
@@ -334,7 +334,7 @@ class Move(gui_base_original.Modifier):
             last = self.node[-1]
             self.vector = self.point.sub(last)
             self.move(self.ui.isCopy.isChecked())
-            self.finish()
+            self.finish(cont=None)
 
 
 Gui.addCommand('Draft_Move', Move())

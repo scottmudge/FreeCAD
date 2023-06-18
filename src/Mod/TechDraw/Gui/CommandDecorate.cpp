@@ -199,7 +199,6 @@ void CmdTechDrawGeometricHatch::activated(int iMsg)
     Gui::ViewProvider* vp = Gui::Application::Instance->getDocument(getDocument())->getViewProvider(geomhatch);
     TechDrawGui::ViewProviderGeomHatch* hvp = dynamic_cast<TechDrawGui::ViewProviderGeomHatch*>(vp);
     if (!hvp) {
-        Base::Console().Log("ERROR - CommandDecorate - GeomHatch has no ViewProvider\n");
         return;
     }
     objFeat->touch(true);
@@ -248,8 +247,7 @@ void CmdTechDrawImage::activated(int iMsg)
     QString fileName = Gui::FileDialog::getOpenFileName(Gui::getMainWindow(),
         QString::fromUtf8(QT_TR_NOOP("Select an Image File")),
         QString(),
-        QString::fromUtf8(QT_TR_NOOP("Image (*.png *.jpg *.jpeg)")));
-
+        QString::fromUtf8(QT_TR_NOOP("Image files (*.jpg *.jpeg *.png *.bmp);;All files (*)")));
     if (fileName.isEmpty()) {
         return;
     }

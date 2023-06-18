@@ -86,10 +86,12 @@ DlgBooleanOperation::DlgBooleanOperation(QWidget* parent)
   : QWidget(parent), ui(new Ui_DlgBooleanOperation)
 {
     ui->setupUi(this);
-    connect(ui->firstShape, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)),
-            this, SLOT(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)));
-    connect(ui->secondShape, SIGNAL(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)),
-            this, SLOT(currentItemChanged(QTreeWidgetItem*, QTreeWidgetItem*)));
+    connect(ui->swapButton, &QPushButton::clicked,
+            this, &DlgBooleanOperation::onSwapButtonClicked);
+    connect(ui->firstShape, &QTreeWidget::currentItemChanged,
+            this, &DlgBooleanOperation::currentItemChanged);
+    connect(ui->secondShape, &QTreeWidget::currentItemChanged,
+            this, &DlgBooleanOperation::currentItemChanged);
     this->connectNewObject = App::GetApplication().signalNewObject.connect(boost::bind
         (&DlgBooleanOperation::slotCreatedObject, this, bp::_1));
     this->connectModObject = App::GetApplication().signalChangedObject.connect(boost::bind
@@ -316,7 +318,7 @@ void DlgBooleanOperation::currentItemChanged(QTreeWidgetItem* current, QTreeWidg
     //    previous->setCheckState(0, Qt::Unchecked);
 }
 
-void DlgBooleanOperation::on_swapButton_clicked()
+void DlgBooleanOperation::onSwapButtonClicked()
 {
     QTreeWidgetItem* lChild = ui->firstShape->currentItem();
     bool lsel = (lChild && (lChild->checkState(0) & Qt::Checked));

@@ -161,6 +161,10 @@ public:
     constexpr bool operator!() const {
         return !i;
     }
+
+    typename std::underlying_type<Enum>::type toUnderlyingType() const {
+        return static_cast<typename std::underlying_type<Enum>::type>(i);
+    }
 };
 }
 

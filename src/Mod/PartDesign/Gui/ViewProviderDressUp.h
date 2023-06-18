@@ -56,7 +56,9 @@ public:
      * Should be reimplemented in the successor.
      */
     virtual const std::string & featureName() const;
-    QString menuName;
+    std::string featureIcon() const;
+
+    virtual QString getMenuName() const = 0;
 
     virtual void updateAddSubShapeIndicator();
     virtual void updateData(const App::Property*);

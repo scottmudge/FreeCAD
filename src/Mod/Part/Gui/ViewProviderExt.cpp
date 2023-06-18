@@ -355,7 +355,7 @@ void ViewProviderPartExt::onChanged(const App::Property* prop)
 
     // The lower limit of the deviation has been increased to avoid
     // to freeze the GUI
-    // https://forum.freecadweb.org/viewtopic.php?f=3&t=24912&p=195613
+    // https://forum.freecad.org/viewtopic.php?f=3&t=24912&p=195613
     if (prop == &Deviation) {
         if (!prop->testStatus(App::Property::User3)) {
             if(isUpdateForced()||Visibility.getValue()) 
@@ -1907,8 +1907,14 @@ void ViewProviderPartExt::updateVisual()
 
         // Since OCCT 7.6 a value of equal 0 is not allowed any more, this can happen if a single vertex
         // should be displayed.
-        if (deflection < gp::Resolution())
+        if (deflection < gp::Resolution()) {
             deflection = Precision::Confusion();
+        }
+
+        // For very big objects the computed deflection can become very high and thus leads to a useless
+        // tessellation. To avoid this the upper limit is set to 20.0
+        // See also forum: https://forum.freecad.org/viewtopic.php?t=77521
+        deflection = std::min(deflection, 20.0);
 
         // create or use the mesh on the data structure
         Standard_Real AngDeflectionRads = std::max(Precision::Angular(),

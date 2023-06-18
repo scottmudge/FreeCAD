@@ -28,7 +28,9 @@
 # include <QMenu>
 # include <QMessageBox>
 # include <QSplitter>
-# include <QDesktopWidget>
+# if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#   include <QDesktopWidget>
+# endif
 # include <QPixmap>
 # include <QPainter>
 #endif
@@ -43,7 +45,9 @@
 #include <Base/Tools.h>
 #include <Base/Exception.h>
 #include <App/Application.h>
+#include <App/Color.h>
 #include "ViewParams.h"
+
 #include "PrefWidgets.h"
 #include "FileDialog.h"
 #include "MainWindow.h"
@@ -589,7 +593,11 @@ void PrefWidgetStates::restoreSettings()
         auto parent = widget->parentWidget();
         if (!parent)
           parent = getMainWindow();
+#if QT_VERSION < QT_VERSION_CHECK(5,14,0)
         QRect rect = QApplication::desktop()->availableGeometry(parent);
+#else
+        QRect rect = parent->screen()->availableGeometry();
+#endif
         x = std::max<int>(rect.left(), std::min<int>(rect.left()+rect.width()/2, x));
         y = std::max<int>(rect.top(), std::min<int>(rect.top()+rect.height()/2, y));
         w = std::min<int>(rect.width(), w);
@@ -951,9 +959,9 @@ void PrefComboBox::setAutoSave(bool enable)
     autoSave(enable, this, QOverload<int>::of(&PrefComboBox::currentIndexChanged));
 }
 
-QVariant::Type PrefComboBox::getParamType() const
+QMetaType::Type PrefComboBox::getParamType() const
 {
-  return property("prefType").type();
+  return static_cast<QMetaType::Type>(property("prefType").userType());
 }
 
 void PrefComboBox::restorePreferences()
@@ -969,7 +977,7 @@ void PrefComboBox::restorePreferences()
     m_DefaultIndex = currentIndex();
   }
   int index = -1;
-  switch(static_cast<int>(getParamType())) {
+  switch(getParamType()) {
   case QMetaType::Int:
   case QMetaType::LongLong:
     index = findData(static_cast<int>(getWindowParameter()->GetInt(entryName(), m_Default.toInt())));
@@ -1008,7 +1016,7 @@ void PrefComboBox::savePreferences()
     return;
   }
 
-  switch(static_cast<int>(getParamType())) {
+  switch(getParamType()) {
   case QMetaType::Int:
   case QMetaType::LongLong:
     getWindowParameter()->SetInt(entryName(), currentData().toInt());
@@ -1104,12 +1112,17 @@ void PrefLinePattern::updateLanguage()
       this->setItemText(i++, QApplication::translate("LinePattern", item.name));
 }
 
-QVariant::Type PrefLinePattern::getParamType() const
+QMetaType::Type PrefLinePattern::getParamType() const
 {
   auto res = property("prefType");
-  if (res.isValid())
-    return res.type();
-  return QVariant::Int;
+  if (res.isValid()) {
+# if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    return static_cast<QMetaType::Type>(res.type());
+# else
+    return res.metaType();
+# endif
+  }
+  return QMetaType::Int;
 }
 
 // --------------------------------------------------------------------
@@ -1261,8 +1274,7 @@ void PrefColorButton::setAutoSave(bool enable)
 
 void PrefColorButton::restorePreferences()
 {
-  if (getWindowParameter().isNull())
-  {
+  if (getWindowParameter().isNull()) {
     failedToRestore(objectName());
     return;
   }
@@ -1270,20 +1282,15 @@ void PrefColorButton::restorePreferences()
   if (!m_Restored)
     m_Default = color();
 
-  const QColor &col = m_Default;
-
-  unsigned int icol = (col.red() << 24) | (col.green() << 16) | (col.blue() << 8) | col.alpha();
+  unsigned int icol = App::Color::asPackedRGBA<QColor>(m_Default);
 
   unsigned long lcol = static_cast<unsigned long>(icol);
-  lcol = getWindowParameter()->GetUnsigned( entryName(), lcol );
+  lcol = getWindowParameter()->GetUnsigned(entryName(), lcol);
   icol = static_cast<unsigned int>(lcol);
-  int r = (icol >> 24)&0xff;
-  int g = (icol >> 16)&0xff;
-  int b = (icol >>  8)&0xff;
-  int a = (icol      )&0xff;
+  QColor value = App::Color::fromPackedRGBA<QColor>(icol);
   if (!this->allowTransparency())
-      a = 0xff;
-  setColor(QColor(r,g,b,a));
+    value.setAlpha(0xff);
+  setColor(value);
 }
 
 void PrefColorButton::savePreferences()
@@ -1296,7 +1303,7 @@ void PrefColorButton::savePreferences()
 
   QColor col = color();
   // (r,g,b,a) with a = 255 (opaque)
-  unsigned int icol = (col.red() << 24) | (col.green() << 16) | (col.blue() << 8) | col.alpha();
+  unsigned int icol = App::Color::asPackedRGBA<QColor>(col);
   unsigned long lcol = static_cast<unsigned long>(icol);
   getWindowParameter()->SetUnsigned( entryName(), lcol );
 }

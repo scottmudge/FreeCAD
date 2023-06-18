@@ -603,7 +603,7 @@ void CmdTestProgress5::activated(int iMsg)
     QEventLoop loop;
 
     auto thr1 = new BarThread(2000);
-    QObject::connect(thr1, SIGNAL(finished()), &loop, SLOT(quit()));
+    QObject::connect(thr1, &QThread::finished, &loop, &QEventLoop::quit);
     thr1->start();
     loop.exec();
 
@@ -611,7 +611,7 @@ void CmdTestProgress5::activated(int iMsg)
 
     QTimer timer;
     timer.setSingleShot(true);
-    QObject::connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
+    QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
     thr2->start();
     timer.start(2000); // 2s timeout
     loop.exec();
@@ -715,8 +715,8 @@ CmdTestConsoleOutput::CmdTestConsoleOutput()
 {
     sGroup      = "Standard-Test";
     sMenuText   = QT_TR_NOOP("Test console output");
-    sToolTipText= QT_TR_NOOP("Test console output");
-    sStatusTip  = QT_TR_NOOP("Test console output");
+    sToolTipText= QT_TR_NOOP("Run test cases to verify console messages");
+    sStatusTip  = QT_TR_NOOP("Run test cases to verify console messages");
 }
 
 namespace Gui {
@@ -724,11 +724,13 @@ class TestConsoleObserver : public Base::ILogger
 {
     QMutex mutex;
 public:
-    int matchMsg, matchWrn, matchErr, matchLog;
-    TestConsoleObserver() : matchMsg(0), matchWrn(0), matchErr(0), matchLog(0)
+    int matchMsg, matchWrn, matchErr, matchLog, matchCritical;
+    TestConsoleObserver() : matchMsg(0), matchWrn(0), matchErr(0), matchLog(0), matchCritical(0)
     {
     }
-    void SendLog(const std::string& msg, Base::LogStyle level) override{
+    void SendLog(const std::string& notifiername, const std::string& msg, Base::LogStyle level) override{
+
+        (void) notifiername;
 
         QMutexLocker ml(&mutex);
 
@@ -744,6 +746,11 @@ public:
                 break;
             case Base::LogStyle::Log:
                 matchLog += strcmp(msg.c_str(), "Write a log to the console output.\n");
+                break;
+            case Base::LogStyle::Critical:
+                matchMsg += strcmp(msg.c_str(), "Write a critical message to the console output.\n");
+                break;
+            default:
                 break;
         }
     }
@@ -789,6 +796,16 @@ public:
     }
 };
 
+class ConsoleCriticalTask : public QRunnable
+{
+public:
+    void run() override
+    {
+        for (int i=0; i<10; i++)
+            Base::Console().Critical("Write a critical message to the console output.\n");
+    }
+};
+
 }
 
 void CmdTestConsoleOutput::activated(int iMsg)
@@ -800,10 +817,11 @@ void CmdTestConsoleOutput::activated(int iMsg)
     QThreadPool::globalInstance()->start(new ConsoleWarningTask);
     QThreadPool::globalInstance()->start(new ConsoleErrorTask);
     QThreadPool::globalInstance()->start(new ConsoleLogTask);
+    QThreadPool::globalInstance()->start(new ConsoleCriticalTask);
     QThreadPool::globalInstance()->waitForDone();
     Base::Console().DetachObserver(&obs);
 
-    if (obs.matchMsg > 0 || obs.matchWrn > 0 || obs.matchErr > 0 || obs.matchLog > 0) {
+    if (obs.matchMsg > 0 || obs.matchWrn > 0 || obs.matchErr > 0 || obs.matchLog > 0 || obs.matchCritical > 0) {
         Base::Console().Error("Race condition in Console class\n");
     }
 }

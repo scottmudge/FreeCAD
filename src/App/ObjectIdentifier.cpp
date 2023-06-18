@@ -2268,7 +2268,7 @@ Py::Object ObjectIdentifier::access(const ResolveResults &result,
         if(lastObj) {
             const char *attr = components[idx].getName().c_str();
             auto prop = lastObj->getPropertyByName(attr);
-            if(!prop && pyobj.hasAttr(attr))
+            if(!prop && !pyobj.hasAttr(attr))
                 attr = nullptr;
             setPropDep(lastObj,prop,attr);
             if(value && prop && idx+1 < components.size()) {

@@ -388,7 +388,7 @@ void Placement::setupSignalMapper()
     int id = 1;
     QList<Gui::QuantitySpinBox*> sb = this->findChildren<Gui::QuantitySpinBox*>();
     for (const auto & it : sb) {
-        connect(it, SIGNAL(valueChanged(double)), signalMapper, SLOT(map()));
+        connect(it, qOverload<double>(&QuantitySpinBox::valueChanged), signalMapper, qOverload<>(&QSignalMapper::map));
         signalMapper->setMapping(it, id++);
     }
 
@@ -693,7 +693,7 @@ void Placement::reject()
     // but its content is not fully updated.
     // In order to override again the placement the signalMapper is blocked
     // See related forum thread:
-    // https://forum.freecadweb.org/viewtopic.php?f=3&t=44341#p378659
+    // https://forum.freecad.org/viewtopic.php?f=3&t=44341#p378659
     QSignalBlocker block(signalMapper);
     QDialog::reject();
 }
@@ -1043,8 +1043,7 @@ TaskPlacement::TaskPlacement()
     taskbox->groupLayout()->addWidget(widget);
 
     Content.push_back(taskbox);
-    connect(widget, SIGNAL(placementChanged(const QVariant &, bool, bool)),
-            this, SLOT(slotPlacementChanged(const QVariant &, bool, bool)));
+    connect(widget, &Placement::placementChanged, this, &TaskPlacement::slotPlacementChanged);
 }
 
 TaskPlacement::~TaskPlacement()

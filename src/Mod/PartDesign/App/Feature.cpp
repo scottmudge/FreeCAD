@@ -419,10 +419,17 @@ App::DocumentObject *Feature::getSubObject(const char *subname,
                 if (feat) {
                     Base::Matrix4D _mat;
                     if (!transform) {
-                        // If no transform is request, we must counter the
-                        // placement of this feature, because
-                        // PartDesign::Feature is not suppose to transform its
-                        // children
+                        // Normally the parent object is supposed to transform
+                        // the sub-object using its own placement. So, if no
+                        // transform is requested, (i.e. no parent
+                        // transformation), we just need to NOT apply the
+                        // transformation.
+                        //
+                        // But PartDesign features (including sketch) are
+                        // supposed to be contained inside a body. It makes
+                        // little sense to transform its sub-object. So if 'no
+                        // transform' is requested, we need to actively apply
+                        // an inverse transform.
                         _mat = Placement.getValue().inverse().toMatrix();
                         if (pmat)
                             *pmat *= _mat; 
@@ -436,6 +443,7 @@ App::DocumentObject *Feature::getSubObject(const char *subname,
     }
     return Part::Feature::getSubObject(subname, pyObj, pmat, transform, depth);
 }
+
 
 }//namespace PartDesign
 

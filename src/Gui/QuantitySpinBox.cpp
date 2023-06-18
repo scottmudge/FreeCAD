@@ -318,11 +318,12 @@ QuantitySpinBox::QuantitySpinBox(QWidget *parent)
 {
     d_ptr->locale = locale();
     this->setContextMenuPolicy(Qt::DefaultContextMenu);
-    QObject::connect(lineEdit(), SIGNAL(textChanged(QString)),
-                     this, SLOT(userInput(QString)));
-    QObject::connect(this, SIGNAL(editingFinished()),
-                     this, SLOT(handlePendingEmit()));
-
+    connect(lineEdit(), &QLineEdit::textChanged,
+            this, &QuantitySpinBox::userInput);
+    connect(this, &QuantitySpinBox::editingFinished,
+            this, [&]{
+        this->handlePendingEmit(true);
+    });
 }
 
 QuantitySpinBox::~QuantitySpinBox()
@@ -567,27 +568,28 @@ void QuantitySpinBox::finishFormulaDialog(Dialog::DlgExpressionInput *input)
     Q_EMIT showFormulaDialog(false);
 }
 
-void QuantitySpinBox::handlePendingEmit()
+void QuantitySpinBox::handlePendingEmit(bool updateUnit /* = true */)
 {
-    updateFromCache(true);
+    updateFromCache(true, updateUnit);
 }
 
-void QuantitySpinBox::updateFromCache(bool notify)
+void QuantitySpinBox::updateFromCache(bool notify, bool updateUnit /* = true */)
 {
     Q_D(QuantitySpinBox);
     if (d->pendingEmit) {
         double factor;
         const Base::Quantity& res = d->cached;
-        QString text = getUserString(res, factor, d->unitStr);
+        auto tmpUnit(d->unitStr);
+        QString text = getUserString(res, factor, updateUnit ? d->unitStr : tmpUnit);
         d->unitValue = res.getValue() / factor;
         d->quantity = res;
 
         // signaling
         if (notify) {
             d->pendingEmit = false;
-            valueChanged(res);
-            valueChanged(res.getValue());
-            textChanged(text);
+            Q_EMIT valueChanged(res);
+            Q_EMIT valueChanged(res.getValue());
+            Q_EMIT textChanged(text);
         }
     }
 }

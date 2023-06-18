@@ -29,7 +29,6 @@
 #include <deque>
 #include <vector>
 
-#include <Base/Observer.h>
 #include <Base/Parameter.h>
 
 // forward declarations
@@ -349,11 +348,11 @@ public:
      */
     Base::Reference<ParameterGrp>                     GetParameterGroupByPath(const char* sName);
 
-    ParameterManager *                                GetParameterSet(const char* sName) const;
+    Base::Reference<ParameterManager>                 GetParameterSet(const char* sName) const;
     const std::map<std::string,Base::Reference<ParameterManager>> &  GetParameterSetList(void) const;
-    ParameterManager * AddParameterSet(std::string &name, const std::string &filename = std::string());
+    Base::Reference<ParameterManager> AddParameterSet(std::string &name, const std::string &filename = std::string());
     void RemoveParameterSet(const char* sName);
-    bool RenameParameterSet(const char *sName, ParameterManager *);
+    bool RenameParameterSet(const char *sName, const Base::Reference<ParameterManager> &);
     void RefreshParameterSet(bool savefirst = true);
     //@}
 

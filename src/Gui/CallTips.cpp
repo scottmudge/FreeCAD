@@ -31,7 +31,9 @@
 # include <QRegularExpressionMatch>
 # include <QTextCursor>
 # include <QToolTip>
-# include <QDesktopWidget>
+# if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#   include <QDesktopWidget>
+# endif
 #endif
 
 #include <App/Property.h>
@@ -92,8 +94,7 @@ CallTipsList::CallTipsList(QPlainTextEdit* parent)
     pal.setColor(QPalette::Inactive, QPalette::HighlightedText, pal.color(QPalette::Active, QPalette::HighlightedText));
     parent->setPalette( pal );
 
-    connect(this, SIGNAL(itemActivated(QListWidgetItem *)),
-            this, SLOT(callTipItemActivated(QListWidgetItem *)));
+    connect(this, &QListWidget::itemActivated, this, &CallTipsList::callTipItemActivated);
 
     hideKeys.append(Qt::Key_Space);
     hideKeys.append(Qt::Key_Exclam);
@@ -373,12 +374,12 @@ void CallTipsList::extractTipsFromObject(Py::Object& obj, Py::List& list, QMap<Q
             // for Py2 but silently accepts it for Py3.
             //
             // FIXME: Add methods of extension to the current instance and not its type object
-            // https://forum.freecadweb.org/viewtopic.php?f=22&t=18105
-            // https://forum.freecadweb.org/viewtopic.php?f=3&t=20009&p=154447#p154447
-            // https://forum.freecadweb.org/viewtopic.php?f=10&t=12534&p=155290#p155290
+            // https://forum.freecad.org/viewtopic.php?f=22&t=18105
+            // https://forum.freecad.org/viewtopic.php?f=3&t=20009&p=154447#p154447
+            // https://forum.freecad.org/viewtopic.php?f=10&t=12534&p=155290#p155290
             //
-            // https://forum.freecadweb.org/viewtopic.php?f=39&t=33874&p=286759#p286759
-            // https://forum.freecadweb.org/viewtopic.php?f=39&t=33874&start=30#p286772
+            // https://forum.freecad.org/viewtopic.php?f=39&t=33874&p=286759#p286759
+            // https://forum.freecad.org/viewtopic.php?f=39&t=33874&start=30#p286772
             Py::Object attr = obj.getAttr(name);
             if (!attr.ptr()) {
                 Base::Console().Log("Python attribute '%s' returns null!\n", name.c_str());
@@ -581,7 +582,11 @@ void CallTipsList::showTips(const QString& line)
     this->cursorPos = cursor.position();
     QRect rect = textEdit->cursorRect(cursor);
 
-    const QRect screen = QApplication::desktop()->availableGeometry(textEdit);
+#if QT_VERSION < QT_VERSION_CHECK(5,14,0)
+    QRect screen = QApplication::desktop()->availableGeometry(textEdit);
+#else
+    QRect screen = textEdit->screen()->availableGeometry();
+#endif
     QPoint pos = textEdit->mapToGlobal(rect.topLeft());
 
     if (w > screen.width())

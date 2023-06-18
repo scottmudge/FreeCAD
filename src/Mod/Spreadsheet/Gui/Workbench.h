@@ -41,10 +41,11 @@ namespace SpreadsheetGui {
 
 class SpreadsheetGuiExport WorkbenchHelper : public QObject
 {
-  Q_OBJECT
+    Q_OBJECT
+
 public Q_SLOTS:
-  void setForegroundColor(const QColor &color);
-  void setBackgroundColor(const QColor &color);
+    void setForegroundColor(const QColor &color);
+    void setBackgroundColor(const QColor &color);
 };
 
 class SpreadsheetGuiExport Workbench : public Gui::StdWorkbench

@@ -27,13 +27,17 @@
 # include <QApplication>
 # include <QClipboard>
 # include <QFile>
-# include <QDesktopWidget>
+# include <QFileInfo>
 # include <QLocale>
 # include <QMutex>
 # include <QProcessEnvironment>
 # include <QRegularExpression>
 # include <QRegularExpressionMatch>
 # include <QScreen>
+# if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#   include <QDesktopWidget>
+# endif
+# include <QSettings>
 # include <QSysInfo>
 # include <QTextBrowser>
 # include <QTextStream>
@@ -92,6 +96,57 @@ static inline int parseAlignment(const std::string &text)
 }
 
 namespace Gui {
+
+QString prettyProductInfoWrapper()
+{
+    auto productName = QSysInfo::prettyProductName();
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
+#ifdef FC_OS_MACOSX
+    auto macosVersionFile = QString::fromUtf8("/System/Library/CoreServices/.SystemVersionPlatform.plist");
+    auto fi = QFileInfo (macosVersionFile);
+    if (fi.exists() && fi.isReadable()) {
+        auto plistFile = QFile(macosVersionFile);
+        plistFile.open(QIODevice::ReadOnly);
+        while (!plistFile.atEnd()) {
+            auto line = plistFile.readLine();
+            if (line.contains("ProductUserVisibleVersion")) {
+                auto nextLine = plistFile.readLine();
+                if (nextLine.contains("<string>")) {
+                    QRegularExpression re(QString::fromUtf8("\\s*<string>(.*)</string>"));
+                    auto matches = re.match(QString::fromUtf8(nextLine));
+                    if (matches.hasMatch()) {
+                        productName = QString::fromUtf8("macOS ") + matches.captured(1);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+#endif
+#endif
+#ifdef FC_OS_WIN64
+    QSettings regKey {QString::fromUtf8("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"), QSettings::NativeFormat};
+    if (regKey.contains(QString::fromUtf8("CurrentBuildNumber"))) {
+        auto buildNumber = regKey.value(QString::fromUtf8("CurrentBuildNumber")).toInt();
+        if (buildNumber > 0) {
+            if (buildNumber < 9200) {
+                productName = QString::fromUtf8("Windows 7 build %1").arg(buildNumber);
+            }
+            else if (buildNumber < 10240) {
+                productName = QString::fromUtf8("Windows 8 build %1").arg(buildNumber);
+            }
+            else if (buildNumber < 22000) {
+                productName = QString::fromUtf8("Windows 10 build %1").arg(buildNumber);
+            }
+            else {
+                productName = QString::fromUtf8("Windows 11 build %1").arg(buildNumber);
+            }
+        }
+    }
+#endif
+    return productName;
+}
+
 /** Displays all messages at startup inside the splash screen.
  * \author Werner Mayer
  */
@@ -135,8 +190,10 @@ public:
     {
         return "SplashObserver";
     }
-    void SendLog(const std::string& msg, Base::LogStyle level) override
+    void SendLog(const std::string& notifiername, const std::string& msg, Base::LogStyle level) override
     {
+        Q_UNUSED(notifiername)
+        
 #ifdef FC_DEBUG
         Log(msg.c_str());
         Q_UNUSED(level)
@@ -349,11 +406,19 @@ AboutDialog::AboutDialog(bool showLic, QWidget* parent)
 
     setModal(true);
     ui->setupUi(this);
+    connect(ui->copyButton, &QPushButton::clicked,
+            this, &AboutDialog::copyToClipboard);
+
     // remove the automatic help button in dialog title since we don't use it
     setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 
     layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+#if QT_VERSION < QT_VERSION_CHECK(5,14,0)
     QRect rect = QApplication::desktop()->availableGeometry(getMainWindow());
+#else
+    QRect rect = getMainWindow()->screen()->availableGeometry();
+#endif
 
     loadSplashGif(ui->labelSplashPicture, "SplashGif", "SplashGifAlignment");
 
@@ -455,7 +520,7 @@ void AboutDialog::setupLabels()
     ui->labelBuildDate->setText(date);
 
     QString os = ui->labelBuildOS->text();
-    os.replace(QStringLiteral("Unknown"), QSysInfo::prettyProductName());
+    os.replace(QStringLiteral("Unknown"), prettyProductInfoWrapper());
     ui->labelBuildOS->setText(os);
 
     QString platform = ui->labelBuildPlatform->text();
@@ -826,7 +891,7 @@ void AboutDialog::linkActivated(const QUrl& link)
     licenseView->setSource(link);
 }
 
-void AboutDialog::on_copyButton_clicked()
+void AboutDialog::copyToClipboard()
 {
     QString data;
     QTextStream str(&data);
@@ -853,7 +918,7 @@ void AboutDialog::on_copyButton_clicked()
     }
 
     str << "[code]\n";
-    str << "OS: " << QSysInfo::prettyProductName() << deskInfo << '\n';
+    str << "OS: " << prettyProductInfoWrapper() << deskInfo << '\n';
     str << "Word size of " << exe << ": " << QSysInfo::WordSize << "-bit\n";
     str << "Version: " << major << "." << minor << "." << point << "." << build;
     char *appimage = getenv("APPIMAGE");
@@ -911,14 +976,14 @@ void AboutDialog::on_copyButton_clicked()
     bool firstMod = true;
     if (fs::exists(modDir) && fs::is_directory(modDir)) {
         for (const auto& mod : fs::directory_iterator(modDir)) {
-            auto dirName = mod.path().leaf().string();
+            auto dirName = mod.path().filename().string();
             if (dirName[0] == '.') // Ignore dot directories
                 continue;
             if (firstMod) {
                 firstMod = false;
                 str << "Installed mods: \n";
             }
-            str << "  * " << QString::fromStdString(mod.path().leaf().string());
+            str << "  * " << QString::fromStdString(mod.path().filename().string());
             auto metadataFile = mod.path() / "package.xml";
             if (fs::exists(metadataFile)) {
                 App::Metadata metadata(metadataFile);

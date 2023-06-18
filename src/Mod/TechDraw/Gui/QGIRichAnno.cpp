@@ -36,7 +36,6 @@
 #endif
 
 #include <App/Application.h>
-#include <Base/Console.h>
 #include <Mod/TechDraw/App/DrawRichAnno.h>
 
 #include "QGIRichAnno.h"
@@ -97,7 +96,6 @@ void QGIRichAnno::updateView(bool update)
     Q_UNUSED(update);
     auto annoFeat( dynamic_cast<TechDraw::DrawRichAnno*>(getViewObject()) );
     if (!annoFeat) {
-        Base::Console().Log("QGIRA::updateView - no feature!\n");
         return;
     }
 
@@ -270,20 +268,21 @@ void QGIRichAnno::paint ( QPainter * painter, const QStyleOptionGraphicsItem * o
 
 QPen QGIRichAnno::rectPen() const
 {
-    QPen pen;
     const auto sym( dynamic_cast<TechDraw::DrawRichAnno*>(getViewObject()) );
-    if (!sym)
-        return pen;
+    if (!sym) {
+        return QPen();
+    }
     auto vp = static_cast<ViewProviderRichAnno*>(getViewProvider(getViewObject()));
-    if (!vp)
-        return pen;
+    if (!vp) {
+        return QPen();
+    }
 
     double rectWeight = Rez::guiX(vp->LineWidth.getValue());
     Qt::PenStyle rectStyle = static_cast<Qt::PenStyle>(vp->LineStyle.getValue());
     App::Color temp = vp->LineColor.getValue();
     QColor rectColor = temp.asValue<QColor>();
 
-    pen = QPen(rectStyle);
+    QPen pen = QPen(rectStyle);
     pen.setWidthF(rectWeight);
     pen.setColor(rectColor);
     return pen;
@@ -302,8 +301,7 @@ double QGIRichAnno::prefPointSize()
 //    double mmToPts = 2.83;  //theoretical value
     double mmToPts = 2.00;  //practical value. seems to be reasonable for common fonts.
 
-    double ptsSize = round(fontSize * mmToPts);
-    return ptsSize;
+    return round(fontSize * mmToPts);
 }
 
 void QGIRichAnno::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event) {
@@ -324,8 +322,8 @@ void QGIRichAnno::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event) {
     QGridLayout gridLayout(&dialog);
     gridLayout.addWidget(&richEdit, 0, 0, 1, 1);
 
-    connect(&richEdit, SIGNAL(saveText(QString)), &dialog, SLOT(accept()));
-    connect(&richEdit, SIGNAL(editorFinished(void)), &dialog, SLOT(reject()));
+    connect(&richEdit, &MRichTextEdit::saveText, &dialog, &QDialog::accept);
+    connect(&richEdit, &MRichTextEdit::editorFinished, &dialog, &QDialog::reject);
 
     if (dialog.exec()) {
         QString newText = richEdit.toHtml();

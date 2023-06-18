@@ -169,7 +169,7 @@ This command only works with a &apos;mesh&apos; object.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../CrossSections.cpp" line="343"/>
+        <location filename="../../CrossSections.cpp" line="366"/>
         <source>Failure</source>
         <translation type="unfinished"></translation>
     </message>
@@ -482,25 +482,25 @@ A value in the range of 0.2-10.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../Tessellation.cpp" line="212"/>
-        <location filename="../../Tessellation.cpp" line="218"/>
+        <location filename="../../Tessellation.cpp" line="225"/>
+        <location filename="../../Tessellation.cpp" line="231"/>
         <source>No active document</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../Tessellation.cpp" line="246"/>
+        <location filename="../../Tessellation.cpp" line="259"/>
         <source>You have selected a body without tip.
 Either set the tip of the body or select a different shape, please.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../Tessellation.cpp" line="250"/>
+        <location filename="../../Tessellation.cpp" line="263"/>
         <source>You have selected a shape without faces.
 Select a different shape, please.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../Tessellation.cpp" line="254"/>
+        <location filename="../../Tessellation.cpp" line="267"/>
         <source>Select a shape for meshing, first.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -565,7 +565,7 @@ Select a different shape, please.</source>
     </message>
 </context>
 <context>
-    <name>MeshPart_FlatteningCommand</name>
+    <name>MeshPart_CreateFlatMesh</name>
     <message>
         <location filename="../../MeshFlatteningCommand.py" line="47"/>
         <source>Unwrap Mesh</source>
@@ -573,13 +573,20 @@ Select a different shape, please.</source>
     </message>
     <message>
         <location filename="../../MeshFlatteningCommand.py" line="50"/>
-        <location filename="../../MeshFlatteningCommand.py" line="82"/>
         <source>Find a flat representation of a mesh.</source>
         <translation type="unfinished"></translation>
     </message>
+</context>
+<context>
+    <name>MeshPart_CreateFlatFace</name>
     <message>
         <location filename="../../MeshFlatteningCommand.py" line="79"/>
         <source>Unwrap Face</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../MeshFlatteningCommand.py" line="82"/>
+        <source>Find a flat representation of a face.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

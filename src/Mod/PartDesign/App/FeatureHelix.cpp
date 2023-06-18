@@ -124,35 +124,35 @@ App::DocumentObjectExecReturn* Helix::execute()
     HelixMode mode = static_cast<HelixMode>(Mode.getValue());
     if (mode == HelixMode::pitch_height_angle) {
         if (Pitch.getValue() < Precision::Confusion())
-            return new App::DocumentObjectExecReturn("Error: Pitch too small");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: Pitch too small"));
         if (Height.getValue() < Precision::Confusion())
-            return new App::DocumentObjectExecReturn("Error: height too small!");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: height too small!"));
         Turns.setValue(Height.getValue() / Pitch.getValue());
         Growth.setValue(Pitch.getValue() * tan(Base::toRadians(Angle.getValue())));
     }
     else if (mode == HelixMode::pitch_turns_angle) {
         if (Pitch.getValue() < Precision::Confusion())
-            return new App::DocumentObjectExecReturn("Error: pitch too small!");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: pitch too small!"));
         if (Turns.getValue() < Precision::Confusion())
-            return new App::DocumentObjectExecReturn("Error: turns too small!");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: turns too small!"));
         Height.setValue(Turns.getValue() * Pitch.getValue());
         Growth.setValue(Pitch.getValue() * tan(Base::toRadians(Angle.getValue())));
     }
     else if (mode == HelixMode::height_turns_angle) {
         if (Height.getValue() < Precision::Confusion())
-            return new App::DocumentObjectExecReturn("Error: height too small!");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: height too small!"));
         if (Turns.getValue() < Precision::Confusion())
-            return new App::DocumentObjectExecReturn("Error: turns too small!");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: turns too small!"));
         Pitch.setValue(Height.getValue() / Turns.getValue());
         Growth.setValue(Pitch.getValue() * tan(Base::toRadians(Angle.getValue())));
     }
     else if (mode == HelixMode::height_turns_growth) {
         if (Turns.getValue() < Precision::Confusion())
-            return new App::DocumentObjectExecReturn("Error: turns too small!");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: turns too small!"));
         if ((Height.getValue() < Precision::Confusion())
             && (abs(Growth.getValue()) < Precision::Confusion())
             && Turns.getValue() > 1.0)
-            return new App::DocumentObjectExecReturn("Error: either height or growth must not be zero!");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: either height or growth must not be zero!"));
         Pitch.setValue(Height.getValue() / Turns.getValue());
         if (Height.getValue() > 0) {
             Angle.setValue(Base::toDegrees(atan(
@@ -166,7 +166,7 @@ App::DocumentObjectExecReturn* Helix::execute()
         }
     }
     else {
-        return new App::DocumentObjectExecReturn("Error: unsupported mode");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: unsupported mode"));
     }
 
     TopLoc_Location invObjLoc;
@@ -187,7 +187,7 @@ App::DocumentObjectExecReturn* Helix::execute()
     }
     catch (Standard_Failure& e) {
         if (std::string(e.GetMessageString()) == "TopoDS::Face")
-            return new App::DocumentObjectExecReturn("Error: Could not create face from sketch");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: Could not create face from sketch"));
         else
             return new App::DocumentObjectExecReturn(e.GetMessageString());
     }
@@ -248,7 +248,7 @@ TopoDS_Shape Helix::generateHelixPath(double startOffset0)
     Base::Vector3d profileCenter = getProfileCenterPoint();
 
     // The factor of 100 below ensures that profile size is small compared to the curvature of the helix.
-    // This improves the issue reported in https://forum.freecadweb.org/viewtopic.php?f=10&t=65048
+    // This improves the issue reported in https://forum.freecad.org/viewtopic.php?f=10&t=65048
     double axisOffset = 100.0 * (profileCenter * start - baseVector * start);
     double radius = std::fabs(axisOffset);
     bool turned = axisOffset < 0;

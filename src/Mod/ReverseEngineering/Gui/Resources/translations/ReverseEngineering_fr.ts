@@ -83,12 +83,12 @@
     <message>
       <location filename="../../Command.cpp" line="69"/>
       <source>Approximate B-spline surface...</source>
-      <translation>Approximation de la surface de la courbe B-spline...</translation>
+      <translation>Approximer la surface de la B-spline...</translation>
     </message>
     <message>
       <location filename="../../Command.cpp" line="70"/>
       <source>Approximate a B-spline surface</source>
-      <translation>Approximer la surface d’une courbe B-spline</translation>
+      <translation>Approximer la surface d’une B-spline</translation>
     </message>
   </context>
   <context>
@@ -191,13 +191,13 @@
     <message>
       <location filename="../../Command.cpp" line="585"/>
       <source>Structured point clouds</source>
-      <translation>Nuages de points structurés</translation>
+      <translation>Nuages structurés de points</translation>
     </message>
     <message>
       <location filename="../../Command.cpp" line="586"/>
       <location filename="../../Command.cpp" line="587"/>
       <source>Triangulation of structured point clouds</source>
-      <translation>Triangulation de nuages de points structurés</translation>
+      <translation>Triangulation des nuages structurés de points</translation>
     </message>
   </context>
   <context>
@@ -228,14 +228,14 @@
       <translation>Afficher la triangulation</translation>
     </message>
     <message>
-      <location filename="../../FitBSplineSurface.cpp" line="148"/>
+      <location filename="../../FitBSplineSurface.cpp" line="150"/>
       <source>Placement</source>
       <translation>Placement</translation>
     </message>
     <message>
-      <location filename="../../FitBSplineSurface.cpp" line="220"/>
+      <location filename="../../FitBSplineSurface.cpp" line="222"/>
       <source>Fit B-Spline</source>
-      <translation>Ajuster la courbe B-spline</translation>
+      <translation>Ajuster la B-spline</translation>
     </message>
     <message>
       <location filename="../../Poisson.cpp" line="91"/>
@@ -243,7 +243,7 @@
       <translation>Reconstruction de Poisson</translation>
     </message>
     <message>
-      <location filename="../../SegmentationManual.cpp" line="230"/>
+      <location filename="../../SegmentationManual.cpp" line="257"/>
       <source>Segmentation</source>
       <translation>Segmentation</translation>
     </message>
@@ -253,12 +253,12 @@
     <message>
       <location filename="../../FitBSplineSurface.ui" line="14"/>
       <source>Fit B-spline surface</source>
-      <translation>Adapter la surface de la courbe B-spline</translation>
+      <translation>Ajuster la surface de la B-spline</translation>
     </message>
     <message>
       <location filename="../../FitBSplineSurface.ui" line="20"/>
       <source>u-Direction</source>
-      <translation>direction U</translation>
+      <translation>direction u</translation>
     </message>
     <message>
       <location filename="../../FitBSplineSurface.ui" line="26"/>
@@ -275,7 +275,7 @@
     <message>
       <location filename="../../FitBSplineSurface.ui" line="87"/>
       <source>v-Direction</source>
-      <translation>v-Direction</translation>
+      <translation>direction v</translation>
     </message>
     <message>
       <location filename="../../FitBSplineSurface.ui" line="154"/>
@@ -331,20 +331,20 @@
   <context>
     <name>ReenGui::FitBSplineSurfaceWidget</name>
     <message>
-      <location filename="../../FitBSplineSurface.cpp" line="159"/>
-      <location filename="../../FitBSplineSurface.cpp" line="227"/>
+      <location filename="../../FitBSplineSurface.cpp" line="161"/>
+      <location filename="../../FitBSplineSurface.cpp" line="229"/>
       <source>Input error</source>
       <translation>Erreur de saisie</translation>
     </message>
     <message>
-      <location filename="../../FitBSplineSurface.cpp" line="199"/>
+      <location filename="../../FitBSplineSurface.cpp" line="201"/>
       <source>Wrong selection</source>
       <translation>Sélection invalide</translation>
     </message>
     <message>
-      <location filename="../../FitBSplineSurface.cpp" line="200"/>
+      <location filename="../../FitBSplineSurface.cpp" line="202"/>
       <source>Please select a single placement object to get local orientation.</source>
-      <translation>Veuillez sélectionner un objet de placement unique pour obtenir l'orientation locale.</translation>
+      <translation>Veuillez sélectionner l'emplacement d'un seul objet pour obtenir l'orientation locale.</translation>
     </message>
   </context>
   <context>
@@ -567,7 +567,7 @@
   <context>
     <name>ReverseEngineeringGui::TaskSegmentationManual</name>
     <message>
-      <location filename="../../SegmentationManual.cpp" line="306"/>
+      <location filename="../../SegmentationManual.cpp" line="333"/>
       <source>Create</source>
       <translation>Créer</translation>
     </message>

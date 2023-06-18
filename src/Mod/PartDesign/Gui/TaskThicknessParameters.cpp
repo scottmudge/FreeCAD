@@ -73,16 +73,18 @@ TaskThicknessParameters::TaskThicknessParameters(ViewProviderDressUp *DressUpVie
     ui->checkMakeOffset->setChecked(i);
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->Value, SIGNAL(valueChanged(double)),
-            this, SLOT(onValueChanged(double)));
-    connect(ui->checkReverse, SIGNAL(toggled(bool)),
-            this, SLOT(onReversedChanged(bool)));
-    connect(ui->checkMakeOffset, SIGNAL(toggled(bool)),
-            this, SLOT(onMakeOffsetChanged(bool)));
-    connect(ui->modeComboBox, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(onModeChanged(int)));
-    connect(ui->joinComboBox, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(onJoinTypeChanged(int)));
+    connect(ui->Value, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+        this, &TaskThicknessParameters::onValueChanged);
+    connect(ui->checkReverse, &QCheckBox::toggled,
+        this, &TaskThicknessParameters::onReversedChanged);
+    connect(ui->checkMakeOffset, &QCheckBox::toggled,
+            this, &TaskThicknessParameters::onMakeOffsetChanged);
+    connect(ui->modeComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
+        this, &TaskThicknessParameters::onModeChanged);
+    connect(ui->joinComboBox, qOverload<int>(&QComboBox::currentIndexChanged),
+        this, &TaskThicknessParameters::onJoinTypeChanged);
+    connect(ui->checkIntersection, &QCheckBox::toggled,
+        this, &TaskThicknessParameters::onIntersectionChanged);
 
     int mode = pcThickness->Mode.getValue();
     ui->modeComboBox->setCurrentIndex(mode);
@@ -171,6 +173,19 @@ bool TaskThicknessParameters::getReversed(void) const
     return ui->checkReverse->isChecked();
 }
 
+void TaskThicknessParameters::onIntersectionChanged(const bool on) {
+    clearButtons(none);
+    PartDesign::Thickness* pcThickness = static_cast<PartDesign::Thickness*>(DressUpView->getObject());
+    setupTransaction();
+    pcThickness->Intersection.setValue(on);
+    recompute();
+}
+
+bool TaskThicknessParameters::getIntersection(void) const
+{
+    return ui->checkIntersection->isChecked();
+}
+
 void TaskThicknessParameters::onMakeOffsetChanged(const bool on) {
     clearButtons(none);
     PartDesign::Thickness* pcThickness = static_cast<PartDesign::Thickness*>(DressUpView->getObject());
@@ -256,6 +271,7 @@ bool TaskDlgThicknessParameters::accept()
     FCMD_OBJ_CMD(obj,"Reversed = " << draftparameter->getReversed());
     FCMD_OBJ_CMD(obj,"Mode = " << draftparameter->getMode());
     FCMD_OBJ_CMD(obj,"MakeOffset = " << draftparameter->getMakeOffset());
+    FCMD_OBJ_CMD(obj,"Intersection = " << draftparameter->getIntersection());
     FCMD_OBJ_CMD(obj,"Join = " << draftparameter->getJoinType());
 
     return TaskDlgDressUpParameters::accept();

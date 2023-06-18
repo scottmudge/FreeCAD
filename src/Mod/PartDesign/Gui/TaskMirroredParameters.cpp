@@ -76,8 +76,8 @@ TaskMirroredParameters::TaskMirroredParameters(TaskMultiTransformParameters *par
 {
     proxy = new QWidget(parentTask);
     ui->setupUi(proxy);
-    connect(ui->buttonOK, SIGNAL(clicked(bool)),
-            parentTask, SLOT(onSubTaskButtonOK()));
+    connect(ui->buttonOK, &QToolButton::pressed,
+            parentTask, &TaskMirroredParameters::onSubTaskButtonOK);
     QMetaObject::connectSlotsByName(this);
 
     layout->addWidget(proxy);
@@ -95,10 +95,10 @@ void TaskMirroredParameters::setupUI()
 {
     TaskTransformedParameters::setupUI();
 
-    connect(ui->comboPlane, SIGNAL(activated(int)),
-            this, SLOT(onPlaneChanged(int)));
-    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
-            this, SLOT(onUpdateView(bool)));
+    connect(ui->comboPlane, qOverload<int>(&QComboBox::activated),
+            this, &TaskMirroredParameters::onPlaneChanged);
+    connect(ui->checkBoxUpdateView, &QCheckBox::toggled,
+            this, &TaskMirroredParameters::onUpdateView);
 
     this->planeLinks.setCombo(*(ui->comboPlane));
     ui->comboPlane->setEnabled(true);
@@ -181,7 +181,7 @@ void TaskMirroredParameters::onPlaneChanged(int /*num*/)
             pcMirrored->MirrorPlane.Paste(planeLinks.getCurrentLink());
         }
     } catch (Base::Exception &e) {
-        QMessageBox::warning(nullptr,tr("Error"),QString::fromUtf8(e.what()));
+        QMessageBox::warning(nullptr,tr("Error"),QApplication::translate("Exception", e.what()));
     }
 
     recomputeFeature();

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (c) Eivind Kvedalen (eivind@kvedalen.name) 2015             *
+ *   Copyright (c) 2015 Eivind Kvedalen <eivind@kvedalen.name>             *
  *                                                                         *
  *   This file is part of the FreeCAD CAx development system.              *
  *                                                                         *
@@ -147,18 +147,18 @@ SheetTableView::SheetTableView(QWidget *parent)
                 /*: This is shown in the context menu for the vertical header in a spreadsheet.
                     The number refers to how many lines are selected and will be inserted. */
                 auto insertBefore = menu.addAction(tr("Insert %n row(s) above", "", selection.size()));
-                connect(insertBefore, SIGNAL(triggered()), this, SLOT(insertRows()));
-    
+                connect(insertBefore, &QAction::triggered, this, &SheetTableView::insertRows);
+
                 if (max < model()->rowCount() - 1) {
                     auto insertAfter = menu.addAction(tr("Insert %n row(s) below", "", selection.size()));
-                    connect(insertAfter, SIGNAL(triggered()), this, SLOT(insertRowsAfter()));
+                    connect(insertAfter, &QAction::triggered, this, &SheetTableView::insertRowsAfter);
                 }
             } else {
                 auto insert = menu.addAction(tr("Insert %n non-contiguous rows", "", selection.size()));
-                connect(insert, SIGNAL(triggered()), this, SLOT(insertRows()));
+                connect(insert, &QAction::triggered, this, &SheetTableView::insertRows);
             }
             auto remove = menu.addAction(tr("Remove row(s)", "", selection.size()));
-            connect(remove, SIGNAL(triggered()), this, SLOT(removeRows()));
+            connect(remove, &QAction::triggered, this, &SheetTableView::removeRows);
 
             menu.addSeparator();
 
@@ -182,18 +182,18 @@ SheetTableView::SheetTableView(QWidget *parent)
                 /*: This is shown in the context menu for the horizontal header in a spreadsheet.
                     The number refers to how many lines are selected and will be inserted. */
                 auto insertAbove = menu.addAction(tr("Insert %n column(s) left", "", selection.size()));
-                connect(insertAbove, SIGNAL(triggered()), this, SLOT(insertColumns()));
+                connect(insertAbove, &QAction::triggered, this, &SheetTableView::insertColumns);
 
                 if (max < model()->columnCount() - 1) {
                     auto insertAfter = menu.addAction(tr("Insert %n column(s) right", "", selection.size()));
-                    connect(insertAfter, SIGNAL(triggered()), this, SLOT(insertColumnsAfter()));
+                    connect(insertAfter, &QAction::triggered, this, &SheetTableView::insertColumnsAfter);
                 }
             } else {
                 auto insert = menu.addAction(tr("Insert %n non-contiguous columns", "", selection.size()));
-                connect(insert, SIGNAL(triggered()), this, SLOT(insertColumns()));
+                connect(insert, &QAction::triggered, this, &SheetTableView::insertColumns);
             }
             auto remove = menu.addAction(tr("Remove column(s)", "", selection.size()));
-            connect(remove, SIGNAL(triggered()), this, SLOT(removeColumns()));
+            connect(remove, &QAction::triggered, this, &SheetTableView::removeColumns);
 
             menu.addSeparator();
 
@@ -300,22 +300,22 @@ void SheetTableView::buildContextMenu()
 
     contextMenu->addMenu(subMenu);
     subMenu->addActions(editGroup->actions());
-    connect(editGroup, SIGNAL(triggered(QAction*)), this, SLOT(editMode(QAction*)));
+    connect(editGroup, &QActionGroup::triggered, this, &SheetTableView::editMode);
 
     actionEditPersistent = new QAction(tr("Persistent"),this);
     actionEditPersistent->setCheckable(true);
-    connect(actionEditPersistent, SIGNAL(toggled(bool)), this, SLOT(onEditPersistent(bool)));
+    connect(actionEditPersistent, &QAction::toggled, this, &SheetTableView::onEditPersistent);
     subMenu->addSeparator();
     subMenu->addAction(actionEditPersistent);
 
     contextMenu->addSeparator();
     QAction *recompute = new QAction(tr("Recompute cells"),this);
-    connect(recompute, SIGNAL(triggered()), this, SLOT(onRecompute()));
+    connect(recompute, &QAction::triggered, this, &SheetTableView::onRecompute);
     contextMenu->addAction(recompute);
     recompute->setToolTip(tr("Mark selected cells as touched, and recompute the entire spreadsheet"));
 
     QAction *recomputeOnly = new QAction(tr("Recompute cells only"),this);
-    connect(recomputeOnly, SIGNAL(triggered()), this, SLOT(onRecomputeNoTouch()));
+    connect(recomputeOnly, &QAction::triggered, this, &SheetTableView::onRecomputeNoTouch);
     contextMenu->addAction(recomputeOnly);
     recomputeOnly->setToolTip(tr("Recompute only the selected cells without touching other depending cells\n"
                                  "It can be used as a way out of tricky cyclic dependency problem, but may\n"
@@ -326,34 +326,34 @@ void SheetTableView::buildContextMenu()
     contextMenu->addAction(actionBind);
 
     QAction *actionConf = new QAction(tr("Configuration table..."),this);
-    connect(actionConf, SIGNAL(triggered()), this, SLOT(onConfSetup()));
+    connect(actionConf, &QAction::triggered, this, &SheetTableView::onConfSetup);
     contextMenu->addAction(actionConf);
 
     contextMenu->addSeparator();
     actionMerge = contextMenu->addAction(tr("Merge cells"));
-    connect(actionMerge,SIGNAL(triggered()), this, SLOT(mergeCells()));
+    connect(actionMerge, &QAction::triggered, this, &SheetTableView::mergeCells);
     actionSplit = contextMenu->addAction(tr("Split cells"));
-    connect(actionSplit,SIGNAL(triggered()), this, SLOT(splitCell()));
+    connect(actionSplit, &QAction::triggered, this, &SheetTableView::splitCell);
     contextMenu->addSeparator();
     actionCut = contextMenu->addAction(tr("Cut"));
-    connect(actionCut,SIGNAL(triggered()), this, SLOT(cutSelection()));
+    connect(actionCut, &QAction::triggered, this, &SheetTableView::cutSelection);
     actionDel = contextMenu->addAction(tr("Delete"));
-    connect(actionDel,SIGNAL(triggered()), this, SLOT(deleteSelection()));
+    connect(actionDel, &QAction::triggered, this, &SheetTableView::deleteSelection);
     actionCopy = contextMenu->addAction(tr("Copy"));
-    connect(actionCopy,SIGNAL(triggered()), this, SLOT(copySelection()));
+    connect(actionCopy, &QAction::triggered, this, &SheetTableView::copySelection);
     actionPaste = contextMenu->addAction(tr("Paste"));
-    connect(actionPaste,SIGNAL(triggered()), this, SLOT(pasteClipboard()));
+    connect(actionPaste, &QAction::triggered, this, &SheetTableView::pasteClipboard);
 
     pasteMenu = new QMenu(tr("Paste special..."));
     contextMenu->addMenu(pasteMenu);
     actionPasteValue = pasteMenu->addAction(tr("Paste value"));
-    connect(actionPasteValue,SIGNAL(triggered()), this, SLOT(pasteValue()));
+    connect(actionPasteValue, &QAction::triggered, this, &SheetTableView::pasteValue);
     actionPasteFormat = pasteMenu->addAction(tr("Paste format"));
-    connect(actionPasteFormat,SIGNAL(triggered()), this, SLOT(pasteFormat()));
+    connect(actionPasteFormat, &QAction::triggered, this, &SheetTableView::pasteFormat);
     actionPasteValueFormat = pasteMenu->addAction(tr("Paste value && format"));
-    connect(actionPasteValueFormat,SIGNAL(triggered()), this, SLOT(pasteValueFormat()));
+    connect(actionPasteValueFormat, &QAction::triggered, this, &SheetTableView::pasteValueFormat);
     actionPasteFormula = pasteMenu->addAction(tr("Paste formula"));
-    connect(actionPasteFormula,SIGNAL(triggered()), this, SLOT(pasteFormula()));
+    connect(actionPasteFormula, &QAction::triggered, this, &SheetTableView::pasteFormula);
 }
 
 void SheetTableView::updateHiddenRows() {
@@ -1098,7 +1098,7 @@ void SheetTableView::_pasteClipboard(const char *name, int type)
             return;
 
         if(!copy) {
-            for(auto range : ranges) {
+            for(auto &range : ranges) {
                 do {
                     sheet->clear(*range);
                 } while (range.next());
@@ -1203,7 +1203,7 @@ void SheetTableView::finishEditWithMove(int keyPressed, Qt::KeyboardModifiers mo
 
     case Qt::Key_Home:
         // Home: row 1, same column
-        // Ctrl-Home: row 1, column 1 
+        // Ctrl-Home: row 1, column 1
         targetRow = 0;
         if (modifiers == Qt::ControlModifier)
             targetColumn = 0;
@@ -1317,7 +1317,7 @@ void SheetTableView::finishEditWithMove(int keyPressed, Qt::KeyboardModifiers mo
         // With shift down, this motion becomes a block selection command, rather than just simple motion:
         ModifyBlockSelection(targetRow, targetColumn);
     }
-        
+
 }
 
 void SheetTableView::ModifyBlockSelection(int targetRow, int targetCol)

@@ -53,10 +53,11 @@ public:
     bool toCString(const Py::Object&, std::string&);
     QObject* toQObject(const Py::Object&);
     QGraphicsItem* toQGraphicsItem(PyObject* ptr);
+    QGraphicsItem* toQGraphicsItem(const Py::Object& pyObject);
     QGraphicsObject* toQGraphicsObject(PyObject* pyPtr);
+    QGraphicsObject* toQGraphicsObject(const Py::Object& pyObject);
 
     Py::Object fromQPrinter(QPrinter*);
-
     Py::Object fromQObject(QObject*, const char* className=nullptr);
     Py::Object fromQWidget(QWidget*, const char* className=nullptr);
     Py::Object fromQEvent(QEvent*, const char* className=0);
@@ -73,6 +74,10 @@ public:
     QDir* toQDir(PyObject* pyobj);
     static void createChildrenNameAttributes(PyObject* root, QObject* object);
     static void setParent(PyObject* pyWdg, QObject* parent);
+
+private:
+    static std::string shiboken;
+    static std::string PySide;
 };
 
 } // namespace Gui

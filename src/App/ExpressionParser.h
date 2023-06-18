@@ -29,7 +29,9 @@
 
 #include "Expression.h"
 #include <Base/Interpreter.h>
+#include <Base/Matrix.h>
 #include <Base/Quantity.h>
+#include <Base/Vector3D.h>
 
 namespace App {
 
@@ -561,42 +563,63 @@ public:
         FUNC_NONE,
 
         // Normal functions taking one or two arguments
+        ABS,
         ACOS,
         ASIN,
         ATAN,
-        ABS,
-        EXP,
-        LOG,
-        LOG10,
-        SIN,
-        SINH,
-        TAN,
-        TANH,
-        SQRT,
+        ATAN2,
+        CATH,
+        CBRT,
+        CEIL,
         COS,
         COSH,
-        ATAN2,
+        EXP,
+        FLOOR,
         FMOD,
         FPOW,
-        ROUND,
-        TRUNC,
-        CEIL,
-        FLOOR,
         HYPOT,
-        CATH,
+        LOG,
+        LOG10,
+        ROUND,
+        SIN,
+        SINH,
+        SQRT,
+        TAN,
+        TANH,
 
         GET_VAR,
         HAS_VAR,
         IMPORT_PY,
         PRAGMA,
-        LIST,
-        TUPLE,
-        MSCALE, // matrix scale by vector
+
+        TRUNC,
+
+        // Matrix
         MINVERT, // invert matrix/placement/rotation
-        CREATE, // create new object of a given type
+        MROTATE, // Rotate matrix/placement/rotation around axis, by rotation object, or by euler angles.
+        MROTATEX, // Rotate matrix/placement/rotation around x-axis.
+        MROTATEY, // Rotate matrix/placement/rotation around y-axis.
+        MROTATEZ, // Rotate matrix/placement/rotation around z-axis.
+        MSCALE, // matrix scale by vector
+        MTRANSLATE, // Translate matrix/placement.
+
+        // Object creation
+        CREATE, // Create new object of a given type.
+        LIST, // Create Python list.
+        MATRIX, // Create matrix object.
+        PLACEMENT, // Create placement object.
+        ROTATION, // Create rotation object.
+        ROTATIONX, // Create x-axis rotation object.
+        ROTATIONY, // Create y-axis rotation object.
+        ROTATIONZ, // Create z-axis rotation object.
         STR, // stringify
+        TRANSLATIONM, // Create translation matrix object.
+        TUPLE, // Create Python tuple.
+        VECTOR, // Create vector object.
+
+        HIDDENREF, // hidden reference that has no dependency check
+        HIDDEN_REF = HIDDENREF,
         HREF, // deprecated alias of HIDDENREF
-        HIDDEN_REF, // hidden reference that has no dependency check
 
         // double binding, used by PropertyExpressionEngine to make a property both driving and driven
         DBIND, 
@@ -613,12 +636,12 @@ public:
         // Aggregates
         AGGREGATES,
 
-        SUM,
         AVERAGE,
-        STDDEV,
         COUNT,
-        MIN,
         MAX,
+        MIN,
+        STDDEV,
+        SUM,
 
         // Last one
         LAST,
@@ -639,11 +662,19 @@ public:
 protected:
     explicit FunctionExpression(const App::DocumentObject *_owner):Expression(_owner){}
 
+    static Py::Object evalAggregate(const Expression *owner, int type, const ExpressionList &args);
+    static Base::Vector3d evaluateSecondVectorArgument(const Expression *expression, const ExpressionList &arguments);
+    static void initialiseObject(const Py::Object *object, const ExpressionList &arguments, const unsigned long offset = 0);
+    static Py::Object transformFirstArgument(
+        const Expression *expression,
+        const ExpressionList &arguments,
+        const Base::Matrix4D *transformationMatrix);
+    static Py::Object translationMatrix(double x, double y, double z);
+
     void _visit(ExpressionVisitor & v) override;
     void _toString(std::ostream &ss, bool persistent, int indent) const override;
     ExpressionPtr _copy() const override;
     Py::Object _getPyValue(int *jumpCode=nullptr) const override;
-    static Py::Object evalAggregate(const Expression *owner, int type, const ExpressionList &args);
 
     int ftype;        /**< Function to execute */
     ExpressionList args; /** Arguments to function*/

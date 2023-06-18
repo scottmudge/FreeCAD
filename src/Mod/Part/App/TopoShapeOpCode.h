@@ -25,12 +25,12 @@
 
 #include <Mod/Part/PartGlobal.h>
 
-/** Definition of commonly used TopoShape operaional code
+/** Definition of commonly used TopoShape operational code
  *
- * The operaional code (op code) is encoded into the mapped element name to
- * provide more meaning shape history when tracking back. Some code can be
- * passed to generalized shape making API TopoShape::makEBoolean() to make
- * shape.
+ * The operational code (op code) is encoded into the mapped element name to
+ * provide more context and meaning to the  shape history when tracing it back
+ * to its predecessors. Some op codes can be passed to the generalized shape-
+ * making API TopoShape::makEBoolean() to make a shape.
  */
 namespace Part {
 

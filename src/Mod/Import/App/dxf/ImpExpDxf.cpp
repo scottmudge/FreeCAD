@@ -450,7 +450,7 @@ void gPntToTuple(double* result, gp_Pnt& p)
 }
 
 point3D gPntTopoint3D(gp_Pnt& p)
-{ 
+{
    point3D result;
    result.x = p.X();
    result.y = p.Y();
@@ -568,7 +568,7 @@ void ImpExpDxfWrite::exportShape(const TopoDS_Shape input)
         } else if (adapt.GetType() == GeomAbs_Line) {
             exportLine(adapt);
         } else {
-            Base::Console().Warning("ImpExpDxf - unknown curve type: %d\n",adapt.GetType());
+            Base::Console().Warning("ImpExpDxf - unknown curve type: %d\n", static_cast<int>(adapt.GetType()));
         }
     }
 

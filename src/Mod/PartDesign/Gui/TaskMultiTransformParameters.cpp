@@ -72,43 +72,43 @@ TaskMultiTransformParameters::TaskMultiTransformParameters(ViewProviderTransform
 
     // Create a context menu for the listview of transformation features
     auto action = new QAction(tr("Edit"), ui->listTransformFeatures);
-    action->connect(action, SIGNAL(triggered()),
-                    this, SLOT(onTransformEdit()));
+    action->connect(action, &QAction::triggered,
+                    this, &TaskMultiTransformParameters::onTransformEdit);
     ui->listTransformFeatures->addAction(action);
     action = new QAction(tr("Delete"), ui->listTransformFeatures);
-    action->connect(action, SIGNAL(triggered()),
-                    this, SLOT(onTransformDelete()));
+    action->connect(action, &QAction::triggered,
+                    this, &TaskMultiTransformParameters::onTransformDelete);
     ui->listTransformFeatures->addAction(action);
     action = new QAction(tr("Add mirrored transformation"), ui->listTransformFeatures);
-    action->connect(action, SIGNAL(triggered()),
-                    this, SLOT(onTransformAddMirrored()));
+    action->connect(action, &QAction::triggered,
+                    this, &TaskMultiTransformParameters::onTransformAddMirrored);
     ui->listTransformFeatures->addAction(action);
     action = new QAction(tr("Add linear pattern"), ui->listTransformFeatures);
-    action->connect(action, SIGNAL(triggered()),
-                    this, SLOT(onTransformAddLinearPattern()));
+    action->connect(action, &QAction::triggered,
+                    this, &TaskMultiTransformParameters::onTransformAddLinearPattern);
     ui->listTransformFeatures->addAction(action);
     action = new QAction(tr("Add polar pattern"), ui->listTransformFeatures);
-    action->connect(action, SIGNAL(triggered()),
-                    this, SLOT(onTransformAddPolarPattern()));
+    action->connect(action, &QAction::triggered,
+                    this, &TaskMultiTransformParameters::onTransformAddPolarPattern);
     ui->listTransformFeatures->addAction(action);
     action = new QAction(tr("Add scaled transformation"), ui->listTransformFeatures);
-    action->connect(action, SIGNAL(triggered()),
-                    this, SLOT(onTransformAddScaled()));
+    action->connect(action, &QAction::triggered,
+                    this, &TaskMultiTransformParameters::onTransformAddScaled);
     ui->listTransformFeatures->addAction(action);
     action = new QAction(tr("Move up"), ui->listTransformFeatures);
-    action->connect(action, SIGNAL(triggered()),
-                    this, SLOT(onMoveUp()));
+    action->connect(action, &QAction::triggered,
+                    this, &TaskMultiTransformParameters::onMoveUp);
     ui->listTransformFeatures->addAction(action);
     action = new QAction(tr("Move down"), ui->listTransformFeatures);
-    action->connect(action, SIGNAL(triggered()),
-                    this, SLOT(onMoveDown()));
+    action->connect(action, &QAction::triggered,
+                    this, &TaskMultiTransformParameters::onMoveDown);
     ui->listTransformFeatures->addAction(action);
     ui->listTransformFeatures->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
-            this, SLOT(onUpdateView(bool)));
+    connect(ui->checkBoxUpdateView, &QCheckBox::toggled,
+            this, &TaskMultiTransformParameters::onUpdateView);
 
-    connect(ui->listTransformFeatures, SIGNAL(activated(QModelIndex)),
-            this, SLOT(onTransformActivated(QModelIndex)));
+    connect(ui->listTransformFeatures, &QListWidget::activated,
+            this, &TaskMultiTransformParameters::onTransformActivated);
 
     updateUI();
 }
@@ -210,8 +210,8 @@ void TaskMultiTransformParameters::onTransformEdit()
             + subTask->getProxyWidget()->minimumHeight());
 
     subTask->setEnabledTransaction(isEnabledTransaction());
-    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
-            subTask, SLOT(onUpdateView(bool)));
+    connect(ui->checkBoxUpdateView, &QCheckBox::toggled,
+            subTask, &TaskTransformedParameters::onUpdateView);
 }
 
 void TaskMultiTransformParameters::onTransformActivated(const QModelIndex& index)
@@ -432,7 +432,8 @@ void TaskMultiTransformParameters::onMoveDown()
     moveTransformFeature(+1);
 }
 
-void TaskMultiTransformParameters::onSubTaskButtonOK() {
+void TaskMultiTransformParameters::onSubTaskButtonOK()
+{
     closeSubTask();
 }
 

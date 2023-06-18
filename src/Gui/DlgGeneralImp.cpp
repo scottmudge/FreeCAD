@@ -1,34 +1,41 @@
-/***************************************************************************
- *   Copyright (c) 2004 Werner Mayer <wmayer[at]users.sourceforge.net>     *
- *                                                                         *
- *   This file is part of the FreeCAD CAx development system.              *
- *                                                                         *
- *   This library is free software; you can redistribute it and/or         *
- *   modify it under the terms of the GNU Library General Public           *
- *   License as published by the Free Software Foundation; either          *
- *   version 2 of the License, or (at your option) any later version.      *
- *                                                                         *
- *   This library  is distributed in the hope that it will be useful,      *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU Library General Public License for more details.                  *
- *                                                                         *
- *   You should have received a copy of the GNU Library General Public     *
- *   License along with this library; see the file COPYING.LIB. If not,    *
- *   write to the Free Software Foundation, Inc., 59 Temple Place,         *
- *   Suite 330, Boston, MA  02111-1307, USA                                *
- *                                                                         *
- ***************************************************************************/
+// SPDX-License-Identifier: LGPL-2.1-or-later
+
+ /****************************************************************************
+  *   Copyright (c) 2004 Werner Mayer <wmayer[at]users.sourceforge.net>     *
+  *   Copyright (c) 2023 FreeCAD Project Association                         *
+  *                                                                          *
+  *   This file is part of FreeCAD.                                          *
+  *                                                                          *
+  *   FreeCAD is free software: you can redistribute it and/or modify it     *
+  *   under the terms of the GNU Lesser General Public License as            *
+  *   published by the Free Software Foundation, either version 2.1 of the   *
+  *   License, or (at your option) any later version.                        *
+  *                                                                          *
+  *   FreeCAD is distributed in the hope that it will be useful, but         *
+  *   WITHOUT ANY WARRANTY; without even the implied warranty of             *
+  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU       *
+  *   Lesser General Public License for more details.                        *
+  *                                                                          *
+  *   You should have received a copy of the GNU Lesser General Public       *
+  *   License along with FreeCAD. If not, see                                *
+  *   <https://www.gnu.org/licenses/>.                                       *
+  *                                                                          *
+  ***************************************************************************/
 
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <cmath>
+# include <limits>
 # include <QApplication>
 # include <QLocale>
 # include <QStyleFactory>
 # include <QTextStream>
 # include <QTimer>
 #endif
+
+#include <Base/Parameter.h>
+#include <Base/UnitsApi.h>
 
 #include "DlgGeneralImp.h"
 #include "ui_DlgGeneral.h"
@@ -43,14 +50,10 @@
 #include "ViewParams.h"
 #include "OverlayWidgets.h"
 #include "Language/Translator.h"
-#include "Gui/PreferencePackManager.h"
 #include "DlgPreferencesImp.h"
 
-#include "DlgCreateNewPreferencePackImp.h"
 
-// Only needed until PreferencePacks can be managed from the AddonManager:
-#include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
+using namespace Base;
 
 
 using namespace Gui;
@@ -71,31 +74,26 @@ DlgGeneralImp::DlgGeneralImp( QWidget* parent )
 {
     ui->setupUi(this);
 
-    // fills the combo box with all available workbenches
-    // sorted by their menu text
-    QStringList work = Application::Instance->workbenches();
-    QMap<QString, QString> menuText;
-    for (QStringList::Iterator it = work.begin(); it != work.end(); ++it) {
-        QString text = Application::Instance->workbenchMenuText(*it);
-        menuText[text] = *it;
+
+    connect(ui->comboBox_UnitSystem, qOverload<int>(&QComboBox::currentIndexChanged), this, &DlgGeneralImp::onUnitSystemIndexChanged);
+    ui->spinBoxDecimals->setMaximum(std::numeric_limits<double>::digits10 + 1);
+
+    int num = static_cast<int>(Base::UnitSystem::NumUnitSystemTypes);
+    for (int i = 0; i < num; i++) {
+        QString item = Base::UnitsApi::getDescription(static_cast<Base::UnitSystem>(i));
+        ui->comboBox_UnitSystem->addItem(item, i);
     }
 
-    {   // add special workbench to selection
-        QPixmap px = Application::Instance->workbenchIcon(QStringLiteral("NoneWorkbench"));
-        QString key = QStringLiteral("<last>");
-        QString value = QStringLiteral("$LastModule");
-        if (px.isNull())
-            ui->AutoloadModuleCombo->addItem(key, QVariant(value));
-        else
-            ui->AutoloadModuleCombo->addItem(px, key, QVariant(value));
+    // Enable/disable the fractional inch option depending on system
+    if (UnitsApi::getSchema() == UnitSystem::ImperialBuilding)
+    {
+        ui->comboBox_FracInch->setVisible(true);
+        ui->fractionalInchLabel->setVisible(true);
     }
-
-    for (QMap<QString, QString>::Iterator it = menuText.begin(); it != menuText.end(); ++it) {
-        QPixmap px = Application::Instance->workbenchIcon(it.value());
-        if (px.isNull())
-            ui->AutoloadModuleCombo->addItem(it.key(), QVariant(it.value()));
-        else
-            ui->AutoloadModuleCombo->addItem(px, it.key(), QVariant(it.value()));
+    else
+    {
+        ui->comboBox_FracInch->setVisible(false);
+        ui->fractionalInchLabel->setVisible(false);
     }
 }
 
@@ -149,11 +147,34 @@ static void saveTreeMode(int value)
 
 void DlgGeneralImp::saveSettings()
 {
-    int index = ui->AutoloadModuleCombo->currentIndex();
-    QVariant data = ui->AutoloadModuleCombo->itemData(index);
-    QString startWbName = data.toString();
-    App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/General")->
-                          SetASCII("AutoloadModule", startWbName.toUtf8());
+    // must be done as very first because we create a new instance of NavigatorStyle
+    // where we set some attributes afterwards
+    int FracInch;  // minimum fractional inch to display
+    int viewSystemIndex; // currently selected View System (unit system)
+
+    ParameterGrp::handle hGrpu = App::GetApplication().GetParameterGroupByPath
+    ("User parameter:BaseApp/Preferences/Units");
+    hGrpu->SetInt("UserSchema", ui->comboBox_UnitSystem->currentIndex());
+    hGrpu->SetInt("Decimals", ui->spinBoxDecimals->value());
+
+    // Set actual value
+    Base::UnitsApi::setDecimals(ui->spinBoxDecimals->value());
+
+    // Convert the combobox index to the its integer denominator. Currently
+    // with 1/2, 1/4, through 1/128, this little equation directly computes the
+    // denominator given the combobox integer.
+    //
+    // The inverse conversion is done when loaded. That way only one thing (the
+    // numerical fractional inch value) needs to be stored.
+    FracInch = std::pow(2, ui->comboBox_FracInch->currentIndex() + 1);
+    hGrpu->SetInt("FracInch", FracInch);
+
+    // Set the actual format value
+    Base::QuantityFormat::setDefaultDenominator(FracInch);
+
+    // Set and save the Unit System
+    viewSystemIndex = ui->comboBox_UnitSystem->currentIndex();
+    UnitsApi::setSchema(static_cast<UnitSystem>(viewSystemIndex));
 
     setRecentFileSize();
 
@@ -172,7 +193,6 @@ void DlgGeneralImp::saveSettings()
     ui->UseLocaleFormatting->onSave();
     ui->EnableCursorBlinking->onSave();
     ui->SplashScreen->onSave();
-    ui->PythonWordWrap->onSave();
     ui->CmdHistorySize->onSave();
     ui->checkPopUpWindow->onSave();
     ui->toolbarIconSize->onSave();
@@ -265,11 +285,21 @@ void DlgGeneralImp::setupToolBarIconSize(QComboBox *comboBox)
 
 void DlgGeneralImp::loadSettings()
 {
-    std::string start = App::Application::Config()["StartWorkbench"];
-    start = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/General")->
-                                  GetASCII("AutoloadModule", start.c_str());
-    QString startWbName = QString::fromUtf8(start.c_str());
-    ui->AutoloadModuleCombo->setCurrentIndex(ui->AutoloadModuleCombo->findData(startWbName));
+    int FracInch;
+    int cbIndex;
+
+    ParameterGrp::handle hGrpu = App::GetApplication().GetParameterGroupByPath
+    ("User parameter:BaseApp/Preferences/Units");
+    ui->comboBox_UnitSystem->setCurrentIndex(hGrpu->GetInt("UserSchema", 0));
+    ui->spinBoxDecimals->setValue(hGrpu->GetInt("Decimals", Base::UnitsApi::getDecimals()));
+
+    // Get the current user setting for the minimum fractional inch
+    FracInch = hGrpu->GetInt("FracInch", Base::QuantityFormat::getDefaultDenominator());
+
+    // Convert fractional inch to the corresponding combobox index using this
+    // handy little equation.
+    cbIndex = std::log2(FracInch) - 1;
+    ui->comboBox_FracInch->setCurrentIndex(cbIndex);
 
     ParameterGrp::handle hGrp = WindowParameter::getDefaultParameter()->GetGroup("General");
 
@@ -285,6 +315,12 @@ void DlgGeneralImp::loadSettings()
         QByteArray lang = it->first.c_str();
         QString langname = QString::fromUtf8(lang.constData());
 
+        if (it->second == "sr-CS") {
+            // Qt does not treat sr-CS (Serbian, Latin) as a Latin-script variant by default: this
+            // forces it to do so.
+            it->second = "sr_Latn";
+        }
+
         QLocale locale(QString::fromUtf8(it->second.c_str()));
         QString native = locale.nativeLanguageName();
         if (!native.isEmpty()) {
@@ -298,6 +334,7 @@ void DlgGeneralImp::loadSettings()
             ui->Languages->setCurrentIndex(index);
         }
     }
+
     QAbstractItemModel* model = ui->Languages->model();
     if (model)
         model->sort(0);
@@ -319,7 +356,9 @@ void DlgGeneralImp::loadSettings()
     }
     ui->treeMode->setCurrentIndex(index);
     QObject::connect(ui->treeMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        [this](int value) { if (PrefParam::AutoSave()) saveTreeMode(value); });
+        [this](int value) {
+            if (PrefParam::AutoSave()) saveTreeMode(value);
+        });
 
     populateStylesheets("StyleSheet", "qss", ui->StyleSheets, "No style sheet");
     populateStylesheets("IconSet", "iconset", ui->IconSets, "None", QStringList(QStringLiteral("*.txt")));
@@ -361,7 +400,6 @@ void DlgGeneralImp::loadSettings()
     ui->EnableCursorBlinking->onRestore();
     ui->RecentFiles->onRestore();
     ui->SplashScreen->onRestore();
-    ui->PythonWordWrap->onRestore();
 
     ui->CmdHistorySize->setValue(ViewParams::defaultCommandHistorySize());
     ui->CmdHistorySize->onRestore();
@@ -378,7 +416,9 @@ void DlgGeneralImp::loadSettings()
 
 void DlgGeneralImp::updateLanguage()
 {
+    int index = ui->comboBox_UnitSystem->currentIndex();
     ui->retranslateUi(this);
+    ui->comboBox_UnitSystem->setCurrentIndex(index);
     ui->toolTipIconSize->setToolTip(QApplication::translate("ViewParams",
                 ViewParams::docToolTipIconSize()));
     setupToolBarIconSize(ui->toolbarIconSize);
@@ -391,6 +431,24 @@ void DlgGeneralImp::changeEvent(QEvent *e)
     }
     else {
         QWidget::changeEvent(e);
+    }
+}
+
+void DlgGeneralImp::onUnitSystemIndexChanged(int index)
+{
+    if (index < 0)
+        return; // happens when clearing the combo box in retranslateUi()
+
+    // Enable/disable the fractional inch option depending on system
+    if (static_cast<UnitSystem>(index) == UnitSystem::ImperialBuilding)
+    {
+        ui->comboBox_FracInch->setVisible(true);
+        ui->fractionalInchLabel->setVisible(true);
+    }
+    else
+    {
+        ui->comboBox_FracInch->setVisible(false);
+        ui->fractionalInchLabel->setVisible(false);
     }
 }
 

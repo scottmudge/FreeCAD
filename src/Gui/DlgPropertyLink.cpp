@@ -84,6 +84,13 @@ DlgPropertyLink::DlgPropertyLink(QWidget* parent, int flags)
     selFont = ui->treeWidget->font();
     selFont.setBold(true);
 
+    connect(ui->checkObjectType, &QCheckBox::toggled,
+            this, &DlgPropertyLink::onObjectTypeToggled);
+    connect(ui->typeTree, &QTreeWidget::itemSelectionChanged,
+            this, &DlgPropertyLink::onTypeTreeItemSelectionChanged);
+    connect(ui->searchBox, &ExpressionLineEdit::textChanged,
+            this, &DlgPropertyLink::onSearchBoxTextChanged);
+
     ui->typeTree->hide();
     if(flags & NoTypeFilter) {
         QSignalBlocker blocker(ui->checkObjectType);
@@ -110,7 +117,8 @@ DlgPropertyLink::DlgPropertyLink(QWidget* parent, int flags)
 
     timer = new QTimer(this);
     timer->setSingleShot(true);
-    connect(timer, SIGNAL(timeout()), this, SLOT(onTimer()));
+
+    connect(timer, &QTimer::timeout, this, &DlgPropertyLink::onTimer);
 
     ui->treeWidget->setEditTriggers(QAbstractItemView::DoubleClicked);
     ui->treeWidget->setItemDelegate(new ItemDelegate(this));
@@ -118,8 +126,8 @@ DlgPropertyLink::DlgPropertyLink(QWidget* parent, int flags)
 
     ui->treeWidget->viewport()->installEventFilter(this);
 
-    connect(ui->treeWidget, SIGNAL(itemExpanded(QTreeWidgetItem*)),
-            this, SLOT(onItemExpanded(QTreeWidgetItem*)));
+    connect(ui->treeWidget, &QTreeWidget::itemExpanded,
+            this, &DlgPropertyLink::onItemExpanded);
 
     connect(ui->treeWidget, SIGNAL(currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)),
             this, SLOT(onCurrentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)));
@@ -1341,13 +1349,13 @@ void DlgPropertyLink::onItemExpanded(QTreeWidgetItem * item) {
     }
 }
 
-void DlgPropertyLink::on_checkObjectType_toggled(bool on)
+void DlgPropertyLink::onObjectTypeToggled(bool on)
 {
     ui->typeTree->setVisible(on);
     filterObjects();
 }
 
-void DlgPropertyLink::on_typeTree_itemSelectionChanged() {
+void DlgPropertyLink::onTypeTreeItemSelectionChanged() {
 
     selectedTypes.clear();
     const auto items = ui->typeTree->selectedItems();
@@ -1358,7 +1366,7 @@ void DlgPropertyLink::on_typeTree_itemSelectionChanged() {
         filterObjects();
 }
 
-void DlgPropertyLink::on_searchBox_textChanged(const QString& text)
+void DlgPropertyLink::onSearchBoxTextChanged(const QString& text)
 {
     itemSearch(text,false);
 }

@@ -44,7 +44,7 @@ using namespace Gui::Dialog;
 UndoDialog::UndoDialog( QWidget* parent )
   : QMenu( parent )
 {
-    connect(this, SIGNAL(aboutToShow()), this, SLOT(onFetchInfo()));
+    connect(this, &QMenu::aboutToShow, this, &UndoDialog::onFetchInfo);
 }
 
 /**
@@ -66,8 +66,9 @@ void UndoDialog::onFetchInfo()
     MDIView* mdi =  getMainWindow()->activeWindow();
     if (mdi) {
         QStringList vecUndos = mdi->undoActions();
-        for (QStringList::Iterator i = vecUndos.begin(); i != vecUndos.end(); ++i)
-            addAction(*i, this, SLOT(onSelected()));
+        for (QStringList::Iterator i = vecUndos.begin(); i != vecUndos.end(); ++i) {
+            addAction(*i, this, &UndoDialog::onSelected);
+        }
     }
 }
 
@@ -92,7 +93,7 @@ void UndoDialog::onSelected()
 RedoDialog::RedoDialog( QWidget* parent )
   : QMenu( parent )
 {
-    connect(this, SIGNAL(aboutToShow()), this, SLOT(onFetchInfo()));
+    connect(this, &QMenu::aboutToShow, this, &RedoDialog::onFetchInfo);
 }
 
 /**
@@ -114,8 +115,9 @@ void RedoDialog::onFetchInfo()
     MDIView* mdi = getMainWindow()->activeWindow();
     if (mdi) {
         QStringList vecRedos = mdi->redoActions();
-        for (QStringList::Iterator i = vecRedos.begin(); i != vecRedos.end(); ++i)
-            addAction(*i, this, SLOT(onSelected()));
+        for (QStringList::Iterator i = vecRedos.begin(); i != vecRedos.end(); ++i) {
+            addAction(*i, this, &RedoDialog::onSelected);
+        }
     }
 }
 

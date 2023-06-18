@@ -50,6 +50,7 @@
 #include <Gui/Tools.h>
 #include <Gui/Utilities.h>
 #include <Gui/Inventor/SmSwitchboard.h>
+#include <Gui/SoDatumLabel.h>
 #include <Mod/Part/App/Geometry.h>
 #include <Mod/Sketcher/App/GeometryFacade.h>
 #include <Mod/Sketcher/App/SolverGeometryExtension.h>
@@ -58,12 +59,13 @@
 #include <Mod/Sketcher/App/GeoList.h>
 
 #include "EditModeConstraintCoinManager.h"
-#include "SoDatumLabel.h"
 #include "SoZoomTranslation.h"
 #include "ViewProviderSketch.h"
 #include "ViewProviderSketchCoinAttorney.h"
+#include "Utils.h"
 
 
+using namespace Gui;
 using namespace SketcherGui;
 using namespace Sketcher;
 
@@ -654,24 +656,46 @@ Restart:
                         if (Constr->SecondPos != Sketcher::PointPos::none) { // point to point distance
                             pnt1 = geolistfacade.getPoint(Constr->First, Constr->FirstPos);
                             pnt2 = geolistfacade.getPoint(Constr->Second, Constr->SecondPos);
-                        } else if (Constr->Second != GeoEnum::GeoUndef) { // point to line distance
-                            pnt1 = geolistfacade.getPoint(Constr->First, Constr->FirstPos);
-
+                        } else if (Constr->Second != GeoEnum::GeoUndef) {
                             const Part::Geometry *geo = geolistfacade.getGeometryFromGeoId(Constr->Second);
                             if (geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
                                 const Part::GeomLineSegment *lineSeg = static_cast<const Part::GeomLineSegment *>(geo);
                                 Base::Vector3d l2p1 = lineSeg->getStartPoint();
                                 Base::Vector3d l2p2 = lineSeg->getEndPoint();
-                                // calculate the projection of p1 onto line2
-                                pnt2.ProjectToLine(pnt1-l2p1, l2p2-l2p1);
-                                pnt2 += pnt1;
+                                if (Constr->FirstPos != Sketcher::PointPos::none) {  // point to line distance
+                                    pnt1 = geolistfacade.getPoint(Constr->First, Constr->FirstPos);
+                                    // calculate the projection of p1 onto line2
+                                    pnt2.ProjectToLine(pnt1-l2p1, l2p2-l2p1);
+                                    pnt2 += pnt1;
+                                } else {
+                                    const Part::Geometry *geo1 = geolistfacade.getGeometryFromGeoId(Constr->First);
+                                    if (geo1->getTypeId() == Part::GeomCircle::getClassTypeId()) { // circle to line distance
+                                        const Part::GeomCircle *circleSeg = static_cast<const Part::GeomCircle*>(geo1);
+                                        Base::Vector3d ct = circleSeg->getCenter();
+                                        double radius = circleSeg->getRadius();
+                                        pnt1.ProjectToLine(ct-l2p1, l2p2-l2p1); //project on the line translated to origin
+                                        Base::Vector3d dir = pnt1;
+                                        dir.Normalize();
+                                        pnt1 += ct;
+                                        pnt2 = ct + dir * radius;
+                                    }
+                                }
+
+                            } else if (geo->getTypeId() == Part::GeomCircle::getClassTypeId()) {
+                                const Part::Geometry *geo1 = geolistfacade.getGeometryFromGeoId(Constr->First);
+                                if (geo1->getTypeId() == Part::GeomCircle::getClassTypeId()) { // circle to circle distance
+                                    const Part::GeomCircle *circleSeg1 = static_cast<const Part::GeomCircle*>(geo1);
+                                    auto circleSeg2 = static_cast<const Part::GeomCircle*>(geo);
+                                    GetCirclesMinimalDistance(circleSeg1, circleSeg2, pnt1, pnt2);
+                                }
+
                             } else
                                 break;
                         } else if (Constr->FirstPos != Sketcher::PointPos::none) {
                             pnt2 = geolistfacade.getPoint(Constr->First, Constr->FirstPos);
                         } else if (Constr->First != GeoEnum::GeoUndef) {
                             const Part::Geometry *geo = geolistfacade.getGeometryFromGeoId(Constr->First);
-                            if (geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
+                            if (geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) { // segment distance
                                 const Part::GeomLineSegment *lineSeg = static_cast<const Part::GeomLineSegment *>(geo);
                                 pnt1 = lineSeg->getStartPoint();
                                 pnt2 = lineSeg->getEndPoint();
@@ -1176,7 +1200,7 @@ Base::Vector3d EditModeConstraintCoinManager::seekConstraintPosition(const Base:
         relPos = norm * 0.5f + dir * multiplier;
         freePos = origPos + relPos * scaled_step;
 
-        // Prevent crash : https://forum.freecadweb.org/viewtopic.php?f=8&t=65305
+        // Prevent crash : https://forum.freecad.org/viewtopic.php?f=8&t=65305
         if (!rp) {
             return relPos * step;
         }
@@ -1223,7 +1247,7 @@ void EditModeConstraintCoinManager::updateConstraintColor(const std::vector<Sket
     std::vector<int> CurvNum;
     std::vector<SbColor *> color;   // curve color
 
-    for(int l=0; l<geometryLayerParameters.CoinLayers; l++) {
+    for(int l=0; l<geometryLayerParameters.getCoinLayerCount(); l++) {
         PtNum.push_back(editModeScenegraphNodes.PointsMaterials[l]->diffuseColor.getNum());
         pcolor.push_back(editModeScenegraphNodes.PointsMaterials[l]->diffuseColor.startEditing());
         CurvNum.push_back(editModeScenegraphNodes.CurvesMaterials[l]->diffuseColor.getNum());
@@ -1356,7 +1380,7 @@ void EditModeConstraintCoinManager::updateConstraintColor(const std::vector<Sket
         }
     }
 
-    for(int l=0; l<geometryLayerParameters.CoinLayers; l++) {
+    for(int l=0; l<geometryLayerParameters.getCoinLayerCount(); l++) {
         editModeScenegraphNodes.PointsMaterials[l]->diffuseColor.finishEditing();
         editModeScenegraphNodes.CurvesMaterials[l]->diffuseColor.finishEditing();
     }
@@ -1440,7 +1464,7 @@ void EditModeConstraintCoinManager::rebuildConstraintNodes(const GeoListFacade &
                                             drawingParameters.ConstrDimColor
                                             :drawingParameters.NonDrivingConstrDimColor)
                                         :drawingParameters.DeactivatedConstrDimColor;
-                text->size.setValue(drawingParameters.coinFontSize);
+                text->size.setValue(drawingParameters.labelFontSize);
                 text->lineWidth = 2 * drawingParameters.pixelScalingFactor;
                 text->useAntialiasing = false;
                 SoAnnotation *anno = new SoAnnotation();
@@ -1732,6 +1756,7 @@ std::set<int> EditModeConstraintCoinManager::detectPreselectionConstr(const SoPi
 
                         SbVec3f absPos;
                         SbVec3f trans;
+                        float scaleFactor;
 
                         auto translation = static_cast<SoZoomTranslation *>(static_cast<SoSeparator *>(tailFather)->getChild( static_cast<int>(ConstraintNodePosition::FirstTranslationIndex)));
 
@@ -1739,17 +1764,22 @@ std::set<int> EditModeConstraintCoinManager::detectPreselectionConstr(const SoPi
 
                         trans = translation->translation.getValue();
 
+                        scaleFactor = translation->getScaleFactor();
+
                         if (tail != sep->getChild(static_cast<int>(ConstraintNodePosition::FirstIconIndex))) {
+                            Base::Console().Log("SecondIcon\n");
 
                             auto translation2 = static_cast<SoZoomTranslation *>(static_cast<SoSeparator *>(tailFather)->getChild( static_cast<int>(ConstraintNodePosition::SecondTranslationIndex)));
 
                             absPos += translation2->abPos.getValue();
 
                             trans += translation2->translation.getValue();
+
+                            scaleFactor = translation2->getScaleFactor();
                         }
 
-                        // TODO: Is this calculation actually sound? Why the absolute position is not scaled and the translation is? Review.
-                        SbVec3f constrPos = absPos + trans*ViewProviderSketchCoinAttorney::getScaleFactor(viewProvider);
+                        // Only the translation is scaled because this is how SoZoomTranslation works
+                        SbVec3f constrPos = absPos + scaleFactor*trans;
 
                         SbVec2f iconCoords = ViewProviderSketchCoinAttorney::getScreenCoordinates(viewProvider, SbVec2f(constrPos[0],constrPos[1]));
 
@@ -1774,16 +1804,20 @@ std::set<int> EditModeConstraintCoinManager::detectPreselectionConstr(const SoPi
 
                             if (b->first.contains(iconX, iconY)) {
                                 // We've found a bounding box that contains the mouse pointer!
-                                for (std::set<int>::iterator k = b->second.begin(); k != b->second.end(); ++k)
+                                for (std::set<int>::iterator k = b->second.begin(); k != b->second.end(); ++k) {
                                     constrIndices.insert(*k);
+                                }
                             }
                         }
                     }
                     else {
                         // It's a constraint icon, not a combined one
                         QStringList constrIdStrings = constrIdsStr.split(QStringLiteral(","));
-                        while (!constrIdStrings.empty())
-                            constrIndices.insert(constrIdStrings.takeAt(0).toInt());
+                        while (!constrIdStrings.empty()) {
+                            auto constraintid = constrIdStrings.takeAt(0).toInt();
+                            constrIndices.insert(constraintid);
+
+                        }
                     }
                 }
             }

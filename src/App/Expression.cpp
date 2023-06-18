@@ -126,17 +126,19 @@ static inline void printExpression(std::ostream &os, const App::Expression *expr
     _e.raiseException();\
 }while(0)
 
-#define EXPR_PY_THROW(_expr) _EXPR_PY_THROW("",_expr)
+#define EXPR_PY_THROW(_expr) _EXPR_PY_THROW("", _expr)
 
-#define EXPR_THROW(_msg) _EXPR_THROW(_msg,this)
+#define EXPR_THROW(_msg) _EXPR_THROW(_msg, this)
 
-#define RUNTIME_THROW(_msg) __EXPR_THROW(Base::RuntimeError,_msg, static_cast<Expression*>(nullptr))
+#define ARGUMENT_THROW(_msg) EXPR_THROW("Invalid number of arguments: " _msg)
 
-#define TYPE_THROW(_msg) __EXPR_THROW(Base::TypeError,_msg, static_cast<Expression*>(nullptr))
+#define RUNTIME_THROW(_msg) __EXPR_THROW(Base::RuntimeError, _msg, static_cast<Expression*>(nullptr))
 
-#define PARSER_THROW(_msg) __EXPR_THROW(Base::ParserError,_msg, static_cast<Expression*>(nullptr))
+#define TYPE_THROW(_msg) __EXPR_THROW(Base::TypeError, _msg, static_cast<Expression*>(nullptr))
 
-#define PY_THROW(_msg) __EXPR_THROW(Py::RuntimeError,_msg, static_cast<Expression*>(nullptr))
+#define PARSER_THROW(_msg) __EXPR_THROW(Base::ParserError, _msg, static_cast<Expression*>(nullptr))
+
+#define PY_THROW(_msg) __EXPR_THROW(Py::RuntimeError, _msg, static_cast<Expression*>(nullptr))
 
 #define EXPR_NEW(_t,...) \
     ExpressionPtr(::new(ExpressionFastAlloc(_t)().allocate(1)) _t(__VA_ARGS__))
@@ -1878,13 +1880,13 @@ void NumberExpression::_toString(std::ostream &ss, bool,int) const
 {
     // Restore the old implementation because using digits10 + 2 causes
     // undesired side-effects:
-    // https://forum.freecadweb.org/viewtopic.php?f=3&t=44057&p=375882#p375882
+    // https://forum.freecad.org/viewtopic.php?f=3&t=44057&p=375882#p375882
     // See also:
     // https://en.cppreference.com/w/cpp/types/numeric_limits/digits10
     // https://en.cppreference.com/w/cpp/types/numeric_limits/max_digits10
     // https://www.boost.org/doc/libs/1_63_0/libs/multiprecision/doc/html/boost_multiprecision/tut/limits/constants.html
     boost::io::ios_flags_saver ifs(ss);
-    ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << getValue();
+    ss << std::setprecision(std::numeric_limits<double>::digits10) << getValue();
     if (!getQuantity().getUnit().isEmpty()) {
         ss << ' ';
         UnitExpression::_toString(ss, false, 0);
@@ -2272,6 +2274,7 @@ void OperatorExpression::_toString(std::ostream &s, bool persistent,int) const
         s << " ";
         break;
     case OP_UNIT:
+        s << " ";
         break;
     default:
         assert(0);
@@ -2811,6 +2814,7 @@ const std::vector<FunctionExpression::FunctionInfo> &FunctionExpression::getFunc
         {TAN, "tan", "Tangent of a value"},
         {TANH, "tanh", "Hybolic tangent of a value"},
         {SQRT, "sqrt", "Square root of a number"},
+        {CBRT, "cbrt", "Cubic root of a number"},
         {COS, "cos", "Cosine of a value"},
         {COSH, "cosh", "Hybolic cosine of a value"},
         {ATAN2, "atan2", "Arctangent of a value"},
@@ -2843,6 +2847,45 @@ const std::vector<FunctionExpression::FunctionInfo> &FunctionExpression::getFunc
                            "Scaling of a matrix"},
         {MINVERT, "minvert", "minvert(matrix|placement|rotation)\n\n"
                              "Invert either a matrix, placement or rotation"},
+        {MROTATE, "mrotate", "mrotate(matrix, rotation)\n"
+                             "Rotate a matrix"},
+        {MROTATEX, "mrotatex", "mrotatex(matrix, angle)\n"
+                              "Rotate the matrix along x axis"},
+        {MROTATEY, "mrotatex", "mrotatey(matrix, angle)\n"
+                              "Rotate the matrix along y axis"},
+        {MROTATEZ, "mrotatex", "mrotatez(matrix, angle)\n"
+                              "Rotate the matrix along z axis"},
+        {MTRANSLATE, "mtranslate", "mtranslate(matrix, vector)\n"
+                                   "translate a matrix"},
+        {TRANSLATIONM, "translationm", "translationm(d)\n"
+                                       "translationm(x,y,z)\n"
+                                       "Create a translation matrix"},
+        {PLACEMENT, "placement", "placement()\n"
+                                 "placement(placement)\n"
+                                 "placement(matrix)\n"
+                                 "placement(base, rotation)\n"
+                                 "placement(base, rotation, center)\n"
+                                 "placement(base, axis, angle)\n"
+                                 "Create a placement"},
+        {ROTATION, "rotation", "rotation()\n"
+                               "rotation(rotation)\n"
+                               "rotation(matrix)\n"
+                               "rotation(axis, degree)\n"
+                               "rotation(vector_start, vector_end)\n"
+                               "rotation(angle1, angle2, angle3)\n"
+                               "rotation(seq, angle1, angle2, angle3)\n"
+                               "rotation(x, y, z, w)\n"
+                               "rotation(dir1, dir2, dir3, seq)\n"
+                               "Create a rotation."},
+        {MATRIX, "matrix", "matrix()\n"
+                           "matrix(matrix)\n"
+                           "matrix(vector1, vector2, vector3, vector4)\n"
+                           "matrix(coef...)\n"
+                           "Create a matrix."},
+        {VECTOR, "vector", "vector()\n"
+                           "vector(vector)\n"
+                           "vector(x,y,z)\n"
+                           "Create a vector."},
         {CREATE, "create", "create(type,...)\n\n"
                            "Create a new Python object with the given type.\n"
                            "Currently supported types can be specified as string\n"
@@ -3090,6 +3133,76 @@ Py::Object FunctionExpression::evalAggregate(
     return pyFromQuantity(c->getQuantity());
 }
 
+Base::Vector3d FunctionExpression::evaluateSecondVectorArgument(const Expression *expression, const ExpressionList &arguments)
+{
+    Py::Tuple vectorValues;
+    Py::Object secondParameter = arguments[1]->getPyValue();
+
+    if (arguments.size() == 2) {
+        if (!secondParameter.isSequence())
+            _EXPR_THROW("Second parameter is not a sequence type: '" << secondParameter.as_string() << "'.", expression);
+        if (PySequence_Size(secondParameter.ptr()) != 3)
+            _EXPR_THROW("Second parameter provided has " << PySequence_Size(secondParameter.ptr()) << " elements instead of 3.", expression);
+
+        vectorValues = Py::Tuple(Py::Sequence(secondParameter));
+    } else {
+        vectorValues = Py::Tuple(3);
+        vectorValues.setItem(0, secondParameter);
+        vectorValues.setItem(1, arguments[2]->getPyValue());
+        vectorValues.setItem(2, arguments[3]->getPyValue());
+    }
+
+    Vector3d vector;
+    if (!PyArg_ParseTuple(vectorValues.ptr(), "ddd", &vector.x, &vector.y, &vector.z)) {
+        PyErr_Clear();
+        _EXPR_THROW("Error parsing scale values.", expression);
+    }
+
+    return vector;
+}
+
+void FunctionExpression::initialiseObject(const Py::Object *object, const ExpressionList &arguments, const unsigned long offset)
+{
+    if (arguments.size() > offset) {
+        Py::Tuple constructorArguments(arguments.size() - offset);
+        for (unsigned i = offset; i < arguments.size(); ++i)
+            constructorArguments.setItem(i - offset, arguments[i]->getPyValue());
+        Py::Dict kwd;
+        PyObjectBase::__PyInit(object->ptr(), constructorArguments.ptr(), kwd.ptr());
+    }
+}
+
+Py::Object FunctionExpression::transformFirstArgument(
+    const Expression* expression,
+    const ExpressionList &arguments,
+    const Base::Matrix4D* transformationMatrix
+)
+{
+    Py::Object target = arguments[0]->getPyValue();
+
+    if (PyObject_TypeCheck(target.ptr(), &Base::MatrixPy::Type)) {
+        Base::Matrix4D matrix = static_cast<Base::MatrixPy*>(target.ptr())->value();
+        return Py::asObject(new Base::MatrixPy(*transformationMatrix * matrix));
+    } else if (PyObject_TypeCheck(target.ptr(), &Base::PlacementPy::Type)) {
+        Base::Matrix4D placementMatrix =
+            static_cast<Base::PlacementPy*>(target.ptr())->getPlacementPtr()->toMatrix();
+        return Py::asObject(new Base::PlacementPy(Base::Placement(*transformationMatrix * placementMatrix)));
+    } else if (PyObject_TypeCheck(target.ptr(), &Base::RotationPy::Type)) {
+        Base::Matrix4D rotatioMatrix;
+        static_cast<Base::RotationPy*>(target.ptr())->getRotationPtr()->getValue(rotatioMatrix);
+        return Py::asObject(new Base::RotationPy(Base::Rotation(*transformationMatrix * rotatioMatrix)));
+    }
+
+    _EXPR_THROW("Function requires the first argument to be either Matrix, Placement or Rotation.", expression);
+}
+
+Py::Object FunctionExpression::translationMatrix(double x, double y, double z)
+{
+    Base::Matrix4D matrix;
+    matrix.move(x, y, z);
+    return Py::asObject(new Base::MatrixPy(matrix));
+}
+
 Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const ExpressionList &args) 
 {
     if(!expr || !expr->getOwner())
@@ -3127,100 +3240,165 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
         return pyobj;
 #endif
     } case LIST: {
-        if(args.size() == 1 && args[0]->isDerivedFrom(RangeExpression::getClassTypeId()))
+        if (args.size() == 1 && args[0]->isDerivedFrom(RangeExpression::getClassTypeId()))
             return args[0]->getPyValue();
         Py::List list(args.size());
-        int i=0;
-        for(auto &arg : args)
-            list.setItem(i++,arg->getPyValue());
+        int i = 0;
+        for (auto &arg : args)
+            list.setItem(i++, arg->getPyValue());
         return list;
     } case TUPLE: {
-        if(args.size() == 1 && args[0]->isDerivedFrom(RangeExpression::getClassTypeId()))
+        if (args.size() == 1 && args[0]->isDerivedFrom(RangeExpression::getClassTypeId()))
             return Py::Tuple(args[0]->getPyValue());
         Py::Tuple tuple(args.size());
-        int i=0;
-        for(auto &arg : args)
-            tuple.setItem(i++,arg->getPyValue());
+        int i = 0;
+        for (auto &arg : args)
+            tuple.setItem(i++, arg->getPyValue());
         return tuple;
-    } case MSCALE: {
-        if(args.size() < 2)
-            _EXPR_THROW("Function requires at least two arguments.",expr);
-        Py::Object pymat = args[0]->getPyValue();
-        Py::Object pyscale;
-        if(PyObject_TypeCheck(pymat.ptr(),&Base::MatrixPy::Type)) {
-            if(args.size() == 2) {
-                Py::Object obj = args[1]->getPyValue();
-                if(obj.isSequence() && PySequence_Size(obj.ptr())==3)
-                    pyscale = Py::Tuple(Py::Sequence(obj));
-            } else if(args.size() == 4) {
-                Py::Tuple tuple(3);
-                tuple.setItem(0,args[1]->getPyValue());
-                tuple.setItem(1,args[2]->getPyValue());
-                tuple.setItem(2,args[3]->getPyValue());
-                pyscale = tuple;
-            }
-        }
-        if(!pyscale.isNone()) {
-            Base::Vector3d vec;
-            if (!PyArg_ParseTuple(pyscale.ptr(), "ddd", &vec.x,&vec.y,&vec.z))
-                PyErr_Clear();
-            else {
-                auto mat = static_cast<Base::MatrixPy*>(pymat.ptr())->value();
-                mat.scale(vec);
-                return Py::asObject(new Base::MatrixPy(mat));
-            }
-        }
-        _EXPR_THROW("Function requires arguments to be either "
-                "(matrix,vector) or (matrix,number,number,number).", expr);
+    }
+    }
 
-    } case MINVERT: {
+    if(args.empty())
+        _EXPR_THROW("Function requires at least one argument.",expr);
+
+    switch (f) {
+    case MINVERT: {
         Py::Object pyobj = args[0]->getPyValue();
-        if (PyObject_TypeCheck(pyobj.ptr(),&Base::MatrixPy::Type)) {
+        if (PyObject_TypeCheck(pyobj.ptr(), &Base::MatrixPy::Type)) {
             auto m = static_cast<Base::MatrixPy*>(pyobj.ptr())->value();
             if (fabs(m.determinant()) <= DBL_EPSILON)
-                _EXPR_THROW("Cannot invert singular matrix.",expr);
+                _EXPR_THROW("Cannot invert singular matrix.", expr);
             m.inverseGauss();
             return Py::asObject(new Base::MatrixPy(m));
-
-        } else if (PyObject_TypeCheck(pyobj.ptr(),&Base::PlacementPy::Type)) {
+        } else if (PyObject_TypeCheck(pyobj.ptr(), &Base::PlacementPy::Type)) {
             const auto &pla = *static_cast<Base::PlacementPy*>(pyobj.ptr())->getPlacementPtr();
             return Py::asObject(new Base::PlacementPy(pla.inverse()));
-
-        } else if (PyObject_TypeCheck(pyobj.ptr(),&Base::RotationPy::Type)) {
+        } else if (PyObject_TypeCheck(pyobj.ptr(), &Base::RotationPy::Type)) {
             const auto &rot = *static_cast<Base::RotationPy*>(pyobj.ptr())->getRotationPtr();
             return Py::asObject(new Base::RotationPy(rot.inverse()));
         }
-        _EXPR_THROW("Function requires the first argument to be either Matrix, Placement or Rotation.",expr);
+        _EXPR_THROW(
+            "Function requires the first argument to be either Matrix, Placement or Rotation.",
+            expr);
+        break;
+    }
+    case MROTATE: {
+        Py::Object rotationObject = args[1]->getPyValue();
+        if (!PyObject_TypeCheck(rotationObject.ptr(), &Base::RotationPy::Type))
+        {
+            rotationObject = Py::asObject(new Base::RotationPy(Base::Rotation()));
+            initialiseObject(&rotationObject, args, 1);
+        }
 
-    } case CREATE: {
+        Base::Matrix4D rotationMatrix;
+        static_cast<Base::RotationPy*>(rotationObject.ptr())->getRotationPtr()->getValue(rotationMatrix);
+
+        return transformFirstArgument(expr, args, &rotationMatrix);
+    }
+    case MROTATEX:
+    case MROTATEY:
+    case MROTATEZ:
+    {
+        Py::Object rotationAngleParameter = args[1]->getPyValue();
+        Quantity rotationAngle = pyToQuantity(rotationAngleParameter, expr, "Invalid rotation angle.");
+
+        if (!(rotationAngle.isDimensionlessOrUnit(Unit::Angle)))
+            _EXPR_THROW("Unit must be either empty or an angle.", expr);
+
+        Rotation rotation = Base::Rotation(
+            Vector3d(static_cast<double>(f == MROTATEX), static_cast<double>(f == MROTATEY), static_cast<double>(f == MROTATEZ)),
+            rotationAngle.getValue() * M_PI / 180.0);
+        Base::Matrix4D rotationMatrix;
+        rotation.getValue(rotationMatrix);
+
+        return transformFirstArgument(expr, args, &rotationMatrix);
+    }
+    case MSCALE: {
+        if(args.size() < 2)
+            _EXPR_THROW("Function requires at least two arguments.",expr);
+        Vector3d scaleValues = evaluateSecondVectorArgument(expr, args);
+
+        Base::Matrix4D scaleMatrix;
+        scaleMatrix.scale(scaleValues);
+
+        return transformFirstArgument(expr, args, &scaleMatrix);
+    }
+    case MTRANSLATE: {
+        if(args.size() < 2)
+            _EXPR_THROW("Function requires at least two arguments.",expr);
+        Vector3d translateValues = evaluateSecondVectorArgument(expr, args);
+
+        Base::Matrix4D translateMatrix;
+        translateMatrix.move(translateValues);
+
+        Py::Object target = args[0]->getPyValue();
+        if (PyObject_TypeCheck(target.ptr(), &Base::RotationPy::Type)) {
+            Base::Matrix4D targetRotatioMatrix;
+            static_cast<Base::RotationPy*>(target.ptr())->getRotationPtr()->getValue(targetRotatioMatrix);
+            return Py::asObject(new Base::PlacementPy(Base::Placement(translateMatrix * targetRotatioMatrix)));
+        }
+
+        return transformFirstArgument(expr, args, &translateMatrix);
+    }
+    case CREATE: {
         Py::Object pytype = args[0]->getPyValue();
-        if(!pytype.isString())
-            _EXPR_THROW("Function requires the first argument to be a string.",expr);
+        if (!pytype.isString())
+            _EXPR_THROW("Function requires the first argument to be a string.", expr);
         std::string type(pytype.as_string());
         Py::Object res;
-        if(boost::iequals(type,"matrix")) 
+        if (boost::iequals(type, "matrix"))
             res = Py::asObject(new Base::MatrixPy(Base::Matrix4D()));
-        else if(boost::iequals(type,"vector"))
+        else if (boost::iequals(type, "vector"))
             res = Py::asObject(new Base::VectorPy(Base::Vector3d()));
-        else if(boost::iequals(type,"placement"))
+        else if (boost::iequals(type, "placement"))
             res = Py::asObject(new Base::PlacementPy(Base::Placement()));
-        else if(boost::iequals(type,"rotation"))
+        else if (boost::iequals(type, "rotation"))
             res = Py::asObject(new Base::RotationPy(Base::Rotation()));
         else
-            _EXPR_THROW("Unknown type '" << type << "'.",expr);
-        if(args.size()>1) {
-            Py::Tuple tuple(args.size()-1);
-            for(unsigned i=1;i<args.size();++i)
-                tuple.setItem(i-1,args[i]->getPyValue());
-            Py::Dict dict;
-            PyObjectBase::__PyInit(res.ptr(),tuple.ptr(),dict.ptr());
-        }
+            _EXPR_THROW("Unknown type '" << type << "'.", expr);
+        initialiseObject(&res, args, 1);
         return res;
-    } case STR: {
+    }
+    case MATRIX: {
+        Py::Object matrix = Py::asObject(new Base::MatrixPy(Base::Matrix4D()));
+        initialiseObject(&matrix, args);
+        return matrix;
+    }
+    case PLACEMENT: {
+        Py::Object placement = Py::asObject(new Base::PlacementPy(Base::Placement()));
+        initialiseObject(&placement, args);
+        return placement;
+    }
+    case ROTATION: {
+        Py::Object rotation = Py::asObject(new Base::RotationPy(Base::Rotation()));
+        initialiseObject(&rotation, args);
+        return rotation;
+    }
+    case STR:
         return Py::String(args[0]->getPyValue().as_string());
-    } case HREF:
-      case HIDDEN_REF:
-      case DBIND: {
+    case TRANSLATIONM: {
+        if (args.size() != 1)
+            break; // Break and proceed to 3 size version.
+        Py::Object parameter = args[0]->getPyValue();
+        if (!parameter.isSequence())
+            _EXPR_THROW("Not sequence type: '" << parameter.as_string() << "'.", expr);
+        if (PySequence_Size(parameter.ptr()) != 3)
+            _EXPR_THROW("Sequence provided has " << PySequence_Size(parameter.ptr()) << " elements instead of 3.", expr);
+        double x, y, z;
+        if (!PyArg_ParseTuple(Py::Tuple(Py::Sequence(parameter)).ptr(), "ddd", &x, &y, &z)) {
+            PyErr_Clear();
+            _EXPR_THROW("Error parsing sequence.", expr);
+        }
+        return translationMatrix(x, y, z);
+    }
+    case VECTOR: {
+        Py::Object vector = Py::asObject(new Base::VectorPy(Base::Vector3d()));
+        initialiseObject(&vector, args);
+        return vector;
+    }
+    case HIDDENREF:
+    case HREF:
+    case DBIND: {
         return args[0]->getPyValue();
     } default:
         break;
@@ -3230,13 +3408,13 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
     Quantity v1 = pyToQuantity(e1,expr,"Invalid first argument.");
     Py::Object e2;
     Quantity v2;
-    if(args.size()>1) {
+    if (args.size() > 1) {
         e2 = args[1]->getPyValue();
         v2 = pyToQuantity(e2,expr,"Invalid second argument.");
     }
     Py::Object e3;
     Quantity v3;
-    if(args.size()>2) {
+    if (args.size() > 2) {
         e3 = args[2]->getPyValue();
         v3 = pyToQuantity(e3,expr,"Invalid third argument.");
     }
@@ -3252,8 +3430,11 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
     case COS:
     case SIN:
     case TAN:
-        if (!(v1.getUnit() == Unit::Angle || v1.getUnit().isEmpty()))
-            _EXPR_THROW("Unit must be either empty or an angle.",expr);
+    case ROTATIONX:
+    case ROTATIONY:
+    case ROTATIONZ:
+        if (!(v1.isDimensionlessOrUnit(Unit::Angle)))
+            _EXPR_THROW("Unit must be either empty or an angle.", expr);
 
         // Convert value to radians
         value *= M_PI / 180.0;
@@ -3262,8 +3443,8 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
     case ACOS:
     case ASIN:
     case ATAN:
-        if (!v1.getUnit().isEmpty())
-            _EXPR_THROW("Unit must be empty.",expr);
+        if (!v1.isDimensionless())
+            _EXPR_THROW("Unit must be empty.", expr);
         unit = Unit::Angle;
         scaler = 180.0 / M_PI;
         break;
@@ -3273,7 +3454,7 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
     case SINH:
     case TANH:
     case COSH:
-        if (!v1.getUnit().isEmpty())
+        if (!v1.isDimensionless())
             _EXPR_THROW("Unit must be empty.",expr);
         unit = Unit();
         break;
@@ -3309,6 +3490,31 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
                     s.Angle);
         break;
     }
+    case CBRT: {
+        unit = v1.getUnit();
+
+        // All components of unit must be either zero or dividable by 3
+        UnitSignature s = unit.getSignature();
+        if ( !((s.Length % 3) == 0) &&
+              ((s.Mass % 3) == 0) &&
+              ((s.Time % 3) == 0) &&
+              ((s.ElectricCurrent % 3) == 0) &&
+              ((s.ThermodynamicTemperature % 3) == 0) &&
+              ((s.AmountOfSubstance % 3) == 0) &&
+              ((s.LuminousIntensity % 3) == 0) &&
+              ((s.Angle % 3) == 0))
+            _EXPR_THROW("All dimensions must be multiples of 3 to compute the cube root.",expr);
+
+        unit = Unit(s.Length /3,
+                    s.Mass / 3,
+                    s.Time / 3,
+                    s.ElectricCurrent / 3,
+                    s.ThermodynamicTemperature / 3,
+                    s.AmountOfSubstance / 3,
+                    s.LuminousIntensity / 3,
+                    s.Angle);
+        break;
+    }
     case ATAN2:
         if (e2.isNone())
             _EXPR_THROW("Invalid second argument.",expr);
@@ -3327,12 +3533,12 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
         if (e2.isNone())
             _EXPR_THROW("Invalid second argument.",expr);
 
-        if (!v2.getUnit().isEmpty())
+        if (!v2.isDimensionless())
             _EXPR_THROW("Exponent is not allowed to have a unit.",expr);
 
         // Compute new unit for exponentiation
         double exponent = v2.getValue();
-        if (!v1.getUnit().isEmpty()) {
+        if (!v1.isDimensionless()) {
             if (exponent - boost::math::round(exponent) < 1e-9)
                 unit = v1.getUnit().pow(exponent);
             else
@@ -3355,6 +3561,10 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
         }
         unit = v1.getUnit();
         break;
+    case TRANSLATIONM:
+        if (v1.isDimensionlessOrUnit(Unit::Length) && v2.isDimensionlessOrUnit(Unit::Length) && v3.isDimensionlessOrUnit(Unit::Length))
+            break;
+        _EXPR_THROW("Translation units must be a length or dimensionless.", expr);
     default:
         _EXPR_THROW("Unknown function: " << f,0);
     }
@@ -3397,6 +3607,9 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
     case SQRT:
         output = sqrt(value);
         break;
+    case CBRT:
+        output = cbrt(value);
+        break;
     case COS:
         output = cos(value);
         break;
@@ -3435,6 +3648,14 @@ Py::Object FunctionExpression::evaluate(const Expression *expr, int f, const Exp
     case FLOOR:
         output = floor(value);
         break;
+    case ROTATIONX:
+    case ROTATIONY:
+    case ROTATIONZ:
+        return Py::asObject(new Base::RotationPy(Base::Rotation(
+            Vector3d(static_cast<double>(f == ROTATIONX), static_cast<double>(f == ROTATIONY), static_cast<double>(f == ROTATIONZ)),
+            value)));
+    case TRANSLATIONM:
+        return translationMatrix(v1.getValue(), v2.getValue(), v3.getValue());
     default:
         _EXPR_THROW("Unknown function: " << f,0);
     }

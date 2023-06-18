@@ -74,16 +74,19 @@ TaskDraftParameters::TaskDraftParameters(ViewProviderDressUp *DressUpView,QWidge
 
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->draftAngle, SIGNAL(valueChanged(double)),
-            this, SLOT(onAngleChanged(double)));
-    connect(ui->checkReverse, SIGNAL(toggled(bool)),
-            this, SLOT(onReversedChanged(bool)));
-    connect(ui->buttonPlane, SIGNAL(toggled(bool)),
-            this, SLOT(onButtonPlane(bool)));
-    connect(ui->btnClearPlane, SIGNAL(clicked()), this, SLOT(onClearPlane()));
-    connect(ui->buttonLine, SIGNAL(toggled(bool)),
-            this, SLOT(onButtonLine(bool)));
-    connect(ui->btnClearLine, SIGNAL(clicked()), this, SLOT(onClearLine()));
+    connect(ui->draftAngle, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+        this, &TaskDraftParameters::onAngleChanged);
+    connect(ui->checkReverse, &QCheckBox::toggled,
+        this, &TaskDraftParameters::onReversedChanged);
+    connect(ui->buttonPlane, &QToolButton::toggled,
+        this, &TaskDraftParameters::onButtonPlane);
+    connect(ui->buttonLine, &QToolButton::toggled,
+        this, &TaskDraftParameters::onButtonLine);
+
+    connect(ui->btnClearPlane, &QToolButton::clicked,
+        this, &TaskDraftParameters::onClearPlane);
+    connect(ui->btnClearLine, &QToolButton::clicked,
+        this, &TaskDraftParameters::onClearLine);
 
     setupTransaction();
     bool touched = populateRefElement(&pcDraft->NeutralPlane, ui->linePlane, true);

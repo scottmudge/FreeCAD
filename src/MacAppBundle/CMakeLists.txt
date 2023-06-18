@@ -144,8 +144,8 @@ file(GLOB CONFIG_LLVM "${HOMEBREW_PREFIX}/opt/llvm/lib/c++")
 file(GLOB CONFIG_GCC "${HOMEBREW_PREFIX}/opt/gcc/lib/gcc/current")
 
 execute_process(
-       COMMAND find /usr/local/Cellar/nglib -name MacOS
-       OUTPUT_VARIABLE CONFIG_NGLIB)
+    COMMAND find -L /usr/local/Cellar/nglib -name MacOS
+    OUTPUT_VARIABLE CONFIG_NGLIB)
 
 install(CODE
     "message(STATUS \"Making bundle relocatable...\")

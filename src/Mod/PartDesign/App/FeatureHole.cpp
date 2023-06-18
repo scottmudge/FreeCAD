@@ -1685,7 +1685,7 @@ App::DocumentObjectExecReturn* Hole::execute()
             base = getBaseShape();
     }
     catch (const Base::Exception&) {
-        std::string text(QT_TR_NOOP("The requested feature cannot be created. The reason may be that:\n"
+        std::string text(QT_TRANSLATE_NOOP("Exception", "The requested feature cannot be created. The reason may be that:\n"
             "  - the active Body does not contain a base shape, so there is no\n"
             "  material to be removed;\n"
             "  - the selected sketch does not belong to the active Body."));
@@ -1701,7 +1701,8 @@ App::DocumentObjectExecReturn* Hole::execute()
         base.move(invObjLoc);
 
         if (profileshape.isNull())
-            return new App::DocumentObjectExecReturn("Hole error: Creating a face from sketch failed");
+            return new App::DocumentObjectExecReturn(
+                QT_TRANSLATE_NOOP("Exception", "Hole error: Creating a face from sketch failed"));
         profileshape.move(invObjLoc);
 
         /* Build the prototype hole */
@@ -1725,10 +1726,11 @@ App::DocumentObjectExecReturn* Hole::execute()
             length = getThroughAllLength();
         }
         else
-            return new App::DocumentObjectExecReturn("Hole error: Unsupported length specification");
+            return new App::DocumentObjectExecReturn(
+                QT_TRANSLATE_NOOP("Exception", "Hole error: Unsupported length specification"));
 
         if (length <= 0.0)
-            return new App::DocumentObjectExecReturn("Hole error: Invalid hole depth");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Hole error: Invalid hole depth"));
 
         BRepBuilderAPI_MakeWire mkWire;
         const std::string holeCutType = HoleCutType.getValueAsString();
@@ -1739,7 +1741,8 @@ App::DocumentObjectExecReturn* Hole::execute()
             isDynamicCounterbore(threadType, holeCutType));
         bool isCounterdrill = (holeCutType == "Counterdrill");
 
-        double TaperedAngleVal = Tapered.getValue() ? Base::toRadians(TaperedAngle.getValue()) : Base::toRadians(90.0);
+        double TaperedAngleVal =
+            Tapered.getValue() ? Base::toRadians(TaperedAngle.getValue()) : Base::toRadians(90.0);
         double radiusBottom = Diameter.getValue() / 2.0 - length / tan(TaperedAngleVal);
 
         double radius = Diameter.getValue() / 2.0;
@@ -1750,30 +1753,36 @@ App::DocumentObjectExecReturn* Hole::execute()
         double zPosCounter = 0.0;
 
         if (TaperedAngleVal <= 0.0 || TaperedAngleVal > Base::toRadians(180.0))
-            return new App::DocumentObjectExecReturn("Hole error: Invalid taper angle");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Hole error: Invalid taper angle"));
 
         if (isCountersink || isCounterbore || isCounterdrill) {
             double holeCutRadius = HoleCutDiameter.getValue() / 2.0;
             double holeCutDepth = HoleCutDepth.getValue();
             double countersinkAngle = Base::toRadians(HoleCutCountersinkAngle.getValue() / 2.0);
 
-            if ( isCounterbore) {
-                // Counterbore is rendered the same way as a countersink, but with a hardcoded angle of 90deg
+            if (isCounterbore) {
+                // Counterbore is rendered the same way as a countersink, but with a hardcoded
+                // angle of 90deg
                 countersinkAngle = Base::toRadians(90.0);
             }
 
-            if ( isCountersink) {
-                holeCutDepth = 0;
+            if (isCountersink) {
+                holeCutDepth = 0.0;
+                // We cannot recalculate the HoleCutDiameter because the previous HoleCutDepth
+                // is unknown. Therefore we cannot know with what HoleCutDepth the current
+                // HoleCutDiameter was calculated.
             }
 
             if (holeCutRadius < radius)
-                return new App::DocumentObjectExecReturn("Hole error: Hole cut diameter too small");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Hole error: Hole cut diameter too small"));
 
             if (holeCutDepth > length)
-                return new App::DocumentObjectExecReturn("Hole error: Hole cut depth must be less than hole depth");
+                return new App::DocumentObjectExecReturn(
+                    QT_TRANSLATE_NOOP("Exception", "Hole error: Hole cut depth must be less than hole depth"));
 
             if (holeCutDepth < 0.0)
-                return new App::DocumentObjectExecReturn("Hole error: Hole cut depth must be greater or equal to zero");
+                return new App::DocumentObjectExecReturn(
+                    QT_TRANSLATE_NOOP("Exception", "Hole error: Hole cut depth must be greater or equal to zero"));
 
             // Top point
             gp_Pnt newPoint = toPnt(holeCutRadius * xDir);
@@ -1789,12 +1798,13 @@ App::DocumentObjectExecReturn* Hole::execute()
 
             // Compute intersection of tapered edge and line at bottom of counterbore hole
             computeIntersection(gp_Pnt(holeCutRadius, -holeCutDepth, 0 ),
-                                gp_Pnt(holeCutRadius - sin(countersinkAngle), -cos(countersinkAngle) - holeCutDepth, 0),
+                                gp_Pnt(holeCutRadius - sin(countersinkAngle),
+                                       -cos(countersinkAngle) - holeCutDepth, 0),
                                 gp_Pnt(radius, 0, 0),
                                 gp_Pnt(radiusBottom, -length, 0), xPosCounter, zPosCounter);
 
             if (-length > zPosCounter)
-                return new App::DocumentObjectExecReturn("Hole error: Invalid countersink");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Hole error: Invalid countersink"));
 
             lengthCounter = zPosCounter;
             newPoint = toPnt(xPosCounter * xDir + zPosCounter * zDir);
@@ -1827,7 +1837,7 @@ App::DocumentObjectExecReturn* Hole::execute()
 
             // the angle is in any case > 0 and < 90 but nevertheless this safeguard:
             if (drillPointAngle <= 0.0 || drillPointAngle >= Base::toRadians(180.0))
-                return new App::DocumentObjectExecReturn("Hole error: Invalid drill point angle");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Hole error: Invalid drill point angle"));
 
             // if option to take drill point size into account
             // the next wire point is the intersection of the drill edge and the hole edge
@@ -1837,7 +1847,7 @@ App::DocumentObjectExecReturn* Hole::execute()
                     gp_Pnt(radius, 0, 0),
                     gp_Pnt(radiusBottom, -length, 0), xPosDrill, zPosDrill);
                 if (zPosDrill > 0 || zPosDrill >= lengthCounter)
-                    return new App::DocumentObjectExecReturn("Hole error: Invalid drill point");
+                    return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Hole error: Invalid drill point"));
 
                 newPoint = toPnt(xPosDrill * xDir + zPosDrill * zDir);
                 mkWire.Add(BRepBuilderAPI_MakeEdge(lastPoint, newPoint));
@@ -1871,11 +1881,11 @@ App::DocumentObjectExecReturn* Hole::execute()
         double angle = Base::toRadians<double>(360.0);
         BRepPrimAPI_MakeRevol RevolMaker(face, gp_Ax1(firstPoint, zDir), angle);
         if (!RevolMaker.IsDone())
-            return new App::DocumentObjectExecReturn("Hole error: Could not revolve sketch");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Hole error: Could not revolve sketch"));
 
         TopoDS_Shape protoHole = RevolMaker.Shape();
         if (protoHole.IsNull())
-            return new App::DocumentObjectExecReturn("Hole error: Resulting shape is empty");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Hole error: Resulting shape is empty"));
 
 
         // Make thread
@@ -1885,7 +1895,7 @@ App::DocumentObjectExecReturn* Hole::execute()
             // fuse the thread to the hole
             BRepAlgoAPI_Fuse mkFuse(protoHole, protoThread);
             if (!mkFuse.IsDone())
-                return new App::DocumentObjectExecReturn("Error: Adding the thread failed");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Error: Adding the thread failed"));
 
             // we reuse the name protoHole (only now it is threaded)
             protoHole = mkFuse.Shape();
@@ -1942,18 +1952,18 @@ App::DocumentObjectExecReturn* Hole::execute()
                 try {
                     result.makEBoolean(maker, {base,hole});
                 } catch (Standard_Failure &) {
-                    std::string msg("Boolean operation failed on profile Edge");
+                    std::string msg(QT_TRANSLATE_NOOP("Exception", "Boolean operation failed on profile Edge"));
                     msg += std::to_string(i);
                     return new App::DocumentObjectExecReturn(msg.c_str());
                 } catch (Base::Exception &e) {
                     e.ReportException();
-                    std::string msg("Boolean operataion failed on profile Edge");
+                    std::string msg(QT_TRANSLATE_NOOP("Exception", "Boolean operataion failed on profile Edge"));
                     msg += std::to_string(i);
                     return new App::DocumentObjectExecReturn(msg.c_str());
                 }
                 base = getSolid(result);
                 if (base.isNull()) {
-                    std::string msg("Boolean operataion produced non-solid on profile Edge");
+                    std::string msg(QT_TRANSLATE_NOOP("Exception", "Boolean operataion produced non-solid on profile Edge"));
                     msg += std::to_string(i);
                     return new App::DocumentObjectExecReturn(msg.c_str());
                 }
@@ -1966,11 +1976,13 @@ App::DocumentObjectExecReturn* Hole::execute()
         return App::DocumentObject::StdReturn;
     }
     catch (Standard_Failure& e) {
-        if (std::string(e.GetMessageString()) == "TopoDS::Face" &&
-            (std::string(DepthType.getValueAsString()) == "UpToFirst" || std::string(DepthType.getValueAsString()) == "UpToFace"))
-            return new App::DocumentObjectExecReturn("Could not create face from sketch.\n"
+        if (std::string(e.GetMessageString()) == "TopoDS::Face"
+            && (std::string(DepthType.getValueAsString()) == "UpToFirst"
+                || std::string(DepthType.getValueAsString()) == "UpToFace"))
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                "Could not create face from sketch.\n"
                 "Intersecting sketch entities or multiple faces in a sketch are not allowed "
-                "for making a pocket up to a face.");
+                "for making a pocket up to a face."));
         else
             return new App::DocumentObjectExecReturn(e.GetMessageString());
     }
@@ -1979,7 +1991,8 @@ App::DocumentObjectExecReturn* Hole::execute()
     }
 }
 
-void Hole::rotateToNormal(const gp_Dir& helixAxis, const gp_Dir& normalAxis, TopoDS_Shape& helixShape) const
+void Hole::rotateToNormal(const gp_Dir& helixAxis, const gp_Dir& normalAxis,
+                          TopoDS_Shape& helixShape) const
 {
     auto getRotationAxis = [](const gp_Dir& dir1, const gp_Dir& dir2, gp_Dir& dir3, double& angle) {
         if (dir1.IsEqual(dir2, Precision::Angular()))
@@ -2027,7 +2040,8 @@ gp_Vec Hole::computePerpendicular(const gp_Vec& zDir) const
     else
         xDir = gp_Vec(0, -zDir.Z(), zDir.Y());
 
-    // Normalize xDir; this is needed as the computation above does not necessarily give a unit-length vector.
+    // Normalize xDir; this is needed as the computation above does not necessarily give
+    // a unit-length vector.
     xDir.Normalize();
     return xDir;
 }
@@ -2076,10 +2090,10 @@ TopoDS_Shape Hole::makeThread(const gp_Vec& xDir, const gp_Vec& zDir, double len
     int threadType = ThreadType.getValue();
     int threadSize = ThreadSize.getValue();
     if (threadType < 0) {
-        throw Base::IndexError("Thread type out of range");
+        throw Base::IndexError(QT_TRANSLATE_NOOP("Exception", "Thread type out of range"));
     }
     if (threadSize < 0) {
-        throw Base::IndexError("Thread size out of range");
+        throw Base::IndexError(QT_TRANSLATE_NOOP("Exception", "Thread size out of range"));
     }
 
     bool leftHanded = (bool)ThreadDirection.getValue();
@@ -2088,11 +2102,11 @@ TopoDS_Shape Hole::makeThread(const gp_Vec& xDir, const gp_Vec& zDir, double len
     // this is the same for all metric and UTS threads as stated here:
     // https://en.wikipedia.org/wiki/File:ISO_and_UTS_Thread_Dimensions.svg
     // Note that in the ISO standard, Dmaj is called D, which has been followed here.
-    double D = threadDescription[threadType][threadSize].diameter;  // Major diameter
-    double P = getThreadPitch();
-    double H = sqrt(3) / 2 * P;                                                           // Height of fundamental triangle
+    double Diam = threadDescription[threadType][threadSize].diameter; // major diameter
+    double Pitch = getThreadPitch();
+    double H = sqrt(3) / 2 * Pitch; // height of fundamental triangle
 
-    double clearance;                                                                     // clearance to be added on the diameter
+    double clearance; // clearance to be added on the diameter
     if (UseCustomThreadClearance.getValue())
         clearance = CustomThreadClearance.getValue();
     else
@@ -2100,13 +2114,13 @@ TopoDS_Shape Hole::makeThread(const gp_Vec& xDir, const gp_Vec& zDir, double len
 
     // construct the cross section going counter-clockwise
     // for graphical explanation of geometrical construction of p1-p6 see:
-    // https://forum.freecadweb.org/viewtopic.php?f=19&t=54284#p466570
-    gp_Pnt p1 = toPnt((D / 2 - 5 * H / 8 + clearance / 2) * xDir + P / 8 * zDir);
-    gp_Pnt p2 = toPnt((D / 2 + clearance / 2) * xDir + 7 * P / 16 * zDir);
-    gp_Pnt p3 = toPnt((D / 2 + clearance / 2) * xDir + 9 * P / 16 * zDir);
-    gp_Pnt p4 = toPnt((D / 2 - 5 * H / 8 + clearance / 2) * xDir + 7 * P / 8 * zDir);
-    gp_Pnt p5 = toPnt(0.9 * (D / 2 - 5 * H / 8) * xDir + 7 * P / 8 * zDir);
-    gp_Pnt p6 = toPnt(0.9 * (D / 2 - 5 * H / 8) * xDir + P / 8 * zDir);
+    // https://forum.freecad.org/viewtopic.php?f=19&t=54284#p466570
+    gp_Pnt p1 = toPnt((Diam / 2 - 5 * H / 8 + clearance / 2) * xDir + Pitch / 8 * zDir);
+    gp_Pnt p2 = toPnt((Diam / 2 + clearance / 2) * xDir + 7 * Pitch / 16 * zDir);
+    gp_Pnt p3 = toPnt((Diam / 2 + clearance / 2) * xDir + 9 * Pitch / 16 * zDir);
+    gp_Pnt p4 = toPnt((Diam / 2 - 5 * H / 8 + clearance / 2) * xDir + 7 * Pitch / 8 * zDir);
+    gp_Pnt p5 = toPnt(0.9 * (Diam / 2 - 5 * H / 8) * xDir + 7 * Pitch / 8 * zDir);
+    gp_Pnt p6 = toPnt(0.9 * (Diam / 2 - 5 * H / 8) * xDir + Pitch / 8 * zDir);
 
     BRepBuilderAPI_MakeWire mkThreadWire;
     mkThreadWire.Add(BRepBuilderAPI_MakeEdge(p1, p2).Edge());
@@ -2120,7 +2134,7 @@ TopoDS_Shape Hole::makeThread(const gp_Vec& xDir, const gp_Vec& zDir, double len
 
     //create the helix path
     double threadDepth = ThreadDepth.getValue();
-    double helixLength = threadDepth + P / 2;
+    double helixLength = threadDepth + Pitch / 2;
     double holeDepth = Depth.getValue();
     std::string threadDepthMethod(ThreadDepthType.getValueAsString());
     std::string depthMethod(DepthType.getValueAsString());
@@ -2128,28 +2142,28 @@ TopoDS_Shape Hole::makeThread(const gp_Vec& xDir, const gp_Vec& zDir, double len
         if (depthMethod == "ThroughAll") {
             threadDepth = length;
             ThreadDepth.setValue(threadDepth);
-            helixLength = threadDepth + 2 * P;
+            helixLength = threadDepth + 2 * Pitch;
         }
         else if (threadDepthMethod == "Tapped (DIN76)") {
             threadDepth = holeDepth - getThreadRunout();
             ThreadDepth.setValue(threadDepth);
-            helixLength = threadDepth + P / 2;
+            helixLength = threadDepth + Pitch / 2;
         }
         else { // Hole depth
             threadDepth = holeDepth;
             ThreadDepth.setValue(threadDepth);
-            helixLength = threadDepth + P / 8;
+            helixLength = threadDepth + Pitch / 8;
         }
     }
     else {
         if (depthMethod == "Dimension") {
             // the thread must not be deeper than the hole
             // thus the max helixLength is holeDepth + P / 8;
-            if (threadDepth > (holeDepth - P / 2))
-                helixLength = holeDepth + P / 8;
+            if (threadDepth > (holeDepth - Pitch / 2))
+                helixLength = holeDepth + Pitch / 8;
         }
     }
-    TopoDS_Shape helix = TopoShape().makeLongHelix(P, helixLength, D / 2, 0.0, leftHanded);
+    TopoDS_Shape helix = TopoShape().makeLongHelix(Pitch, helixLength, Diam / 2, 0.0, leftHanded);
 
     gp_Pnt origo(0.0, 0.0, 0.0);
     gp_Dir dir_axis1(0.0, 0.0, 1.0);  // pointing along the helix axis, as created.
@@ -2171,7 +2185,7 @@ TopoDS_Shape Hole::makeThread(const gp_Vec& xDir, const gp_Vec& zDir, double len
     mkPS.SetMode(true);  //This is for frenet
     mkPS.Add(threadWire);
     if (!mkPS.IsReady())
-        throw Base::CADKernelError("Error: Thread could not be built");
+        throw Base::CADKernelError(QT_TRANSLATE_NOOP("Exception", "Error: Thread could not be built"));
     TopoDS_Shape shell = mkPS.Shape();
 
     // create faces at the ends of the pipe shell
@@ -2196,7 +2210,7 @@ TopoDS_Shape Hole::makeThread(const gp_Vec& xDir, const gp_Vec& zDir, double len
     BRepBuilderAPI_MakeSolid mkSolid;
     mkSolid.Add(TopoDS::Shell(sewer.SewedShape()));
     if (!mkSolid.IsDone())
-        throw Base::CADKernelError("Error: Result is not a solid");
+        throw Base::CADKernelError(QT_TRANSLATE_NOOP("Exception", "Error: Result is not a solid"));
     TopoDS_Shape result = mkSolid.Shape();
 
     // check if the algorithm has confused the inside and outside of the solid

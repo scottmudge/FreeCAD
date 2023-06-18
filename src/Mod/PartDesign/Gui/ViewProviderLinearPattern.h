@@ -33,10 +33,16 @@ class PartDesignGuiExport ViewProviderLinearPattern : public ViewProviderTransfo
     Q_DECLARE_TR_FUNCTIONS(PartDesignGui::ViewProviderLinearPattern)
     PROPERTY_HEADER_WITH_OVERRIDE(PartDesignGui::ViewProviderLinearPattern);
 public:
-    ViewProviderLinearPattern()
-        { featureName = std::string("LinearPattern");
-          menuName = tr("LinearPattern parameters");
-          sPixmap = "PartDesign_LinearPattern.svg"; }
+    ViewProviderLinearPattern() {
+          sPixmap = "PartDesign_LinearPattern.svg";
+    }
+
+    QString getMenuName() const override {
+        return tr("LineraPattern parameters");
+    }
+
+    const std::string & featureName() const override;
+    void setupContextMenu(QMenu*, QObject*, const char*) override;
 
 protected:
     /// Returns a newly create dialog for the part to be placed in the task view

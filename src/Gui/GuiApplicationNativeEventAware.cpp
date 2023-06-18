@@ -111,7 +111,7 @@ bool Gui::GUIApplicationNativeEventAware::processSpaceballEvent(QObject *object,
 
 void Gui::GUIApplicationNativeEventAware::postMotionEvent(std::vector<int> motionDataArray)
 {
-	auto currentWidget(focusWidget());
+    auto currentWidget(focusWidget());
     if (!currentWidget) {
         return;
     }
@@ -125,7 +125,7 @@ void Gui::GUIApplicationNativeEventAware::postMotionEvent(std::vector<int> motio
 
 void Gui::GUIApplicationNativeEventAware::postButtonEvent(int buttonNumber, int buttonPress)
 {
-	auto currentWidget(focusWidget());
+    auto currentWidget(focusWidget());
     if (!currentWidget) {
         return;
     }
@@ -134,11 +134,11 @@ void Gui::GUIApplicationNativeEventAware::postButtonEvent(int buttonNumber, int 
     buttonEvent->setButtonNumber(buttonNumber);
     if (buttonPress)
     {
-	  buttonEvent->setButtonStatus(Spaceball::BUTTON_PRESSED);
+      buttonEvent->setButtonStatus(Spaceball::BUTTON_PRESSED);
     }
     else
     {
-	  buttonEvent->setButtonStatus(Spaceball::BUTTON_RELEASED);
+      buttonEvent->setButtonStatus(Spaceball::BUTTON_RELEASED);
     }
     this->postEvent(currentWidget, buttonEvent);
 }

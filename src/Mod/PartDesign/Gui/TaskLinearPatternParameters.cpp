@@ -80,8 +80,8 @@ TaskLinearPatternParameters::TaskLinearPatternParameters(TaskMultiTransformParam
 {
     proxy = new QWidget(parentTask);
     ui->setupUi(proxy);
-    connect(ui->buttonOK, SIGNAL(clicked(bool)),
-            parentTask, SLOT(onSubTaskButtonOK()));
+    connect(ui->buttonOK, &QToolButton::pressed,
+            parentTask, &TaskLinearPatternParameters::onSubTaskButtonOK);
     QMetaObject::connectSlotsByName(this);
 
     layout->addWidget(proxy);
@@ -91,7 +91,8 @@ TaskLinearPatternParameters::TaskLinearPatternParameters(TaskMultiTransformParam
 
     selectionMode = none;
 
-    blockUpdate = false; // Hack, sometimes it is NOT false although set to false in Transformed::Transformed()!!
+    // Hack, sometimes it is NOT false although set to false in Transformed::Transformed()!!
+    blockUpdate = false;
     setupUI();
 }
 
@@ -250,7 +251,7 @@ void TaskLinearPatternParameters::onDirectionChanged(int /*num*/)
             pcLinearPattern->Direction.Paste(dirLinks.getCurrentLink());
         }
     } catch (Base::Exception &e) {
-        QMessageBox::warning(nullptr,tr("Error"),QString::fromUtf8(e.what()));
+        QMessageBox::warning(nullptr,tr("Error"),QApplication::translate("Exception", e.what()));
     }
 
     kickUpdateViewTimer();

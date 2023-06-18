@@ -335,6 +335,16 @@ App::Document *DocumentObject::getOwnerDocument() const {
     return _pDoc;
 }
 
+std::string DocumentObject::getFullLabel() const {
+    if(!getDocument())
+        return "?";
+
+    auto name = getDocument()->Label.getStrValue();
+    name += "#";
+    name += Label.getStrValue();
+    return name;
+}
+
 const char *DocumentObject::getNameInDocument() const
 {
     // Note: It can happen that we query the internal name of an object even if it is not
@@ -1103,6 +1113,17 @@ DocumentObject::getParents(App::DocumentObject *queryParent, int depth) const {
     }
 
     return ret;
+}
+
+App::DocumentObject* DocumentObject::getFirstParent() const
+{
+    for (auto obj : getInList()) {
+        if (obj->hasExtension(App::GroupExtension::getExtensionClassTypeId(), true)) {
+            return obj;
+        }
+    }
+
+    return nullptr;
 }
 
 DocumentObject *DocumentObject::getLinkedObject(

@@ -29,6 +29,7 @@
 
 #include "Control.h"
 #include "TaskDialog.h"
+#include "TaskView.h"
 
 using namespace Gui::TaskView;
 
@@ -55,6 +56,14 @@ TaskDialog::~TaskDialog()
 }
 
 //==== Slots ===============================================================
+
+void TaskDialog::addTaskBox(QWidget* widget)
+{
+    Gui::TaskView::TaskBox* taskbox = new Gui::TaskView::TaskBox(
+        QPixmap(), widget->windowTitle(), true, nullptr);
+    taskbox->groupLayout()->addWidget(widget);
+    Content.push_back(taskbox);
+}
 
 const std::vector<QWidget*> &TaskDialog::getDialogContent() const
 {

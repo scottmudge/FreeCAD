@@ -150,6 +150,13 @@ be removed using the Delete key.</string>
     </widget>
    </item>
    <item>
+    <widget class="QCheckBox" name="checkIntersection">
+     <property name="text">
+      <string>Intersection</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QCheckBox" name="checkReverse">
      <property name="text">
       <string>Make thickness inwards</string>
@@ -166,13 +173,14 @@ be removed using the Delete key.</string>
   </customwidget>
  </customwidgets>
  <tabstops>
+  <tabstop>buttonRefAdd</tabstop>
+  <tabstop>treeWidgetReferences</tabstop>
   <tabstop>Value</tabstop>
   <tabstop>modeComboBox</tabstop>
   <tabstop>joinComboBox</tabstop>
   <tabstop>checkMakeOffset</tabstop>
+  <tabstop>checkIntersection</tabstop>
   <tabstop>checkReverse</tabstop>
-  <tabstop>buttonRefAdd</tabstop>
-  <tabstop>treeWidgetReferences</tabstop>
  </tabstops>
  <resources/>
  <connections/>

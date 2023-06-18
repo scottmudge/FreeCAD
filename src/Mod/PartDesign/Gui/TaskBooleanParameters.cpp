@@ -70,29 +70,29 @@ TaskBooleanParameters::TaskBooleanParameters(ViewProviderBoolean *BooleanView,QW
     // remembers the initial transaction ID
     App::GetApplication().getActiveTransaction(&transactionID);
 
-    connect(ui->buttonAdd, SIGNAL(clicked(bool)),
-            this, SLOT(onButtonAdd()));
-    connect(ui->buttonRemove, SIGNAL(clicked(bool)),
-            this, SLOT(onButtonRemove()));
-    connect(ui->comboType, SIGNAL(currentIndexChanged(int)),
-            this, SLOT(onTypeChanged(int)));
-    connect(ui->checkBoxNewSolid, SIGNAL(toggled(bool)),
-            this, SLOT(onNewSolidChanged(bool)));
+    connect(ui->buttonAdd, &QPushButton::clicked,
+            this, &TaskBooleanParameters::onButtonAdd);
+    connect(ui->buttonRemove, &QPushButton::clicked,
+            this, &TaskBooleanParameters::onButtonRemove);
+    connect(ui->comboType, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, &TaskBooleanParameters::onTypeChanged);
+    connect(ui->checkBoxNewSolid, &QCheckBox::toggled,
+            this, &TaskBooleanParameters::onNewSolidChanged);
 
     this->groupLayout()->addWidget(proxy);
     
-#if QT_VERSION >= 0x040200
     ui->listWidgetBodies->setMouseTracking(true); // needed for itemEntered() to work
-#endif
+
     ui->listWidgetBodies->setDragDropMode(QListWidget::InternalMove);
-    connect(ui->listWidgetBodies->model(), SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
-            this, SLOT(onItemMoved()));
-    connect(ui->listWidgetBodies, SIGNAL(itemEntered(QListWidgetItem*)), 
-            this, SLOT(preselect(QListWidgetItem*)));
+
+    connect(ui->listWidgetBodies->model(), &QAbstractItemModel::rowsMoved,
+            this, &TaskBooleanParameters::onItemMoved);
+    connect(ui->listWidgetBodies, &QListWidget::itemEntered,
+            this, &TaskBooleanParameters::preselect);
     ui->listWidgetBodies->installEventFilter(this); // for leaveEvent
 
-    connect(ui->listWidgetBodies, SIGNAL(itemSelectionChanged()), 
-            this, SLOT(onItemSelection()));
+    connect(ui->listWidgetBodies, &QListWidget::itemSelectionChanged,
+            this, &TaskBooleanParameters::onItemSelection);
 
     undoConn = App::GetApplication().signalUndo.connect(boost::bind(&TaskBooleanParameters::populate,this));
     redoConn = App::GetApplication().signalRedo.connect(boost::bind(&TaskBooleanParameters::populate,this));
@@ -107,15 +107,15 @@ TaskBooleanParameters::TaskBooleanParameters(ViewProviderBoolean *BooleanView,QW
     action->setShortcutVisibleInContextMenu(true);
 #endif
     ui->listWidgetBodies->addAction(action);
-    connect(action, SIGNAL(triggered()), this, SLOT(onButtonRemove()));
+    connect(action, &QAction::triggered, this, &TaskBooleanParameters::onButtonRemove);
     ui->listWidgetBodies->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     auto hGrp = App::GetApplication().GetUserParameter()
         .GetGroup("BaseApp")->GetGroup("Preferences")->GetGroup("Mod/PartDesign");
     ui->checkboxDeleteOnRemove->setChecked(hGrp->GetBool("BooleanDeleteOnRemove",true));
 
-    connect(ui->checkboxDeleteOnRemove, SIGNAL(toggled(bool)), 
-            this, SLOT(onDeleteOnRemove(bool)));
+    connect(ui->checkboxDeleteOnRemove, &QCheckBox::toggled,
+            this, &TaskBooleanParameters::onDeleteOnRemove);
 }
 
 void TaskBooleanParameters::onDeleteOnRemove(bool checked) {

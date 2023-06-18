@@ -55,14 +55,15 @@ FC_LOG_LEVEL_INIT("Toolbar", true, 2)
 
 using namespace Gui;
 
-ToolBarItem::ToolBarItem() : forceHide(HideStyle::VISIBLE)
+ToolBarItem::ToolBarItem() : visibility(HideStyle::VISIBLE)
 {
 }
 
-ToolBarItem::ToolBarItem(ToolBarItem* item, HideStyle forcehide) : forceHide(forcehide)
+ToolBarItem::ToolBarItem(ToolBarItem* item, HideStyle visibility) : visibility(visibility)
 {
-    if ( item )
+    if (item) {
         item->appendItem(this);
+    }
 }
 
 ToolBarItem::~ToolBarItem()
@@ -99,11 +100,11 @@ ToolBarItem* ToolBarItem::findItem(const std::string& name)
 {
     if ( _name == name ) {
         return this;
-    } else {
-        for ( QList<ToolBarItem*>::Iterator it = _items.begin(); it != _items.end(); ++it ) {
-            if ( (*it)->_name == name ) {
-                return *it;
-            }
+    }
+
+    for (auto it : qAsConst(_items)) {
+        if (it->_name == name) {
+            return it;
         }
     }
 
@@ -117,8 +118,8 @@ ToolBarItem* ToolBarItem::copy() const
     root->setID( id() );
 
     QList<ToolBarItem*> items = getItems();
-    for ( QList<ToolBarItem*>::Iterator it = items.begin(); it != items.end(); ++it ) {
-        root->appendItem( (*it)->copy() );
+    for (auto it : items) {
+        root->appendItem(it->copy());
     }
 
     return root;
@@ -140,21 +141,23 @@ bool ToolBarItem::insertItem( ToolBarItem* before, ToolBarItem* item)
     if (pos != -1) {
         _items.insert(pos, item);
         return true;
-    } else
-        return false;
+    }
+
+    return false;
 }
 
 void ToolBarItem::removeItem(ToolBarItem* item)
 {
     int pos = _items.indexOf(item);
-    if (pos != -1)
+    if (pos != -1) {
         _items.removeAt(pos);
+    }
 }
 
 void ToolBarItem::clear()
 {
-    for ( QList<ToolBarItem*>::Iterator it = _items.begin(); it != _items.end(); ++it ) {
-        delete *it;
+    for (auto it : qAsConst(_items)) {
+        delete it;
     }
 
     _items.clear();
@@ -578,9 +581,6 @@ QString ToolBarManager::generateToolBarID(const char *groupName, const char *nam
 
 void ToolBarManager::setup(ToolBarItem* toolBarItems)
 {
-    if (!toolBarItems)
-        return; // empty menu bar
-
     static QPointer<QWidget> _ActionWidget;
     if (!_ActionWidget) {
         _ActionWidget = new QWidget(getMainWindow());
@@ -590,7 +590,7 @@ void ToolBarManager::setup(ToolBarItem* toolBarItems)
 		// left tool buttons of the application main window. So we move it out
 		// of the way.
 		_ActionWidget->move(QPoint(-100,-100));
-                
+
     } else {
         for (auto action : _ActionWidget->actions())
             _ActionWidget->removeAction(action);
@@ -657,8 +657,10 @@ void ToolBarManager::setup(ToolBarItem* toolBarItems)
         toolbar->setWindowTitle(QApplication::translate("Workbench", toolbarName.c_str())); // i18n
         setToolBarVisible(toolbar, visible);
 
-        for (auto action : toolbar->actions())
+        auto actions = toolbar->actions();
+        for (auto action : actions) {
             _ActionWidget->addAction(action);
+        }
 
         // try to add some breaks to avoid to have all toolbars in one line
         if (toolbar_added) {
@@ -1169,6 +1171,26 @@ bool ToolBarManager::eventFilter(QObject *o, QEvent *e)
         break;
     }
     return res;
+}
+
+void ToolBarManager::setToolbarVisibility(bool show, const QList<QString>& names)
+{
+    auto toolbars = toolBars();
+    for (auto& name : names) {
+        auto it = toolbars.find(name);
+        if (it == toolbars.end() || !it->second)
+            continue;
+        QToolBar *tb = it->second;
+        if (show) {
+            if(hPref->GetBool(name.toStdString().c_str(), true))
+                tb->show();
+            tb->toggleViewAction()->setVisible(true);
+        }
+        else {
+            tb->hide();
+            tb->toggleViewAction()->setVisible(false);
+        }
+    }
 }
 
 QSize ToolBarManager::actionsIconSize(const QSize &s, const QList<QAction*> &actions)

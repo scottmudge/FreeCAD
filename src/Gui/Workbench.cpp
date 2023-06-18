@@ -179,7 +179,7 @@ using namespace Gui;
  * One of the key concepts of the workbench framework is to load a module at runtime when the user needs some function that it
  * provides. So, if the user doesn't need a module it never gets loaded into RAM. This speeds up the startup procedure of
  * FreeCAD and saves memory.
- * 
+ *
  * At startup FreeCAD scans all module directories and invokes InitGui.py. So an item for a workbench gets created. If the user
  * clicks on such an item the matching module gets loaded, the C++ workbench gets registered and activated.
  *
@@ -227,14 +227,15 @@ void Workbench::setName(const std::string& name)
 void Workbench::setupCustomToolbars(ToolBarItem* root, const char* toolbar) const
 {
     std::string name = this->name();
-    ParameterGrp::handle hGrp = App::GetApplication().GetUserParameter().GetGroup("BaseApp")
-        ->GetGroup("Workbench");
+    const auto workbenchGroup {
+        App::GetApplication().GetUserParameter().GetGroup("BaseApp")->GetGroup("Workbench")
+    };
     // workbench specific custom toolbars
-    if (hGrp->HasGroup(name.c_str())) {
-        hGrp = hGrp->GetGroup(name.c_str());
-        if (hGrp->HasGroup(toolbar)) {
-            hGrp = hGrp->GetGroup(toolbar);
-            setupCustomToolbars(root, name.c_str(), hGrp);
+    if (workbenchGroup->HasGroup(name.c_str())) {
+        const auto customGroup = workbenchGroup->GetGroup(name.c_str());
+        if (customGroup->HasGroup(toolbar)) {
+            const auto customToolbarGroup = customGroup->GetGroup(toolbar);
+            setupCustomToolbars(root, name.c_str(), customToolbarGroup);
         }
     }
 
@@ -244,13 +245,11 @@ void Workbench::setupCustomToolbars(ToolBarItem* root, const char* toolbar) cons
     }
 
     // application-wide custom toolbars
-    hGrp = App::GetApplication().GetUserParameter().GetGroup("BaseApp")
-        ->GetGroup("Workbench");
-    if (hGrp->HasGroup("Global")) {
-        hGrp = hGrp->GetGroup("Global");
-        if (hGrp->HasGroup(toolbar)) {
-            hGrp = hGrp->GetGroup(toolbar);
-            setupCustomToolbars(root, "Global", hGrp);
+    if (workbenchGroup->HasGroup("Global")) {
+        const auto globalGroup = workbenchGroup->GetGroup("Global");
+        if (globalGroup->HasGroup(toolbar)) {
+            const auto customToolbarGroup = globalGroup->GetGroup(toolbar);
+            setupCustomToolbars(root, "Global", customToolbarGroup);
         }
     }
 }
@@ -401,6 +400,7 @@ void  Workbench::addPermanentMenuItems(MenuItem* mb) const
 
 void Workbench::activated()
 {
+    Application::Instance->commandManager().signalPyCmdInitialized();
 }
 
 void Workbench::deactivated()
@@ -535,6 +535,10 @@ std::list<std::string> Workbench::listCommandbars() const
 
     qApp->translate("Workbench", "&File");
     qApp->translate("Workbench", "&Edit");
+    qApp->translate("Workbench", "Edit");
+    qApp->translate("Workbench", "Clipboard");
+    qApp->translate("Workbench", "Workbench");
+    qApp->translate("Workbench", "Structure");
     qApp->translate("Workbench", "Standard views");
     qApp->translate("Workbench", "Axonometric");
     qApp->translate("Workbench", "&Stereo");
@@ -546,6 +550,7 @@ std::list<std::string> Workbench::listCommandbars() const
     qApp->translate("Workbench", "&Windows");
     qApp->translate("Workbench", "&On-line help");
     qApp->translate("Workbench", "&Help");
+    qApp->translate("Workbench", "Help");
     qApp->translate("Workbench", "File");
     qApp->translate("Workbench", "Macro");
     qApp->translate("Workbench", "View");
@@ -721,7 +726,6 @@ MenuItem* StdWorkbench::setupMenuBar() const
         *view << "Std_DockOverlay";
     *view << "Std_ViewStatusBar" << "Separator" << "Std_TreeViewActions";
 
-
     // Tools
     auto tool = new MenuItem( menuBar );
     tool->setCommand("&Tools");
@@ -730,6 +734,7 @@ MenuItem* StdWorkbench::setupMenuBar() const
           << "Separator"
           << "Std_ViewScreenShot"
           << "Std_SaveView"
+          << "Std_ViewLoadImage"
           << "Std_SceneInspector"
           << "Std_DependencyGraph"
           << "Std_ProjectUtil"
@@ -774,8 +779,8 @@ MenuItem* StdWorkbench::setupMenuBar() const
     auto wnd = new MenuItem( menuBar );
     wnd->setCommand("&Windows");
     *wnd << "Std_ActivateNextWindow" << "Std_ActivatePrevWindow" << "Separator"
-         << "Std_TileWindows" << "Std_CascadeWindows"
-         << "Std_ArrangeIcons" << "Separator" << "Std_WindowsMenu" << "Std_Windows";
+         << "Std_TileWindows" << "Std_CascadeWindows" << "Separator"
+         << "Std_WindowsMenu" << "Std_Windows";
 
     // Separator
     auto sep = new MenuItem( menuBar );
@@ -799,10 +804,19 @@ ToolBarItem* StdWorkbench::setupToolBars() const
     // File
     auto file = new ToolBarItem( root );
     file->setCommand("File");
-    *file << "Std_New" << "Std_Open" << "Std_Save" << "Separator"
-          << "Std_Undo" << "Std_Redo" << "Separator"
-          << "Std_Refresh" << "Separator" << "Std_WhatsThis";
+    *file << "Std_New" << "Std_Open" << "Std_Save";
 
+    // Edit
+    auto edit = new ToolBarItem( root );
+    edit->setCommand("Edit");
+    *edit << "Std_Undo" << "Std_Redo"
+          << "Separator" << "Std_Refresh";
+    
+    // Clipboard
+    auto clipboard = new ToolBarItem( root , ToolBarItem::HideStyle::HIDDEN );
+    clipboard->setCommand("Clipboard");
+    *clipboard << "Std_Cut" << "Std_Copy" << "Std_Paste";
+    
     // Workbench switcher
     if (WorkbenchSwitcher::isToolbar(WorkbenchSwitcher::getValue())) {
         auto wb = new ToolBarItem(root);
@@ -828,6 +842,11 @@ ToolBarItem* StdWorkbench::setupToolBars() const
     structure->setCommand("Structure");
     *structure << "Std_PartActions" << "Std_Group" << "Std_LinkMake" << "Std_LinkActions" << "Std_DatumActions";
 
+    // Help
+    auto help = new ToolBarItem( root );
+    help->setCommand("Help");
+    *help << "Std_WhatsThis";
+    
     return root;
 }
 

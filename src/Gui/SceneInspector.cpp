@@ -236,6 +236,17 @@ DlgInspector::DlgInspector(QWidget* parent, Qt::WindowFlags fl)
 
     widgetStates->addSplitter(ui->splitter);
 
+    connect(ui->refreshButton, &QPushButton::clicked,
+            this, &DlgInspector::onRefreshButtonClicked);
+
+    connect(ui->treeView, &QTreeView::pressed,
+            this, &DlgInspector::onTreeViewPressed);
+
+    connect(ui->fieldView, &QTreeWidget::itemExpanded,
+            this, &DlgInspector::onFieldViewItemExpanded);
+
+    setWindowTitle(tr("Scene Inspector"));
+
     auto model = new SceneModel(this);
     ui->treeView->setModel(model);
     ui->treeView->setRootIsDecorated(true);
@@ -350,7 +361,7 @@ void DlgInspector::changeEvent(QEvent *e)
     QDialog::changeEvent(e);
 }
 
-void DlgInspector::on_refreshButton_clicked()
+void DlgInspector::onRefreshButtonClicked()
 {
     ui->fieldView->clear();
     Gui::Document* doc = Application::Instance->activeDocument();
@@ -479,7 +490,7 @@ void DlgInspector::populateFieldView(QTreeWidgetItem *parent, SoNode *n)
     }
 }
 
-void DlgInspector::on_treeView_pressed(const QModelIndex &index)
+void DlgInspector::onTreeViewPressed(const QModelIndex &index)
 {
     ui->fieldView->clear();
     auto model = static_cast<SceneModel*>(ui->treeView->model());
@@ -490,7 +501,7 @@ void DlgInspector::on_treeView_pressed(const QModelIndex &index)
     populateFieldView(nullptr, it.value().node);
 }
 
-void DlgInspector::on_fieldView_itemExpanded(QTreeWidgetItem *item)
+void DlgInspector::onFieldViewItemExpanded(QTreeWidgetItem *item)
 {
     expandItem(item, false);
 }

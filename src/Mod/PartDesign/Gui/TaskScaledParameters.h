@@ -57,7 +57,7 @@ public:
 private Q_SLOTS:
     void onFactor(const double f);
     void onOccurrences(const uint n);
-    virtual void onUpdateView(bool);
+    void onUpdateView(bool) override;
 
 protected:
     void changeEvent(QEvent *e) override;

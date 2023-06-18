@@ -373,14 +373,8 @@ App::DocumentObject *Feature::getSubObject(const char *subname,
         mat *= Placement.getValue().toMatrix();
 
     if(!pyObj) {
-#if 0
-        if(subname==0 || *subname==0 || Shape.getShape().hasSubShape(subname))
-            return const_cast<Feature*>(this);
-        return nullptr;
-#else
         // TopoShape::hasSubShape is kind of slow, let's cut outself some slack here.
         return const_cast<Feature*>(this);
-#endif
     }
 
     try {
@@ -414,7 +408,7 @@ App::DocumentObject *Feature::getSubObject(const char *subname,
     catch(Standard_Failure &e) {
         // FIXME: Do not handle the exception here because it leads to a flood of irrelevant and
         // annoying error messages.
-        // For example: https://forum.freecadweb.org/viewtopic.php?f=19&t=42216
+        // For example: https://forum.freecad.org/viewtopic.php?f=19&t=42216
         // Instead either raise a sub-class of Base::Exception and let it handle by the calling
         // instance or do simply nothing. For now the error message is degraded to a log message.
         std::ostringstream str;
@@ -1329,8 +1323,12 @@ void Feature::onChanged(const App::Property* prop)
             Base::Placement p;
             // shape must not be null to override the placement
             if (!this->Shape.getValue().IsNull()) {
-                p.fromMatrix(this->Shape.getShape().getTransform());
-                this->Placement.setValueIfChanged(p);
+                try {
+                    p.fromMatrix(this->Shape.getShape().getTransform());
+                    this->Placement.setValueIfChanged(p);
+                }
+                catch (const Base::ValueError&) {
+                }
             }
         }
     }
@@ -1955,15 +1953,6 @@ template<> PyObject* Part::FeaturePython::getPyObject() {
 template class PartExport FeaturePythonT<Part::Feature>;
 }
 
-// ----------------------------------------------------------------
-/*
-#include <GProp_GProps.hxx>
-#include <BRepGProp.hxx>
-#include <gce_MakeLin.hxx>
-#include <BRepIntCurveSurface_Inter.hxx>
-#include <IntCurveSurface_IntersectionPoint.hxx>
-#include <gce_MakeDir.hxx>
-*/
 std::vector<Part::cutFaces> Part::findAllFacesCutBy(
         const TopoShape& shape, const TopoShape& face, const gp_Dir& dir)
 {
@@ -2022,37 +2011,6 @@ bool Part::checkIntersection(const TopoDS_Shape& first, const TopoDS_Shape& seco
         return false; // no intersection
     if (quick && !first_bb.IsOut(second_bb))
         return true; // assumed intersection
-
-    // Try harder
-
-    // This has been disabled because of:
-    // https://www.freecadweb.org/tracker/view.php?id=3065
-
-    //extrema method
-    /*BRepExtrema_DistShapeShape extrema(first, second);
-    if (!extrema.IsDone())
-      return true;
-    if (extrema.Value() > Precision::Confusion())
-      return false;
-    if (extrema.InnerSolution())
-      return true;
-
-    //here we should have touching shapes.
-    if (touch_is_intersection)
-    {
-
-    //non manifold condition. 1 has to be a face
-    for (int index = 1; index < extrema.NbSolution() + 1; ++index)
-    {
-        if (extrema.SupportTypeShape1(index) == BRepExtrema_IsInFace || extrema.SupportTypeShape2(index) == BRepExtrema_IsInFace)
-            return true;
-        }
-      return false;
-    }
-    else
-      return false;*/
-
-    //boolean method.
 
     if (touch_is_intersection) {
         // If both shapes fuse to a single solid, then they intersect

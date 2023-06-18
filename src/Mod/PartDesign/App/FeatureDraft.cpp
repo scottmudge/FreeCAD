@@ -113,7 +113,7 @@ App::DocumentObjectExecReturn *Draft::execute()
     // Faces where draft should be applied
     auto faces = getFaces(baseShape);
     if (faces.empty())
-        return new App::DocumentObjectExecReturn("No faces specified");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "No faces specified"));
 
     // Draft angle
     double angle = Base::toRadians(Angle.getValue());

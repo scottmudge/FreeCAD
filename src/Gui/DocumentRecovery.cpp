@@ -175,6 +175,8 @@ DocumentRecovery::DocumentRecovery(const QList<QFileInfo>& dirs, QWidget* parent
   : QDialog(parent), d_ptr(new DocumentRecoveryPrivate())
 {
     d_ptr->ui.setupUi(this);
+    connect(d_ptr->ui.buttonCleanup, &QPushButton::clicked,
+            this, &DocumentRecovery::onButtonCleanupClicked);
     d_ptr->ui.buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Start Recovery"));
     d_ptr->ui.treeWidget->header()->setSectionResizeMode(QHeaderView::Stretch);
 
@@ -502,7 +504,7 @@ void DocumentRecovery::contextMenuEvent(QContextMenuEvent* ev)
     QList<QTreeWidgetItem*> items = d_ptr->ui.treeWidget->selectedItems();
     if (!items.isEmpty()) {
         QMenu menu;
-        menu.addAction(tr("Delete"), this, SLOT(onDeleteSection()));
+        menu.addAction(tr("Delete"), this, &DocumentRecovery::onDeleteSection);
         menu.exec(ev->globalPos());
     }
 }
@@ -539,7 +541,7 @@ void DocumentRecovery::onDeleteSection()
     }
 }
 
-void DocumentRecovery::on_buttonCleanup_clicked()
+void DocumentRecovery::onButtonCleanupClicked()
 {
     QMessageBox msgBox(this);
     msgBox.setIcon(QMessageBox::Warning);

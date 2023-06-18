@@ -92,10 +92,10 @@ public:
 
     void setDocument(Gui::Document* doc);
 
-private Q_SLOTS:
-    void on_refreshButton_clicked();
-    void on_treeView_pressed(const QModelIndex &);
-    void on_fieldView_itemExpanded(QTreeWidgetItem *item);
+private:
+    void onRefreshButtonClicked();
+    void onTreeViewPressed(const QModelIndex &);
+    void onFieldViewItemExpanded(QTreeWidgetItem *item);
 
 protected:
     void changeEvent(QEvent *e) override;

@@ -22,8 +22,11 @@
 
 #include "PreCompiled.h"
 
+#include <Mod/Sketcher/App/Constraint.h>
+#include "Utils.h"
 #include "Workbench.h"
-
+#include <Gui/Application.h>
+#include <Gui/Document.h>
 
 using namespace SketcherGui;
 
@@ -132,6 +135,10 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
     virtualspace->setCommand("Sketcher virtual space");
     addSketcherWorkbenchVirtualSpace(*virtualspace);
 
+    Gui::ToolBarItem* edittools = new Gui::ToolBarItem(root, Gui::ToolBarItem::HideStyle::FORCE_HIDE);
+    edittools->setCommand("Sketcher edit tools");
+    addSketcherWorkbenchEditTools(*edittools);
+
      return root;
 }
 
@@ -142,6 +149,55 @@ Gui::ToolBarItem* Workbench::setupCommandBars() const
     return root;
 }
 
+void Workbench::activated()
+{
+    Gui::Document *doc = Gui::Application::Instance->activeDocument();
+    if (isSketchInEdit(doc)) {
+        enterEditMode();
+    }
+}
+
+namespace
+{
+    inline const QStringList editModeToolbarNames()
+    {
+        return QStringList{ QString::fromLatin1("Sketcher Edit Mode"),
+                            QString::fromLatin1("Sketcher geometries"),
+                            QString::fromLatin1("Sketcher constraints"),
+                            QString::fromLatin1("Sketcher tools"),
+                            QString::fromLatin1("Sketcher B-spline tools"),
+                            QString::fromLatin1("Sketcher virtual space"),
+                            QString::fromLatin1("Sketcher edit tools")};
+    }
+
+    inline const QStringList nonEditModeToolbarNames()
+    {
+        return QStringList{ QString::fromLatin1("Structure"),
+                            QString::fromLatin1("Sketcher") };
+    }
+}
+
+void Workbench::enterEditMode()
+{
+    /*Modify toolbars dynamically.
+    First save state of toolbars in case user changed visibility of a toolbar but he's not changing the wb.
+    This happens in someone works directly from sketcher, changing from edit mode to not-edit-mode*/
+    Gui::ToolBarManager::getInstance()->saveState();
+
+    Gui::ToolBarManager::getInstance()->setToolbarVisibility(true, editModeToolbarNames());
+    Gui::ToolBarManager::getInstance()->setToolbarVisibility(false, nonEditModeToolbarNames());
+}
+
+void Workbench::leaveEditMode()
+{
+    /*Modify toolbars dynamically.
+    First save state of toolbars in case user changed visibility of a toolbar but he's not changing the wb.
+    This happens in someone works directly from sketcher, changing from edit mode to not-edit-mode*/
+    Gui::ToolBarManager::getInstance()->saveState();
+
+    Gui::ToolBarManager::getInstance()->setToolbarVisibility(false, editModeToolbarNames());
+    Gui::ToolBarManager::getInstance()->setToolbarVisibility(true, nonEditModeToolbarNames());
+}
 
 namespace SketcherGui {
 
@@ -209,7 +265,9 @@ inline void SketcherAddWorkspaceArcs<Gui::MenuItem>(Gui::MenuItem& geom)
             << "Sketcher_CreateArcOfHyperbola"
             << "Sketcher_CreateArcOfParabola"
             << "Sketcher_CreateBSpline"
-            << "Sketcher_CreatePeriodicBSpline";
+            << "Sketcher_CreatePeriodicBSpline"
+            << "Sketcher_CreateBSplineByInterpolation"
+            << "Sketcher_CreatePeriodicBSplineByInterpolation";
 }
 
 template <>
@@ -328,7 +386,6 @@ inline void SketcherAddWorkbenchConstraints<Gui::MenuItem>(Gui::MenuItem& cons)
             << "Sketcher_ConstrainRadiam"
             << "Sketcher_ConstrainAngle"
             << "Sketcher_ConstrainSnellsLaw"
-            << "Sketcher_ConstrainInternalAlignment"
             << "Separator"
             << "Sketcher_ToggleDrivingConstraint"
             << "Sketcher_ToggleActiveConstraint";
@@ -355,7 +412,6 @@ inline void SketcherAddWorkbenchConstraints<Gui::ToolBarItem>(Gui::ToolBarItem& 
             << "Sketcher_CompConstrainRadDia"
             << "Sketcher_ConstrainAngle"
             // << "Sketcher_ConstrainSnellsLaw" // Rarely used, show only in menu
-            // << "Sketcher_ConstrainInternalAlignment" // This constrain is never used by the user - Do not use precious toolbar space
             << "Separator"
             << "Sketcher_ToggleDrivingConstraint"
             << "Sketcher_ToggleActiveConstraint";
@@ -375,8 +431,8 @@ inline void SketcherAddWorkbenchTools<Gui::MenuItem>(Gui::MenuItem& consaccel)
                 << "Sketcher_RestoreInternalAlignmentGeometry"
                 << "Separator"
                 << "Sketcher_SelectOrigin"
-                << "Sketcher_SelectVerticalAxis"
                 << "Sketcher_SelectHorizontalAxis"
+                << "Sketcher_SelectVerticalAxis"
                 << "Separator"
                 << "Sketcher_Symmetry"
                 << "Sketcher_Clone"
@@ -452,6 +508,17 @@ inline void SketcherAddWorkbenchVirtualSpace<Gui::ToolBarItem>(Gui::ToolBarItem&
     virtualspace << "Sketcher_SwitchVirtualSpace";
 }
 
+template <typename T>
+inline void SketcherAddWorkbenchEditTools(T& virtualspedittoolsace);
+
+template <>
+inline void SketcherAddWorkbenchEditTools<Gui::ToolBarItem>(Gui::ToolBarItem& edittools)
+{
+    edittools   << "Sketcher_Grid"
+                << "Sketcher_Snap"
+                << "Sketcher_RenderingOrder";
+}
+
 void addSketcherWorkbenchSketchActions(Gui::MenuItem& sketch)
 {
     SketcherAddWorkbenchSketchActions(sketch);
@@ -520,6 +587,11 @@ void addSketcherWorkbenchBSplines(Gui::ToolBarItem& bspline)
 void addSketcherWorkbenchVirtualSpace(Gui::ToolBarItem& virtualspace)
 {
     SketcherAddWorkbenchVirtualSpace(virtualspace);
+}
+
+void addSketcherWorkbenchEditTools(Gui::ToolBarItem& edittools)
+{
+    SketcherAddWorkbenchEditTools(edittools);
 }
 
 } /* namespace SketcherGui */

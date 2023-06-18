@@ -514,14 +514,14 @@ App::DocumentObjectExecReturn *Body::execute()
     if ( tip ) {
         if ( !isSolidFeature(tip)
                 && !tip->isDerivedFrom ( PartDesign::Feature::getClassTypeId() ) ) {
-            return new App::DocumentObjectExecReturn ( "Linked object is not a PartDesign feature" );
+            return new App::DocumentObjectExecReturn (QT_TRANSLATE_NOOP("Exception", "Linked object is not a PartDesign feature" ));
         }
 
         // get the shape of the tip
         tipShape = static_cast<Part::Feature *>(tip)->Shape.getShape();
 
         if ( tipShape.getShape().IsNull () ) {
-            return new App::DocumentObjectExecReturn ( "Tip shape is empty" );
+            return new App::DocumentObjectExecReturn (QT_TRANSLATE_NOOP("Exception", "Tip shape is empty" ));
         }
 
         // We should hide here the transformation of the baseFeature

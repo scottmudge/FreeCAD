@@ -445,7 +445,7 @@ protected:
   // restore from/save to parameters
   void restorePreferences() override;
   void savePreferences() override;
-  virtual QVariant::Type getParamType() const;
+  virtual QMetaType::Type getParamType() const;
 
 private:
   QVariant m_Default;
@@ -465,7 +465,7 @@ public:
 protected:
   void changeEvent(QEvent*) override;
   void updateLanguage();
-  QVariant::Type getParamType() const override;
+  QMetaType::Type getParamType() const override;
 };
 
 /**

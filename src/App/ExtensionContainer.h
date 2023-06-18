@@ -254,6 +254,22 @@ public:
      */
     virtual bool canSaveExtension(Extension *ext=nullptr) const;
     
+    /** Extends the rules for handling property name changed, so that extensions are given an opportunity to handle it.
+     *  If an extension handles a change, neither the rest of the extensions, nor the container itself get to handle it.
+     *
+     *  Extensions get their extensionHandleChangedPropertyName() called.
+     *
+     *  If no extension handles the request, then the containers handleChangedPropertyName() is called.
+     */
+    virtual void handleChangedPropertyName(Base::XMLReader &reader, const char * TypeName, const char *PropName) override;
+    /** Extends the rules for handling property type changed, so that extensions are given an opportunity to handle it.
+     *  If an extension handles a change, neither the rest of the extensions, nor the container itself get to handle it.
+     *
+     *  Extensions get their extensionHandleChangedPropertyType() called.
+     *
+     *  If no extension handles the request, then the containers handleChangedPropertyType() is called.
+     */
+    virtual void handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, Property * prop) override;
 private:
     //stored extensions
     std::map<Base::Type, App::Extension*> _extensions;

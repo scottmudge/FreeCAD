@@ -524,7 +524,7 @@
     <message>
       <location filename="../../TrajectorySimulate.ui" line="272"/>
       <source>Type</source>
-      <translation>Tip</translation>
+      <translation>Vrsta</translation>
     </message>
     <message>
       <location filename="../../TrajectorySimulate.ui" line="277"/>
@@ -689,7 +689,7 @@
     <message>
       <location filename="../../TaskTrajectory.ui" line="317"/>
       <source>Type</source>
-      <translation>Tip</translation>
+      <translation>Vrsta</translation>
     </message>
     <message>
       <location filename="../../TaskTrajectory.ui" line="322"/>

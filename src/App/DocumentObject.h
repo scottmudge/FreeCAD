@@ -151,6 +151,8 @@ public:
     /// Return the object full name of the form DocName#ObjName
     std::string getFullName(bool python=false) const override;
     App::Document *getOwnerDocument() const override;
+    /// Return the object full label in the form DocName#ObjName
+    std::string getFullLabel() const;
     bool isAttachedToDocument() const override;
     const char* detachFromDocument() override;
     /// gets the document in which this Object is handled
@@ -447,6 +449,9 @@ public:
      * @return Return a vector of pair of parent and sub object path
      */
     std::vector<std::pair<App::DocumentObject*,std::string> > getParents(App::DocumentObject *queryParent=nullptr, int depth=0) const;
+
+    /// Obtain the first parent group of this object
+    App::DocumentObject* getFirstParent() const;
 
     /** Return the linked object with optional transformation
      *

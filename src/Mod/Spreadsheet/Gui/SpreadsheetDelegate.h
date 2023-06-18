@@ -58,7 +58,8 @@ Q_SIGNALS:
 
 private Q_SLOTS:
     void commitAndCloseEditor();
-    void on_editorFinishedWithKey(int key, Qt::KeyboardModifiers modifiers);
+    void onEditorFinishedWithKey(int key, Qt::KeyboardModifiers modifiers);
+
 private:
     Spreadsheet::Sheet * sheet;
     bool committing = false;

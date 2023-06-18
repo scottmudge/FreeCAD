@@ -39,7 +39,6 @@
 # include <QMessageBox>
 # include <QPointer>
 # include <QScrollArea>
-# include <cmath>
 #endif
 
 #include <Inventor/SmSwitchboard.h>
@@ -423,6 +422,8 @@ Clipping::Clipping(Gui::View3DInventor* view, QWidget* parent)
         spinbox->onRestore();
     };
 
+    setupConnections();
+
     d->ui.clipView->setRange(-INT_MAX,INT_MAX);
     d->ui.clipView->setSingleStep(0.1f);
     d->ui.clipX->setRange(-INT_MAX,INT_MAX);
@@ -608,6 +609,42 @@ Clipping::~Clipping()
     delete d;
 }
 
+void Clipping::setupConnections()
+{
+    connect(d->ui.groupBoxX, &QGroupBox::toggled,
+            this, &Clipping::onGroupBoxXToggled);
+    connect(d->ui.groupBoxY, &QGroupBox::toggled,
+            this, &Clipping::onGroupBoxYToggled);
+    connect(d->ui.groupBoxZ, &QGroupBox::toggled,
+            this, &Clipping::onGroupBoxZToggled);
+    connect(d->ui.clipX, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &Clipping::onClipXValueChanged);
+    connect(d->ui.clipY, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &Clipping::onClipYValueChanged);
+    connect(d->ui.clipZ, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &Clipping::onClipZValueChanged);
+    connect(d->ui.flipClipX, &QPushButton::clicked,
+            this, &Clipping::onFlipClipXClicked);
+    connect(d->ui.flipClipY, &QPushButton::clicked,
+            this, &Clipping::onFlipClipYClicked);
+    connect(d->ui.flipClipZ, &QPushButton::clicked,
+            this, &Clipping::onFlipClipZClicked);
+    connect(d->ui.groupBoxView, &QGroupBox::toggled,
+            this, &Clipping::onGroupBoxViewToggled);
+    connect(d->ui.clipView, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &Clipping::onClipViewValueChanged);
+    connect(d->ui.fromView, &QPushButton::clicked,
+            this, &Clipping::onFromViewClicked);
+    connect(d->ui.adjustViewdirection, &QCheckBox::toggled,
+            this, &Clipping::onAdjustViewdirectionToggled);
+    connect(d->ui.dirX, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &Clipping::onDirXValueChanged);
+    connect(d->ui.dirY, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &Clipping::onDirYValueChanged);
+    connect(d->ui.dirZ, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &Clipping::onDirZValueChanged);
+}
+
 void Clipping::done(int r)
 {
     if (_DockWidget)
@@ -616,7 +653,7 @@ void Clipping::done(int r)
     QDialog::done(r);
 }
 
-void Clipping::on_groupBoxX_toggled(bool on)
+void Clipping::onGroupBoxXToggled(bool on)
 {
     if (on) {
         d->ui.groupBoxView->setChecked(false);
@@ -626,7 +663,7 @@ void Clipping::on_groupBoxX_toggled(bool on)
     d->updateSwitch();
 }
 
-void Clipping::on_groupBoxY_toggled(bool on)
+void Clipping::onGroupBoxYToggled(bool on)
 {
     if (on) {
         d->ui.groupBoxView->setChecked(false);
@@ -636,7 +673,7 @@ void Clipping::on_groupBoxY_toggled(bool on)
     d->updateSwitch();
 }
 
-void Clipping::on_groupBoxZ_toggled(bool on)
+void Clipping::onGroupBoxZToggled(bool on)
 {
     if (on) {
         d->ui.groupBoxView->setChecked(false);
@@ -692,49 +729,49 @@ void Clipping::on_checkBoxOnTop_toggled(bool)
         d->view->getViewer()->redraw();
 }
 
-void Clipping::on_clipX_valueChanged(double val)
+void Clipping::onClipXValueChanged(double val)
 {
     if (d->busy) return;
     SbPlane pln = d->clipX->plane.getValue();
     d->clipX->plane.setValue(SbPlane(pln.getNormal(),d->flipX ? -val : val));
 }
 
-void Clipping::on_clipY_valueChanged(double val)
+void Clipping::onClipYValueChanged(double val)
 {
     if (d->busy) return;
     SbPlane pln = d->clipY->plane.getValue();
     d->clipY->plane.setValue(SbPlane(pln.getNormal(),d->flipY ? -val : val));
 }
 
-void Clipping::on_clipZ_valueChanged(double val)
+void Clipping::onClipZValueChanged(double val)
 {
     if (d->busy) return;
     SbPlane pln = d->clipZ->plane.getValue();
     d->clipZ->plane.setValue(SbPlane(pln.getNormal(),d->flipZ ? -val : val));
 }
 
-void Clipping::on_flipClipX_clicked()
+void Clipping::onFlipClipXClicked()
 {
     d->flipX = !d->flipX;
     SbPlane pln = d->clipX->plane.getValue();
     d->clipX->plane.setValue(SbPlane(-pln.getNormal(),-pln.getDistanceFromOrigin()));
 }
 
-void Clipping::on_flipClipY_clicked()
+void Clipping::onFlipClipYClicked()
 {
     d->flipY = !d->flipY;
     SbPlane pln = d->clipY->plane.getValue();
     d->clipY->plane.setValue(SbPlane(-pln.getNormal(),-pln.getDistanceFromOrigin()));
 }
 
-void Clipping::on_flipClipZ_clicked()
+void Clipping::onFlipClipZClicked()
 {
     d->flipZ = !d->flipZ;
     SbPlane pln = d->clipZ->plane.getValue();
     d->clipZ->plane.setValue(SbPlane(-pln.getNormal(),-pln.getDistanceFromOrigin()));
 }
 
-void Clipping::on_groupBoxView_toggled(bool on)
+void Clipping::onGroupBoxViewToggled(bool on)
 {
     if (on) {
         d->ui.groupBoxX->setChecked(false);
@@ -751,14 +788,14 @@ void Clipping::on_checkBoxShowPlane_toggled(bool)
     d->updateSwitch();
 }
 
-void Clipping::on_clipView_valueChanged(double val)
+void Clipping::onClipViewValueChanged(double val)
 {
     if (d->busy) return;
     SbPlane pln = d->clipView->plane.getValue();
     d->clipView->plane.setValue(SbPlane(pln.getNormal(),val));
 }
 
-void Clipping::on_fromView_clicked()
+void Clipping::onFromViewClicked()
 {
     if (d->view) {
         Gui::View3DInventorViewer* view = d->view->getViewer();
@@ -768,7 +805,7 @@ void Clipping::on_fromView_clicked()
     }
 }
 
-void Clipping::on_adjustViewdirection_toggled(bool on)
+void Clipping::onAdjustViewdirectionToggled(bool on)
 {
     d->ui.dirX->setDisabled(on);
     d->ui.dirY->setDisabled(on);
@@ -781,17 +818,17 @@ void Clipping::on_adjustViewdirection_toggled(bool on)
         d->sensor->unschedule();
 }
 
-void Clipping::on_dirX_valueChanged(double)
+void Clipping::onDirXValueChanged(double)
 {
     d->onDirectionChanged();
 }
 
-void Clipping::on_dirY_valueChanged(double)
+void Clipping::onDirYValueChanged(double)
 {
     d->onDirectionChanged();
 }
 
-void Clipping::on_dirZ_valueChanged(double)
+void Clipping::onDirZValueChanged(double)
 {
     d->onDirectionChanged();
 }

@@ -235,6 +235,8 @@ DlgFilletEdges::DlgFilletEdges(FilletType type, Part::FilletBase* fillet, QWidge
   : QWidget(parent, fl), ui(new Ui_DlgFilletEdges()), d(new Private())
 {
     ui->setupUi(this);
+    setupConnections();
+
     ui->filletStartRadius->setMaximum(INT_MAX);
     ui->filletStartRadius->setMinimum(0);
     ui->filletStartRadius->setUnit(Base::Unit::Length);
@@ -253,16 +255,16 @@ DlgFilletEdges::DlgFilletEdges(FilletType type, Part::FilletBase* fillet, QWidge
     d->connectApplicationDeletedDocument = App::GetApplication().signalDeleteDocument
         .connect(boost::bind(&DlgFilletEdges::onDeleteDocument, this, bp::_1));
     // set tree view with three columns
-    QStandardItemModel* model = new FilletRadiusModel(this);
-    connect(model, SIGNAL(toggleCheckState(const QModelIndex&)),
-            this, SLOT(toggleCheckState(const QModelIndex&)));
+    FilletRadiusModel* model = new FilletRadiusModel(this);
+    connect(model, &FilletRadiusModel::toggleCheckState,
+            this, &DlgFilletEdges::toggleCheckState);
     model->insertColumns(0,3);
 
     // timer for highlighting
     d->highlighttimer = new QTimer(this);
     d->highlighttimer->setSingleShot(true);
-    connect(d->highlighttimer,SIGNAL(timeout()),
-            this, SLOT(onHighlightEdges()));
+    connect(d->highlighttimer, &QTimer::timeout,
+            this, &DlgFilletEdges::onHighlightEdges);
 
     d->filletType = type;
     if (d->filletType == DlgFilletEdges::CHAMFER) {
@@ -291,7 +293,7 @@ DlgFilletEdges::DlgFilletEdges(FilletType type, Part::FilletBase* fillet, QWidge
     header->setSectionResizeMode(0, QHeaderView::Stretch);
     header->setDefaultAlignment(Qt::AlignLeft);
     header->setSectionsMovable(false);
-    on_filletType_activated(0);
+    onFilletTypeActivated(0);
     findShapes();
 }
 
@@ -304,6 +306,28 @@ DlgFilletEdges::~DlgFilletEdges()
     d->connectApplicationDeletedDocument.disconnect();
     d->connectApplicationDeletedObject.disconnect();
     Gui::Selection().rmvSelectionGate();
+}
+
+void DlgFilletEdges::setupConnections()
+{
+    connect(ui->shapeObject, qOverload<int>(&QComboBox::activated),
+            this, &DlgFilletEdges::onShapeObjectActivated);
+    connect(ui->selectEdges, &QRadioButton::toggled,
+            this, &DlgFilletEdges::onSelectEdgesToggled);
+    connect(ui->selectFaces, &QRadioButton::toggled,
+            this, &DlgFilletEdges::onSelectFacesToggled);
+    connect(ui->selectAllButton, &QPushButton::clicked,
+            this, &DlgFilletEdges::onSelectAllButtonClicked);
+    connect(ui->selectNoneButton, &QPushButton::clicked,
+            this, &DlgFilletEdges::onSelectNoneButtonClicked);
+    connect(ui->filletType, qOverload<int>(&QComboBox::activated),
+            this, &DlgFilletEdges::onFilletTypeActivated);
+    connect(ui->filletStartRadius,
+            qOverload<const Base::Quantity&>(&Gui::QuantitySpinBox::valueChanged),
+            this, &DlgFilletEdges::onFilletStartRadiusValueChanged);
+    connect(ui->filletEndRadius,
+            qOverload<const Base::Quantity&>(&Gui::QuantitySpinBox::valueChanged),
+            this, &DlgFilletEdges::onFilletEndRadiusValueChanged);
 }
 
 void DlgFilletEdges::onSelectionChanged(const Gui::SelectionChanges& msg)
@@ -468,13 +492,13 @@ void DlgFilletEdges::onDeleteObject(const App::DocumentObject& obj)
         d->fillet = nullptr;
         d->object = nullptr;
         ui->shapeObject->setCurrentIndex(0);
-        on_shapeObject_activated(0);
+        onShapeObjectActivated(0);
     }
     else if (d->object == &obj) {
         d->object = nullptr;
         ui->shapeObject->removeItem(ui->shapeObject->currentIndex());
         ui->shapeObject->setCurrentIndex(0);
-        on_shapeObject_activated(0);
+        onShapeObjectActivated(0);
     }
     else {
         QString shape = QString::fromUtf8(obj.getNameInDocument());
@@ -493,13 +517,13 @@ void DlgFilletEdges::onDeleteDocument(const App::Document& doc)
     if (d->object) {
         if (d->object->getDocument() == &doc) {
             ui->shapeObject->setCurrentIndex(0);
-            on_shapeObject_activated(0);
+            onShapeObjectActivated(0);
             setEnabled(false);
         }
     }
     else if (App::GetApplication().getActiveDocument() == &doc) {
         ui->shapeObject->setCurrentIndex(0);
-        on_shapeObject_activated(0);
+        onShapeObjectActivated(0);
         setEnabled(false);
     }
 }
@@ -558,7 +582,7 @@ void DlgFilletEdges::findShapes()
 
     if (current_index > 0) {
         ui->shapeObject->setCurrentIndex(current_index);
-        on_shapeObject_activated(current_index);
+        onShapeObjectActivated(current_index);
     }
 
     // if an existing fillet object is given start the edit mode
@@ -592,7 +616,7 @@ void DlgFilletEdges::setupFillet(const std::vector<App::DocumentObject*>& objs)
 
         int current_index = (it - objs.begin()) + 1;
         ui->shapeObject->setCurrentIndex(current_index);
-        on_shapeObject_activated(current_index);
+        onShapeObjectActivated(current_index);
         ui->shapeObject->setEnabled(false);
 
         double startRadius = 1;
@@ -662,7 +686,7 @@ void DlgFilletEdges::setupFillet(const std::vector<App::DocumentObject*>& objs)
         // #0002273
         if (twoRadii) {
             ui->filletType->setCurrentIndex(1);
-            on_filletType_activated(1);
+            onFilletTypeActivated(1);
         }
 
         // #0001746
@@ -685,7 +709,7 @@ void DlgFilletEdges::setupFillet(const std::vector<App::DocumentObject*>& objs)
           * will do the check
           *
         // If sub-objects are already selected then only add the un-selected parts.
-        // This is impotant to avoid recursive calls of rmvSelection() which
+        // This is important to avoid recursive calls of rmvSelection() which
         // invalidates the internal iterator (#0002200).
         if (selIt != selObj.end()) {
             std::vector<std::string> selElements = selIt->getSubNames();
@@ -744,7 +768,7 @@ void DlgFilletEdges::changeEvent(QEvent *e)
     }
 }
 
-void DlgFilletEdges::on_shapeObject_activated(int itemPos)
+void DlgFilletEdges::onShapeObjectActivated(int itemPos)
 {
     d->object = nullptr;
     QStandardItemModel *model = qobject_cast<QStandardItemModel*>(ui->treeView->model());
@@ -821,17 +845,17 @@ void DlgFilletEdges::on_shapeObject_activated(int itemPos)
     }
 }
 
-void DlgFilletEdges::on_selectEdges_toggled(bool on)
+void DlgFilletEdges::onSelectEdgesToggled(bool on)
 {
     if (on) d->selection->selectEdges();
 }
 
-void DlgFilletEdges::on_selectFaces_toggled(bool on)
+void DlgFilletEdges::onSelectFacesToggled(bool on)
 {
     if (on) d->selection->selectFaces();
 }
 
-void DlgFilletEdges::on_selectAllButton_clicked()
+void DlgFilletEdges::onSelectAllButtonClicked()
 {
     std::vector<std::string> subElements;
     FilletRadiusModel* model = static_cast<FilletRadiusModel*>(ui->treeView->model());
@@ -864,7 +888,7 @@ void DlgFilletEdges::on_selectAllButton_clicked()
     }
 }
 
-void DlgFilletEdges::on_selectNoneButton_clicked()
+void DlgFilletEdges::onSelectNoneButtonClicked()
 {
     FilletRadiusModel* model = static_cast<FilletRadiusModel*>(ui->treeView->model());
     bool block = model->blockSignals(true); // do not call toggleCheckState
@@ -882,7 +906,7 @@ void DlgFilletEdges::on_selectNoneButton_clicked()
     }
 }
 
-void DlgFilletEdges::on_filletType_activated(int index)
+void DlgFilletEdges::onFilletTypeActivated(int index)
 {
     QStandardItemModel *model = qobject_cast<QStandardItemModel*>(ui->treeView->model());
     if (index == 0) {
@@ -907,7 +931,7 @@ void DlgFilletEdges::on_filletType_activated(int index)
     ui->treeView->resizeColumnToContents(2);
 }
 
-void DlgFilletEdges::on_filletStartRadius_valueChanged(const Base::Quantity& radius)
+void DlgFilletEdges::onFilletStartRadiusValueChanged(const Base::Quantity& radius)
 {
     QAbstractItemModel* model = ui->treeView->model();
     for (int i=0; i<model->rowCount(); ++i) {
@@ -921,7 +945,7 @@ void DlgFilletEdges::on_filletStartRadius_valueChanged(const Base::Quantity& rad
     }
 }
 
-void DlgFilletEdges::on_filletEndRadius_valueChanged(const Base::Quantity& radius)
+void DlgFilletEdges::onFilletEndRadiusValueChanged(const Base::Quantity& radius)
 {
     QAbstractItemModel* model = ui->treeView->model();
     for (int i=0; i<model->rowCount(); ++i) {
@@ -1036,8 +1060,8 @@ FilletEdgesDialog::FilletEdgesDialog(DlgFilletEdges::FilletType type, Part::Fill
     QDialogButtonBox* buttonBox = new QDialogButtonBox(this);
     buttonBox->setStandardButtons(QDialogButtonBox::Cancel|QDialogButtonBox::Ok);
 
-    QObject::connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
-    QObject::connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
+    QObject::connect(buttonBox, &QDialogButtonBox::accepted, this, &FilletEdgesDialog::accept);
+    QObject::connect(buttonBox, &QDialogButtonBox::rejected, this, &FilletEdgesDialog::reject);
 
     hboxLayout->addWidget(widget);
     hboxLayout->addWidget(buttonBox);

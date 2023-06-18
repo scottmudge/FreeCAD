@@ -19,9 +19,20 @@
 #*                                                                         *
 #***************************************************************************
 
-import FreeCAD, DraftGeomUtils, Part, Draft, Arch, Mesh, MeshPart, os, sys, codecs, ntpath
+import os
+import codecs
+import ntpath
 from collections import defaultdict
 # import numpy as np
+
+import FreeCAD
+import Arch
+import Draft
+import DraftGeomUtils
+import Mesh
+import MeshPart
+import Part
+
 if FreeCAD.GuiUp:
     from draftutils.translate import translate
     import FreeCADGui
@@ -45,15 +56,12 @@ p = Draft.precision()
 if open.__module__ in ['__builtin__','io']:
     pythonopen = open
 
-def decode(txt):
-    return txt
-
 def findVert(aVertex,aList):
     "finds aVertex in aList, returns index"
     for i in range(len(aList)):
-        if ( round(aVertex.X,p) == round(aList[i].X,p) ):
-            if ( round(aVertex.Y,p) == round(aList[i].Y,p) ):
-                if ( round(aVertex.Z,p) == round(aList[i].Z,p) ):
+        if round(aVertex.X,p) == round(aList[i].X,p):
+            if round(aVertex.Y,p) == round(aList[i].Y,p):
+                if round(aVertex.Z,p) == round(aList[i].Z,p):
                     return i
     return None
 
@@ -82,10 +90,10 @@ def getIndices(shape,offsetv,offsetvn,colors,dosegment):
     if mesh:
         topology = mesh.Topology
         for v in topology[0]:
-              vlist.append(" "+str(round(v[0],p))+" "+str(round(v[1],p))+" "+str(round(v[2],p)))
+            vlist.append(" "+str(round(v[0],p))+" "+str(round(v[1],p))+" "+str(round(v[2],p)))
 
         for vn in mesh.Facets:
-              vnlist.append(" "+str(vn.Normal[0]) + " " + str(vn.Normal[1]) + " " + str(vn.Normal[2]))
+            vnlist.append(" "+str(vn.Normal[0]) + " " + str(vn.Normal[1]) + " " + str(vn.Normal[2]))
 
         for i, vn in enumerate(topology[1]):
             flist.append(" "+str(vn[0]+offsetv)+"//"+str(i+offsetvn)+\
@@ -153,7 +161,7 @@ def _export(exportSet, filename, colors):
     outfile = codecs.open(filename,"wb",encoding="utf8")
     ver = FreeCAD.Version()
     outfile.write("# FreeCAD v" + ver[0] + "." + ver[1] + " build" + ver[2] + " Arch module\n")
-    outfile.write("# http://www.freecadweb.org\n")
+    outfile.write("# http://www.freecad.org\n")
     offsetv = 1
     offsetvn = 1
 
@@ -341,11 +349,11 @@ def _export(exportSet, filename, colors):
         tmpobj.Document.removeObject(tmpobj.Name)
 
     outfile.close()
-    FreeCAD.Console.PrintMessage(translate("Arch","Successfully written") + " " + decode(filename) + "\n")
+    FreeCAD.Console.PrintMessage(translate("Arch","Successfully written") + " " + filename + "\n")
     if materials:
         outfile = pythonopen(filenamemtl,"w")
         outfile.write("# FreeCAD v" + ver[0] + "." + ver[1] + " build" + ver[2] + " Arch module\n")
-        outfile.write("# https://www.freecadweb.org\n")
+        outfile.write("# https://www.freecad.org\n")
         kinds = {"AmbientColor":"Ka ","DiffuseColor":"Kd ","SpecularColor":"Ks ","EmissiveColor":"Ke ","Transparency":"Tr ","Dissolve":"d "}
         done = [] # store names to avoid duplicates
         for mat in materials:
@@ -365,20 +373,8 @@ def _export(exportSet, filename, colors):
                     done.append(mat.Name)
         outfile.write("# Material Count: " + str(len(materials)))
         outfile.close()
-        FreeCAD.Console.PrintMessage(translate("Arch","Successfully written") + ' ' + decode(filenamemtl) + "\n")
+        FreeCAD.Console.PrintMessage(translate("Arch","Successfully written") + ' ' + filenamemtl + "\n")
 
-
-#def decode(name):
-#    "decodes encoded strings"
-#    try:
-#        decodedName = (name.decode("utf8"))
-#    except UnicodeDecodeError:
-#        try:
-#            decodedName = (name.decode("latin1"))
-#        except UnicodeDecodeError:
-#            FreeCAD.Console.PrintError(translate("Arch","Error: Couldn't determine character encoding"))
-#            decodedName = name
-#    return decodedName
 
 def open(filename):
     "called when freecad wants to open a file"
@@ -392,7 +388,7 @@ def insert(filename,docname):
     meshName = ntpath.basename(filename)
     for i in meshName.split():
         if "." in i:
-           i = i.split(".")[0]
+            i = i.split(".")[0]
     meshName = i
     "called when freecad wants to import a file"
     try:
@@ -461,7 +457,7 @@ def insert(filename,docname):
             material.append([line[7:], len(facets), len(facets)])
     if activeobject:
         makeMesh(doc,activeobject,verts,facets,material,colortable)
-    FreeCAD.Console.PrintMessage(translate("Arch","Successfully imported") + ' ' + decode(filename) + "\n")
+    FreeCAD.Console.PrintMessage(translate("Arch","Successfully imported") + ' ' + filename + "\n")
     return doc
 
 def makeMesh(doc,activeobject,verts,facets,material,colortable):

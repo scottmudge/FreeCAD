@@ -96,7 +96,7 @@ PropertyView::PropertyView(QWidget *parent)
 
     timer = new QTimer(this);
     timer->setSingleShot(true);
-    connect(timer, SIGNAL(timeout()), this, SLOT(onTimer()));
+    connect(timer, &QTimer::timeout, this, &PropertyView::onTimer);
 
     tabs = new QTabWidget (this);
     tabs->setObjectName(QString::fromUtf8("propertyTab"));
@@ -121,7 +121,7 @@ PropertyView::PropertyView(QWidget *parent)
         tabs->setCurrentIndex(preferredTab);
 
     // connect after adding all tabs, so adding doesn't thrash the parameter
-    connect(tabs, SIGNAL(currentChanged(int)), this, SLOT(tabChanged(int)));
+    connect(tabs, &QTabWidget::currentChanged, this, &PropertyView::tabChanged);
 
     this->connectPropData =
     App::GetApplication().signalChangedObject.connect(boost::bind
@@ -425,8 +425,9 @@ void PropertyView::slotActivateView(const Gui::MDIView *view)
     }
 }
 
-void PropertyView::onTimer() {
-    // See https://forum.freecadweb.org/viewtopic.php?f=8&t=72526
+void PropertyView::onTimer()
+{
+    // See https://forum.freecad.org/viewtopic.php?f=8&t=72526
     if (this->updating) {
         timer->start(ViewParams::getPropertyViewTimer());
         return;

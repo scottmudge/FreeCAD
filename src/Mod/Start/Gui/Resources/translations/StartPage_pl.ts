@@ -131,7 +131,7 @@
     <message>
       <location filename="TranslationTexts.py" line="67"/>
       <source>If not bundled with your FreeCAD version, install the FreeCAD documentation package to get documentation hubs, workbench help and individual command documentation without an internet connection.</source>
-      <translation>Jeśli nie jest dołączony do Twojej wersji programu zainstaluj pakiet dokumentacji FreeCAD, aby uzyskać centra dokumentacji, pomoc dla środowiska pracy i indywidualną dokumentację poleceń, bez dostępu do Internetu.</translation>
+      <translation>Jeśli nie dołączono do Twojej wersji programu, zainstaluj pakiet dokumentacji FreeCAD, aby uzyskać centra dokumentacji, pomoc dla środowiska pracy i indywidualną dokumentację poleceń, bez dostępu do Internetu.</translation>
     </message>
     <message>
       <location filename="TranslationTexts.py" line="68"/>
@@ -362,7 +362,7 @@ Używając ";;" do rozdzielenia ścieżek, możesz dodać tutaj kilka folderów<
     <message>
       <location filename="../../DlgStartPreferences.ui" line="319"/>
       <source>If this is checked and a style sheet is specified in General preferences, it will be used and override the colors below</source>
-      <translation>Jeśli ta opcja jest zaznaczona, i arkusz stylów jest określony w Preferencjach ogólnych, zostanie on użyty i zastąpi poniższe kolory</translation>
+      <translation>Jeśli ta opcja jest zaznaczona i arkusz stylów jest określony w Preferencjach ogólnych, zostanie on użyty i zastąpi poniższe kolory</translation>
     </message>
     <message>
       <location filename="../../DlgStartPreferences.ui" line="338"/>

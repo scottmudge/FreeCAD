@@ -23,6 +23,7 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <QActionGroup>
 # include <QApplication>
 # include <QByteArray>
 # include <QCheckBox>
@@ -30,7 +31,9 @@
 # include <QCloseEvent>
 # include <QContextMenuEvent>
 # include <QDesktopServices>
-# include <QDesktopWidget>
+# if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#   include <QDesktopWidget>
+# endif
 # include <QDockWidget>
 # include <QFontMetrics>
 # include <QKeySequence>
@@ -74,6 +77,7 @@
 #include <Base/Interpreter.h>
 #include <Base/Stream.h>
 #include <Base/Tools.h>
+#include <Base/UnitsApi.h>
 #include <DAGView/DAGView.h>
 #include <TaskView/TaskView.h>
 
@@ -88,6 +92,7 @@
 #include "FileDialog.h"
 #include "MenuManager.h"
 #include "OverlayWidgets.h"
+#include "NotificationArea.h"
 #include "ProgressBar.h"
 #include "PropertyView.h"
 #include "PythonConsole.h"
@@ -111,6 +116,7 @@
 #include "View3DInventorViewer.h"
 #include "DlgObjectSelection.h"
 #include "Tools.h"
+#include <App/Color.h>
 
 FC_LOG_LEVEL_INIT("MainWindow",false,true,true)
 
@@ -155,11 +161,96 @@ private:
     int _timeout;
 };
 
+/**
+ * The DimensionWidget class is aiming at providing a widget used in the status bar that will:
+ *  - Allow application to display dimension information such as the viewportsize
+ *  - Provide a popup menu allowing user to change the used unit schema (and update if changed elsewhere)
+ */
+class DimensionWidget : public QPushButton, WindowParameter
+{
+    Q_OBJECT
+
+public:
+    explicit DimensionWidget(QWidget* parent): QPushButton(parent), WindowParameter("Units")
+    {
+        setFlat(true);
+        setText(qApp->translate("Gui::MainWindow", "Dimension"));
+        setMinimumWidth(120);
+
+        //create the action buttons
+        auto* menu = new QMenu(this);
+        auto* actionGrp = new QActionGroup(menu);
+        int num = static_cast<int>(Base::UnitSystem::NumUnitSystemTypes);
+        for (int i = 0; i < num; i++) {
+            QAction* action = menu->addAction(QStringLiteral("UnitSchema%1").arg(i));
+            actionGrp->addAction(action);
+            action->setCheckable(true);
+            action->setData(i);
+        }
+        QObject::connect(actionGrp, &QActionGroup::triggered, this, [this](QAction* action) {
+            int userSchema = action->data().toInt();
+            // Set and save the Unit System
+            Base::UnitsApi::setSchema(static_cast<Base::UnitSystem>(userSchema));
+            getWindowParameter()->SetInt("UserSchema", userSchema);
+            // Update the application to show the unit change
+            Gui::Application::Instance->onUpdate();
+        } );
+        setMenu(menu);
+        retranslateUi();
+        unitChanged();
+        getWindowParameter()->Attach(this);
+    }
+
+    ~DimensionWidget()
+    {
+        getWindowParameter()->Detach(this);
+    }
+
+    void OnChange(Base::Subject<const char*> &rCaller, const char * sReason) override
+    {
+        Q_UNUSED(rCaller)
+        if (strcmp(sReason, "UserSchema") == 0) {
+            unitChanged();
+        }
+    }
+
+    void changeEvent(QEvent *event) override
+    {
+        if (event->type() == QEvent::LanguageChange) {
+            retranslateUi();
+        }
+        else {
+            QPushButton::changeEvent(event);
+        }
+    }
+
+private:
+    void unitChanged(void)
+    {
+        int userSchema = getWindowParameter()->GetInt("UserSchema", 0);
+        auto actions = menu()->actions();
+        if(Q_UNLIKELY(userSchema < 0 || userSchema >= actions.size())) {
+            userSchema = 0;
+        }
+        actions[userSchema]->setChecked(true);
+    }
+
+    void retranslateUi() {
+        auto actions = menu()->actions();
+        int maxSchema = static_cast<int>(Base::UnitSystem::NumUnitSystemTypes);
+        assert(actions.size() <= maxSchema);
+        for(int i = 0; i < maxSchema ; i++)
+        {
+            actions[i]->setText(Base::UnitsApi::getDescription(static_cast<Base::UnitSystem>(i)));
+        }
+    }
+};
+
 // -------------------------------------
 // Pimpl class
 struct MainWindowP
 {
-    QLabel* sizeLabel;
+    QPushButton* sizeLabel;
     QLabel* actionLabel;
     QTimer* actionTimer;
     QTimer* statusTimer;
@@ -221,7 +312,6 @@ protected:
         cMgr.getCommandByName("Std_CloseAllWindows")->addTo(menu);
         menu->addSeparator();
         cMgr.getCommandByName("Std_CascadeWindows")->addTo(menu);
-        cMgr.getCommandByName("Std_ArrangeIcons")->addTo(menu);
         cMgr.getCommandByName("Std_TileWindows")->addTo(menu);
         menu->addSeparator();
         cMgr.getCommandByName("Std_Windows")->addTo(menu);
@@ -279,7 +369,6 @@ protected:
 
 } // namespace Gui
 
-
 /* TRANSLATOR Gui::MainWindow */
 
 MainWindow::MainWindow(QWidget * parent, Qt::WindowFlags f)
@@ -335,6 +424,7 @@ MainWindow::MainWindow(QWidget * parent, Qt::WindowFlags f)
         tab->setTabsClosable(true);
         // The tabs might be very wide
         tab->setExpanding(false);
+        tab->setObjectName(QString::fromLatin1("mdiAreaTabBar"));
     }
     d->mdiArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     d->mdiArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -344,7 +434,7 @@ MainWindow::MainWindow(QWidget * parent, Qt::WindowFlags f)
     setCentralWidget(d->mdiArea);
 
     statusBar()->setObjectName(QStringLiteral("statusBar"));
-    connect(statusBar(), SIGNAL(messageChanged(const QString &)), this, SLOT(statusMessageChanged(const QString &)));
+    connect(statusBar(), &QStatusBar::messageChanged, this, &MainWindow::statusMessageChanged);
 
     // labels and progressbar
     d->status = new StatusBarObserver();
@@ -352,10 +442,9 @@ MainWindow::MainWindow(QWidget * parent, Qt::WindowFlags f)
     d->actionLabel->setObjectName(QStringLiteral("SB_ActionLabel"));
     d->actionLabel->setWindowTitle(tr("Message label"));
     // d->actionLabel->setMinimumWidth(120);
-    d->sizeLabel = new QLabel(tr("Dimension"), statusBar());
-    d->sizeLabel->setWindowTitle(tr("Dimension label"));
-    d->sizeLabel->setObjectName(QStringLiteral("SB_DimensionLabel"));
-    d->sizeLabel->setMinimumWidth(120);
+
+    d->sizeLabel = new DimensionWidget(statusBar());
+
     statusBar()->addWidget(d->actionLabel, 1);
     QProgressBar* progressBar = Gui::SequencerBar::instance()->getProgressBar(statusBar());
     progressBar->setWindowTitle(tr("Progress bar"));
@@ -363,39 +452,70 @@ MainWindow::MainWindow(QWidget * parent, Qt::WindowFlags f)
     statusBar()->addPermanentWidget(progressBar, 0);
     statusBar()->addPermanentWidget(d->sizeLabel, 0);
 
+    auto hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/NotificationArea");
+
+    auto notificationAreaEnabled = hGrp->GetBool("NotificationAreaEnabled", true);
+
+    if(notificationAreaEnabled) {
+        NotificationArea* notificationArea = new NotificationArea(statusBar());
+        notificationArea->setObjectName(QString::fromLatin1("notificationArea"));
+        notificationArea->setStyleSheet(QStringLiteral("text-align:left;"));
+        statusBar()->addPermanentWidget(notificationArea);
+    }
     // clears the action label
     d->actionTimer = new QTimer( this );
     d->actionTimer->setObjectName(QStringLiteral("actionTimer"));
-    connect(d->actionTimer, SIGNAL(timeout()), d->actionLabel, SLOT(clear()));
+    connect(d->actionTimer, &QTimer::timeout, d->actionLabel, &QLabel::clear);
 
     // clear status type
     d->statusTimer = new QTimer( this );
     d->statusTimer->setObjectName(QStringLiteral("statusTimer"));
-    connect(d->statusTimer, SIGNAL(timeout()), this, SLOT(clearStatus()));
+    connect(d->statusTimer, &QTimer::timeout, this, &MainWindow::clearStatus);
 
     // update gui timer
     d->activityTimer = new QTimer(this);
     d->activityTimer->setObjectName(QStringLiteral("activityTimer"));
-    connect(d->activityTimer, SIGNAL(timeout()),this, SLOT(_updateActions()));
+    connect(d->activityTimer, &QTimer::timeout, this, &MainWindow::_updateActions);
     d->activityTimer->setSingleShot(false);
     d->activityTimer->start(150);
 
     // update view-sensitive commands when clipboard has changed
     QClipboard *clipbd = QApplication::clipboard();
-    connect(clipbd, SIGNAL(dataChanged()), this, SLOT(updateEditorActions()));
+    connect(clipbd, &QClipboard::dataChanged, this, &MainWindow::updateEditorActions);
 
     d->windowMapper = new QSignalMapper(this);
 
     // connection between workspace, window menu and tab bar
-    connect(d->windowMapper, SIGNAL(mapped(QWidget *)),
-            this, SLOT(onSetActiveSubWindow(QWidget*)));
-    connect(d->mdiArea, SIGNAL(subWindowActivated(QMdiSubWindow*)),
-            this, SLOT(onWindowActivated(QMdiSubWindow* )));
+#if QT_VERSION < QT_VERSION_CHECK(5,15,0)
+    connect(d->windowMapper, qOverload<QWidget*>(&QSignalMapper::mapped),
+            this, &MainWindow::onSetActiveSubWindow);
+#elif QT_VERSION < QT_VERSION_CHECK(6,0,0)
+    connect(d->windowMapper, &QSignalMapper::mappedWidget,
+            this, &MainWindow::onSetActiveSubWindow);
+#else
+    connect(d->windowMapper, &QSignalMapper::mappedObject,
+            this, [=](QObject* object) {
+        onSetActiveSubWindow(qobject_cast<QWidget*>(object));
+    });
+#endif
+    connect(d->mdiArea, &QMdiArea::subWindowActivated,
+            this, &MainWindow::onWindowActivated);
 
     setupDockWindows();
 
     // accept drops on the window, get handled in dropEvent, dragEnterEvent
     setAcceptDrops(true);
+
+    // setup font substitutions for NaviCube
+    // Helvetica usually gives good enough results on mac & linux
+    // in rare cases Helvetica matches a bad font on linux
+    // Nimbus Sans Narrow and Open Sans Condensed added as fallback
+    // Bahnschrift is a condensed font available on windows versions since 2017
+    // Arial added as fallback for older version
+    auto substitutions = QStringLiteral("Bahnschrift,Helvetica,Nimbus Sans Narrow,Open Sans Condensed,Arial,Sans");
+    auto family = QStringLiteral("FreeCAD NaviCube");
+    QFont::insertSubstitutions(family, substitutions.split(QLatin1Char(',')));
+
     statusBar()->showMessage(tr("Ready"), 2001);
 }
 
@@ -855,11 +975,6 @@ QMenu* MainWindow::createPopupMenu ()
     return menu;
 }
 
-void MainWindow::arrangeIcons()
-{
-    d->mdiArea->tileSubWindows();
-}
-
 void MainWindow::tile()
 {
     d->mdiArea->tileSubWindows();
@@ -1002,12 +1117,20 @@ bool MainWindow::closeAllDocuments (bool close)
 
 void MainWindow::activateNextWindow ()
 {
-    d->mdiArea->activateNextSubWindow();
+    auto tab = d->mdiArea->findChild<QTabBar*>();
+    if (tab && tab->count() > 0) {
+        int index = (tab->currentIndex() + 1) % tab->count();
+        tab->setCurrentIndex(index);
+    }
 }
 
 void MainWindow::activatePreviousWindow ()
 {
-    d->mdiArea->activatePreviousSubWindow();
+    auto tab = d->mdiArea->findChild<QTabBar*>();
+    if (tab && tab->count() > 0) {
+        int index = (tab->currentIndex() + tab->count() - 1) % tab->count();
+        tab->setCurrentIndex(index);
+    }
 }
 
 void MainWindow::activateWorkbench(const QString& name)
@@ -1253,7 +1376,7 @@ void MainWindow::addWindow(MDIView* view)
         }
 
         QAction* action = menu->addAction(tr("Close All"));
-        connect(action, SIGNAL(triggered()), d->mdiArea, SLOT(closeAllSubWindows()));
+        connect(action, &QAction::triggered, d->mdiArea, &QMdiArea::closeAllSubWindows);
         d->mdiArea->addSubWindow(child);
     }
 
@@ -1419,7 +1542,7 @@ void MainWindow::onWindowsMenuAboutToShow()
         for (const auto & action : actions) {
             if (action == last)
                 break; // this is a separator
-            connect(action, SIGNAL(triggered()), d->windowMapper, SLOT(map()));
+            connect(action, &QAction::triggered, d->windowMapper, qOverload<>(&QSignalMapper::map));
         }
     }
 
@@ -1537,7 +1660,7 @@ void MainWindow::closeEvent (QCloseEvent * e)
 
         saveWindowSettings();
 
-        // https://forum.freecadweb.org/viewtopic.php?f=8&t=67748
+        // https://forum.freecad.org/viewtopic.php?f=8&t=67748
         // When the session manager jumps in it can happen that the closeEvent()
         // function is triggered twice and for the second call the main window might be
         // invisible. In this case the window settings shouldn't be saved.
@@ -1766,7 +1889,11 @@ void MainWindow::loadWindowSettings()
     QString qtver = QStringLiteral("Qt%1.%2").arg(major).arg(minor);
     QSettings config(vendor, application);
 
-    QRect rect = QApplication::desktop()->availableGeometry(d->screen);
+#if QT_VERSION < QT_VERSION_CHECK(5,14,0)
+    QRect rect = QApplication::desktop()->availableGeometry(this);
+#else
+    QRect rect = this->screen()->availableGeometry();
+#endif
 
     config.beginGroup(qtver);
     QPoint pos = config.value(QStringLiteral("Position"), this->pos()).toPoint();
@@ -1906,7 +2033,6 @@ void MainWindow::startSplasher()
         if (hGrp->GetBool("ShowSplasher", true)) {
             d->splashscreen = new SplashScreen(this->splashImage());
             d->splashscreen->show();
-            d->screen = QApplication::desktop()->screenNumber(d->splashscreen);
         }
         else
             d->splashscreen = nullptr;
@@ -2651,20 +2777,26 @@ void StatusBarObserver::OnChange(Base::Subject<const char*> &rCaller, const char
     auto format = QStringLiteral("#statusBar{color: %1}");
     if (strcmp(sReason, "colorText") == 0) {
         unsigned long col = rclGrp.GetUnsigned( sReason );
-        this->msg = format.arg(QColor((col >> 24) & 0xff,(col >> 16) & 0xff,(col >> 8) & 0xff).name());
+        this->msg = format.arg(App::Color::fromPackedRGB<QColor>(col).name());
     }
     else if (strcmp(sReason, "colorWarning") == 0) {
         unsigned long col = rclGrp.GetUnsigned( sReason );
-        this->wrn = format.arg(QColor((col >> 24) & 0xff,(col >> 16) & 0xff,(col >> 8) & 0xff).name());
+        this->wrn = format.arg(App::Color::fromPackedRGB<QColor>(col).name());
     }
     else if (strcmp(sReason, "colorError") == 0) {
         unsigned long col = rclGrp.GetUnsigned( sReason );
-        this->err = format.arg(QColor((col >> 24) & 0xff,(col >> 16) & 0xff,(col >> 8) & 0xff).name());
+        this->err = format.arg(App::Color::fromPackedRGB<QColor>(col).name());
+    }
+    else if (strcmp(sReason, "colorCritical") == 0) {
+        unsigned long col = rclGrp.GetUnsigned( sReason );
+        this->critical = format.arg(QColor((col >> 24) & 0xff,(col >> 16) & 0xff,(col >> 8) & 0xff).name());
     }
 }
 
-void StatusBarObserver::SendLog(const std::string& msg, Base::LogStyle level)
+void StatusBarObserver::SendLog(const std::string& notifiername, const std::string& msg, Base::LogStyle level)
 {
+    (void) notifiername;
+
     int messageType = -1;
     switch(level){
         case Base::LogStyle::Warning:
@@ -2678,6 +2810,11 @@ void StatusBarObserver::SendLog(const std::string& msg, Base::LogStyle level)
             break;
         case Base::LogStyle::Log:
             messageType = MainWindow::Log;
+            break;
+        case Base::LogStyle::Critical:
+            messageType = MainWindow::Critical;
+            break;
+        default:
             break;
     }
 
@@ -2702,3 +2839,4 @@ ActionStyleEvent::Style ActionStyleEvent::getType() const
 
 
 #include "moc_MainWindow.cpp"
+#include "MainWindow.moc"

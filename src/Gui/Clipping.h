@@ -25,6 +25,7 @@
 #define GUI_DIALOG_CLIPPING_H
 
 #include <QDialog>
+#include <FCGlobal.h>
 #include <Inventor/fields/SoSFColor.h>
 #include <Inventor/fields/SoSFPlane.h>
 #include <Inventor/fields/SoSFFloat.h>
@@ -108,22 +109,6 @@ public:
 
 protected Q_SLOTS:
     void onViewDestroyed(QObject *);
-    void on_groupBoxX_toggled(bool);
-    void on_groupBoxY_toggled(bool);
-    void on_groupBoxZ_toggled(bool);
-    void on_clipX_valueChanged(double);
-    void on_clipY_valueChanged(double);
-    void on_clipZ_valueChanged(double);
-    void on_flipClipX_clicked();
-    void on_flipClipY_clicked();
-    void on_flipClipZ_clicked();
-    void on_groupBoxView_toggled(bool);
-    void on_clipView_valueChanged(double);
-    void on_fromView_clicked();
-    void on_adjustViewdirection_toggled(bool);
-    void on_dirX_valueChanged(double);
-    void on_dirY_valueChanged(double);
-    void on_dirZ_valueChanged(double);
     void on_angleX_valueChanged(double);
     void on_angleY_valueChanged(double);
     void on_checkBoxFill_toggled(bool);
@@ -134,6 +119,25 @@ protected Q_SLOTS:
     void on_spinBoxHatchScale_valueChanged(double);
     void on_checkBoxHatch_toggled(bool on);
     void on_editHatchTexture_fileNameSelected(const QString &filename);
+
+protected:
+    void setupConnections();
+    void onGroupBoxXToggled(bool);
+    void onGroupBoxYToggled(bool);
+    void onGroupBoxZToggled(bool);
+    void onClipXValueChanged(double);
+    void onClipYValueChanged(double);
+    void onClipZValueChanged(double);
+    void onFlipClipXClicked();
+    void onFlipClipYClicked();
+    void onFlipClipZClicked();
+    void onGroupBoxViewToggled(bool);
+    void onClipViewValueChanged(double);
+    void onFromViewClicked();
+    void onAdjustViewdirectionToggled(bool);
+    void onDirXValueChanged(double);
+    void onDirYValueChanged(double);
+    void onDirZValueChanged(double);
 
 public:
     void done(int);

@@ -1,22 +1,24 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
 # ***************************************************************************
 # *                                                                         *
-# *   Copyright (c) 2022 FreeCAD Project Association                        *
+# *   Copyright (c) 2022-2023 FreeCAD Project Association                   *
 # *   Copyright (c) 2019 Yorik van Havre <yorik@uncreated.net>              *
 # *                                                                         *
-# *   This library is free software; you can redistribute it and/or         *
-# *   modify it under the terms of the GNU Lesser General Public            *
-# *   License as published by the Free Software Foundation; either          *
-# *   version 2.1 of the License, or (at your option) any later version.    *
+# *   This file is part of FreeCAD.                                         *
 # *                                                                         *
-# *   This library is distributed in the hope that it will be useful,       *
-# *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
-# *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU     *
+# *   FreeCAD is free software: you can redistribute it and/or modify it    *
+# *   under the terms of the GNU Lesser General Public License as           *
+# *   published by the Free Software Foundation, either version 2.1 of the  *
+# *   License, or (at your option) any later version.                       *
+# *                                                                         *
+# *   FreeCAD is distributed in the hope that it will be useful, but        *
+# *   WITHOUT ANY WARRANTY; without even the implied warranty of            *
+# *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU      *
 # *   Lesser General Public License for more details.                       *
 # *                                                                         *
 # *   You should have received a copy of the GNU Lesser General Public      *
-# *   License along with this library; if not, write to the Free Software   *
-# *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
-# *   02110-1301  USA                                                       *
+# *   License along with FreeCAD. If not, see                               *
+# *   <https://www.gnu.org/licenses/>.                                      *
 # *                                                                         *
 # ***************************************************************************
 
@@ -38,6 +40,7 @@ from PySide import QtCore
 
 import FreeCAD
 import addonmanager_utilities as utils
+from addonmanager_metadata import MetadataReader
 from Addon import Addon
 import NetworkManager
 
@@ -164,7 +167,7 @@ class UpdateMetadataCacheWorker(QtCore.QThread):
         new_xml_file = os.path.join(package_cache_directory, "package.xml")
         with open(new_xml_file, "wb") as f:
             f.write(data.data())
-        metadata = FreeCAD.Metadata(new_xml_file)
+        metadata = MetadataReader.from_file(new_xml_file)
         repo.set_metadata(metadata)
         FreeCAD.Console.PrintLog(f"Downloaded package.xml for {repo.name}\n")
         self.status_message.emit(
@@ -175,21 +178,7 @@ class UpdateMetadataCacheWorker(QtCore.QThread):
 
         # Grab a new copy of the icon as well: we couldn't enqueue this earlier because
         # we didn't know the path to it, which is stored in the package.xml file.
-        icon = metadata.Icon
-        if not icon:
-            # If there is no icon set for the entire package, see if there are
-            # any workbenches, which are required to have icons, and grab the first
-            # one we find:
-            content = repo.metadata.Content
-            if "workbench" in content:
-                wb = content["workbench"][0]
-                if wb.Icon:
-                    if wb.Subdirectory:
-                        subdir = wb.Subdirectory
-                    else:
-                        subdir = wb.Name
-                    repo.Icon = subdir + wb.Icon
-                    icon = repo.Icon
+        icon = repo.get_best_icon_relative_path()
 
         icon_url = utils.construct_git_url(repo, icon)
         index = NetworkManager.AM_NETWORK_MANAGER.submit_unmonitored_get(icon_url)

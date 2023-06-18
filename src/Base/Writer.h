@@ -24,6 +24,7 @@
 #define BASE_WRITER_H
 
 
+#include <memory>
 #include <set>
 #include <unordered_set>
 #include <string>
@@ -152,7 +153,7 @@ public:
      *
      * You must call endCharStream() to end the current character stream.
      */
-    std::ostream &beginCharStream(bool base64, unsigned line_size=80);
+    std::ostream &beginCharStream(bool base64=false, unsigned line_size=80);
     /** End the current character output stream
      * @return Returns the normal writer stream for convenience
      */
@@ -191,7 +192,6 @@ private:
 private:
     Writer(const Writer&);
     Writer& operator=(const Writer&);
-
 };
 
 
@@ -253,7 +253,7 @@ public:
     ~FileWriter() override;
 
     void putNextEntry(const char *filename, const char *objName=nullptr) override;
-    void writeFiles(void) override;
+    void writeFiles() override;
 
     std::ostream &Stream() override{return FileStream;}
     void close() {FileStream.close();}

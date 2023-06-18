@@ -55,24 +55,27 @@ protected:
     explicit DlgCustomToolbars(Type, QWidget* parent = nullptr);
     ~DlgCustomToolbars() override;
 
+protected:
+    void setupConnections();
+    void onWorkbenchBoxActivated(int index);
+    void onMoveActionRightButtonClicked();
+    void onMoveActionLeftButtonClicked();
+    void onMoveActionUpButtonClicked();
+    void onMoveActionDownButtonClicked();
+    void onNewButtonClicked();
+    void onRecentButtonClicked();
+    void onRenameButtonClicked();
+    void onDeleteButtonClicked();
+    void onAssignButtonClicked();
+    void onResetButtonClicked();
+    void onToolbarTreeWidgetCurrentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *);
+    void onToolbarTreeWidgetItemChanged(QTreeWidgetItem *, int);
+    void onEditShortcutTextChanged(const QString& sc);
+
 protected Q_SLOTS:
-    void on_workbenchBox_currentIndexChanged(int index);
-    void on_moveActionRightButton_clicked();
-    void on_moveActionLeftButton_clicked();
-    void on_moveActionUpButton_clicked();
-    void on_moveActionDownButton_clicked();
-    void on_newButton_clicked();
-    void on_recentButton_clicked();
-    void on_renameButton_clicked();
-    void on_deleteButton_clicked();
-    void on_assignButton_clicked();
-    void on_resetButton_clicked();
-    void on_toolbarTreeWidget_currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *);
-    void on_toolbarTreeWidget_itemChanged(QTreeWidgetItem *, int);
-    void on_editShortcut_textChanged(const QString& sc);
-    void onAddMacroAction(const QByteArray&);
-    void onRemoveMacroAction(const QByteArray&);
-    void onModifyMacroAction(const QByteArray&);
+    void onAddMacroAction(const QByteArray&) override;
+    void onRemoveMacroAction(const QByteArray&) override;
+    void onModifyMacroAction(const QByteArray&) override;
 
 protected:
     void changeEvent(QEvent *e) override;
@@ -115,13 +118,13 @@ public:
 
 protected:
     void changeEvent(QEvent *e) override;
-    virtual void addCustomToolbar(QString, const QString&) override;
-    virtual void removeCustomToolbar(QString) override;
-    virtual void renameCustomToolbar(QString, const QString&) override;
-    virtual void addCustomCommand(QString, const QByteArray&) override;
-    virtual void removeCustomCommand(QString, const QByteArray&) override;
-    virtual void moveUpCustomCommand(QString, const QByteArray&) override;
-    virtual void moveDownCustomCommand(QString, const QByteArray&) override;
+    void addCustomToolbar(QString, const QString&) override;
+    void removeCustomToolbar(QString) override;
+    void renameCustomToolbar(QString, const QString&) override;
+    void addCustomCommand(QString, const QByteArray&) override;
+    void removeCustomCommand(QString, const QByteArray&) override;
+    void moveUpCustomCommand(QString, const QByteArray&) override;
+    void moveDownCustomCommand(QString, const QByteArray&) override;
 
 private:
     QList<QAction*> getActionGroup(QAction*);

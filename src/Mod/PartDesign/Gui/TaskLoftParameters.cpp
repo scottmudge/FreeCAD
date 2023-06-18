@@ -68,12 +68,13 @@ TaskLoftParameters::TaskLoftParameters(ViewProviderLoft *LoftView, bool /*newObj
                     "Property", pcLoft->SplitProfile.getDocumentation()));
     }
 
-    connect(ui->checkBoxRuled, SIGNAL(toggled(bool)),
-            this, SLOT(onRuled(bool)));
-    connect(ui->checkBoxClosed, SIGNAL(toggled(bool)),
-            this, SLOT(onClosed(bool)));
-    connect(ui->checkBoxSplitProfile, SIGNAL(toggled(bool)),
-            this, SLOT(onSplitProfile(bool)));
+    connect(ui->checkBoxRuled, &QCheckBox::toggled,
+            this, &TaskLoftParameters::onRuled);
+    connect(ui->checkBoxClosed, &QCheckBox::toggled,
+            this, &TaskLoftParameters::onClosed);
+    connect(ui->checkBoxSplitProfile, &QCheckBox::toggled,
+            this, &TaskLoftParameters::onSplitProfile);
+
 
     PartDesign::Loft* loft = static_cast<PartDesign::Loft*>(vp->getObject());
     sectionWidget = new LinkSubListWidget(this, tr("Sections"), tr("Add Section"), loft->Sections);

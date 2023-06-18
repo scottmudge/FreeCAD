@@ -53,10 +53,11 @@
 # include <QOpenGLTexture>
 # include <QAction>
 # include <QVBoxLayout>
+# include <QPainterPath>
 #endif
 
-#include <QPainterPath>
 
+#include <App/Color.h>
 #include <App/Document.h>
 #include <Base/Tools.h>
 #include <Base/UnitsApi.h>
@@ -67,6 +68,7 @@
 #include "Action.h"
 #include "Application.h"
 #include "Command.h"
+#include "Action.h"
 #include "MainWindow.h"
 #include "View3DInventorViewer.h"
 #include "View3DInventor.h"
@@ -77,23 +79,6 @@ FC_LOG_LEVEL_INIT("Gui", true, true)
 using namespace Eigen;
 using namespace std;
 using namespace Gui;
-
-// TODO
-// ortho / persp
-// stay in window
-// corner angle
-// menu actions
-// size
-// XYZ position
-// menu feedback
-// colors
-// antialise cube icon
-// translation
-// DONE
-// - permanent menu ("NaviCube_Menu"
-// - improved hit testing
-// - improved graphics (text now black)
-// - first stab at supporting translations
 
 class Face {
 public:
@@ -229,7 +214,7 @@ public:
 
 	bool drawNaviCube(SoCamera *cam, bool picking, int hiliteId, bool hit);
 	bool initNaviCube();
-	void addFace(float gap, const Vector3f&, const Vector3f&, int, int, int, bool flag=false);
+	void addFace(const Vector3f&, const Vector3f&, int, int, int, bool flag=false);
 
     void setColors(QWidget *parent);
     void setLabels(QWidget *parent);
@@ -240,7 +225,7 @@ public:
     QFont getAxisLabelFont();
     void saveAxisLabelFont(const QFont &);
 
-	GLuint createCubeFaceTex(float gap, const char* text, int shape);
+	GLuint createCubeFaceTex(const char* text, int shape);
 	GLuint createButtonTex(int button, bool stroke = true);
 	GLuint createMenuTex(bool);
 
@@ -313,12 +298,14 @@ public:
     QPointer<QDialog> m_DlgAxisLabels;
     QPointer<QFontDialog> m_DlgAxisFont;
     static double m_BorderWidth;
+    static double m_Chamfer;
 };
 
 int NaviCubeShared::m_CubeWidgetSize;
 long NaviCubeShared::m_StepByTurn;
 bool NaviCubeShared::m_RotateToNearest;
 double NaviCubeShared::m_BorderWidth = 1.5;
+double NaviCubeShared::m_Chamfer = 0.13;
 bool NaviCubeShared::m_ShowCS;
 bool NaviCubeShared::m_AutoHideCube;
 bool NaviCubeShared::m_AutoHideButton;
@@ -434,6 +421,7 @@ void NaviCubeShared::getParams()
     m_StepByTurn = m_hGrp->GetInt("NaviStepByTurn", 8);
     m_ShowCS = m_hGrp->GetBool("ShowCS", true);
     m_BorderWidth = m_hGrp->GetFloat("BorderWidth", 1.5);
+    m_Chamfer = m_hGrp->GetFloat("ChamferSize", 0.12);
     m_AutoHideCube = m_hGrp->GetBool("AutoHideCube", false);
     m_AutoHideButton = m_hGrp->GetBool("AutoHideButton", true);
     m_AutoHideTimeout = m_hGrp->GetInt("AutoHideTimeout", 300);
@@ -492,9 +480,9 @@ auto convertWeights = [](int weight) -> QFont::Weight {
     return QFont::Thin;
 };
 
-GLuint NaviCubeShared::createCubeFaceTex(float gap, const char* text, int shape) {
+GLuint NaviCubeShared::createCubeFaceTex(const char* text, int shape) {
 	int texSize = m_CubeWidgetSize * m_OverSample;
-	float gapi = texSize * gap;
+	float gapi = texSize * m_Chamfer;
 	QImage image(texSize, texSize, QImage::Format_ARGB32);
 	image.fill(qRgba(255, 255, 255, 0));
 	QPainter paint;
@@ -759,13 +747,9 @@ GLuint NaviCubeShared::createMenuTex(bool forPicking) {
     return texture->textureId();
 }
 
-void NaviCubeShared::addFace(float gap, const Vector3f& x, const Vector3f& z, int frontTex, int pickTex, int pickId, bool text) {
+void NaviCubeShared::addFace(const Vector3f& x, const Vector3f& z, int frontTex, int pickTex, int pickId, bool text) {
 	Vector3f y = x.cross(-z);
 	y = y / y.norm() * x.norm();
-
-    auto x2 = x*(1-gap*2);
-    auto y2 = x2.cross(-z);
-	y2 = y2 / y2.norm() * x2.norm();
 
 	int t = m_VertexArray.size();
 
@@ -779,10 +763,10 @@ void NaviCubeShared::addFace(float gap, const Vector3f& x, const Vector3f& z, in
     m_TextureCoordArray.emplace_back(0, 1);
 
     if (pickTex == TEX_FRONT_FACE) {
-        auto x2 = x * (1 - gap * 2);
-        auto y2 = y * (1 - gap * 2);
-        auto x4 = x * (1 - gap * 4);
-        auto y4 = y * (1 - gap * 4);
+        auto x2 = x * (1 - m_Chamfer * 2);
+        auto y2 = y * (1 - m_Chamfer * 2);
+        auto x4 = x * (1 - m_Chamfer * 4);
+        auto y4 = y * (1 - m_Chamfer * 4);
         m_VertexArrays2[pickId].reserve(8);
         m_VertexArrays2[pickId].emplace_back(z - x2 - y4);
         m_VertexArrays2[pickId].emplace_back(z - x4 - y2);
@@ -795,8 +779,8 @@ void NaviCubeShared::addFace(float gap, const Vector3f& x, const Vector3f& z, in
         m_VertexArrays2[pickId].emplace_back(z - x2 + y4);
     }
     else if (pickTex == TEX_EDGE_FACE) {
-        auto x4 = x * (1 - gap * 4);
-        auto y_sqrt2 = y * sqrt(2) * gap;
+        auto x4 = x * (1 - m_Chamfer * 4);
+        auto y_sqrt2 = y * sqrt(2) * m_Chamfer;
         m_VertexArrays2[pickId].reserve(4);
         m_VertexArrays2[pickId].emplace_back(z - x4 - y_sqrt2);
         m_VertexArrays2[pickId].emplace_back(z + x4 - y_sqrt2);
@@ -804,8 +788,8 @@ void NaviCubeShared::addFace(float gap, const Vector3f& x, const Vector3f& z, in
         m_VertexArrays2[pickId].emplace_back(z - x4 + y_sqrt2);
     }
     else if (pickTex == TEX_CORNER_FACE) {
-        auto x_sqrt2 = x * sqrt(2) * gap;
-        auto y_sqrt6 = y * sqrt(6) * gap;
+        auto x_sqrt2 = x * sqrt(2) * m_Chamfer;
+        auto y_sqrt6 = y * sqrt(6) * m_Chamfer;
         m_VertexArrays2[pickId].reserve(6);
         m_VertexArrays2[pickId].emplace_back(z - 2 * x_sqrt2);
         m_VertexArrays2[pickId].emplace_back(z - x_sqrt2 - y_sqrt6);
@@ -889,8 +873,7 @@ bool NaviCubeShared::initNaviCube() {
 			0, 0, 1;
 
 	// first create front and backside of faces
-	float gap = 0.12f;
-	m_Textures[TEX_FRONT_FACE] = createCubeFaceTex(gap, nullptr, SHAPE_SQUARE);
+	m_Textures[TEX_FRONT_FACE] = createCubeFaceTex(nullptr, SHAPE_SQUARE);
 
     vector<string> labels;
 	for (auto &info : m_labels)
@@ -898,12 +881,12 @@ bool NaviCubeShared::initNaviCube() {
                     info.name, QObject::tr(info.def).toUtf8().constData()));
 
 	// create the main faces
-	m_Textures[TEX_FRONT] = createCubeFaceTex(gap, labels[0].c_str(), SHAPE_SQUARE);
-	m_Textures[TEX_REAR] = createCubeFaceTex(gap, labels[1].c_str(), SHAPE_SQUARE);
-	m_Textures[TEX_TOP] = createCubeFaceTex(gap, labels[2].c_str(), SHAPE_SQUARE);
-	m_Textures[TEX_BOTTOM] = createCubeFaceTex(gap, labels[3].c_str(), SHAPE_SQUARE);
-	m_Textures[TEX_RIGHT] = createCubeFaceTex(gap, labels[4].c_str(), SHAPE_SQUARE);
-	m_Textures[TEX_LEFT] = createCubeFaceTex(gap, labels[5].c_str(), SHAPE_SQUARE);
+	m_Textures[TEX_FRONT] = createCubeFaceTex(labels[0].c_str(), SHAPE_SQUARE);
+	m_Textures[TEX_REAR] = createCubeFaceTex(labels[1].c_str(), SHAPE_SQUARE);
+	m_Textures[TEX_TOP] = createCubeFaceTex(labels[2].c_str(), SHAPE_SQUARE);
+	m_Textures[TEX_BOTTOM] = createCubeFaceTex(labels[3].c_str(), SHAPE_SQUARE);
+	m_Textures[TEX_RIGHT] = createCubeFaceTex(labels[4].c_str(), SHAPE_SQUARE);
+	m_Textures[TEX_LEFT] = createCubeFaceTex(labels[5].c_str(), SHAPE_SQUARE);
 
 	// create the arrows
 	m_Textures[TEX_ARROW_NORTH] = createButtonTex(TEX_ARROW_NORTH);
@@ -925,25 +908,25 @@ bool NaviCubeShared::initNaviCube() {
 	m_Textures[TEX_VIEW_MENU_FACE] = createMenuTex(true);
 
 	// front,back,pick,pickid
-	addFace(gap, x, z, TEX_TOP, TEX_FRONT_FACE, TEX_TOP, true);
+	addFace(x, z, TEX_TOP, TEX_FRONT_FACE, TEX_TOP, true);
 	x = r90x * x;
 	z = r90x * z;
-	addFace(gap, x, z, TEX_FRONT, TEX_FRONT_FACE, TEX_FRONT, true);
+	addFace(x, z, TEX_FRONT, TEX_FRONT_FACE, TEX_FRONT, true);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_LEFT, TEX_FRONT_FACE, TEX_LEFT, true);
+	addFace(x, z, TEX_LEFT, TEX_FRONT_FACE, TEX_LEFT, true);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_REAR, TEX_FRONT_FACE, TEX_REAR, true);
+	addFace(x, z, TEX_REAR, TEX_FRONT_FACE, TEX_REAR, true);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_RIGHT, TEX_FRONT_FACE, TEX_RIGHT, true);
+	addFace(x, z, TEX_RIGHT, TEX_FRONT_FACE, TEX_RIGHT, true);
 	x = r90x * r90z * x;
 	z = r90x * r90z * z;
-	addFace(gap, x, z, TEX_BOTTOM, TEX_FRONT_FACE, TEX_BOTTOM, true);
+	addFace(x, z, TEX_BOTTOM, TEX_FRONT_FACE, TEX_BOTTOM, true);
 
 	// add corner faces
-	m_Textures[TEX_CORNER_FACE] = createCubeFaceTex(gap, nullptr, SHAPE_CORNER);
+	m_Textures[TEX_CORNER_FACE] = createCubeFaceTex(nullptr, SHAPE_CORNER);
 	// we need to rotate to the edge, thus matrix for rotation angle of 54.7 deg
 	cs = cos(atan(sqrt(2.0)));
 	sn = sin(atan(sqrt(2.0)));
@@ -954,74 +937,74 @@ bool NaviCubeShared::initNaviCube() {
 
 	z = r45z * r54x * z;
 	x = r45z * r54x * x;
-	z *= sqrt(3) * (1 - 2 * gap); // corner face position along the cube diagonal
+	z *= sqrt(3) * (1 - 2 * m_Chamfer); // corner face position along the cube diagonal
 
-	addFace(gap, x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_BOTTOM_RIGHT_REAR);
+	addFace(x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_BOTTOM_RIGHT_REAR);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_BOTTOM_FRONT_RIGHT);
+	addFace(x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_BOTTOM_FRONT_RIGHT);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_BOTTOM_LEFT_FRONT);
+	addFace(x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_BOTTOM_LEFT_FRONT);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_BOTTOM_REAR_LEFT);
+	addFace(x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_BOTTOM_REAR_LEFT);
 	x = r90x * r90x * r90z * x;
 	z = r90x * r90x * r90z * z;
-	addFace(gap, x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_TOP_RIGHT_FRONT);
+	addFace(x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_TOP_RIGHT_FRONT);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_TOP_FRONT_LEFT);
+	addFace(x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_TOP_FRONT_LEFT);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_TOP_LEFT_REAR);
+	addFace(x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_TOP_LEFT_REAR);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_TOP_REAR_RIGHT);
+	addFace(x, z, TEX_CORNER_FACE, TEX_CORNER_FACE, TEX_TOP_REAR_RIGHT);
 
 	// add edge faces
-	m_Textures[TEX_EDGE_FACE] = createCubeFaceTex(gap, nullptr, SHAPE_EDGE);
+	m_Textures[TEX_EDGE_FACE] = createCubeFaceTex(nullptr, SHAPE_EDGE);
 	// first back to top side
 	x[0] = 1; x[1] = 0; x[2] = 0;
 	z[0] = 0; z[1] = 0; z[2] = 1;
 	// rotate 45 degrees up
 	z = r45x * z;
 	x = r45x * x;
-	z *= sqrt(2) * (1 - gap);
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_FRONT_TOP);
+	z *= sqrt(2) * (1 - m_Chamfer);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_FRONT_TOP);
 	x = r90x * x;
 	z = r90x * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_FRONT_BOTTOM);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_FRONT_BOTTOM);
 	x = r90x * x;
 	z = r90x * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_REAR_BOTTOM);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_REAR_BOTTOM);
 	x = r90x * x;
 	z = r90x * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_REAR_TOP);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_REAR_TOP);
 	x = r90y * x;
 	z = r90y * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_REAR_RIGHT);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_REAR_RIGHT);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_FRONT_RIGHT);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_FRONT_RIGHT);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_FRONT_LEFT);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_FRONT_LEFT);
 	x = r90z * x;
 	z = r90z * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_REAR_LEFT);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_REAR_LEFT);
 	x = r90x * x;
 	z = r90x * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_TOP_LEFT);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_TOP_LEFT);
 	x = r90y * x;
 	z = r90y * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_TOP_RIGHT);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_TOP_RIGHT);
 	x = r90y * x;
 	z = r90y * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_BOTTOM_RIGHT);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_BOTTOM_RIGHT);
 	x = r90y * x;
 	z = r90y * z;
-	addFace(gap, x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_BOTTOM_LEFT);
+	addFace(x, z, TEX_EDGE_FACE, TEX_EDGE_FACE, TEX_BOTTOM_LEFT);
 
 	m_Buttons.push_back(TEX_ARROW_NORTH);
 	m_Buttons.push_back(TEX_ARROW_SOUTH);
@@ -2093,6 +2076,18 @@ void NaviCubeShared::handleMenu(QWidget *parent) {
     QObject::connect(spinBoxWidth, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
     [this](double value) {
         m_hGrp->SetFloat("BorderWidth", value);
+    });
+
+    auto spinBoxChamfer = new QDoubleSpinBox;
+    spinBoxChamfer->setMinimum(0.);
+    spinBoxChamfer->setMaximum(1.);
+    spinBoxChamfer->setSingleStep(0.01);
+    spinBoxChamfer->setValue(m_Chamfer);
+    Gui::Action::addWidget(&m_Menu, QObject::tr("Corner size"),
+            QObject::tr("Cube face corner chamfer size factor"), spinBoxChamfer);
+    QObject::connect(spinBoxChamfer, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+    [this](double value) {
+        m_hGrp->SetFloat("ChamferSize", value);
     });
 
     QObject::connect(&m_Menu, &QMenu::aboutToShow,

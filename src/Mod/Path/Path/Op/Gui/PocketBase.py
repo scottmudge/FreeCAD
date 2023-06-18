@@ -30,7 +30,7 @@ import PathGui
 
 __title__ = "Path Pocket Base Operation UI"
 __author__ = "sliptonic (Brad Collette)"
-__url__ = "https://www.freecadweb.org"
+__url__ = "https://www.freecad.org"
 __doc__ = "Base page controller and command implementation for path pocket operations."
 
 if False:
@@ -115,7 +115,7 @@ class TaskPanelOpPage(PathOpGui.TaskPanelPage):
             PathGuiUtil.updateInputField(obj, "ZigZagAngle", self.form.zigZagAngle)
 
     def getFields(self, obj):
-        """getFields(obj) ... transfers values from UI to obj's proprties"""
+        """getFields(obj) ... transfers values from UI to obj's properties"""
         if obj.CutMode != str(self.form.cutMode.currentData()):
             obj.CutMode = str(self.form.cutMode.currentData())
         if obj.StepOver != self.form.stepOverPercent.value():

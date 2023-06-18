@@ -51,7 +51,6 @@
 #include <Gui/Tools.h>
 #include <Gui/WaitCursor.h>
 #include <Mod/PartDesign/App/Body.h>
-#include <Mod/PartDesign/App/FeatureDressUp.h>
 #include <Mod/PartDesign/Gui/ReferenceSelection.h>
 
 #include "TaskDressUpParameters.h"
@@ -63,11 +62,12 @@ FC_LOG_LEVEL_INIT("PartDesign",true,true)
 using namespace PartDesignGui;
 using namespace Gui;
 
+
 /* TRANSLATOR PartDesignGui::TaskDressUpParameters */
 
 TaskDressUpParameters::TaskDressUpParameters(ViewProviderDressUp *DressUpView, bool selectEdges, bool selectFaces, QWidget *parent)
-    : TaskBox(Gui::BitmapFactory().pixmap((std::string("PartDesign_") + DressUpView->featureName()).c_str()),
-              QObject::tr((DressUpView->featureName() + " parameters").c_str()),
+    : TaskBox(Gui::BitmapFactory().pixmap(DressUpView->featureIcon().c_str()),
+              DressUpView->getMenuName(),
               true,
               parent)
     , proxy(nullptr)

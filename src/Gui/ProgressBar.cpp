@@ -401,7 +401,7 @@ ProgressBar::ProgressBar (SequencerBar* s, QWidget * parent)
     d->minimumDuration = 2000; // 2 seconds
     d->delayShowTimer = new QTimer(this);
     d->delayShowTimer->setSingleShot(true);
-    connect(d->delayShowTimer, SIGNAL(timeout()), this, SLOT(delayedShow()));
+    connect(d->delayShowTimer, &QTimer::timeout, this, &ProgressBar::delayedShow);
     d->observeEventFilter = 0;
 
     setFixedWidth(120);
@@ -413,7 +413,7 @@ ProgressBar::ProgressBar (SequencerBar* s, QWidget * parent)
 
 ProgressBar::~ProgressBar ()
 {
-    disconnect(d->delayShowTimer, SIGNAL(timeout()), this, SLOT(delayedShow()));
+    disconnect(d->delayShowTimer, &QTimer::timeout, this, &ProgressBar::delayedShow);
     delete d->delayShowTimer;
     delete d;
 }
@@ -490,9 +490,9 @@ void ProgressBar::aboutToHide()
 
 bool ProgressBar::canAbort() const
 {
-    int ret = QMessageBox::question(getMainWindow(),tr("Aborting"),
-    tr("Do you really want to abort the operation?"),  QMessageBox::Yes,
-    QMessageBox::No|QMessageBox::Default);
+    auto ret = QMessageBox::question(getMainWindow(),tr("Aborting"),
+    tr("Do you really want to abort the operation?"),  QMessageBox::Yes | QMessageBox::No,
+    QMessageBox::No);
 
     return (ret == QMessageBox::Yes) ? true : false;
 }

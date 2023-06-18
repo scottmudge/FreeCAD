@@ -37,7 +37,6 @@
 
 #include "DrawViewPart.h"
 
-
 class Bnd_Box;
 class gp_Pln;
 class gp_Pnt;
@@ -48,10 +47,6 @@ class gp_Ax2;
 namespace TechDraw
 {
 class Face;
-}
-
-namespace TechDraw
-{
 class DrawProjGroupItem;
 class DrawGeomHatch;
 class PATLineSpec;
@@ -121,7 +116,7 @@ public:
     short mustExecute() const override;
 
     void sectionExec(TopoDS_Shape& s);
-    virtual void makeSectionCut(TopoDS_Shape& baseShape);
+    virtual void makeSectionCut(const TopoDS_Shape& baseShape);
     void postHlrTasks(void) override;
     virtual void postSectionCutTasks();
     void waitingForCut(bool s) { m_waitingForCut = s; }
@@ -170,6 +165,8 @@ public:
     virtual ChangePointVector getChangePointsFromSectionLine();
 
     bool showSectionEdges(void);
+
+    TopoDS_Shape makeFaceFromWires(std::vector<TopoDS_Wire> &inWires);
 
 public Q_SLOTS:
     virtual void onSectionCutFinished(void);

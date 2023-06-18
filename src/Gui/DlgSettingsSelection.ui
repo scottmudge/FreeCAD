@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>670</width>
-    <height>604</height>
+    <width>584</width>
+    <height>618</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -76,29 +76,87 @@
      <property name="title">
       <string>3D View Selection</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QCheckBox" name="checkBoxSelectionOnTop">
-        <property name="text">
-         <string>Show selection always on top</string>
-        </property>
-       </widget>
-      </item>
-      <item>
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="6" column="0">
        <widget class="QCheckBox" name="checkBoxPreSelectionOnTop">
         <property name="text">
          <string>Show pre-selected face always on top</string>
         </property>
        </widget>
       </item>
-      <item>
+      <item row="11" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QLabel" name="label_5">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Color difference threshold</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="spinBoxColorDiff">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item row="7" column="0">
        <widget class="QCheckBox" name="checkBoxShowBoundBox">
         <property name="text">
          <string>Show selection bounding box instead of highlight</string>
         </property>
        </widget>
       </item>
-      <item>
+      <item row="9" column="0">
+       <widget class="QCheckBox" name="checkBoxHiddenLineSelect">
+        <property name="toolTip">
+         <string>If enabled, you can select hidden lines/points in objects shown on top.
+
+Regardless of this option, you can always turn on hidden face/line/point selection
+by holding the SHIFT key. You use mouse wheel while holding the SHIFT key to
+select hidden face at various depth.</string>
+        </property>
+        <property name="text">
+         <string>Enable hidden line selection for on-top-selected objects</string>
+        </property>
+       </widget>
+      </item>
+      <item row="10" column="0">
+       <widget class="QCheckBox" name="checkBoxSelectElementOnTop">
+        <property name="text">
+         <string>Apply box element selection on on-top-selected objects</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QCheckBox" name="checkBoxSelectionOnTop">
+        <property name="text">
+         <string>Show selection always on top</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0">
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
          <widget class="QLabel" name="label_6">
@@ -135,51 +193,53 @@
         </item>
        </layout>
       </item>
-      <item>
-       <widget class="QCheckBox" name="checkBoxHiddenLineSelect">
-        <property name="toolTip">
-         <string>If enabled, you can select hidden lines/points in objects shown on top.
-
-Regardless of this option, you can always turn on hidden face/line/point selection
-by holding the SHIFT key. You use mouse wheel while holding the SHIFT key to
-select hidden face at various depth.</string>
-        </property>
-        <property name="text">
-         <string>Enable hidden line selection for on-top-selected objects</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBoxSelectElementOnTop">
-        <property name="text">
-         <string>Apply box element selection on on-top-selected objects</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
+      <item row="1" column="0">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="QLabel" name="label_5">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+         <widget class="QLabel" name="spinPickRadiusLabel">
           <property name="text">
-           <string>Color difference threshold</string>
+           <string>Pick radius (px):</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="spinBoxColorDiff">
+         <widget class="Gui::PrefDoubleSpinBox" name="spinPickRadius">
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="toolTip">
+           <string>Area for picking elements in 3D view.
+Larger value eases to pick things, but can make small features impossible to select.
+      </string>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhPreferNumbers</set>
+          </property>
           <property name="decimals">
            <number>1</number>
           </property>
+          <property name="minimum">
+           <double>0.500000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>200.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>5.000000000000000</double>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>PickRadius</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
          </widget>
         </item>
         <item>
-         <spacer name="horizontalSpacer_2">
+         <spacer name="horizontalSpacer_4">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -301,6 +361,13 @@ select hidden face at various depth.</string>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Gui::PrefDoubleSpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

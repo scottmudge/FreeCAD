@@ -32,11 +32,12 @@
 namespace Gui {
 class View3DInventorViewer;
 class AbstractSplitViewPy;
+class View3DSettings;
 
 /** The SplitView3DInventor class allows to create a window with two or more Inventor views.
  *  \author Werner Mayer
  */
-class GuiExport AbstractSplitView : public MDIView, public ParameterGrp::ObserverType
+class GuiExport AbstractSplitView : public MDIView
 {
     Q_OBJECT
 
@@ -51,7 +52,6 @@ public:
     /// Message handler
     bool onMsg(const char* pMsg, const char** ppReturn) override;
     bool onHasMsg(const char* pMsg) const override;
-    void OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::MessageType Reason) override;
     void onUpdate() override;
     void deleteSelf() override;
     void viewAll() override;
@@ -65,13 +65,13 @@ public:
     int getSize();
 
 protected:
+    void setDocumentOfViewers(Gui::Document* document);
     void setupSettings();
 
 protected:
-    /// handle to the viewer parameter group
-    ParameterGrp::handle hGrp;
     std::vector<View3DInventorViewer*> _viewer;
     PyObject *_viewerPy;
+    std::unique_ptr<View3DSettings> viewSettings;
 };
 
 /** The SplitView3DInventor class allows to create a window with two or more Inventor views.

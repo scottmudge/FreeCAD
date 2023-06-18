@@ -37,6 +37,8 @@
 
 class QTreeWidget;
 
+class QTreeWidgetItem;
+
 namespace Gui { namespace Dialog {
 
 class Ui_DlgPropertyLink;
@@ -54,7 +56,7 @@ public:
         AllowSubElement = 32,
         NoSubObject = 64,
     };
-    DlgPropertyLink(QWidget* parent = nullptr, int flags=0);
+    explicit DlgPropertyLink(QWidget* parent = nullptr, int flags=0);
     ~DlgPropertyLink() override;
 
     QList<App::SubObjectT> currentLinks() const;
@@ -111,9 +113,9 @@ protected:
     void keyPressEvent(QKeyEvent *ev) override;
 
 private Q_SLOTS:
-    void on_checkObjectType_toggled(bool);
-    void on_typeTree_itemSelectionChanged();
-    void on_searchBox_textChanged(const QString&);
+    void onObjectTypeToggled(bool);
+    void onTypeTreeItemSelectionChanged();
+    void onSearchBoxTextChanged(const QString&);
     void onItemExpanded(QTreeWidgetItem * item);
     void onCurrentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*);
     void onItemChanged(QTreeWidgetItem*, int);

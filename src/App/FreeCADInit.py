@@ -63,16 +63,6 @@ def setupSearchPaths(PathExtension):
     # new paths must be prepended to avoid to load a wrong version of a library
     try:
         os.environ["PATH"] = PathEnvironment + os.environ["PATH"]
-    except UnicodeDecodeError:
-        # See #0002238. FIXME: check again once ported to Python 3.x
-        Log('UnicodeDecodeError was raised when concatenating unicode string with PATH. Try to remove non-ascii paths...\n')
-        path = os.environ["PATH"].split(os.pathsep)
-        cleanpath=[]
-        for i in path:
-            if test_ascii(i):
-                cleanpath.append(i)
-        os.environ["PATH"] = PathEnvironment + os.pathsep.join(cleanpath)
-        Log('done\n')
     except UnicodeEncodeError:
         Log('UnicodeEncodeError was raised when concatenating unicode string with PATH. Try to replace non-ascii chars...\n')
         os.environ["PATH"] = PathEnvironment.encode(errors='replace') + os.environ["PATH"]
@@ -202,6 +192,32 @@ def InitApplications():
         else:
             Log('Init:      Initializing ' + Dir + '(Init.py not found)... ignore\n')
 
+    def processMetadataFile(MetadataFile):
+        meta = FreeCAD.Metadata(MetadataFile)
+        if not meta.supportsCurrentFreeCAD():
+            Msg(f'NOTICE: {meta.Name} does not support this version of FreeCAD, so is being skipped\n')
+            return None
+        content = meta.Content
+        if "workbench" in content:
+            workbenches = content["workbench"]
+            for workbench in workbenches:
+                if not workbench.supportsCurrentFreeCAD():
+                    Msg(f'NOTICE: {meta.Name} content item {workbench.Name} does not support this version of FreeCAD, so is being skipped\n')
+                    return None
+                subdirectory = workbench.Name if not workbench.Subdirectory else workbench.Subdirectory
+                subdirectory = subdirectory.replace("/",os.path.sep)
+                subdirectory = os.path.join(Dir, subdirectory)
+                #classname = workbench.Classname
+                sys.path.insert(0,subdirectory)
+                PathExtension.append(subdirectory)
+                RunInitPy(subdirectory)
+
+    def tryProcessMetadataFile(MetadataFile):
+        try:
+            processMetadataFile(MetadataFile)
+        except Exception as exc:
+            Err(str(exc))
+
     for Dir in ModDict.values():
         if ((Dir != '') & (Dir != 'CVS') & (Dir != '__init__.py')):
             stopFile = os.path.join(Dir, "ADDON_DISABLED")
@@ -212,26 +228,7 @@ def InitApplications():
             PathExtension.append(Dir)
             MetadataFile = os.path.join(Dir, "package.xml")
             if os.path.exists(MetadataFile):
-                meta = FreeCAD.Metadata(MetadataFile)
-                if not meta.supportsCurrentFreeCAD():
-                    Msg(f'NOTICE: {meta.Name} does not support this version of FreeCAD, so is being skipped\n')
-                    continue
-                content = meta.Content
-                if "workbench" in content:
-                    workbenches = content["workbench"]
-                    for workbench in workbenches:
-                        if not workbench.supportsCurrentFreeCAD():
-                            Msg(f'NOTICE: {meta.Name} content item {workbench.Name} does not support this version of FreeCAD, so is being skipped\n')
-                            continue
-                        subdirectory = workbench.Name if not workbench.Subdirectory else workbench.Subdirectory
-                        subdirectory = subdirectory.replace("/",os.path.sep)
-                        subdirectory = os.path.join(Dir, subdirectory)
-                        #classname = workbench.Classname
-                        sys.path.insert(0,subdirectory)
-                        PathExtension.append(subdirectory)
-                        RunInitPy(subdirectory)
-                else:
-                    pass # The package content says there are no workbenches here, so just skip
+                tryProcessMetadataFile(MetadataFile)
             else:
                 RunInitPy(Dir)
 
@@ -302,7 +299,9 @@ Log = FreeCAD.Console.PrintLog
 Msg = FreeCAD.Console.PrintMessage
 Err = FreeCAD.Console.PrintError
 Wrn = FreeCAD.Console.PrintWarning
-test_ascii = lambda s: all(ord(c) < 128 for c in s)
+Crt = FreeCAD.Console.PrintCritical
+Ntf = FreeCAD.Console.PrintNotification
+Tnf = FreeCAD.Console.PrintTranslatedNotification
 
 #store the cmake variales
 App.__cmake__ = cmake;
@@ -752,8 +751,18 @@ class PropertyType(IntEnum):
 
 App.PropertyType = PropertyType
 
+class ReturnType(IntEnum):
+    PyObject = 0
+    DocObject = 1
+    DocAndPyObject = 2
+    Placement = 3
+    Matrix = 4
+    LinkAndPlacement = 5
+    LinkAndMatrix = 6
+
+App.ReturnType = ReturnType
+
 # clean up namespace
 del(InitApplications)
-del(test_ascii)
 
 Log ('Init: App::FreeCADInit.py done\n')

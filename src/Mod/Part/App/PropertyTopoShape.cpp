@@ -326,9 +326,7 @@ void PropertyPartShape::Save (Base::Writer &writer) const
             << "\"/>\n";
     } else if(binary) {
         writer.Stream() << " binary=\"1\">\n";
-        TopoShape shape;
-        shape.setShape(_Shape.getShape());
-        shape.exportBinary(writer.beginCharStream(true));
+        _Shape.exportBinary(writer.beginCharStream(true));
         writer.endCharStream() <<  writer.ind() << "</Part>\n";
     } else {
         writer.Stream() << " brep=\"1\">\n";
@@ -371,7 +369,7 @@ void PropertyPartShape::Restore(Base::XMLReader &reader)
     int hasher_idx = reader.getAttributeAsInteger("HasherIndex","-1");
     int save_hasher = reader.getAttributeAsInteger("SaveHasher","");
 
-    TopoDS_Shape sh;
+    TopoShape shape;
 
     if(reader.hasAttribute("file")) {
         std::string file = reader.getAttribute("file");
@@ -380,12 +378,9 @@ void PropertyPartShape::Restore(Base::XMLReader &reader)
             reader.addFile(file.c_str(),this);
         }
     } else if(reader.getAttributeAsInteger("binary","")) {
-        TopoShape shape;
         shape.importBinary(reader.beginCharStream(true));
-        sh = shape.getShape();
     } else if(reader.getAttributeAsInteger("brep","")) {
-        BRep_Builder builder;
-        BRepTools::Read(sh, reader.beginCharStream(false), builder);
+        shape.importBrep(reader.beginCharStream(false));
     }
 
     reader.readEndElement("Part");
@@ -444,8 +439,8 @@ void PropertyPartShape::Restore(Base::XMLReader &reader)
         }
     }
 
-    if (!sh.IsNull() || !_Shape.isNull()) {
-        setValue(sh, false);
+    if (!shape.isNull() || !_Shape.isNull()) {
+        setValue(shape.getShape(), false);
     }
 }
 
@@ -611,24 +606,12 @@ void PropertyPartShape::SaveDocFile (Base::Writer &writer) const
     // if (_Shape.getShape().IsNull())
     //     return;
 
-    TopoDS_Shape myShape = _Shape.getShape();
     Base::FileInfo finfo(writer.getCurrentFileName());
     if (finfo.hasExtension("bin")) {
-        TopoShape shape;
-        shape.setShape(myShape);
-        shape.exportBinary(writer.Stream());
+        _Shape.exportBinary(writer.Stream());
     }
     else {
-        bool direct = App::GetApplication().GetParameterGroupByPath
-            ("User parameter:BaseApp/Preferences/Mod/Part/General")->GetBool("DirectAccess", true);
-        if (!direct) {
-            saveToFile(writer);
-        }
-        else {
-            TopoShape shape;
-            shape.setShape(myShape);
-            shape.exportBrep(writer.Stream());
-        }
+        _Shape.exportBrep(writer.Stream());
     }
 }
 
@@ -644,20 +627,7 @@ void PropertyPartShape::RestoreDocFile(Base::Reader &reader)
         shape.importBinary(reader);
     }
     else {
-        TopoDS_Shape sh;
-        static ParameterGrp::handle hGrp;
-        if (!hGrp)
-            hGrp = App::GetApplication().GetParameterGroupByPath(
-                "User parameter:BaseApp/Preferences/Mod/Part/General");
-        bool direct = hGrp->GetBool("DirectAccess", true);
-        if (!direct) {
-            shape = loadFromFile(reader);
-        }
-        else {
-            auto iostate = reader.exceptions();
-            shape = loadFromStream(reader);
-            reader.exceptions(iostate);
-        }
+        shape.importBrep(reader);
     }
 
     std::string ver = _Ver;

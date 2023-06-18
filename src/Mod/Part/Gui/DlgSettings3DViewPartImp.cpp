@@ -59,8 +59,12 @@ DlgSettings3DViewPart::DlgSettings3DViewPart(QWidget* parent)
     ui->checkBoxMapPointColor->setChecked(PartParams::getMapPointColor());
     ui->checkBoxMapTransparency->setChecked(PartParams::getMapTransparency());
 
-    connect(ui->deviationLowerBound, SIGNAL(valueChanged(double)), this, SLOT(onLowerBoundChanged()));
-    connect(ui->angularDeflectionLowerBound, SIGNAL(valueChanged(double)), this, SLOT(onLowerBoundChanged()));
+    connect(ui->deviationLowerBound, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &DlgSettings3DViewPart::onLowerBoundChanged);
+    connect(ui->angularDeflectionLowerBound, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &DlgSettings3DViewPart::onLowerBoundChanged);
+    connect(ui->maxDeviation, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &DlgSettings3DViewPart::onMaxDeviationValueChanged);
 }
 
 /**
@@ -71,7 +75,7 @@ DlgSettings3DViewPart::~DlgSettings3DViewPart()
     // no need to delete child widgets, Qt does it all for us
 }
 
-void DlgSettings3DViewPart::on_maxDeviation_valueChanged(double v)
+void DlgSettings3DViewPart::onMaxDeviationValueChanged(double v)
 {
     if (!this->isVisible())
         return;
@@ -83,7 +87,7 @@ void DlgSettings3DViewPart::on_maxDeviation_valueChanged(double v)
     }
 }
 
-void DlgSettings3DViewPart::onLowerBoundChanged()
+void DlgSettings3DViewPart::onLowerBoundChanged(double)
 {
     ui->maxDeviation->setMinimum(ui->deviationLowerBound->value());
     ui->maxAngularDeflection->setMinimum(ui->angularDeflectionLowerBound->value());

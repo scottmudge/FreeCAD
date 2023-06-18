@@ -92,8 +92,14 @@ int RotationPy::PyInit(PyObject* args, PyObject* kwds)
 
     PyErr_Clear();
     if (PyArg_ParseTuple(args, "O!", &(Base::MatrixPy::Type), &o)) {
-      getRotationPtr()->setValue(static_cast<Base::MatrixPy*>(o)->value());
-      return 0;
+        try {
+            getRotationPtr()->setValue(static_cast<Base::MatrixPy*>(o)->value());
+            return 0;
+        }
+        catch (const Base::Exception& e) {
+            PyErr_SetString(e.getPyExceptionType(), e.what());
+            return -1;
+        }
     }
 
     PyErr_Clear();
@@ -134,12 +140,18 @@ int RotationPy::PyInit(PyObject* args, PyObject* kwds)
       &a31, &a32, &a33, &a34,
       &a41, &a42, &a43, &a44))
     {
-      Matrix4D mtx(a11, a12, a13, a14,
-        a21, a22, a23, a24,
-        a31, a32, a33, a34,
-        a41, a42, a43, a44);
-      getRotationPtr()->setValue(mtx);
-      return 0;
+        try {
+            Matrix4D mtx(a11, a12, a13, a14,
+                         a21, a22, a23, a24,
+                         a31, a32, a33, a34,
+                         a41, a42, a43, a44);
+            getRotationPtr()->setValue(mtx);
+            return 0;
+        }
+        catch (const Base::Exception& e) {
+            PyErr_SetString(e.getPyExceptionType(), e.what());
+            return -1;
+        }
     }
 
     // try read a 3x3 matrix
@@ -149,14 +161,19 @@ int RotationPy::PyInit(PyObject* args, PyObject* kwds)
       &a21, &a22, &a23,
       &a31, &a32, &a33))
     {
-      Matrix4D mtx(a11, a12, a13, a14,
-        a21, a22, a23, a24,
-        a31, a32, a33, a34,
-        a41, a42, a43, a44);
-      getRotationPtr()->setValue(mtx);
-      return 0;
+        try {
+            Matrix4D mtx(a11, a12, a13, a14,
+                         a21, a22, a23, a24,
+                         a31, a32, a33, a34,
+                         a41, a42, a43, a44);
+            getRotationPtr()->setValue(mtx);
+            return 0;
+        }
+        catch (const Base::Exception& e) {
+            PyErr_SetString(e.getPyExceptionType(), e.what());
+            return -1;
+        }
     }
-
 
     PyErr_Clear();
     PyObject *v1, *v2;
@@ -377,9 +394,11 @@ PyObject* RotationPy::isSame(PyObject *args)
 
 PyObject* RotationPy::isIdentity(PyObject *args)
 {
-    if (!PyArg_ParseTuple(args, ""))
+    double tol = 0.0;
+    if (!PyArg_ParseTuple(args, "|d", &tol))
         return nullptr;
-    bool null = getRotationPtr()->isIdentity();
+    bool null = tol > 0.0 ? getRotationPtr()->isIdentity(tol)
+                          : getRotationPtr()->isIdentity();
     return Py_BuildValue("O", (null ? Py_True : Py_False));
 }
 

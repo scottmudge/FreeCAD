@@ -377,8 +377,8 @@ ContainerDialog::ContainerDialog( QWidget* templChild )
     resize( QSize(307, 197).expandedTo(minimumSizeHint()) );
 
     // signals and slots connections
-    connect( buttonOk, SIGNAL( clicked() ), this, SLOT( accept() ) );
-    connect( buttonCancel, SIGNAL( clicked() ), this, SLOT( reject() ) );
+    connect( buttonOk, &QPushButton::clicked, this, &QDialog::accept);
+    connect( buttonCancel, &QPushButton::clicked, this, &QDialog::reject);
 }
 
 /** Destroys the object and frees any allocated resources */
@@ -461,11 +461,10 @@ void PyResource::load(const char* name)
 
     QWidget* w=nullptr;
     try {
-        UiLoader loader;
-        loader.setLanguageChangeEnabled(true);
+        auto loader = UiLoader::newInstance();
         QFile file(fn);
         if (file.open(QFile::ReadOnly))
-            w = loader.load(&file, QApplication::activeWindow());
+            w = loader->load(&file, QApplication::activeWindow());
         file.close();
     }
     catch (...) {
@@ -562,9 +561,9 @@ Py::Object PyResource::value(const Py::Tuple& args)
     }
 
     Py::Object item = Py::None();
-    switch (v.type())
+    switch (v.userType())
     {
-    case QVariant::StringList:
+    case QMetaType::QStringList:
         {
             QStringList str = v.toStringList();
             int nSize = str.count();
@@ -574,21 +573,21 @@ Py::Object PyResource::value(const Py::Tuple& args)
             }
             item = slist;
         }   break;
-    case QVariant::ByteArray:
+    case QMetaType::QByteArray:
         break;
-    case QVariant::String:
+    case QMetaType::QString:
         item = Py::String(v.toString().toUtf8());
         break;
-    case QVariant::Double:
+    case QMetaType::Double:
         item = Py::Float(v.toDouble());
         break;
-    case QVariant::Bool:
+    case QMetaType::Bool:
         item = Py::Boolean(v.toBool() ? 1 : 0);
         break;
-    case QVariant::UInt:
+    case QMetaType::UInt:
         item = Py::Long(static_cast<unsigned long>(v.toUInt()));
         break;
-    case QVariant::Int:
+    case QMetaType::Int:
         item = Py::Int(v.toInt());
         break;
     default:

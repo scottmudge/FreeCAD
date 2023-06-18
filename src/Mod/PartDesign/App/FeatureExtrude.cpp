@@ -74,7 +74,7 @@ void FeatureExtrude::initProperties(const char *group)
     TaperAngle2.setConstraints(&floatAngle);
 
     // Remove the constraints and keep the type to allow to accept negative values
-    // https://forum.freecadweb.org/viewtopic.php?f=3&t=52075&p=448410#p447636
+    // https://forum.freecad.org/viewtopic.php?f=3&t=52075&p=448410#p447636
     Length2.setConstraints(nullptr);
 
     ADD_PROPERTY_TYPE(Offset, (0.0), group, App::Prop_None, "Offset from face in which pad will end");
@@ -202,7 +202,7 @@ void FeatureExtrude::generatePrism(TopoShape& prism,
 
         // Without taper angle we create a prism because its shells are in every case no B-splines and can therefore
         // be use as support for further features like Pads, Lofts etc. B-spline shells can break certain features,
-        // see e.g. https://forum.freecadweb.org/viewtopic.php?p=560785#p560785
+        // see e.g. https://forum.freecad.org/viewtopic.php?p=560785#p560785
         // It is better not to use BRepFeat_MakePrism here even if we have a support because the
         // resulting shape creates problems with Pocket
         try {
@@ -293,12 +293,12 @@ App::DocumentObjectExecReturn *FeatureExtrude::buildExtrusion(ExtrudeOptions opt
     // Validate parameters
     double L = Length.getValue();
     if ((method == "Length") && (L < Precision::Confusion()))
-        return new App::DocumentObjectExecReturn("Length too small");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Length too small"));
     double L2 = 0;
     if ((method == "TwoLengths")) {
         L2 = Length2.getValue();
         if (std::abs(L2) < Precision::Confusion())
-            return new App::DocumentObjectExecReturn("Second length too small");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Second length too small"));
     }
 
     Part::Feature* obj = nullptr;
@@ -327,7 +327,7 @@ App::DocumentObjectExecReturn *FeatureExtrude::buildExtrusion(ExtrudeOptions opt
                 shapes.push_back(shape);
             }
             if (failed)
-                return new App::DocumentObjectExecReturn("Failed to obtain profile shape");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Failed to obtain profile shape"));
             if (hasEdges)
                 sketchshape.makEWires(shapes);
             else
@@ -369,7 +369,8 @@ App::DocumentObjectExecReturn *FeatureExtrude::buildExtrusion(ExtrudeOptions opt
 
         // factor would be zero if vectors are orthogonal
         if (factor < Precision::Confusion())
-            return new App::DocumentObjectExecReturn("Creation failed because direction is orthogonal to sketch's normal vector");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                        "Creation failed because direction is orthogonal to sketch's normal vector"));
 
         // perform the length correction if not along custom vector
         if (AlongSketchNormal.getValue()) {
@@ -384,7 +385,8 @@ App::DocumentObjectExecReturn *FeatureExtrude::buildExtrusion(ExtrudeOptions opt
         dir.Transform(invTrsf);
 
         if (sketchshape.isNull())
-            return new App::DocumentObjectExecReturn("Creating a face from sketch failed");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                        "Creating a face from sketch failed"));
         sketchshape.move(invObjLoc);
 
         TopoShape prism(0,getDocument()->getStringHasher());
@@ -431,7 +433,7 @@ App::DocumentObjectExecReturn *FeatureExtrude::buildExtrusion(ExtrudeOptions opt
                     result = refineShapeIfActive(result);
                     this->AddSubShape.setValue(result);
                 }catch(Standard_Failure &) {
-                    return new App::DocumentObjectExecReturn("Pocket: Up to face: Could not get SubShape!");
+                    return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Up to face: Could not get SubShape!"));
                 }
 
                 if (NewSolid.getValue())
@@ -472,19 +474,19 @@ App::DocumentObjectExecReturn *FeatureExtrude::buildExtrusion(ExtrudeOptions opt
                     || std::fabs(params.innerTaperAngleRev) >= Precision::Angular()) {
                 if (fabs(params.taperAngleFwd) > M_PI * 0.5 - Precision::Angular()
                         || fabs(params.taperAngleRev) > M_PI * 0.5 - Precision::Angular())
-                    return new App::DocumentObjectExecReturn(
-                            "Magnitude of taper angle matches or exceeds 90 degrees");
+                    return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                            "Magnitude of taper angle matches or exceeds 90 degrees"));
                 if (fabs(params.innerTaperAngleFwd) > M_PI * 0.5 - Precision::Angular()
                         || fabs(params.innerTaperAngleRev) > M_PI * 0.5 - Precision::Angular())
-                    return new App::DocumentObjectExecReturn(
-                            "Magnitude of inner taper angle matches or exceeds 90 degrees");
+                    return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                            "Magnitude of inner taper angle matches or exceeds 90 degrees"));
                 if (Reversed.getValue())
                     params.dir.Reverse();
                 std::vector<TopoShape> drafts;
                 params.usepipe = this->UsePipeForDraft.getValue();
                 Part::ExtrusionHelper::makeDraft(params, sketchshape, drafts, getDocument()->getStringHasher());
                 if (drafts.empty())
-                    return new App::DocumentObjectExecReturn("Padding with draft angle failed");
+                    return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Padding with draft angle failed"));
                 prism.makECompound(drafts, nullptr, false);
 
             } else
@@ -517,13 +519,15 @@ App::DocumentObjectExecReturn *FeatureExtrude::buildExtrusion(ExtrudeOptions opt
                 }
                 result.makEBoolean(maker, {base,prism});
             }catch(Standard_Failure &){
-                return new App::DocumentObjectExecReturn("Fusion with base feature failed");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                            "Fusion with base feature failed"));
             }
             // we have to get the solids (fuse sometimes creates compounds)
             auto solRes = this->getSolid(result);
             // lets check if the result is a solid
             if (solRes.isNull())
-                return new App::DocumentObjectExecReturn("Resulting shape is not a solid");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                            "Resulting shape is not a solid"));
 
             solRes = refineShapeIfActive(solRes);
             this->Shape.setValue(getSolid(solRes));
@@ -544,8 +548,9 @@ App::DocumentObjectExecReturn *FeatureExtrude::buildExtrusion(ExtrudeOptions opt
     }
     catch (Standard_Failure& e) {
         if (std::string(e.GetMessageString()) == "TopoDS::Face")
-            return new App::DocumentObjectExecReturn("Could not create face from sketch.\n"
-                "Intersecting sketch entities or multiple faces in a sketch are not allowed.");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                "Could not create face from sketch.\n"
+                "Intersecting sketch entities or multiple faces in a sketch are not allowed."));
         else
             return new App::DocumentObjectExecReturn(e.GetMessageString());
     }

@@ -23,7 +23,6 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
-
 # include <TopoDS_Wire.hxx>
 # include <TopExp_Explorer.hxx>
 # include <BRepAlgoAPI_Cut.hxx>
@@ -35,6 +34,8 @@
 # include <TopoDS.hxx>
 # include <Precision.hxx>
 #endif
+
+#include <boost/core/ignore_unused.hpp>
 
 #include <App/Document.h>
 #include <App/DocumentObserver.h>
@@ -140,7 +141,7 @@ App::DocumentObjectExecReturn *Loft::execute(void)
         //build up multisections
         auto multisections = Sections.getSubListValues();
         if(multisections.empty())
-            return new App::DocumentObjectExecReturn("Loft: At least one section is needed");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Loft: At least one section is needed"));
         
         std::vector<std::vector<TopoShape>> wiresections;
         wiresections.reserve(wires.size());
@@ -179,7 +180,8 @@ App::DocumentObjectExecReturn *Loft::execute(void)
             if (wiresections[0].front().shapeType() != TopAbs_VERTEX) {
                 front = getVerifiedFace();
                 if (front.isNull())
-                    return new App::DocumentObjectExecReturn("Loft: Creating a face from sketch failed");
+                    return new App::DocumentObjectExecReturn(
+                            QT_TRANSLATE_NOOP("Exception", "Loft: Creating a face from sketch failed"));
                 front.move(invObjLoc);
             }
 
@@ -211,7 +213,7 @@ App::DocumentObjectExecReturn *Loft::execute(void)
             }
 
             if(!result.countSubShapes(TopAbs_SHELL))
-                return new App::DocumentObjectExecReturn("Loft: Failed to create shell");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Loft: Failed to create shell"));
             shapes = result.getSubTopoShapes(TopAbs_SHELL);
 
             for (auto &s : shapes) {
@@ -256,17 +258,18 @@ App::DocumentObjectExecReturn *Loft::execute(void)
             maker = Part::OpCodes::Common;
             break;
         default:
-            return new App::DocumentObjectExecReturn("Unknown operation type");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Unknown operation type"));
         }
         try {
             boolOp.makEBoolean(maker, {base,result});
-        }catch(Standard_Failure &e) {
-            return new App::DocumentObjectExecReturn("Failed to perform boolean operation");
+        }
+        catch(Standard_Failure &e) {
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Failed to perform boolean operation"));
         }
         boolOp = this->getSolid(boolOp);
         // lets check if the result is a solid
         if (boolOp.isNull())
-            return new App::DocumentObjectExecReturn("Resulting shape is not a solid");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Resulting shape is not a solid"));
 
         boolOp = refineShapeIfActive(boolOp);
         Shape.setValue(getSolid(boolOp));
@@ -279,7 +282,7 @@ App::DocumentObjectExecReturn *Loft::execute(void)
         return new App::DocumentObjectExecReturn(e.what());
     }
     catch (...) {
-        return new App::DocumentObjectExecReturn("Loft: A fatal error occurred when making the loft");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Loft: A fatal error occurred when making the loft"));
     }
 }
 

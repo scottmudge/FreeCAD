@@ -143,6 +143,12 @@
    <header>Gui/QuantitySpinBox.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>axis</tabstop>
+  <tabstop>revolveAngle</tabstop>
+  <tabstop>checkBoxMidplane</tabstop>
+  <tabstop>checkBoxReversed</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

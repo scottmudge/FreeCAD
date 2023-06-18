@@ -77,12 +77,14 @@ QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
         switch(cell->getEditMode()) {
         case Cell::EditButton: {
             auto button = new QPushButton(parent);
-            connect(button, SIGNAL(clicked()), this, SLOT(commitAndCloseEditor()));
+            connect(button, &QPushButton::clicked,
+                    this, &SpreadsheetDelegate::commitAndCloseEditor);
             return button;
         } 
         case Cell::EditColor: {
             auto button = new Gui::TransparentColorButton(parent);
-            connect(button, SIGNAL(changed()), this, SLOT(commitAndCloseEditor()));
+            connect(button, &Gui::TransparentColorButton::changed,
+                    this, &SpreadsheetDelegate::commitAndCloseEditor);
             return button;
         } 
         case Cell::EditLabel: {
@@ -92,7 +94,8 @@ QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
             else
                 editor->setObjectName(QStringLiteral("label"));
             editor->setContextMenuPolicy(Qt::NoContextMenu);
-            connect(editor, &SpreadsheetGui::TextEdit::finishedWithKey, this, &SpreadsheetDelegate::on_editorFinishedWithKey);
+            connect(editor, &SpreadsheetGui::TextEdit::finishedWithKey,
+                    this, &SpreadsheetDelegate::onEditorFinishedWithKey);
             lastEditor = editor;
             return editor;
         }
@@ -101,7 +104,8 @@ QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
             if(cell->isPersistentEditMode())
                 combo->setObjectName(QStringLiteral("persistent"));
             combo->setContextMenuPolicy(Qt::NoContextMenu);
-            connect(combo, SIGNAL(currentIndexChanged(int)), this, SLOT(commitAndCloseEditor()));
+            connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                    this, &SpreadsheetDelegate::commitAndCloseEditor);
             return combo;
         }
         case Cell::EditQuantity: {
@@ -109,7 +113,8 @@ QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
             spinbox->ignoreSizeHint(true);
             if(cell->isPersistentEditMode())
                 spinbox->setContextMenuPolicy(Qt::NoContextMenu);
-            connect(spinbox, SIGNAL(editingFinished()), this, SLOT(commitAndCloseEditor()));
+            connect(spinbox, &Gui::QuantitySpinBox::editingFinished,
+                    this, &SpreadsheetDelegate::commitAndCloseEditor);
             return spinbox;
         }
         case Cell::EditCheckBox: {
@@ -120,7 +125,8 @@ QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
             layout->addWidget(checkbox);
             layout->setAlignment(Qt::AlignCenter);
             layout->setContentsMargins(0,0,0,0);
-            connect(checkbox, SIGNAL(clicked()), this, SLOT(commitAndCloseEditor()));
+            connect(checkbox, &QCheckBox::clicked,
+                    this, &SpreadsheetDelegate::commitAndCloseEditor);
             return widget;
         } 
         default:
@@ -132,7 +138,8 @@ QWidget *SpreadsheetDelegate::createEditor(QWidget *parent,
     lastEditor = editor;
 
     editor->setDocumentObject(sheet);
-    connect(editor, &SpreadsheetGui::TextEdit::finishedWithKey, this, &SpreadsheetDelegate::on_editorFinishedWithKey);
+    connect(editor, &SpreadsheetGui::TextEdit::finishedWithKey,
+            this, &SpreadsheetDelegate::onEditorFinishedWithKey);
     return editor;
 }
 
@@ -344,7 +351,7 @@ void SpreadsheetDelegate::setModelData(QWidget *editor,
     }
 }
 
-void SpreadsheetDelegate::on_editorFinishedWithKey(int key, Qt::KeyboardModifiers modifiers)
+void SpreadsheetDelegate::onEditorFinishedWithKey(int key, Qt::KeyboardModifiers modifiers)
 {
     commitAndCloseEditor();
     Q_EMIT finishedWithKey(key, modifiers);
@@ -372,13 +379,13 @@ static inline void drawBorder(QPainter *painter, const QStyleOptionViewItem &opt
         painter->drawRect(rect.adjusted(0,0,-1,-1));
         return;
     }
-    if(flags & Sheet::BorderLeft) 
+    if(flags & Sheet::BorderLeft)
         painter->drawLine(rect.topLeft(), rect.bottomLeft());
-    if(flags & Sheet::BorderTop) 
+    if(flags & Sheet::BorderTop)
         painter->drawLine(rect.topLeft(), rect.topRight());
-    if(flags & Sheet::BorderRight) 
+    if(flags & Sheet::BorderRight)
         painter->drawLine(rect.topRight(), rect.bottomRight());
-    if(flags & Sheet::BorderBottom) 
+    if(flags & Sheet::BorderBottom)
         painter->drawLine(rect.bottomLeft(), rect.bottomRight());
 }
 

@@ -122,7 +122,7 @@ App::DocumentObjectExecReturn *Chamfer::execute()
                                         : getContinuousEdges(baseShape);
 
     if (edges.empty())
-        return new App::DocumentObjectExecReturn("No edges specified");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "No edges specified"));
 
     const int chamferType = ChamferType.getValue();
     const double size = Size.getValue();
@@ -156,7 +156,7 @@ App::DocumentObjectExecReturn *Chamfer::execute()
         TopoShape shape(0,getDocument()->getStringHasher());
         shape.makEChamfer(baseShape, edges, chamferInfo);
         if (shape.isNull())
-            return new App::DocumentObjectExecReturn("Failed to create chamfer");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Failed to create chamfer"));
 
         TopTools_ListOfShape aLarg;
         aLarg.Append(baseShape.getShape());
@@ -177,7 +177,7 @@ App::DocumentObjectExecReturn *Chamfer::execute()
         }
         this->Shape.setValue(shape);
         if (failed)
-            return new App::DocumentObjectExecReturn("Resulting shape is invalid");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Resulting shape is invalid"));
         return App::DocumentObject::StdReturn;
     }
     catch (Standard_Failure& e) {
@@ -235,7 +235,7 @@ static App::DocumentObjectExecReturn *validateParameters(int chamferType, double
 {
     // Size is common to all chamfer types.
     if (size <= 0) {
-        return new App::DocumentObjectExecReturn("Size must be greater than zero");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Size must be greater than zero"));
     }
 
     switch (chamferType) {
@@ -244,12 +244,12 @@ static App::DocumentObjectExecReturn *validateParameters(int chamferType, double
             break;
         case 1: // Two distances
             if (size2 <= 0) {
-                return new App::DocumentObjectExecReturn("Size2 must be greater than zero");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Size2 must be greater than zero"));
             }
             break;
         case 2: // Distance and angle
             if (angle <= 0 || angle >= 180.0) {
-                return new App::DocumentObjectExecReturn("Angle must be greater than 0 and less than 180");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Angle must be greater than 0 and less than 180"));
             }
             break;
     }

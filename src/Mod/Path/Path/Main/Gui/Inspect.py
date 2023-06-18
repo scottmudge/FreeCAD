@@ -28,6 +28,7 @@ import FreeCAD
 import FreeCADGui
 import Path
 from PySide.QtCore import QT_TRANSLATE_NOOP
+import PathScripts.PathUtils as PathUtils
 
 translate = FreeCAD.Qt.translate
 
@@ -96,7 +97,7 @@ class GCodeEditorDialog(QtGui.QDialog):
     tool = None
 
     def __init__(self, PathObj, parent=FreeCADGui.getMainWindow()):
-        self.PathObj = PathObj.Path
+        self.PathObj = PathObj
         if hasattr(PathObj, "ToolController"):
             self.tool = PathObj.ToolController.Tool
         else:
@@ -182,7 +183,7 @@ class GCodeEditorDialog(QtGui.QDialog):
         cursor.setPosition(ep)
         endrow = cursor.blockNumber()
 
-        commands = self.PathObj.Commands
+        commands = PathUtils.getPathWithPlacement(self.PathObj).Commands
 
         # Derive the starting position for the first selected command
         prevX = prevY = prevZ = None

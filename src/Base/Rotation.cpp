@@ -222,32 +222,55 @@ void Rotation::setValue(const double q[4])
 
 void Rotation::setValue(const Matrix4D & m)
 {
-    double trace = (m[0][0] + m[1][1] + m[2][2]);
+    
+    auto type = m.hasScale();
+    if (type == Base::ScaleType::Other) {
+        THROWM(Base::ValueError, "setValue(matrix): Could not determine the rotation.");
+    }
+    Matrix4D mc(m);
+    if (type != Base::ScaleType::NoScaling) {
+        mc.setCol(3, Vector3d(0.0, 0.0, 0.0));
+        if (type == Base::ScaleType::NonUniformRight) {
+            mc.transpose();
+        }
+        double sx = 1.0 / mc.getRow(0).Length();
+        double sy = 1.0 / mc.getRow(1).Length();
+        double sz = 1.0 / mc.getRow(2).Length();
+        mc.scale(sx, sy, sz);
+        if (type == Base::ScaleType::NonUniformRight) {
+            mc.transpose();
+        }
+        if (mc.determinant3() < 0.0) {
+            mc.scale(-1.0, -1.0, -1.0);
+        }
+    }
+    // Extract quaternion
+    double trace = (mc[0][0] + mc[1][1] + mc[2][2]);
     if (trace > 0.0) {
         double s = sqrt(1.0+trace);
         this->quat[3] = 0.5 * s;
         s = 0.5 / s;
-        this->quat[0] = ((m[2][1] - m[1][2]) * s);
-        this->quat[1] = ((m[0][2] - m[2][0]) * s);
-        this->quat[2] = ((m[1][0] - m[0][1]) * s);
+        this->quat[0] = ((mc[2][1] - mc[1][2]) * s);
+        this->quat[1] = ((mc[0][2] - mc[2][0]) * s);
+        this->quat[2] = ((mc[1][0] - mc[0][1]) * s);
     }
     else {
         // Described in RotationIssues.pdf from <http://www.geometrictools.com>
         //
         // Get the max. element of the trace
         unsigned short i = 0;
-        if (m[1][1] > m[0][0]) i = 1;
-        if (m[2][2] > m[i][i]) i = 2;
+        if (mc[1][1] > mc[0][0]) i = 1;
+        if (mc[2][2] > mc[i][i]) i = 2;
 
         unsigned short j = (i+1)%3;
         unsigned short k = (i+2)%3;
 
-        double s = sqrt((m[i][i] - (m[j][j] + m[k][k])) + 1.0);
+        double s = sqrt((mc[i][i] - (mc[j][j] + mc[k][k])) + 1.0);
         this->quat[i] = s * 0.5;
         s = 0.5 / s;
-        this->quat[3] = ((m[k][j] - m[j][k]) * s);
-        this->quat[j] = ((m[j][i] + m[i][j]) * s);
-        this->quat[k] = ((m[k][i] + m[i][k]) * s);
+        this->quat[3] = ((mc[k][j] - mc[j][k]) * s);
+        this->quat[j] = ((mc[j][i] + mc[i][j]) * s);
+        this->quat[k] = ((mc[k][i] + mc[i][k]) * s);
     }
 
     this->evaluateVector();
@@ -430,33 +453,6 @@ bool Rotation::operator==(const Rotation & q) const
 bool Rotation::operator!=(const Rotation & q) const
 {
     return !(*this == q);
-}
-
-bool Rotation::isSame(const Rotation& q) const
-{
-    if ((this->quat[0] == q.quat[0] &&
-         this->quat[1] == q.quat[1] &&
-         this->quat[2] == q.quat[2] &&
-         this->quat[3] == q.quat[3]) ||
-        (this->quat[0] == -q.quat[0] &&
-         this->quat[1] == -q.quat[1] &&
-         this->quat[2] == -q.quat[2] &&
-         this->quat[3] == -q.quat[3]))
-        return true;
-    return false;
-}
-
-bool Rotation::isSame(const Rotation& q, double tol) const
-{
-    // This follows the implementation of Coin3d where the norm
-    // (x1-y1)**2 + ... + (x4-y4)**2 is computed.
-    // This term can be simplified to
-    // 2 - 2*(x1*y1 + ... + x4*y4) so that for the equality we have to check
-    // 1 - tol/2 <= x1*y1 + ... + x4*y4
-    // Because a quaternion (x1,x2,x3,x4) is equal to (-x1,-x2,-x3,-x4) we use the
-    // absolute value of the scalar product
-    double dot = q.quat[0]*quat[0]+q.quat[1]*quat[1]+q.quat[2]*quat[2]+q.quat[3]*quat[3];
-    return fabs(dot) >= 1.0 - tol/2;
 }
 
 Vector3d Rotation::multVec(const Vector3d & src) const
@@ -760,6 +756,35 @@ void Rotation::getYawPitchRoll(double& y, double& p, double& r) const
     r = (r/D_PI)*180;
 }
 
+bool Rotation::isSame(const Rotation& q) const
+{
+    if ((this->quat[0] == q.quat[0] &&
+         this->quat[1] == q.quat[1] &&
+         this->quat[2] == q.quat[2] &&
+         this->quat[3] == q.quat[3]) ||
+        (this->quat[0] == -q.quat[0] &&
+         this->quat[1] == -q.quat[1] &&
+         this->quat[2] == -q.quat[2] &&
+         this->quat[3] == -q.quat[3]))
+        return true;
+    return false;
+}
+
+bool Rotation::isSame(const Rotation& q, double tol) const
+{
+    // This follows the implementation of Coin3d where the norm
+    // (x1-y1)**2 + ... + (x4-y4)**2 is computed.
+    // This term can be simplified to
+    // 2 - 2*(x1*y1 + ... + x4*y4) so that for the equality we have to check
+    // 1 - tol/2 <= x1*y1 + ... + x4*y4
+    // This simplification only work if both quats are normalized
+    // Is it safe to assume that?
+    // Because a quaternion (x1,x2,x3,x4) is equal to (-x1,-x2,-x3,-x4) we use the
+    // absolute value of the scalar product
+    double dot = q.quat[0]*quat[0]+q.quat[1]*quat[1]+q.quat[2]*quat[2]+q.quat[3]*quat[3];
+    return fabs(dot) >= 1.0 - tol/2;
+}
+
 bool Rotation::isIdentity() const
 {
     return ((this->quat[0] == 0.0  &&
@@ -767,6 +792,11 @@ bool Rotation::isIdentity() const
              this->quat[2] == 0.0) &&
             (this->quat[3] == 1.0 ||
              this->quat[3] == -1.0));
+}
+
+bool Rotation::isIdentity(double tol) const
+{
+    return isSame(Rotation(), tol);
 }
 
 bool Rotation::isNull() const

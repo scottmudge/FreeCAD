@@ -118,7 +118,7 @@ App::DocumentObjectExecReturn *Boolean::execute()
     // If not base shape, use the first tool shape as base
     if(baseShape.isNull()) {
         if (tools.empty())
-            return new App::DocumentObjectExecReturn("No tool objects");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "No tool objects"));
 
         App::DocumentObject *feature;
         if (type == "Cut") {
@@ -134,8 +134,8 @@ App::DocumentObjectExecReturn *Boolean::execute()
         }
         baseShape = getTopoShape(feature);
         if (baseShape.isNull()) {
-            return new App::DocumentObjectExecReturn(
-                    "Cannot do boolean operation with invalid base shape");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                    "Cannot do boolean operation with invalid base shape"));
         }
     }
         
@@ -144,7 +144,7 @@ App::DocumentObjectExecReturn *Boolean::execute()
     for(auto it=itBegin; it<itEnd; ++it) {
         auto shape = getTopoShape(*it);
         if (shape.isNull())
-            return new App::DocumentObjectExecReturn("Tool shape is null");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception","Tool shape is null"));
         shapes.push_back(shape);
     }
 
@@ -172,18 +172,18 @@ App::DocumentObjectExecReturn *Boolean::execute()
     else if(type == "Section")
         op = Part::OpCodes::Section;
     else
-        return new App::DocumentObjectExecReturn("Unsupported boolean operation");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Unsupported boolean operation"));
 
     try {
         result.makEBoolean(op, shapes);
     } catch (Standard_Failure &e) {
         FC_ERR("Boolean operation failed: " << e.GetMessageString());
-        return new App::DocumentObjectExecReturn("Boolean operation failed");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Boolean operation failed"));
     }
     result = this->getSolid(result, false);
     // lets check if the result is a solid
     if (result.isNull())
-        return new App::DocumentObjectExecReturn("Resulting shape is null");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Resulting shape is null"));
 
     if (this->Refine.getValue())
         result = result.makERefine();

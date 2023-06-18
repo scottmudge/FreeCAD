@@ -23,7 +23,6 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
- //# include <BRep_Tool.hxx>
 # include <BRepAlgoAPI_Cut.hxx>
 # include <BRepAlgoAPI_Fuse.hxx>
 # include <BRepBndLib.hxx>
@@ -35,8 +34,6 @@
 # include <gp_Ax2.hxx>
 # include <gp_Pln.hxx>
 # include <Law_Function.hxx>
-//# include <Law_Linear.hxx>
-//# include <Law_S.hxx>
 # include <Precision.hxx>
 # include <ShapeAnalysis_FreeBounds.hxx>
 # include <TopExp.hxx>
@@ -44,8 +41,6 @@
 # include <TopoDS.hxx>
 # include <TopoDS_Wire.hxx>
 # include <TopTools_HSequenceOfShape.hxx>
-//# include <TopTools_IndexedMapOfShape.hxx>
-//# include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
 #endif
 
 #include <App/DocumentObject.h>
@@ -65,26 +60,35 @@ using namespace Part;
 const char* Pipe::TypeEnums[] = {"FullPath", "UpToFace", nullptr};
 const char* Pipe::TransitionEnums[] = {"Transformed", "Right corner", "Round corner", nullptr};
 const char* Pipe::ModeEnums[] = {"Standard", "Fixed", "Frenet", "Auxiliary", "Binormal", nullptr};
-const char* Pipe::TransformEnums[] = {"Constant", "Multisection", "Linear", "S-shape", "Interpolation", nullptr};
+const char* Pipe::TransformEnums[] = {
+    "Constant", "Multisection", "Linear", "S-shape", "Interpolation", nullptr};
 
 
 PROPERTY_SOURCE(PartDesign::Pipe, PartDesign::ProfileBased)
 
 Pipe::Pipe()
 {
-    ADD_PROPERTY_TYPE(Sections,(nullptr),"Sweep",App::Prop_None,"List of sections");
+    ADD_PROPERTY_TYPE(Sections, (nullptr), "Sweep", App::Prop_None, "List of sections");
     Sections.setValue(nullptr);
-    ADD_PROPERTY_TYPE(Spine,(nullptr),"Sweep",App::Prop_None,"Path to sweep along");
-    ADD_PROPERTY_TYPE(SpineTangent,(false),"Sweep",App::Prop_None,"Include tangent edges into path");
-    ADD_PROPERTY_TYPE(AuxillerySpine,(nullptr),"Sweep",App::Prop_None,"Secondary path to orient sweep");
-    ADD_PROPERTY_TYPE(AuxillerySpineTangent,(false),"Sweep",App::Prop_None,"Include tangent edges into secondary path");
-    ADD_PROPERTY_TYPE(AuxilleryCurvelinear, (true), "Sweep", App::Prop_None,"Calculate normal between equidistant points on both spines");
-    ADD_PROPERTY_TYPE(Mode,(long(0)),"Sweep",App::Prop_None,"Profile mode");
-    ADD_PROPERTY_TYPE(Binormal,(Base::Vector3d()),"Sweep",App::Prop_None,"Binormal vector for corresponding orientation mode");
-    ADD_PROPERTY_TYPE(Transition,(long(0)),"Sweep",App::Prop_None,"Transition mode");
-    ADD_PROPERTY_TYPE(Transformation,(long(0)),"Sweep",App::Prop_None,"Section transformation mode");
-    ADD_PROPERTY_TYPE(MoveProfile, (false), "Sweep", App::Prop_None,"Auto move profile to be in contact with sweep path");
-    ADD_PROPERTY_TYPE(RotateProfile, (false), "Sweep", App::Prop_None,"Auto rotate profile to be orthogonal to sweep path");
+    ADD_PROPERTY_TYPE(Spine, (nullptr), "Sweep", App::Prop_None, "Path to sweep along");
+    ADD_PROPERTY_TYPE(SpineTangent, (false), "Sweep", App::Prop_None,
+        "Include tangent edges into path");
+    ADD_PROPERTY_TYPE(AuxillerySpine, (nullptr), "Sweep", App::Prop_None,
+        "Secondary path to orient sweep");
+    ADD_PROPERTY_TYPE(AuxillerySpineTangent, (false), "Sweep", App::Prop_None,
+        "Include tangent edges into secondary path");
+    ADD_PROPERTY_TYPE(AuxilleryCurvelinear, (true), "Sweep", App::Prop_None,
+        "Calculate normal between equidistant points on both spines");
+    ADD_PROPERTY_TYPE(Mode, (long(0)), "Sweep", App::Prop_None, "Profile mode");
+    ADD_PROPERTY_TYPE(Binormal, (Base::Vector3d()), "Sweep", App::Prop_None,
+        "Binormal vector for corresponding orientation mode");
+    ADD_PROPERTY_TYPE(Transition, (long(0)), "Sweep", App::Prop_None, "Transition mode");
+    ADD_PROPERTY_TYPE(Transformation, (long(0)), "Sweep", App::Prop_None,
+        "Section transformation mode");
+    ADD_PROPERTY_TYPE(MoveProfile, (false), "Sweep", App::Prop_None,
+        "Auto move profile to be in contact with sweep path");
+    ADD_PROPERTY_TYPE(RotateProfile, (false), "Sweep", App::Prop_None,
+        "Auto rotate profile to be orthogonal to sweep path");
     Mode.setEnums(ModeEnums);
     Transition.setEnums(TransitionEnums);
     Transition.setValue(1);
@@ -120,13 +124,14 @@ App::DocumentObjectExecReturn *Pipe::execute()
         //build the paths
         path = buildPipePath(Spine,invObjLoc);
         if(path.isNull())
-            return new App::DocumentObjectExecReturn("Invalid spine");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception","Invalid spine"));
 
         // auxiliary
         if(Mode.getValue()==3) {
             auxpath = buildPipePath(AuxillerySpine,invObjLoc);
             if(auxpath.isNull())
-                return new App::DocumentObjectExecReturn("invalid auxiliary spine");
+                return new App::DocumentObjectExecReturn(
+                        QT_TRANSLATE_NOOP("Exception", "invalid auxiliary spine"));
         }
     } catch (Standard_Failure& e) {
         return new App::DocumentObjectExecReturn(e.GetMessageString());
@@ -134,7 +139,7 @@ App::DocumentObjectExecReturn *Pipe::execute()
         e.ReportException();
         return new App::DocumentObjectExecReturn(e.what());
     } catch (...) {
-        return new App::DocumentObjectExecReturn("Unknown error");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Unknown error"));
     }
 
     return _execute(this,
@@ -246,7 +251,7 @@ App::DocumentObjectExecReturn *Pipe::_execute(ProfileBased *feat,
             }
 
             if (!mkPS.IsReady())
-                return new App::DocumentObjectExecReturn("Shape could not be built");
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Shape could not be built"));
 
             TopoShape shell(0, feat->getDocument()->getStringHasher());
             shell.makEShape(mkPS,wires);
@@ -374,7 +379,8 @@ App::DocumentObjectExecReturn *Pipe::_execute(ProfileBased *feat,
             boolOp.makEBoolean(maker, {base,result});
         }catch(Standard_Failure &e) {
             FC_ERR(feat->getFullName() << ": " << e.GetMessageString());
-            return new App::DocumentObjectExecReturn("Failed to perform boolean operation");
+            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception",
+                        "Failed to perform boolean operation"));
         }
         boolOp = feat->getSolid(boolOp);
         // lets check if the result is a solid
@@ -391,7 +397,7 @@ App::DocumentObjectExecReturn *Pipe::_execute(ProfileBased *feat,
         e.ReportException();
         return new App::DocumentObjectExecReturn(e.what());
     } catch (...) {
-        return new App::DocumentObjectExecReturn("A fatal error occurred when making the pipe");
+        return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "A fatal error occurred when making the pipe"));
     }
 }
 
@@ -439,8 +445,8 @@ void Pipe::setupAlgorithm(BRepOffsetAPI_MakePipeShell& mkPipeShell,
 }
 
 
-void Pipe::getContinuousEdges(Part::TopoShape /*TopShape*/, std::vector< std::string >& /*SubNames*/) {
-
+void Pipe::getContinuousEdges(Part::TopoShape /*TopShape*/, std::vector<std::string>& /*SubNames*/)
+{
     /*
     TopTools_IndexedMapOfShape mapOfEdges;
     TopTools_IndexedDataMapOfShapeListOfShape mapEdgeEdge;
@@ -518,7 +524,8 @@ TopoShape Pipe::buildPipePath(const App::PropertyLinkSub &link, const TopLoc_Loc
     return result;
 }
 
-void Pipe::handleChangedPropertyType(Base::XMLReader& reader, const char* TypeName, App::Property* prop)
+void Pipe::handleChangedPropertyType(Base::XMLReader& reader, const char* TypeName,
+                                     App::Property* prop)
 {
     // property Sections had the App::PropertyLinkList and was changed to App::PropertyLinkSubList
     if (prop == &Sections && strcmp(TypeName, "App::PropertyLinkList") == 0) {

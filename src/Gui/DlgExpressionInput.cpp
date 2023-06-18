@@ -66,10 +66,15 @@ DlgExpressionInput::DlgExpressionInput(const App::ObjectIdentifier & _path,
     ui->setupUi(this);
 
     // Connect signal(s)
-    connect(ui->expression, SIGNAL(textChanged()), this, SLOT(textChanged()));
+    connect(ui->expression, &ExpressionTextEdit::textChanged,
+        this, &DlgExpressionInput::textChanged);
+    connect(ui->discardBtn, &QPushButton::clicked,
+        this, &DlgExpressionInput::setDiscarded);
     connect(ui->expression, &ExpressionTextEdit::completerVisibilityChanged,
-            [this](bool visible) {if(!visible) textChanged();});
-    connect(ui->discardBtn, SIGNAL(clicked()), this, SLOT(setDiscarded()));
+        [this](bool visible) {
+            if(!visible)
+                textChanged();
+        });
 
     setMouseTracking(true);
 
@@ -78,13 +83,13 @@ DlgExpressionInput::DlgExpressionInput(const App::ObjectIdentifier & _path,
     }
     else {
         QVariant text = parent->property("text");
-        if (text.canConvert(QMetaType::QString)) {
+        if (text.canConvert<QString>()) {
             ui->expression->setPlainText(text.toString());
         }
     }
 
     timer.setSingleShot(true);
-    connect(&timer, SIGNAL(timeout()), this, SLOT(onTimer()));
+    connect(&timer, &QTimer::timeout, this, &DlgExpressionInput::onTimer);
 
     // Set document object on line edit to create auto completer
     DocumentObject * docObj = path.getDocumentObject();

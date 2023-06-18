@@ -127,6 +127,10 @@ public:
         return _toHandle;
     }
 
+    T* get() const {
+        return _toHandle;
+    }
+
     operator T*() const {
         return _toHandle;
     }

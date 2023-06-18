@@ -50,8 +50,8 @@ public:
     void saveSettings() override;
     void loadSettings() override;
 
-private Q_SLOTS:
-    void on_mouseButton_clicked();
+private:
+    void onMouseButtonClicked();
     void onNewDocViewChanged(int);
 
 protected:
@@ -74,8 +74,8 @@ public:
     void getValues(double& q0, double& q1, double& q2, double& q3) const;
 
 
-private Q_SLOTS:
-    void on_currentView_clicked();
+private:
+    void onCurrentViewClicked();
 
 private:
     QDoubleSpinBox* sb0;

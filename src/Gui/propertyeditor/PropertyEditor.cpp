@@ -32,7 +32,9 @@
 # include <QMessageBox>
 # include <QCheckBox>
 # include <QInputDialog>
-# include <QDesktopWidget>
+# if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#   include <QDesktopWidget>
+# endif
 # include <QPainter>
 #endif
 
@@ -83,7 +85,7 @@ PropertyEditor::PropertyEditor(bool isViewEditor)
     setExpandsOnDoubleClick(true);
 
 #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-    QStyleOptionViewItem opt = viewOptions();
+    QStyleOptionViewItem opt = PropertyEditor::viewOptions();
 #else
     QStyleOptionViewItem opt;
     initViewItemOption(&opt);
@@ -95,14 +97,12 @@ PropertyEditor::PropertyEditor(bool isViewEditor)
 
     this->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
-    connect(this, SIGNAL(activated(const QModelIndex &)), this, SLOT(onItemActivated(const QModelIndex &)));
-    connect(this, SIGNAL(clicked(const QModelIndex &)), this, SLOT(onItemActivated(const QModelIndex &)));
-    connect(this, SIGNAL(expanded(const QModelIndex &)), this, SLOT(onItemExpanded(const QModelIndex &)));
-    connect(this, SIGNAL(collapsed(const QModelIndex &)), this, SLOT(onItemCollapsed(const QModelIndex &)));
-    connect(propertyModel, SIGNAL(rowsMoved(const QModelIndex &, int, int, const QModelIndex &, int)),
-            this, SLOT(onRowsMoved(const QModelIndex &, int, int, const QModelIndex &, int)));
-    connect(propertyModel, SIGNAL(rowsRemoved(const QModelIndex &, int, int)),
-            this, SLOT(onRowsRemoved(const QModelIndex &, int, int)));
+    connect(this, &QTreeView::activated, this, &PropertyEditor::onItemActivated);
+    connect(this, &QTreeView::clicked, this, &PropertyEditor::onItemActivated);
+    connect(this, &QTreeView::expanded, this, &PropertyEditor::onItemExpanded);
+    connect(this, &QTreeView::collapsed, this, &PropertyEditor::onItemCollapsed);
+    connect(propertyModel, &QAbstractItemModel::rowsMoved, this, &PropertyEditor::onRowsMoved);
+    connect(propertyModel, &QAbstractItemModel::rowsRemoved, this, &PropertyEditor::onRowsRemoved);
 }
 
 PropertyEditor::~PropertyEditor()
@@ -705,7 +705,11 @@ void PropertyEditor::contextMenuEvent(QContextMenuEvent *ev) {
     QPoint pos(QCursor::pos());
     std::vector<QAction*> hiddenActions;
     QAction *showAll = Action::addCheckBox(&menu, tr("Show all"), PropertyView::showAll());
+#if QT_VERSION < QT_VERSION_CHECK(5,14,0)
     QRect rect = QApplication::desktop()->availableGeometry(this);
+#else
+    QRect rect = this->screen()->availableGeometry();
+#endif
     connect(showAll, &QAction::toggled, [&](bool checked) {
         PropertyView::setShowAll(checked);
         for (auto action : hiddenActions)

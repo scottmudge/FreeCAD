@@ -180,26 +180,26 @@ TaskAttacher::TaskAttacher(Gui::ViewProviderDocumentObject *ViewProvider, QWidge
     ui->lineRef4->installEventFilter(this);
     ui->lineRef4->setMouseTracking(true);
 
-    connect(ui->checkBoxFlip, SIGNAL(toggled(bool)),
-            this, SLOT(onCheckFlip(bool)));
-    connect(ui->buttonRef1, SIGNAL(clicked(bool)),
-            this, SLOT(onButtonRef1(bool)));
-    connect(ui->lineRef1, SIGNAL(textEdited(QString)),
-            this, SLOT(onRefName1(QString)));
-    connect(ui->buttonRef2, SIGNAL(clicked(bool)),
-            this, SLOT(onButtonRef2(bool)));
-    connect(ui->lineRef2, SIGNAL(textEdited(QString)),
-            this, SLOT(onRefName2(QString)));
-    connect(ui->buttonRef3, SIGNAL(clicked(bool)),
-            this, SLOT(onButtonRef3(bool)));
-    connect(ui->lineRef3, SIGNAL(textEdited(QString)),
-            this, SLOT(onRefName3(QString)));
-    connect(ui->buttonRef4, SIGNAL(clicked(bool)),
-            this, SLOT(onButtonRef4(bool)));
-    connect(ui->lineRef4, SIGNAL(textEdited(QString)),
-            this, SLOT(onRefName4(QString)));
-    connect(ui->listOfModes,SIGNAL(itemSelectionChanged()),
-            this, SLOT(onModeSelect()));
+    connect(ui->checkBoxFlip, &QCheckBox::toggled,
+            this, &TaskAttacher::onCheckFlip);
+    connect(ui->buttonRef1, &QPushButton::clicked,
+            this, &TaskAttacher::onButtonRef1);
+    connect(ui->lineRef1, &QLineEdit::textEdited,
+            this, &TaskAttacher::onRefName1);
+    connect(ui->buttonRef2, &QPushButton::clicked,
+            this, &TaskAttacher::onButtonRef2);
+    connect(ui->lineRef2, &QLineEdit::textEdited,
+            this, &TaskAttacher::onRefName2);
+    connect(ui->buttonRef3, &QPushButton::clicked,
+            this, &TaskAttacher::onButtonRef3);
+    connect(ui->lineRef3, &QLineEdit::textEdited,
+            this, &TaskAttacher::onRefName3);
+    connect(ui->buttonRef4, &QPushButton::clicked,
+            this, &TaskAttacher::onButtonRef4);
+    connect(ui->lineRef4, &QLineEdit::textEdited,
+            this, &TaskAttacher::onRefName4);
+    connect(ui->listOfModes, &QListWidget::itemSelectionChanged,
+            this, &TaskAttacher::onModeSelect);
 
     this->groupLayout()->addWidget(proxy);
 
@@ -272,12 +272,18 @@ TaskAttacher::TaskAttacher(Gui::ViewProviderDocumentObject *ViewProvider, QWidge
     }
 
     if (!isBase) {
-        connect(ui->attachmentOffsetX, SIGNAL(valueChanged(double)), this, SLOT(onAttachmentOffsetXChanged(double)));
-        connect(ui->attachmentOffsetY, SIGNAL(valueChanged(double)), this, SLOT(onAttachmentOffsetYChanged(double)));
-        connect(ui->attachmentOffsetZ, SIGNAL(valueChanged(double)), this, SLOT(onAttachmentOffsetZChanged(double)));
-        connect(ui->attachmentOffsetYaw, SIGNAL(valueChanged(double)), this, SLOT(onAttachmentOffsetYawChanged(double)));
-        connect(ui->attachmentOffsetPitch, SIGNAL(valueChanged(double)), this, SLOT(onAttachmentOffsetPitchChanged(double)));
-        connect(ui->attachmentOffsetRoll, SIGNAL(valueChanged(double)), this, SLOT(onAttachmentOffsetRollChanged(double)));
+        connect(ui->attachmentOffsetX, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+                this, &TaskAttacher::onAttachmentOffsetXChanged);
+        connect(ui->attachmentOffsetY, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+                this, &TaskAttacher::onAttachmentOffsetYChanged);
+        connect(ui->attachmentOffsetZ, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+                this, &TaskAttacher::onAttachmentOffsetZChanged);
+        connect(ui->attachmentOffsetYaw, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+                this, &TaskAttacher::onAttachmentOffsetYawChanged);
+        connect(ui->attachmentOffsetPitch, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+                this, &TaskAttacher::onAttachmentOffsetPitchChanged);
+        connect(ui->attachmentOffsetRoll, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+                this, &TaskAttacher::onAttachmentOffsetRollChanged);
 
         ui->attachmentOffsetX->bind(App::ObjectIdentifier::parse(ViewProvider->getObject(),std::string(".AttachmentOffset.Base.x")));
         ui->attachmentOffsetY->bind(App::ObjectIdentifier::parse(ViewProvider->getObject(),std::string(".AttachmentOffset.Base.y")));
@@ -446,7 +452,7 @@ void TaskAttacher::updatePreview()
             pcAttach->positionBySupport();
         errMessage.clear();
     } catch (Base::Exception &err){
-        errMessage = QString::fromUtf8(err.what());
+        errMessage = QCoreApplication::translate("Exception", err.what());
     } catch (Standard_Failure &err){
         errMessage = tr("OCC error: %1").arg(QString::fromUtf8(err.GetMessageString()));
     } catch (...) {
@@ -620,14 +626,13 @@ void TaskAttacher::onSelectionChanged(const Gui::SelectionChanges& msg)
             }
 
             updateReferencesUI();
-
-        } catch(Base::Exception& e) {
+        }
+        catch(Base::Exception& e) {
             e.ReportException();
             //error = true;
-            ui->message->setText(QString::fromUtf8(e.what()));
+            ui->message->setText(QCoreApplication::translate("Exception", e.what()));
             ui->message->setStyleSheet(QStringLiteral("QLabel{color: red;}"));
         }
-
     }
 }
 
@@ -1410,7 +1415,7 @@ bool TaskDlgAttacher::accept()
         document->commitCommand();
     }
     catch (const Base::Exception& e) {
-        QMessageBox::warning(parameter, tr("Datum dialog: Input error"), QString::fromUtf8(e.what()));
+        QMessageBox::warning(parameter, tr("Datum dialog: Input error"), QCoreApplication::translate("Exception", e.what()));
         return false;
     }
 

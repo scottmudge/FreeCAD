@@ -38,6 +38,23 @@ ClassName = 'SheetParams'
 ParamPath = 'User parameter:BaseApp/Preferences/Mod/Spreadsheet'
 ClassDoc = 'Convenient class to obtain spreadsheet related parameters'
 
+Params = [
+    ParamBool('showAliasName', False),
+    ParamString('DisplayAliasFormatString', '%V = %A'),
+    ParamString('AliasedCellBackgroundColor', '#feff9e'),
+    ParamString('LockedAliasedCellColor', '#9effff'),
+    ParamString('TextColor', '#000000'),
+    ParamString('PositiveNumberColor', ''),
+    ParamString('NegativeNumberColor', ''),
+]
+
+def declare():
+    params_utils.declare_begin(sys.modules[__name__])
+    params_utils.declare_end(sys.modules[__name__])
+
+def define():
+    params_utils.define(sys.modules[__name__])
+
 class CellEditMode:
     def __init__(self, name, title, doc):
         self.name = name

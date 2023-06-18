@@ -34,9 +34,10 @@
 
 #include "SketcherSettings.h"
 #include "ui_SketcherSettings.h"
+#include "ui_SketcherSettingsGrid.h"
+#include "ui_SketcherSettingsDisplay.h"
 #include "ui_SketcherSettingsColors.h"
 #include "ui_SketcherSettingsDisplay.h"
-#include "TaskSketcherGeneral.h"
 
 
 using namespace SketcherGui;
@@ -47,11 +48,6 @@ SketcherSettings::SketcherSettings(QWidget* parent)
     : PreferencePage(parent), ui(new Ui_SketcherSettings)
 {
     ui->setupUi(this);
-    QGridLayout* gridLayout = new QGridLayout(ui->placeholder);
-    gridLayout->setSpacing(0);
-    gridLayout->setContentsMargins(0, 0, 0, 0);
-    form = new SketcherGeneralWidget(ui->placeholder);
-    gridLayout->addWidget(form, 0, 0, 1, 1);
 }
 
 /**
@@ -66,26 +62,22 @@ void SketcherSettings::saveSettings()
 {
     // Sketch editing
     ui->checkBoxAdvancedSolverTaskBox->onSave();
-    ui->checkBoxSettingsTaskBox->onSave();
     ui->checkBoxRecalculateInitialSolutionWhileDragging->onSave();
     ui->checkBoxEnableEscape->onSave();
     ui->checkBoxNotifyConstraintSubstitutions->onSave();
     ui->checkBoxAutoRemoveRedundants->onSave();
     ui->checkBoxMakeInternals->onSave();
-    form->saveSettings();
 }
 
 void SketcherSettings::loadSettings()
 {
     // Sketch editing
     ui->checkBoxAdvancedSolverTaskBox->onRestore();
-    ui->checkBoxSettingsTaskBox->onRestore();
     ui->checkBoxRecalculateInitialSolutionWhileDragging->onRestore();
     ui->checkBoxEnableEscape->onRestore();
     ui->checkBoxNotifyConstraintSubstitutions->onRestore();
     ui->checkBoxAutoRemoveRedundants->onRestore();
     ui->checkBoxMakeInternals->onRestore();
-    form->loadSettings();
 }
 
 /**
@@ -101,23 +93,22 @@ void SketcherSettings::changeEvent(QEvent *e)
     }
 }
 
+/* TRANSLATOR SketcherGui::SketcherSettingsGrid */
 
-/* TRANSLATOR SketcherGui::SketcherSettingsDisplay */
-
-SketcherSettingsDisplay::SketcherSettingsDisplay(QWidget* parent)
-    : PreferencePage(parent), ui(new Ui_SketcherSettingsDisplay)
+SketcherSettingsGrid::SketcherSettingsGrid(QWidget* parent)
+    : PreferencePage(parent), ui(new Ui_SketcherSettingsGrid)
 {
     ui->setupUi(this);
 
     QList < QPair<Qt::PenStyle, int> > styles;
     styles << qMakePair(Qt::SolidLine, 0xffff)
-           << qMakePair(Qt::DashLine, 0x0f0f)
-           << qMakePair(Qt::DotLine, 0xaaaa);
-//           << qMakePair(Qt::DashDotLine, 0x????)
-//           << qMakePair(Qt::DashDotDotLine, 0x????);
-    ui->comboBox->setIconSize (QSize(80, 12));
+        << qMakePair(Qt::DashLine, 0x0f0f)
+        << qMakePair(Qt::DotLine, 0xaaaa);
+
+    ui->gridLinePattern->setIconSize(QSize(80, 12));
+    ui->gridDivLinePattern->setIconSize(QSize(80, 12));
     for (QList < QPair<Qt::PenStyle, int> >::iterator it = styles.begin(); it != styles.end(); ++it) {
-        QPixmap px(ui->comboBox->iconSize());
+        QPixmap px(ui->gridLinePattern->iconSize());
         px.fill(Qt::transparent);
         QBrush brush(Qt::black);
         QPen pen(it->first);
@@ -126,14 +117,86 @@ SketcherSettingsDisplay::SketcherSettingsDisplay(QWidget* parent)
 
         QPainter painter(&px);
         painter.setPen(pen);
-        double mid = ui->comboBox->iconSize().height() / 2.0;
-        painter.drawLine(0, mid, ui->comboBox->iconSize().width(), mid);
+        double mid = ui->gridLinePattern->iconSize().height() / 2.0;
+        painter.drawLine(0, mid, ui->gridLinePattern->iconSize().width(), mid);
         painter.end();
 
-        ui->comboBox->addItem(QIcon(px), QString(), QVariant(it->second));
+        ui->gridLinePattern->addItem(QIcon(px), QString(), QVariant(it->second));
+        ui->gridDivLinePattern->addItem(QIcon(px), QString(), QVariant(it->second));
     }
+}
 
-    connect(ui->btnTVApply, SIGNAL(clicked(bool)), this, SLOT(onBtnTVApplyClicked(bool)));
+SketcherSettingsGrid::~SketcherSettingsGrid()
+{
+    // no need to delete child widgets, Qt does it all for us
+}
+
+void SketcherSettingsGrid::saveSettings()
+{
+    ui->checkBoxShowGrid->onSave();
+    ui->gridSize->onSave();
+    ui->checkBoxGridAuto->onSave();
+    ui->gridSizePixelThreshold->onSave();
+    ui->gridLineColor->onSave();
+    ui->gridDivLineColor->onSave();
+    ui->gridLineWidth->onSave();
+    ui->gridDivLineWidth->onSave();
+    ui->gridNumberSubdivision->onSave();
+
+    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+    QVariant data = ui->gridLinePattern->itemData(ui->gridLinePattern->currentIndex());
+    int pattern = data.toInt();
+    hGrp->SetInt("GridLinePattern", pattern);
+
+    data = ui->gridDivLinePattern->itemData(ui->gridDivLinePattern->currentIndex());
+    pattern = data.toInt();
+    hGrp->SetInt("GridDivLinePattern", pattern);
+}
+
+void SketcherSettingsGrid::loadSettings()
+{
+    ui->checkBoxShowGrid->onRestore();
+    ui->gridSize->onRestore();
+    ui->checkBoxGridAuto->onRestore();
+    ui->gridSizePixelThreshold->onRestore();
+    ui->gridLineColor->onRestore();
+    ui->gridDivLineColor->onRestore();
+    ui->gridLineWidth->onRestore();
+    ui->gridDivLineWidth->onRestore();
+    ui->gridNumberSubdivision->onRestore();
+
+    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+    int pattern = hGrp->GetInt("GridLinePattern", 0x0f0f);
+    int index = ui->gridLinePattern->findData(QVariant(pattern));
+    if (index < 0) index = 1;
+    ui->gridLinePattern->setCurrentIndex(index);
+    pattern = hGrp->GetInt("GridDivLinePattern", 0xffff);
+    index = ui->gridDivLinePattern->findData(QVariant(pattern));
+    if (index < 0) index = 0;
+    ui->gridDivLinePattern->setCurrentIndex(index);
+}
+
+/**
+ * Sets the strings of the subwidgets using the current language.
+ */
+void SketcherSettingsGrid::changeEvent(QEvent* e)
+{
+    if (e->type() == QEvent::LanguageChange) {
+        ui->retranslateUi(this);
+    }
+    else {
+        QWidget::changeEvent(e);
+    }
+}
+
+/* TRANSLATOR SketcherGui::SketcherSettingsDisplay */
+
+SketcherSettingsDisplay::SketcherSettingsDisplay(QWidget* parent)
+    : PreferencePage(parent), ui(new Ui_SketcherSettingsDisplay)
+{
+    ui->setupUi(this);
+
+    connect(ui->btnTVApply, &QPushButton::clicked, this, &SketcherSettingsDisplay::onBtnTVApplyClicked);
 }
 
 /**
@@ -165,10 +228,6 @@ void SketcherSettingsDisplay::saveSettings()
     ui->checkBoxTVSectionView->onSave();
     ui->checkBoxAdjustCamera->onSave();
 
-    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Part");
-    QVariant data = ui->comboBox->itemData(ui->comboBox->currentIndex());
-    int pattern = data.toInt();
-    hGrp->SetInt("GridLinePattern", pattern);
 }
 
 void SketcherSettingsDisplay::loadSettings()
@@ -192,12 +251,6 @@ void SketcherSettingsDisplay::loadSettings()
     this->ui->checkBoxTVForceOrtho->setEnabled(this->ui->checkBoxTVRestoreCamera->isChecked());
     ui->checkBoxTVSectionView->onRestore();
     ui->checkBoxAdjustCamera->onRestore();
-
-    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Part");
-    int pattern = hGrp->GetInt("GridLinePattern", 0x0f0f);
-    int index = ui->comboBox->findData(QVariant(pattern));
-    if (index <0) index = 1;
-    ui->comboBox->setCurrentIndex(index);
 }
 
 /**
