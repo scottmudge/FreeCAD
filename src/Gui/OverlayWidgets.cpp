@@ -3104,8 +3104,7 @@ public:
             h -= tabbar->height();
 
         int naviCubeSize = NaviCube::getNaviCubeSize();
-        int naviCorner = OverlayParams::getDockOverlayCheckNaviCube() ?
-            OverlayParams::getCornerNaviCube() : -1;
+        int naviCorner = -1;
 
         QRect rect;
         QRect rectBottom(0,0,0,0);
