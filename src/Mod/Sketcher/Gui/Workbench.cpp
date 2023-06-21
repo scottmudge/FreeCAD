@@ -184,8 +184,8 @@ void Workbench::enterEditMode()
     This happens in someone works directly from sketcher, changing from edit mode to not-edit-mode*/
     Gui::ToolBarManager::getInstance()->saveState();
 
-    Gui::ToolBarManager::getInstance()->setToolbarVisibility(true, editModeToolbarNames());
-    Gui::ToolBarManager::getInstance()->setToolbarVisibility(false, nonEditModeToolbarNames());
+    Gui::ToolBarManager::getInstance()->setToolbarVisibility(true, editModeToolbarNames(), true);
+    Gui::ToolBarManager::getInstance()->setToolbarVisibility(false, nonEditModeToolbarNames(), true);
 }
 
 void Workbench::leaveEditMode()
@@ -195,8 +195,8 @@ void Workbench::leaveEditMode()
     This happens in someone works directly from sketcher, changing from edit mode to not-edit-mode*/
     Gui::ToolBarManager::getInstance()->saveState();
 
-    Gui::ToolBarManager::getInstance()->setToolbarVisibility(false, editModeToolbarNames());
-    Gui::ToolBarManager::getInstance()->setToolbarVisibility(true, nonEditModeToolbarNames());
+    Gui::ToolBarManager::getInstance()->setToolbarVisibility(false, editModeToolbarNames(), true);
+    Gui::ToolBarManager::getInstance()->setToolbarVisibility(true, nonEditModeToolbarNames(), true);
 }
 
 namespace SketcherGui {

@@ -1173,7 +1173,7 @@ bool ToolBarManager::eventFilter(QObject *o, QEvent *e)
     return res;
 }
 
-void ToolBarManager::setToolbarVisibility(bool show, const QList<QString>& names)
+void ToolBarManager::setToolbarVisibility(bool show, const QList<QString>& names, const bool override_prefs /*= false*/)
 {
     auto toolbars = toolBars();
     for (auto& name : names) {
@@ -1182,7 +1182,7 @@ void ToolBarManager::setToolbarVisibility(bool show, const QList<QString>& names
             continue;
         QToolBar *tb = it->second;
         if (show) {
-            if(hPref->GetBool(name.toStdString().c_str(), true))
+            if(hPref->GetBool(name.toStdString().c_str(), true) || override_prefs)
                 tb->show();
             tb->toggleViewAction()->setVisible(true);
         }

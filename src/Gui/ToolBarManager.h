@@ -106,7 +106,7 @@ public:
     void retranslate();
     static void checkToolbar();
 
-    void setToolbarVisibility(bool show, const QList<QString>& names);
+    void setToolbarVisibility(bool show, const QList<QString>& names, const bool override_prefs = false);
 
     void removeToolBar(const QString &);
 
