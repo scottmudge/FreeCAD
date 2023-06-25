@@ -521,6 +521,8 @@ public:
 
     void onViewPropertyChanged(const App::Property &);
 
+    const SoPathList *getLatePickPaths() const;
+
     struct Private;
     friend struct Private;
 

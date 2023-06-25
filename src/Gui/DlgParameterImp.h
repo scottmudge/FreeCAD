@@ -196,7 +196,7 @@ protected:
     /** Triggers the "Del" key. */
     void keyPressEvent (QKeyEvent* event) override;
 
-protected Q_SLOTS:
+protected:
     /** Removes the underlying parameter group and its sub-groups from the
      * parameter tree structure.
      */
@@ -268,7 +268,7 @@ protected:
     void keyPressEvent (QKeyEvent* event) override;
     void resizeEvent(QResizeEvent*) override;
 
-protected Q_SLOTS:
+protected:
     /** Changes the value of the leaf of the selected item. */
     void onChangeSelectedItem(QTreeWidgetItem*, int);
     void onChangeSelectedItem();

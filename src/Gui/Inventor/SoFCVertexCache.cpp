@@ -94,6 +94,7 @@
 FC_LOG_LEVEL_INIT("Renderer", true, true)
 
 using namespace Gui;
+using namespace Base;
 
 static SbFCUniqueId VertexCacheId;
 
@@ -177,14 +178,6 @@ public:
   };
 
   struct VertexHasher {
-    // copied from boost::hash_combine. 
-    template <class S, class T>
-    static inline void hash_combine(S& seed, const T& v)
-    {
-      std::hash<T> hasher;
-      seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
-    }
-
     unsigned long operator()(const Vertex &v) const {
       unsigned long seed = 0;
       hash_combine(seed, v.color);

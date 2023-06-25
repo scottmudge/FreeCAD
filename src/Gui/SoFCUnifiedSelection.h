@@ -728,6 +728,20 @@ private:
 
 };
 
+class GuiExport SoFCLatePickGroup : public SoFCSeparator
+{
+    using inherited = SoFCSeparator;
+    SO_NODE_HEADER(Gui::SoFCLatePickGroup);
+
+public:
+    static void initClass();
+    static void finish();
+    explicit SoFCLatePickGroup();
+
+    void GLRenderBelowPath(SoGLRenderAction * action) override;
+    void GLRenderInPath(SoGLRenderAction * action) override;
+    void rayPick(SoRayPickAction * action) override;
+};
 
 } // namespace Gui
 

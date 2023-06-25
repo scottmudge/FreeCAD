@@ -1281,6 +1281,7 @@ ParameterGroup::~ParameterGroup()
 
 void ParameterGroup::clear()
 {
+    QSignalBlocker blocker(this);
     itemMap.clear();
     QTreeWidget::clear();
 }

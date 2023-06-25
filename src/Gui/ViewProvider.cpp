@@ -63,6 +63,7 @@ FC_LOG_LEVEL_INIT("ViewProvider", true, true)
 
 using namespace std;
 using namespace Gui;
+using namespace Base;
 
 
 namespace Gui {
@@ -1086,15 +1087,6 @@ struct BBoxKey {
         return subname==other.subname && mat==other.mat;
     }
 };
-
-// copied from boost::hash_combine, because boost changes hearder location in
-// different version.
-template <class T>
-inline void hash_combine(std::size_t& seed, const T& v)
-{
-    std::hash<T> hasher;
-    seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
-}
 
 static std::hash<std::string> StringHasher;
 static std::hash<bool> BoolHasher;

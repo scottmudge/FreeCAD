@@ -153,7 +153,7 @@ QMenu::right-arrow:selected {
 }
 
 QMenu::item {
-    padding: 2px 4px; /* make room for icon at left */
+    padding: 2px 16px 2px 16px; /* make room for icon at left */
     border: 1px solid transparent; /* reserve space for selection border */
 }
 

@@ -367,7 +367,11 @@ void SketcherGui::ActivateHandler(Gui::Document* doc, DrawSketchHandler* handler
         if (doc->getInEdit()
             && doc->getInEdit()->isDerivedFrom(SketcherGui::ViewProviderSketch::getClassTypeId())) {
             SketcherGui::ViewProviderSketch* vp =
-                static_cast<SketcherGui::ViewProviderSketch*>(doc->getInEdit());
+                static_cast<SketcherGui::ViewProviderSketch*> (doc->getInEdit());
+            if (auto cur = vp->currentHandler()) {
+                if (cur->toggle(handler))
+                    return;
+            }
             vp->purgeHandler();
             vp->activateHandler(ptr.release());
         }

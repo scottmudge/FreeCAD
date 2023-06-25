@@ -3052,6 +3052,10 @@ void Application::LoadParameters()
 {
     // Init parameter sets ===========================================================
     //
+    if (!mConfig.count("IssuePage")) {
+        mConfig["IssuePage"] = "https://github.com/FreeCAD/FreeCAD/issues";
+    }
+
     std::string vendorPrefix;
     if (mConfig.count("VendorCFGPrefix"))
         vendorPrefix = mConfig["VendorCFGPrefix"];

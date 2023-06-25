@@ -24,6 +24,7 @@
 #define GUI_INVENTOR_BASE_H
 
 #include <boost/intrusive_ptr.hpp>
+#include <Base/Tools.h>
 
 // define this only if we actually decide to run coin in multiple thread
 #ifdef FC_COIN_MULTI_THREAD
@@ -77,6 +78,30 @@ void GuiExport coinRemoveAllChildren(SoGroup *node);
 
 /// Check if the bounding box is valid
 bool GuiExport isValidBBox(const SbBox3f &bbox);
+
+template<class PathPtr>
+struct PathHasher {
+    std::size_t operator()(const PathPtr & path) const {
+        if (!path) return 0;
+        std::size_t seed = 0;
+        for (int i=0, n=path->getLength(); i<n; ++i) {
+            Base::hash_combine(seed, path->getNode(i));
+        }
+        return seed;
+    }
+
+    bool operator()(const PathPtr &a, const PathPtr &b) const {
+        if (a == b)
+            return true;
+        if (!a || !b || a->getLength() != b->getLength())
+            return false;
+        for (int i=0, c=a->getLength(); i<c; ++i) {
+            if (a->getNode(i) != b->getNode(i))
+                return false;
+        }
+        return true;
+    }
+};
 
 }
 

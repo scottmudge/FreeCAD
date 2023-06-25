@@ -84,37 +84,6 @@ typedef CoinPtr<SoFCRenderCache> RenderCachePtr;
 typedef SoFCRenderCache::VertexCacheMap VertexCacheMap;
 typedef SoFCRenderCache::Material Material;
 
-// copied from boost::hash_combine. 
-template <class T>
-static inline void hash_combine(std::size_t& seed, const T& v)
-{
-  std::hash<T> hasher;
-  seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
-}
-
-struct PathHasher {
-  std::size_t operator()(const PathPtr & path) const {
-    if (!path) return 0;
-    std::size_t seed = 0;
-    for (int i=0, n=path->getLength(); i<n; ++i) {
-      hash_combine(seed, path->getNode(i));
-    }
-    return seed;
-  }
-
-  bool operator()(const PathPtr &a, const PathPtr &b) const {
-    if (a == b)
-      return true;
-    if (!a || !b || a->getLength() != b->getLength())
-      return false;
-    for (int i=0, c=a->getLength(); i<c; ++i) {
-      if (a->getNode(i) != b->getNode(i))
-        return false;
-    }
-    return true;
-  }
-};
-
 struct ElementEntry {
   ElementEntry()
     : id(0), color(0)
@@ -217,7 +186,10 @@ public:
   bool ontop = false;
 };
 
-typedef std::unordered_map<PathPtr, SelectionSensor, PathHasher, PathHasher> SelectionPathMap;
+typedef std::unordered_map<PathPtr,
+                           SelectionSensor,
+                           PathHasher<PathPtr>,
+                           PathHasher<PathPtr>> SelectionPathMap;
 
 class SoFCRenderCacheManagerP {
 public:
@@ -231,12 +203,14 @@ public:
                     bool alt);
 
   void initAction();
+  void doLatePick(SoRayPickAction *action) const;
 
   static SoCallbackAction::Response preSeparator(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response postSeparator(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response preFCSel(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response postFCSel(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response postSep(void *, SoCallbackAction *action, const SoNode * node);
+  static SoCallbackAction::Response preLatePickGroup(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response preAnnotation(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response postAnnotation(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response prePathAnnotation(void *, SoCallbackAction *action, const SoNode * node);
@@ -360,9 +334,44 @@ public:
     PathPtr path;
   };
 
+  class LatePickPathSensor : public SoPathSensor
+  {
+  public:
+    LatePickPathSensor()
+    {
+      setFunction([](void *, SoSensor *sensor) {
+        auto self = static_cast<LatePickPathSensor*>(sensor);
+        if (self->tmpPath->getLength() == self->attachedPath->getLength())
+          return;
+        self->detach();
+        self->master->latepickpaths.truncate(0);
+        self->master->latepicktable.erase(self->tmpPath);
+        return;
+      });
+    }
+
+    virtual void notify(SoNotList * l) {
+      (void)l;
+      if (!isScheduled())
+        schedule();
+    }
+
+    SoFCRenderCacheManagerP *master = nullptr;
+    PathPtr tmpPath;
+    PathPtr attachedPath;
+  };
+
   static FC_COIN_THREAD_LOCAL std::unordered_map<const SoNode *, CacheSensor> cachetable;
   static FC_COIN_THREAD_LOCAL std::unordered_map<const SoNode *, VCacheSensor> vcachetable;
-  std::unordered_map<PathPtr, PathCacheSensor, PathHasher, PathHasher> pathcachetable;
+  std::unordered_map<PathPtr,
+                     PathCacheSensor,
+                     PathHasher<PathPtr>,
+                     PathHasher<PathPtr>> pathcachetable;
+  std::unordered_map<PathPtr,
+                     LatePickPathSensor,
+                     PathHasher<PathPtr>,
+                     PathHasher<PathPtr>> latepicktable;
+  mutable SoPathList latepickpaths;
   RenderCachePtr highlightcache;
   CoinPtr<SoPath> highlightpath;
   bool nosectionontop = false;
@@ -470,6 +479,7 @@ void SoFCRenderCacheManagerP::initAction()
   this->action = new SoCallbackAction;
   this->action->addPreCallback(SoFCSelectionRoot::getClassTypeId(), &preSeparator, this);
   this->action->addPostCallback(SoFCSelectionRoot::getClassTypeId(), &postSeparator, this);
+  this->action->addPreCallback(SoFCLatePickGroup::getClassTypeId(), &preLatePickGroup, this);
   this->action->addPostCallback(SoSeparator::getClassTypeId(), &postSep, this);
   this->action->addPreCallback(SoFCSelection::getClassTypeId(), &preFCSel, this);
   this->action->addPostCallback(SoFCSelection::getClassTypeId(), &postFCSel, this);
@@ -536,6 +546,8 @@ SoFCRenderCacheManager::clear()
   PRIVATE(this)->selcaches.clear();
   PRIVATE(this)->selpaths.clear();
   PRIVATE(this)->renderer->clear();
+  PRIVATE(this)->latepicktable.clear();
+  PRIVATE(this)->latepickpaths.truncate(0);
 }
 
 bool
@@ -1231,6 +1243,52 @@ SoFCRenderCacheManagerP::prePathAnnotation(void *userdata,
   else if (annotation->getPath() && ++self->annotation == 1)
     self->stack.back()->increaseRenderingOrder(action->getState());
   return SoCallbackAction::CONTINUE;
+}
+
+SoCallbackAction::Response
+SoFCRenderCacheManagerP::preLatePickGroup(void *userdata,
+                                          SoCallbackAction *action,
+                                          const SoNode * node)
+{
+  (void)node;
+  SoFCRenderCacheManagerP *self = reinterpret_cast<SoFCRenderCacheManagerP*>(userdata);
+  if (self->stack.empty())
+    return SoCallbackAction::CONTINUE;
+
+  const SoPath *path = action->getCurPath();
+  auto it = self->latepicktable.find(const_cast<SoPath*>(path));
+  if (it != self->latepicktable.end())
+    return SoCallbackAction::CONTINUE;
+
+  // Must use SoTempPath as key to avoid path changes, because we are using
+  // the path as key which is supposed to be immutable.
+  PathPtr tmppath = new SoTempPath(path->getLength());
+  tmppath->append(path);
+  LatePickPathSensor &sensor = self->latepicktable[tmppath];
+  sensor.tmpPath = tmppath;
+  sensor.master = self;
+  sensor.attachedPath = path->copy();
+  sensor.attach(sensor.attachedPath);
+  self->latepickpaths.truncate(0);
+
+  return SoCallbackAction::CONTINUE;
+}
+
+void SoFCRenderCacheManager::doLatePick(SoRayPickAction *action) const
+{
+  PRIVATE(this)->doLatePick(action);
+}
+
+void SoFCRenderCacheManagerP::doLatePick(SoRayPickAction *action) const
+{
+  if (latepicktable.empty())
+    return;
+  if (latepickpaths.getLength() == 0) {
+    for (auto &v : latepicktable)
+      latepickpaths.append(v.first);
+    latepickpaths.sort();
+  }
+  action->apply(latepickpaths, TRUE);
 }
 
 SoCallbackAction::Response

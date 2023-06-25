@@ -81,12 +81,12 @@ public:
         SNAP_MODE_45Degree
     };
 
-    void registerPressedKey(bool pressed, int key) override
+    bool toggle(DrawSketchHandler *next) override
     {
-        if (Mode != STATUS_SEEK_Second)
-            return; // SegmentMode can be changed only in STATUS_SEEK_Second mode
+        if (!dynamic_cast<DrawSketchHandlerLineSet*>(next))
+            return false;
 
-        if (key == SoKeyboardEvent::M && pressed && previousCurve != -1) {
+        if (EditCurve.size() > 1) {
             // loop through the following modes:
             // SEGMENT_MODE_Line, TRANSITION_MODE_Free / TRANSITION_MODE_Tangent
             // SEGMENT_MODE_Line, TRANSITION_MODE_Perpendicular_L
@@ -103,32 +103,47 @@ public:
             else
                 onSketchPos = EditCurve[29];
 
-            const Part::Geometry *geom = sketchgui->getSketchObject()->getGeometry(previousCurve);
+            const Part::Geometry *geom = nullptr;
+            if (previousCurve != -1)
+                geom = sketchgui->getSketchObject()->getGeometry(previousCurve);
+            else {
+                dirVec.Set(EditCurve[1].y - EditCurve[0].y, EditCurve[1].x - EditCurve[0].x, 0.f);
+                dirVec.Normalize();
+            }
 
             if (SegmentMode == SEGMENT_MODE_Line) {
                 switch (TransitionMode) {
                     case TRANSITION_MODE_Free:
-                        if (geom->getTypeId() == Part::GeomArcOfCircle::getClassTypeId()) { // 3rd mode
-                            SegmentMode = SEGMENT_MODE_Arc;
-                            TransitionMode = TRANSITION_MODE_Tangent;
+                        if (geom) {
+                            if (geom->getTypeId() == Part::GeomArcOfCircle::getClassTypeId()) { // 3rd mode
+                                SegmentMode = SEGMENT_MODE_Arc;
+                                TransitionMode = TRANSITION_MODE_Tangent;
+                            }
+                            else // 1st mode
+                                TransitionMode = TRANSITION_MODE_Perpendicular_L;
+                            break;
                         }
-                        else // 1st mode
-                            TransitionMode = TRANSITION_MODE_Perpendicular_L;
-                        break;
+                        // fall through
                     case TRANSITION_MODE_Perpendicular_L: // 2nd mode
-                        if (geom->getTypeId() == Part::GeomArcOfCircle::getClassTypeId())
-                            TransitionMode = TRANSITION_MODE_Free;
-                        else
-                            TransitionMode = TRANSITION_MODE_Tangent;
-                        break;
-                    case TRANSITION_MODE_Tangent:
-                        if (geom->getTypeId() == Part::GeomArcOfCircle::getClassTypeId()) // 1st mode
-                            TransitionMode = TRANSITION_MODE_Perpendicular_L;
-                        else { // 3rd mode
-                            SegmentMode = SEGMENT_MODE_Arc;
-                            TransitionMode = TRANSITION_MODE_Tangent;
+                        if (geom) {
+                            if (geom->getTypeId() == Part::GeomArcOfCircle::getClassTypeId())
+                                TransitionMode = TRANSITION_MODE_Free;
+                            else
+                                TransitionMode = TRANSITION_MODE_Tangent;
+                            break;
                         }
-                        break;
+                        // fall through
+                    case TRANSITION_MODE_Tangent:
+                        if (geom) {
+                            if (geom->getTypeId() == Part::GeomArcOfCircle::getClassTypeId()) // 1st mode
+                                TransitionMode = TRANSITION_MODE_Perpendicular_L;
+                            else { // 3rd mode
+                                SegmentMode = SEGMENT_MODE_Arc;
+                                TransitionMode = TRANSITION_MODE_Tangent;
+                            }
+                            break;
+                        }
+                        // fall through
                     default: // unexpected mode
                         TransitionMode = TRANSITION_MODE_Free;
                         break;
@@ -144,7 +159,7 @@ public:
                         break;
                     default: // 6th mode (Perpendicular_R) + unexpected mode
                         SegmentMode = SEGMENT_MODE_Line;
-                        if (geom->getTypeId() == Part::GeomArcOfCircle::getClassTypeId())
+                        if (geom && geom->getTypeId() == Part::GeomArcOfCircle::getClassTypeId())
                             TransitionMode = TRANSITION_MODE_Tangent;
                         else
                             TransitionMode = TRANSITION_MODE_Free;
@@ -157,7 +172,10 @@ public:
             else
                 EditCurve.resize(32);
             mouseMove(onSketchPos); // trigger an update of EditCurve
+            return true;
         }
+
+        return false;
     }
 
     void mouseMove(Base::Vector2d onSketchPos) override

@@ -160,6 +160,7 @@ void Gui::SoFCDB::init()
     SmSwitchboard                   ::initClass();
     SoFCSwitch                      ::initClass();
     SoFCSeparator                   ::initClass();
+    SoFCLatePickGroup               ::initClass();
     SoFCSelectionRoot               ::initClass();
     SoFCPathAnnotation              ::initClass();
     SoFCDetail                      ::initClass();

@@ -342,6 +342,9 @@ public:
     bool addLateDelayedPath(const SoPath *path, bool copy, int priority=1);
     int currentLateDelayedPath() const;
 
+    bool addLatePickPath(const SoPath *path);
+    const SoPathList *getLatePickPaths() const;
+
 protected:
     virtual void beginTraversal(SoNode * node);
 
@@ -425,6 +428,12 @@ public:
     void afterPick(const SoPickedPointList &);
     void doPick(SoNode *node);
 
+    bool isLatePicking() const {
+        return latePicking;
+    }
+
+    void setLatePicking(bool enable);
+
     void cleanup();
 
 protected:
@@ -441,6 +450,7 @@ private:
     PickMode pickMode = PickMode::FrontFace;
     bool skipFace;
     bool resetclipplane = false;
+    bool latePicking = false;
 };
 
 } // namespace Gui

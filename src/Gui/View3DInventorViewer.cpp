@@ -3013,7 +3013,9 @@ void View3DInventorViewer::renderScene()
         QMessageBox::warning(parentWidget(), QObject::tr("Out of memory"),
                              QObject::tr("Not enough memory available to display the data."));
     }
-    glbra->checkRootNode(nullptr);
+    if (glbra) {
+        glbra->checkRootNode(nullptr);
+    }
 
 #if defined (ENABLE_GL_DEPTH_RANGE)
     // using 10% of the z-buffer for the foreground node
@@ -5478,5 +5480,14 @@ const SoPath *View3DInventorViewer::getRootPath()
 {
     return inventorSelection->getRootPath();
 }
+
+const SoPathList *View3DInventorViewer::getLatePickPaths() const
+{
+    auto action = this->getSoRenderManager()->getGLRenderAction();
+    if (action->isOfType(SoBoxSelectionRenderAction::getClassTypeId()))
+        return static_cast<SoBoxSelectionRenderAction*>(action)->getLatePickPaths();
+    return nullptr;
+}
+
 
 #include "moc_View3DInventorViewer.cpp"

@@ -36,6 +36,8 @@
 # include <Inventor/SbColor.h>
 #endif
 
+#include "SoFCUnifiedSelection.h"
+#include "SoFCSelection.h"
 #include "ViewProviderPlane.h"
 #include "ViewProviderOrigin.h"
 
@@ -78,8 +80,8 @@ void ViewProviderPlane::attach ( App::DocumentObject *obj ) {
     sep->addChild ( pLines );
 
     // add semi transparent face
-    auto faceSeparator = new SoSeparator();
-    sep->addChild(faceSeparator);
+    auto faceSeparator = new SoFCLatePickGroup();
+    pHighlight->addChild(faceSeparator);
 
     auto material = new SoMaterial();
     material->transparency.setValue(0.95f);
@@ -95,11 +97,6 @@ void ViewProviderPlane::attach ( App::DocumentObject *obj ) {
     shapeHints->vertexOrdering = SoShapeHints::COUNTERCLOCKWISE;
     shapeHints->shapeType = SoShapeHints::UNKNOWN_SHAPE_TYPE;
     faceSeparator->addChild(shapeHints);
-
-    // disable picking
-    auto pickStyle = new SoPickStyle();
-    pickStyle->style = SoPickStyle::UNPICKABLE;
-    faceSeparator->addChild(pickStyle);
 
     auto faceSet = new SoFaceSet();
     auto vertexProperty = new SoVertexProperty();

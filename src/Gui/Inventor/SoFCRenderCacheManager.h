@@ -85,6 +85,8 @@ public:
 
   void setHatchImage(const void *dataptr, int nc, int width, int height);
 
+  void doLatePick(SoRayPickAction *action) const;
+
   const char *getRenderStatistics() const;
 
 private:

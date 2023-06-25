@@ -36,6 +36,7 @@ generate_from_xml(ViewProviderSketchGeometryExtensionPy)
 set(SketcherGui_UIC_SRCS
     TaskSketcherConstraints.ui
     TaskSketcherElements.ui
+    TaskSketcherGeneral.ui
     TaskSketcherMessages.ui
     TaskSketcherSolverAdvanced.ui
     TaskSketcherValidation.ui
@@ -102,6 +103,9 @@ SET(SketcherGui_SRCS
     TaskSketcherElements.h
     TaskSketcherCreateCommands.cpp
     TaskSketcherCreateCommands.h
+    TaskSketcherGeneral.ui
+    TaskSketcherGeneral.cpp
+    TaskSketcherGeneral.h
     TaskSketcherMessages.ui
     TaskSketcherMessages.cpp
     TaskSketcherMessages.h

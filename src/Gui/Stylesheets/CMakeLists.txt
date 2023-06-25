@@ -19,6 +19,7 @@ SET(Overlay_Stylesheets_Files
     "overlay/Light.qss"
     "overlay/Dark-Outline.qss"
     "overlay/Light-Outline.qss"
+    "overlay/SplitDark.qss"
     # "overlay/Dark-off.qss"
     # "overlay/Light-off.qss"
     "overlay/close.svg"

@@ -1011,6 +1011,9 @@ public:
     SoColorPacker colorpacker;
     SoNode *root;
     std::map<int, SoPathList> latedelayedpaths;
+    SoPathList latepickpaths;
+    using PathPtr = CoinPtr<SoPath>;
+    std::unordered_set<PathPtr, PathHasher<PathPtr>, PathHasher<PathPtr>> latepickpathset;
     SoPathList tmppathlist;
     unsigned delayedpathcount = 0;
     int currentdelayedpath = 0;
@@ -1319,6 +1322,10 @@ SoBoxSelectionRenderAction::apply(SoPath * path)
 void
 SoBoxSelectionRenderAction::checkRootNode(SoNode *node)
 {
+    if (node) {
+        PRIVATE(this)->latepickpaths.truncate(0);
+        PRIVATE(this)->latepickpathset.clear();
+    }
     PRIVATE(this)->root = node;
 }
 
@@ -1487,6 +1494,18 @@ void SoBoxSelectionRenderAction::beginTraversal(SoNode *node)
     inherited::beginTraversal(node);
 }
 
+bool SoBoxSelectionRenderAction::addLatePickPath(const SoPath *path)
+{
+    SoState * thestate = this->getState();
+    SoCacheElement::invalidate(thestate);
+    if (!PRIVATE(this)->latepickpathset.count(const_cast<SoPath*>(path))) {
+        auto copy = path->copy();
+        PRIVATE(this)->latepickpathset.insert(copy);
+        PRIVATE(this)->latepickpaths.append(copy);
+    }
+    return true;
+}
+
 bool SoBoxSelectionRenderAction::addLateDelayedPath(const SoPath *path, bool copy, int priority)
 {
     int current = PRIVATE(this)->currentdelayedpath;
@@ -1549,6 +1568,12 @@ bool SoBoxSelectionRenderAction::addLateDelayedPath(const SoPath *path, bool cop
     return true;
 }
 
+const SoPathList *
+SoBoxSelectionRenderAction::getLatePickPaths() const
+{
+    return &PRIVATE(this)->latepickpaths;
+}
+
 #undef PRIVATE
 #undef PUBLIC
 
@@ -1570,6 +1595,12 @@ void SoFCRayPickAction::initClass() {
     };
     SoRayPickAction::addMethod(SoShape::getClassTypeId(), handler);
     SoRayPickAction::addMethod(SoImage::getClassTypeId(), handler);
+}
+
+void SoFCRayPickAction::setLatePicking(bool enable)
+{
+    FC_LOG("late pick " << enable);
+    latePicking = enable;
 }
 
 void SoFCRayPickAction::finish() {

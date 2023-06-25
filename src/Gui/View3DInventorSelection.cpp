@@ -85,11 +85,11 @@ View3DInventorSelection::View3DInventorSelection(View3DInventorViewer *owner, So
 
     coin_setenv("COIN_SEPARATE_DIFFUSE_TRANSPARENCY_OVERRIDE", "1", TRUE);
 
-    auto pcGroupOnTopMaterial = new SoMaterial;
-    pcGroupOnTopMaterial->transparency = ViewParams::getTransparencyOnTop();
-    pcGroupOnTopMaterial->diffuseColor.setIgnored(true);
-    pcGroupOnTopMaterial->setOverride(true);
-    pcGroupOnTop->addChild(pcGroupOnTopMaterial);
+    // auto pcGroupOnTopMaterial = new SoMaterial;
+    // pcGroupOnTopMaterial->transparency = ViewParams::getTransparencyOnTop();
+    // pcGroupOnTopMaterial->diffuseColor.setIgnored(true);
+    // pcGroupOnTopMaterial->setOverride(true);
+    // pcGroupOnTop->addChild(pcGroupOnTopMaterial);
 
     pcGroupOnTopDispMode = new SoFCDisplayMode;
     pcGroupOnTopDispMode->transparency = ViewParams::getTransparencyOnTop();

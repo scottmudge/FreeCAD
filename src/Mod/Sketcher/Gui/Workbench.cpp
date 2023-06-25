@@ -179,6 +179,9 @@ namespace
 
 void Workbench::enterEditMode()
 {
+    // Not sure why the below saving is necessary. It is probably conflict with
+    // the my modification of toolbar manager, causing vanish of all toolbars
+#if 0
     /*Modify toolbars dynamically.
     First save state of toolbars in case user changed visibility of a toolbar but he's not changing the wb.
     This happens in someone works directly from sketcher, changing from edit mode to not-edit-mode*/
@@ -186,10 +189,14 @@ void Workbench::enterEditMode()
 
     Gui::ToolBarManager::getInstance()->setToolbarVisibility(true, editModeToolbarNames(), true);
     Gui::ToolBarManager::getInstance()->setToolbarVisibility(false, nonEditModeToolbarNames(), true);
+#endif
 }
 
 void Workbench::leaveEditMode()
 {
+    // Not sure why the below saving is necessary. It is probably conflict with
+    // the my modification of toolbar manager, causing vanish of all toolbars
+#if 0
     /*Modify toolbars dynamically.
     First save state of toolbars in case user changed visibility of a toolbar but he's not changing the wb.
     This happens in someone works directly from sketcher, changing from edit mode to not-edit-mode*/
@@ -197,6 +204,7 @@ void Workbench::leaveEditMode()
 
     Gui::ToolBarManager::getInstance()->setToolbarVisibility(false, editModeToolbarNames(), true);
     Gui::ToolBarManager::getInstance()->setToolbarVisibility(true, nonEditModeToolbarNames(), true);
+#endif
 }
 
 namespace SketcherGui {

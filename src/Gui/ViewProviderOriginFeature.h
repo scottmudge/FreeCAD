@@ -31,6 +31,8 @@ class SoScale;
 namespace Gui
 {
 
+class SoFCSelection;
+
 /**
  * View provider associated with an App::OriginFeature.
  */
@@ -70,6 +72,7 @@ protected:
     bool onDelete ( const std::vector<std::string> & ) override;
 protected:
     SoSeparator    * pOriginFeatureRoot;
+    SoFCSelection  * pHighlight;
     SoScale        * pScale;
     SoAsciiText    * pLabel;
 };

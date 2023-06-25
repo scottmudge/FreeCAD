@@ -71,6 +71,9 @@ ViewProviderOriginFeature::ViewProviderOriginFeature () {
     pLabel->width.setValue(-1);
 
     ShadowStyle.setValue(3);
+
+    pHighlight = new SoFCSelection ();
+    pHighlight->ref();
 }
 
 
@@ -78,6 +81,7 @@ ViewProviderOriginFeature::~ViewProviderOriginFeature () {
     pScale->unref ();
     pOriginFeatureRoot->unref ();
     pLabel->unref ();
+    pHighlight->unref();
 }
 
 // Separator node that alters OpenGL depth function. Coin3d's SoDepthBuffer
@@ -100,19 +104,19 @@ public:
 
     void render(SoGLRenderAction *action, bool inpath) {
         Gui::FCDepthFunc guard(func);
-        SoState *state = action->getState();
-        float t = SoLazyElement::getTransparency(state, 0);
-        if (t != 0.0f) {
-            state->push();
-            float trans = 0.0f;
-            SoLazyElement::setTransparency(state, this, 1, &trans, &packer);
-        }
+        // SoState *state = action->getState();
+        // float t = SoLazyElement::getTransparency(state, 0);
+        // if (t != 0.0f) {
+        //     state->push();
+        //     float trans = 0.0f;
+        //     SoLazyElement::setTransparency(state, this, 1, &trans, &packer);
+        // }
         if (inpath)
             inherited::GLRenderInPath(action);
         else
             inherited::GLRenderBelowPath(action);
-        if (t != 0.0f)
-            state->pop();
+        // if (t != 0.0f)
+        //     state->pop();
     }
 
 
@@ -148,7 +152,7 @@ void ViewProviderOriginFeature::attach(App::DocumentObject* pcObject)
     // Scale feature to the given size
     pScale->scaleFactor = SbVec3f (sz, sz, sz);
     // sep->addChild (pScale);
-    pOriginFeatureRoot->addChild (pScale);
+    pHighlight->addChild (pScale);
 
     // Setup font size
     auto font = new SoFont ();
@@ -177,10 +181,10 @@ void ViewProviderOriginFeature::attach(App::DocumentObject* pcObject)
     // report incorrect bounds.
     //
     // sep->addChild ( font );
-    pOriginFeatureRoot->addChild (font);
+    pHighlight->addChild (font);
 
     // Create the selection node
-    auto highlight = new SoFCSelection ();
+    auto highlight = pHighlight;
     highlight->applySettings ();
     if ( !Selectable.getValue() ) {
         highlight->selectionMode = Gui::SoFCSelection::SEL_OFF;

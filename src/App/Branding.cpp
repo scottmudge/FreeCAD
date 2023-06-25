@@ -68,6 +68,7 @@ Branding::Branding()
     filter.push_back("UserParameterTemplate");
 
     filter.push_back("VendorCFGPrefix");
+    filter.push_back("IssuePage");
 }
 
 bool Branding::readFile(const QString& fn)

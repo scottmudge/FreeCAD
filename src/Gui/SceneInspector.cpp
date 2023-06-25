@@ -116,7 +116,10 @@ QVariant SceneModel::data(const QModelIndex & index, int role) const
     auto itName = nodeNames.find(node);
     QString name;
     QTextStream stream(&name);
-    stream << item.node.get() << ", ";
+    stream << item.node.get();
+    if (node->isOverride())
+        stream << "*";
+    stream << ", ";
 
     auto obj = ViewProviderLink::linkedObjectByNode(node);
     if (obj) {
@@ -166,7 +169,7 @@ QModelIndex SceneModel::index(int row, int column, const QModelIndex &parent) co
             auto &child = items[index];
             if (!child.node) {
                 child.node = path->getNode(row);
-                child.expand = false;
+                // child.expand = false;
                 child.parent = parent;
             }
             return index;

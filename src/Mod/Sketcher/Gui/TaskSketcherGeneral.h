@@ -50,30 +50,8 @@ public:
     explicit SketcherGeneralWidget(QWidget *parent=nullptr);
     ~SketcherGeneralWidget() override;
     
-    bool eventFilter(QObject *object, QEvent *event) override;
-
     void saveSettings();
-    void saveOrderingOrder();
     void loadSettings();
-    void loadOrderingOrder();
-    void setGridSize(double val);
-    void checkGridView(bool);
-    void checkGridSnap(bool);
-    void checkAutoconstraints(bool);
-    void checkAvoidRedundant(bool);
-    void enableGridSettings(bool);
-    void enableAvoidRedundant(bool);
-
-Q_SIGNALS:
-    void emitToggleGridView(bool);
-    void emitToggleGridSnap(bool);
-    void emitSetGridSize(double);
-    void emitToggleAutoconstraints(bool);
-    void emitToggleAvoidRedundant(bool);
-    void emitRenderOrderChanged();
-
-protected Q_SLOTS:
-    void onToggleGridAutoScale(bool);
 
 protected:
     void changeEvent(QEvent *e) override;
@@ -94,22 +72,9 @@ public:
     void OnChange(Gui::SelectionSingleton::SubjectType &rCaller,
                   Gui::SelectionSingleton::MessageType Reason) override;
 
-public Q_SLOTS:
-    void onToggleGridView(bool on);
-    void onSetGridSize(double val);
-    void onToggleGridSnap(bool on);
-    void onToggleAutoconstraints(bool on);
-    void onToggleAvoidRedundant(bool);
-    void onRenderOrderChanged();
-
-private:
-    void onChangedSketchView(const Gui::ViewProvider&,
-                             const App::Property&);
-
 private:
     ViewProviderSketch *sketchView;
     SketcherGeneralWidget* widget;
-    boost::signals2::scoped_connection changedSketchView;
 };
 
 } //namespace SketcherGui
