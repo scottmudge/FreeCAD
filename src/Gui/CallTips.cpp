@@ -31,6 +31,7 @@
 # include <QRegularExpressionMatch>
 # include <QTextCursor>
 # include <QToolTip>
+# include <QScreen>
 # if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
 #   include <QDesktopWidget>
 # endif
@@ -554,7 +555,7 @@ void CallTipsList::showTips(const QString& line)
         addItem(it.key());
         QListWidgetItem *item = this->item(this->count()-1);
         item->setData(Qt::ToolTipRole, QVariant(it.value().description));
-        item->setData(Qt::UserRole, qVariantFromValue( it.value() )); //< store full CallTip data
+        item->setData(Qt::UserRole, QVariant::fromValue( it.value() )); //< store full CallTip data
         QIcon icon = iconOfType(it.value().type);
         if(!icon.isNull())
             item->setIcon(icon);
