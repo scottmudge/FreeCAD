@@ -82,13 +82,13 @@ public:
     /// indicates if the view is in passive mode
     bool isPassive() const {return bIsPassive;}
 
-    virtual void onChanged(const App::Property *);
+    void onChanged(const App::Property *) override;
 
-    virtual App::Document *getOwnerDocument() const {
+    App::Document *getOwnerDocument() const override {
         return getAppDocument();
     }
 
-    virtual std::string getFullName(bool python=false) const;
+    std::string getFullName(bool python=false) const override;
 
     /** @name methods to override
      */

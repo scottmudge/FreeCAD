@@ -184,8 +184,8 @@ public:
             {"Text", "TextColor", Qt::black, m_TextColor},
             {"Highlight", "HiliteColor", QColor(170, 226, 255, 255), m_HiliteColor},
             {"Face", "FrontColor", QColor(226, 233, 239, 192), m_FrontFaceColor},
-            {"Edge", "EdgeColor", QColor(226, 233, 239, 192).dark(140), m_EdgeFaceColor},
-            {"Corner", "CornerColor", QColor(226, 233, 239, 192).dark(110), m_CornerFaceColor},
+            {"Edge", "EdgeColor", QColor(226, 233, 239, 192).darker(140), m_EdgeFaceColor},
+            {"Corner", "CornerColor", QColor(226, 233, 239, 192).darker(110), m_CornerFaceColor},
             {"Button", "ButtonColor", QColor(226, 233, 239, 128), m_ButtonColor},
             {"Border", "BorderColor", QColor(50, 50, 50, 255), m_BorderColor},
             {"Axis label", "AxisLabelColor", Qt::black, m_AxisLabelColor}}

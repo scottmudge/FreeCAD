@@ -409,8 +409,8 @@ public:
 
 protected:
   // restore from/save to parameters
-  void restorePreferences();
-  void savePreferences();
+  void restorePreferences() override;
+  void savePreferences() override;
 
 private:
   QString m_Default;

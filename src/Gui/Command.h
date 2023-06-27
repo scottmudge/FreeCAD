@@ -669,7 +669,7 @@ public:
                  const char *paramEntry=nullptr);
     ~GroupCommand() override;
 
-    void OnChange(Base::Subject<const char*> &, const char* sReason);
+    void OnChange(Base::Subject<const char*> &, const char* sReason) override;
 
     /** Add child command
      * @param cmd: child command. Pass null pointer to add a separator.

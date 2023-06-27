@@ -106,7 +106,7 @@ public:
         Select      = 0x02,
         TreeSubName = 0x04,
     };
-    Q_DECLARE_FLAGS(FindItemOptions, FindItemOption);
+    Q_DECLARE_FLAGS(FindItemOptions, FindItemOption)
 
     static QTreeWidgetItem *findItem(const App::SubObjectT &objT,
                                      QTreeWidgetItem *context = nullptr,

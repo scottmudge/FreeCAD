@@ -104,7 +104,7 @@ public:
     void onRename(Gui::Document *pDoc) override;
     void onUpdate(void) override;
     void viewAll() override;
-    const char *getName(void) const;
+    const char *getName(void) const override;
     void onChanged(const App::Property *prop) override;
 
     void bindCamera(SoCamera *camera, bool sync=false);

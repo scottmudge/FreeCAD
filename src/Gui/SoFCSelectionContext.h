@@ -61,7 +61,7 @@ struct GuiExport SoFCSelectionContext : SoFCSelectionContextBase
 
     ~SoFCSelectionContext() override;
 
-    virtual bool isCounted() const {
+    bool isCounted() const override {
         return isSelected();
     }
 
@@ -134,7 +134,7 @@ struct GuiExport SoFCSelectionContextEx : SoFCSelectionContext
 
     static MergeFunc merge;
 
-    virtual bool isCounted() const {
+    bool isCounted() const override {
         return !colors.empty() || isSelected();
     }
 };

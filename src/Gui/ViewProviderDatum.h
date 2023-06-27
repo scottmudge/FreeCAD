@@ -36,7 +36,7 @@ namespace Gui {
 
 class GuiExport ViewProviderDatum : public Gui::ViewProviderGeometryObject
 {
-    PROPERTY_HEADER(Gui::ViewProviderDatum);
+    PROPERTY_HEADER_WITH_OVERRIDE(Gui::ViewProviderDatum);
 
 public:
     /// constructor

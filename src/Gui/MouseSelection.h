@@ -142,7 +142,7 @@ public:
     void initialize() override;
     void terminate(bool abort = false) override;
 
-    virtual QCursor getCursor(int);
+    QCursor getCursor(int) override;
 
 protected:
     int mouseButtonEvent(const SoMouseButtonEvent* const e, const QPoint& pos) override;
@@ -228,7 +228,7 @@ protected:
     int locationEvent(const SoLocation2Event*    const e, const QPoint& pos) override;
     int keyboardEvent(const SoKeyboardEvent*     const e) override;
 
-    virtual QCursor getCursor(int);
+    QCursor getCursor(int) override;
 
     /// draw the rectangle
     void draw() override;

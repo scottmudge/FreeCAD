@@ -137,8 +137,8 @@ protected:
     /// Removes all planes and axis if they are still linked to the document
     void unsetupObject () override;
 
-    virtual bool canSaveExtension(Extension *) const;
-    virtual void Restore(Base::XMLReader& reader);
+    bool canSaveExtension(Extension *) const override;
+    void Restore(Base::XMLReader& reader) override;
 
 private:
     class OriginExtension : public GeoFeatureGroupExtension {

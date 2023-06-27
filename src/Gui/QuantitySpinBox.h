@@ -70,7 +70,7 @@ public:
      *  Quantity.
      */
     Base::Unit unit() const;
-    void setUnit(const Base::Unit &unit);
+    void setUnit(const Base::Unit &unit) override;
     /// Set the unit property
     void setUnitText(const QString&);
     /// Get the unit property

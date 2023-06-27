@@ -2502,7 +2502,14 @@ void MainWindowP::applyOverrideIcons(const QStringList &icons)
             if (path.size()) {
                 QSize size(64, 64);
                 if (pair.size() == 3) {
-                    auto sz = pair[2].trimmed().split(QLatin1Char('x'), QString::KeepEmptyParts, Qt::CaseInsensitive);
+                    auto sz = pair[2].trimmed().split(
+                            QLatin1Char('x'),
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+                            QString::KeepEmptyParts, 
+#else
+                            Qt::KeepEmptyParts, 
+#endif
+                            Qt::CaseInsensitive);
                     if (sz.size() >= 1) {
                         size.setWidth(sz[0].toInt());
                         if (sz.size() > 1)

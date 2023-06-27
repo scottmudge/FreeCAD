@@ -194,8 +194,8 @@ public:
     using ExpressionSpinBox::apply;
     void setNumberExpression(App::NumberExpression*) override;
 
-    void resizeEvent(QResizeEvent *event);
-    void paintEvent(QPaintEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
 };
 
 } // namespace Gui

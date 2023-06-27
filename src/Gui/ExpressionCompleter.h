@@ -89,8 +89,8 @@ Q_SIGNALS:
 
 private:
     void init();
-    virtual QString pathFromIndex ( const QModelIndex & index ) const;
-    virtual QStringList splitPath ( const QString & path ) const;
+    QString pathFromIndex ( const QModelIndex & index ) const override;
+    QStringList splitPath ( const QString & path ) const override;
     void showPopup(bool show);
 
     App::ExpressionTokenizer tokenizer;

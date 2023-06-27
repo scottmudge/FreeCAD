@@ -65,7 +65,7 @@ public:
         { }
     ///@}
 
-    virtual QIcon getIcon() const;
+    QIcon getIcon() const override;
 
 protected:
     void onChanged ( const App::Property* prop ) override;

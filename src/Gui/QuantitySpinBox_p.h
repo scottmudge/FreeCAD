@@ -104,7 +104,7 @@ protected:
                 Q_EMIT clicked();
     }
 
-    bool event(QEvent *ev) {
+    bool event(QEvent *ev) override {
         if (ev->type() == QEvent::ToolTip) {
             ev->accept();
             QHelpEvent* he = static_cast<QHelpEvent*>(ev);
@@ -123,7 +123,7 @@ protected:
         return iconHeight + parentWidget()->style()->pixelMetric(QStyle::PM_SpinBoxFrameWidth);
     }
 
-    bool eventFilter(QObject *o, QEvent *ev) {
+    bool eventFilter(QObject *o, QEvent *ev) override {
         auto parent = parentWidget();
         if (o && o == parent) {
             switch(ev->type()) {

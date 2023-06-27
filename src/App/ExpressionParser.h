@@ -430,6 +430,8 @@ public:
     static ExpressionPtr create(const App::DocumentObject *owner, PyObject *pyobj=0);
     ~PyObjectExpression() override;
 
+    using Expression::setPyObject; // no actual use, just silence compiler warning
+
     void setPyObject(Py::Object pyobj);
     void setPyObject(PyObject *pyobj, bool owned=false);
 
@@ -742,7 +744,7 @@ protected:
     ExpressionPtr _copy() const override;
     void _getIdentifiers(std::map<App::ObjectIdentifier,bool> &) const override;
     bool _renameObjectIdentifier(const std::map<ObjectIdentifier,ObjectIdentifier> &, 
-                                         const ObjectIdentifier &, ExpressionVisitor &);
+                                         const ObjectIdentifier &, ExpressionVisitor &) override;
     void _moveCells(const CellAddress &, int, int, ExpressionVisitor &) override;
     void _offsetCells(int, int, ExpressionVisitor &) override;
     Py::Object _getPyValue(int *jumpCode=nullptr) const override;
