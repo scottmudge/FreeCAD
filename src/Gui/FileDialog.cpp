@@ -373,7 +373,7 @@ QString FileDialog::getExistingDirectory( QWidget * parent, const QString & capt
 
     QFileDialog dialog(parent, caption, dir);
     new PrefWidgetStates(&dialog, true, "FileDialog", &dialog);
-    // dialog.setFileMode((options & ShowDirsOnly) ? DirectoryOnly : Directory);
+    dialog.setFileMode((options & ShowDirsOnly) ? DirectoryOnly : Directory);
     dialog.setOptions(options);
     dialog.setSupportedSchemes(QStringList(QStringLiteral("file")));
     QString path;
