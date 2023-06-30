@@ -7246,6 +7246,8 @@ bool ViewProviderSketch::setEdit(int ModNum)
     ParameterGrp::handle hSketch = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher");
     edit->handleEscapeButton = !hSketch->GetBool("LeaveSketchWithEscape", true);
 
+    // Init icon, font and marker sizes
+    initParams();
     createEditInventorNodes();
 
     auto editDoc = Gui::Application::Instance->editDocument();
