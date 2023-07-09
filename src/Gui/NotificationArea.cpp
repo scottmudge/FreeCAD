@@ -534,6 +534,7 @@ protected:
         layout->addWidget(tableWidget);
 
         tableWidget->setMaximumSize(1200, 600);
+        tableWidget->setMinimumSize(300, 150);
         tableWidget->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
         tableWidget->header()->setStretchLastSection(false);
         tableWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);

@@ -677,27 +677,25 @@ PyObject* SketchObjectPy::addExternal(PyObject* args)
 
 PyObject* SketchObjectPy::delExternal(PyObject* args)
 {
-    /*[[[cog
-    getGeoId()
-    ]]]*/
-
-    int GeoId;
-    const char *name=nullptr;
-    if (PyArg_ParseTuple(args, "s", &name )) {
-        if(!getSketchObjectPtr()->geoIdFromShapeType(name,GeoId)) {
-            PyErr_Format(PyExc_ValueError, "Invalid geometry name: %s", name);
-            return nullptr;
-        }
-    } else {
-        PyErr_Clear();
-        if (!PyArg_ParseTuple(args, "i", &GeoId ))
-            return nullptr;
-    }
-    //[[[end]]]
-
     try {
-        if (this->getSketchObjectPtr()->delExternal(GeoId)) {
-            setError(name, GeoId, "Not able to delete an external geometry");
+        std::vector<int> geoIds;
+        Py::Sequence seq(args);
+        for(int i=0;i<seq.size();++i) {
+            Py::Object item(seq[i].ptr());
+            if (item.isNumeric())
+                geoIds.push_back(Py::Int(item));
+            else {
+                int GeoId;
+                std::string name = Py::String(item);
+                if(!getSketchObjectPtr()->geoIdFromShapeType(name.c_str(),GeoId)) {
+                    PyErr_Format(PyExc_ValueError, "Invalid geometry name: %s", name.c_str());
+                    return nullptr;
+                }
+                geoIds.push_back(GeoId);
+            }
+        }
+        if (this->getSketchObjectPtr()->delExternal(geoIds)) {
+            PyErr_SetString(PyExc_ValueError, "Failed to delete external geometry");
             return nullptr;
         }
         Py_Return;

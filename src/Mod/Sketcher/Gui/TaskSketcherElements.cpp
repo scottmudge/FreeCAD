@@ -330,8 +330,6 @@ void ElementView::contextMenuEvent (QContextMenuEvent* event)
 
            << "Separator"
 
-           << "Sketcher_CloseShape"
-           << "Sketcher_ConnectLines"
            << "Sketcher_SelectConstraints"
            << "Sketcher_SelectOrigin"
            << "Sketcher_SelectHorizontalAxis"
@@ -341,7 +339,7 @@ void ElementView::contextMenuEvent (QContextMenuEvent* event)
 
     Gui::MenuManager::getInstance()->setupContextMenu(&mitems, menu);
 
-    QAction* remove = menu.addAction(tr("Delete"), this, SLOT(deleteSelectedItems()),
+    QAction* remove = menu.addAction(tr("Delete"), this, &ElementView::deleteSelectedItems,
         QKeySequence(QKeySequence::Delete));
     remove->setEnabled(!items.isEmpty());
 

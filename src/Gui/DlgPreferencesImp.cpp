@@ -437,6 +437,7 @@ void DlgPreferencesImp::restoreDefaults()
         App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/General")->
                               SetBool("SaveUserParameter", saveParameter);
 
+        paramTouched = false;
         reject();
     }
 }

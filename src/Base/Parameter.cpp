@@ -224,6 +224,7 @@ ParameterGrp::ParameterGrp(XERCES_CPP_NAMESPACE_QUALIFIER DOMElement *GroupNode,
   */
 ParameterGrp::~ParameterGrp()
 {
+    assert(_ObserverSet.empty());
     for (auto &v : _GroupMap) {
         v.second->_Parent = nullptr;
         v.second->_Manager = nullptr;
@@ -1305,7 +1306,7 @@ void ParameterGrp::Clear(bool notify)
 
 bool ParameterGrp::ShouldRemove() const
 {
-    if (this->getRefCount() > 1)
+    if (this->getRefCount() > 1 || !_ObserverSet.empty())
         return false;
     for (const auto& it : _GroupMap) {
         bool ok = it.second->ShouldRemove();

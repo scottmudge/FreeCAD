@@ -1599,7 +1599,6 @@ void SoFCRayPickAction::initClass() {
 
 void SoFCRayPickAction::setLatePicking(bool enable)
 {
-    FC_LOG("late pick " << enable);
     latePicking = enable;
 }
 

@@ -1091,8 +1091,11 @@ void Command::refreshIcon()
     if (auto group = qobject_cast<ActionGroup*>(_pcAction)) {
         for (auto qaction : group->actions()) {
             if (auto action = qobject_cast<Action*>(qaction->parent())) {
-                if (auto cmd = action->command())
-                    cmd->refreshIcon();
+                if (auto cmd = action->command()) {
+                    if (cmd != this) {
+                        cmd->refreshIcon();
+                    }
+                }
             }
         }
     }
@@ -2084,6 +2087,7 @@ void CommandManager::addCommand(Command* pCom)
             FC_ERR("duplicate command " << pCom->getName());
         return;
     }
+
     ++_revision;
     cmd = pCom;
 

@@ -1144,16 +1144,17 @@ class CmdSketcherGrid : public Gui::Command
 public:
     CmdSketcherGrid();
     virtual ~CmdSketcherGrid(){}
-    virtual const char* className() const override
+    const char* className() const override
     { return "CmdSketcherGrid"; }
-    virtual void languageChange() override;
+    void languageChange() override;
 protected:
-    virtual void activated(int iMsg) override;
-    virtual bool isActive(void) override;
-    virtual Gui::Action * createAction(void) override;
+    void activated(int iMsg) override;
+    bool isActive(void) override;
+    Gui::Action * createAction(void) override;
+    void refreshIcon() override;
+
 private:
     void updateIcon(bool value);
-    void updateInactiveHandlerIcon();
 
     CmdSketcherGrid(const CmdSketcherGrid&) = delete;
     CmdSketcherGrid(CmdSketcherGrid&&) = delete;
@@ -1175,22 +1176,18 @@ CmdSketcherGrid::CmdSketcherGrid()
 
 void CmdSketcherGrid::updateIcon(bool value)
 {
-    static QIcon active = Gui::BitmapFactory().iconFromTheme("Sketcher_GridToggle");
-    static QIcon inactive = Gui::BitmapFactory().iconFromTheme("Sketcher_GridToggle_Deactivated");
-
-    auto * pcAction = qobject_cast<Gui::ActionGroup*>(getAction());
-    pcAction->setIcon(value ? active : inactive);
+    if (auto * pcAction = qobject_cast<Gui::ActionGroup*>(getAction())) {
+        if (value)
+            pcAction->setIcon(Gui::BitmapFactory().iconFromTheme("Sketcher_GridToggle"));
+        else
+            pcAction->setIcon(Gui::BitmapFactory().iconFromTheme("Sketcher_GridToggle_Deactivated"));
+    }
 }
 
-void CmdSketcherGrid::updateInactiveHandlerIcon()
+void CmdSketcherGrid::refreshIcon()
 {
     auto * vp = getInactiveHandlerEditModeSketchViewProvider();
-
-    if(vp) {
-        auto value = vp->ShowGrid.getValue();
-
-        updateIcon(value);
-    }
+    updateIcon(vp && vp->ShowGrid.getValue());
 }
 
 void CmdSketcherGrid::activated(int iMsg)
@@ -1226,7 +1223,7 @@ Gui::Action* CmdSketcherGrid::createAction()
     });
 
     // set the right pixmap
-    updateInactiveHandlerIcon();
+    refreshIcon();
 
     return pcAction;
 }
@@ -1676,6 +1673,8 @@ void CmdRenderingOrder::updateIcon()
     static QIcon external = Gui::BitmapFactory().iconFromTheme("Sketcher_RenderingOrder_External");
 
     auto * pcAction = qobject_cast<Gui::ActionGroup*>(getAction());
+    if (!pcAction)
+        return;
 
     if(TopElement == ElementType::Normal) {
         pcAction->setIcon(normal);
