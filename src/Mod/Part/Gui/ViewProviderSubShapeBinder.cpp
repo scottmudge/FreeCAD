@@ -92,7 +92,7 @@ void ViewProviderSubShapeBinder::onChanged(const App::Property *prop) {
         App::Color shapeColor,lineColor,pointColor;
         int transparency, linewidth;
         bool mapFace,mapLine,mapPoint,mapTrans;
-        if(UseBinderStyle.getValue()) {
+        if(UseBinderStyle.getValue() && false) {
             //get the datum coloring scheme
             // set default color for datums (golden yellow with 60% transparency)
             shapeColor.setPackedValue(PartParams::getDefaultDatumColor());
