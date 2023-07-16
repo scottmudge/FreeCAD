@@ -497,15 +497,13 @@ Action::addCheckBox(QMenu *menu,
                     bool checked,
                     QCheckBox **_checkbox)
 {
-    auto checkbox = new QCheckBox;
+    auto checkbox = new QCheckBox(menu);
     checkbox->setText(txt);
     checkbox->setChecked(checked);
-    checkbox->setIcon(icon);
     if (_checkbox) *_checkbox = checkbox;
-    auto action = addWidget(menu, txt, tooltip, checkbox, false);
+    auto action = addWidget(menu, txt, tooltip, checkbox, false, icon);
     action->setCheckable(true);
     action->setChecked(checked);
-    menu->addAction(action);
     QObject::connect(checkbox, &QCheckBox::toggled, action, &QAction::setChecked);
     QObject::connect(checkbox, &QCheckBox::toggled, action, &QAction::toggled);
     return action;
@@ -537,12 +535,25 @@ Action::addWidget(QMenu *menu,
                   const QString &txt,
                   const QString &tooltip,
                   QWidget *w,
-                  bool needLabel)
+                  bool needLabel,
+                  const QIcon &icon)
 {
     QWidgetAction *wa = new QWidgetAction(menu);
     QWidget *widget = new QWidget(menu);
     QHBoxLayout *layout = new QHBoxLayout(widget);
     widget->setLayout(layout);
+    if (!icon.isNull()) {
+        QLabel *iconLabel = new QLabel(widget);
+        // label->installEventFilter(new MenuFocusEventFilter(menu, wa));
+        int s = ToolBarManager::getInstance()->toolBarIconSize();
+        QSize iconSize(s, s);
+        auto size = icon.actualSize(iconSize);
+        if (size.height() < iconSize.height()) {
+            iconSize.setWidth(static_cast<float>(iconSize.height())/size.height()*size.width());
+        }
+        iconLabel->setPixmap(icon.pixmap(iconSize));
+        layout->addWidget(iconLabel);
+    }
     if (needLabel) {
         QLabel *label = new QLabel(widget);
         label->installEventFilter(new MenuFocusEventFilter(menu, wa));
@@ -551,13 +562,15 @@ Action::addWidget(QMenu *menu,
     }
     layout->addWidget(w);
     layout->setContentsMargins(4,0,4,0);
+    if (!icon.isNull() || needLabel)
+        layout->addStretch();
     widget->setFocusProxy(w);
     widget->setFocusPolicy(Qt::TabFocus);
     w->installEventFilter(new MenuFocusEventFilter(menu, wa, w));
     w->setFocusPolicy(Qt::TabFocus);
     wa->setDefaultWidget(widget);
     wa->setToolTip(tooltip);
-    wa->setStatusTip(tooltip);
+    // wa->setStatusTip(tooltip);
     wa->setVisible(true);
     wa->setText(txt);
     menu->addAction(wa);
@@ -624,7 +637,15 @@ void ActionGroup::addTo(QWidget *widget)
             widget->addAction(action());
             auto tb = setupMenuToolButton(widget);
             auto menu = new QMenu(widget);
-            menu->addActions(actions());
+            for (auto action : actions()) {
+                if (!action->isCheckable()) {
+                    menu->addAction(action);
+                } else {
+                    auto wa = addCheckBox(menu, action->text(), action->toolTip(),
+                            action->icon(), action->isChecked());
+                    QObject::connect(wa, &QAction::toggled, action, &QAction::toggled);
+                }
+            }
             tb->setMenu(menu);
             ToolBarManager::getInstance()->checkToolbarIconSize(static_cast<QToolBar*>(widget));
 

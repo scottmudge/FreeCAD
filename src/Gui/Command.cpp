@@ -1306,9 +1306,10 @@ Gui::Action * CheckableCommand::createAction(void)
     return pcAction;
 }
 
-void CheckableCommand::setActionIcon(Action *, const QIcon &)
+void CheckableCommand::setActionIcon(Action *action, const QIcon &icon)
 {
-    // Do not set icon, as it looks bad in menu for checkable
+    // Since we are using QCheckBox inside QMenu, showing icon is fine now
+    Command::setActionIcon(action, icon);
 }
 
 //===========================================================================

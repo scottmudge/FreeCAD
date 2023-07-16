@@ -111,7 +111,8 @@ public:
                               const QString &txt,
                               const QString &tooltip,
                               QWidget *widget,
-                              bool needLable = true);
+                              bool needLable = true,
+                              const QIcon &icon = QIcon());
 
     static QString createToolTip(QString helpText,
                                  const QString &title,

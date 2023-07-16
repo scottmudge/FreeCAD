@@ -80,13 +80,6 @@ void ActivateBSplineHandler(Gui::Document *doc,DrawSketchHandler *handler)
     }
 }
 
-void ShowRestoreInformationLayer(const char * visibleelementname)
-{
-    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher/General");
-    bool status = hGrp->GetBool(visibleelementname, true);
-    hGrp->SetBool(visibleelementname, !status);
-}
-
 /// For a knot given by (GeoId, PosId) finds the B-Spline and the knot's
 /// index within it (by OCC numbering).
 /// Returns true if the entities are found, false otherwise.
@@ -128,11 +121,73 @@ bool findBSplineAndKnotIndex(Sketcher::SketchObject* Obj,
     return false;
 }
 
-// Show/Hide B-spline degree
-DEF_STD_CMD_A(CmdSketcherBSplineDegree)
+/*[[[cog
+import cog
+def genBSplineOption(name, option=None):
+    if option is None:
+        option = name
+    cog.out(f'''
+class CmdSketcherBSpline{name} : public Gui::CheckableCommand
+{{
+public:
+    CmdSketcherBSpline{name}();
+    virtual const char* className() const {{
+        return "CmdSketcherBSpline{name}";
+    }}
+protected:
+    ParameterGrp::handle param() const {{
+        static ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath(
+                "User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+        return hGrp;
+    }}
+    virtual void setOption(bool checked) {{
+        param()->SetBool("BSpline{option}Visible", checked);
+        if (auto vp = ViewProviderSketch::getEditingViewProvider()) {{
+            vp->showRestoreInformationLayer();
+        }}
+    }}
+    virtual bool getOption(void) const {{
+        return param()->GetBool("BSpline{option}Visible", true);
+    }}
+}};
+CmdSketcherBSpline{name}::CmdSketcherBSpline{name}()
+    :CheckableCommand("Sketcher_BSpline{name}")
+''')
+]]]*/
+//[[[end]]]
 
+
+// Show/Hide B-spline degree
+/*[[[cog
+genBSplineOption('Degree')
+]]]*/
+
+class CmdSketcherBSplineDegree : public Gui::CheckableCommand
+{
+public:
+    CmdSketcherBSplineDegree();
+    virtual const char* className() const {
+        return "CmdSketcherBSplineDegree";
+    }
+protected:
+    ParameterGrp::handle param() const {
+        static ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath(
+                "User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+        return hGrp;
+    }
+    virtual void setOption(bool checked) {
+        param()->SetBool("BSplineDegreeVisible", checked);
+        if (auto vp = ViewProviderSketch::getEditingViewProvider()) {
+            vp->showRestoreInformationLayer();
+        }
+    }
+    virtual bool getOption(void) const {
+        return param()->GetBool("BSplineDegreeVisible", true);
+    }
+};
 CmdSketcherBSplineDegree::CmdSketcherBSplineDegree()
-    : Command("Sketcher_BSplineDegree")
+    :CheckableCommand("Sketcher_BSplineDegree")
+//[[[end]]]
 {
     sAppModule      = "Sketcher";
     sGroup          = "Sketcher";
@@ -145,23 +200,37 @@ CmdSketcherBSplineDegree::CmdSketcherBSplineDegree()
     eType           = ForEdit;
 }
 
-void CmdSketcherBSplineDegree::activated(int iMsg)
-{
-    Q_UNUSED(iMsg);
-
-    ShowRestoreInformationLayer("BSplineDegreeVisible");
-}
-
-bool CmdSketcherBSplineDegree::isActive()
-{
-    return isSketcherBSplineActive(getActiveGuiDocument(), false);
-}
-
 // Show/Hide B-spline polygon
-DEF_STD_CMD_A(CmdSketcherBSplinePolygon)
+/*[[[cog
+genBSplineOption('Polygon', 'ControlPolygon')
+]]]*/
 
+class CmdSketcherBSplinePolygon : public Gui::CheckableCommand
+{
+public:
+    CmdSketcherBSplinePolygon();
+    virtual const char* className() const {
+        return "CmdSketcherBSplinePolygon";
+    }
+protected:
+    ParameterGrp::handle param() const {
+        static ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath(
+                "User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+        return hGrp;
+    }
+    virtual void setOption(bool checked) {
+        param()->SetBool("BSplineControlPolygonVisible", checked);
+        if (auto vp = ViewProviderSketch::getEditingViewProvider()) {
+            vp->showRestoreInformationLayer();
+        }
+    }
+    virtual bool getOption(void) const {
+        return param()->GetBool("BSplineControlPolygonVisible", true);
+    }
+};
 CmdSketcherBSplinePolygon::CmdSketcherBSplinePolygon()
-    : Command("Sketcher_BSplinePolygon")
+    :CheckableCommand("Sketcher_BSplinePolygon")
+//[[[end]]]
 {
     sAppModule      = "Sketcher";
     sGroup          = "Sketcher";
@@ -174,23 +243,38 @@ CmdSketcherBSplinePolygon::CmdSketcherBSplinePolygon()
     eType           = ForEdit;
 }
 
-void CmdSketcherBSplinePolygon::activated(int iMsg)
-{
-    Q_UNUSED(iMsg);
-
-    ShowRestoreInformationLayer("BSplineControlPolygonVisible");
-}
-
-bool CmdSketcherBSplinePolygon::isActive()
-{
-    return isSketcherBSplineActive(getActiveGuiDocument(), false);
-}
 
 // Show/Hide B-spline comb
-DEF_STD_CMD_A(CmdSketcherBSplineComb)
+/*[[[cog
+genBSplineOption('Comb')
+]]]*/
 
+class CmdSketcherBSplineComb : public Gui::CheckableCommand
+{
+public:
+    CmdSketcherBSplineComb();
+    virtual const char* className() const {
+        return "CmdSketcherBSplineComb";
+    }
+protected:
+    ParameterGrp::handle param() const {
+        static ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath(
+                "User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+        return hGrp;
+    }
+    virtual void setOption(bool checked) {
+        param()->SetBool("BSplineCombVisible", checked);
+        if (auto vp = ViewProviderSketch::getEditingViewProvider()) {
+            vp->showRestoreInformationLayer();
+        }
+    }
+    virtual bool getOption(void) const {
+        return param()->GetBool("BSplineCombVisible", true);
+    }
+};
 CmdSketcherBSplineComb::CmdSketcherBSplineComb()
-    : Command("Sketcher_BSplineComb")
+    :CheckableCommand("Sketcher_BSplineComb")
+//[[[end]]]
 {
     sAppModule      = "Sketcher";
     sGroup          = "Sketcher";
@@ -203,23 +287,36 @@ CmdSketcherBSplineComb::CmdSketcherBSplineComb()
     eType           = ForEdit;
 }
 
-void CmdSketcherBSplineComb::activated(int iMsg)
+/*[[[cog
+genBSplineOption('KnotMultiplicity')
+]]]*/
+
+class CmdSketcherBSplineKnotMultiplicity : public Gui::CheckableCommand
 {
-    Q_UNUSED(iMsg);
-
-    ShowRestoreInformationLayer("BSplineCombVisible");
-}
-
-bool CmdSketcherBSplineComb::isActive()
-{
-    return isSketcherBSplineActive(getActiveGuiDocument(), false);
-}
-
-//
-DEF_STD_CMD_A(CmdSketcherBSplineKnotMultiplicity)
-
+public:
+    CmdSketcherBSplineKnotMultiplicity();
+    virtual const char* className() const {
+        return "CmdSketcherBSplineKnotMultiplicity";
+    }
+protected:
+    ParameterGrp::handle param() const {
+        static ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath(
+                "User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+        return hGrp;
+    }
+    virtual void setOption(bool checked) {
+        param()->SetBool("BSplineKnotMultiplicityVisible", checked);
+        if (auto vp = ViewProviderSketch::getEditingViewProvider()) {
+            vp->showRestoreInformationLayer();
+        }
+    }
+    virtual bool getOption(void) const {
+        return param()->GetBool("BSplineKnotMultiplicityVisible", true);
+    }
+};
 CmdSketcherBSplineKnotMultiplicity::CmdSketcherBSplineKnotMultiplicity()
-    : Command("Sketcher_BSplineKnotMultiplicity")
+    :CheckableCommand("Sketcher_BSplineKnotMultiplicity")
+//[[[end]]]
 {
     sAppModule      = "Sketcher";
     sGroup          = "Sketcher";
@@ -232,23 +329,36 @@ CmdSketcherBSplineKnotMultiplicity::CmdSketcherBSplineKnotMultiplicity()
     eType           = ForEdit;
 }
 
-void CmdSketcherBSplineKnotMultiplicity::activated(int iMsg)
+/*[[[cog
+genBSplineOption('PoleWeight')
+]]]*/
+
+class CmdSketcherBSplinePoleWeight : public Gui::CheckableCommand
 {
-    Q_UNUSED(iMsg);
-
-    ShowRestoreInformationLayer("BSplineKnotMultiplicityVisible");
-}
-
-bool CmdSketcherBSplineKnotMultiplicity::isActive()
-{
-    return isSketcherBSplineActive(getActiveGuiDocument(), false);
-}
-
-//
-DEF_STD_CMD_A(CmdSketcherBSplinePoleWeight)
-
+public:
+    CmdSketcherBSplinePoleWeight();
+    virtual const char* className() const {
+        return "CmdSketcherBSplinePoleWeight";
+    }
+protected:
+    ParameterGrp::handle param() const {
+        static ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath(
+                "User parameter:BaseApp/Preferences/Mod/Sketcher/General");
+        return hGrp;
+    }
+    virtual void setOption(bool checked) {
+        param()->SetBool("BSplinePoleWeightVisible", checked);
+        if (auto vp = ViewProviderSketch::getEditingViewProvider()) {
+            vp->showRestoreInformationLayer();
+        }
+    }
+    virtual bool getOption(void) const {
+        return param()->GetBool("BSplinePoleWeightVisible", true);
+    }
+};
 CmdSketcherBSplinePoleWeight::CmdSketcherBSplinePoleWeight()
-    : Command("Sketcher_BSplinePoleWeight")
+    :CheckableCommand("Sketcher_BSplinePoleWeight")
+//[[[end]]]
 {
     sAppModule = "Sketcher";
     sGroup = "Sketcher";
@@ -259,18 +369,6 @@ CmdSketcherBSplinePoleWeight::CmdSketcherBSplinePoleWeight()
     sPixmap = "Sketcher_BSplinePoleWeight";
     sAccel = "";
     eType = ForEdit;
-}
-
-void CmdSketcherBSplinePoleWeight::activated(int iMsg)
-{
-    Q_UNUSED(iMsg);
-
-    ShowRestoreInformationLayer("BSplinePoleWeightVisible");
-}
-
-bool CmdSketcherBSplinePoleWeight::isActive()
-{
-    return isSketcherBSplineActive(getActiveGuiDocument(), false);
 }
 
 // Composite drop down menu for show/hide geometry information layer

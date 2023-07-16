@@ -727,7 +727,13 @@ void StringHasher::Restore(Base::XMLReader &reader) {
 
     std::size_t count = reader.getAttributeAsUnsigned("count");
     if (newtag) {
-        restoreStreamNew(reader.beginCharStream(false),count);
+        try {
+            restoreStreamNew(reader.beginCharStream(false),count);
+        } catch (const Base::Exception &e) {
+            e.ReportException();
+            FC_ERR("Failed to restore string table. It is strongly recommanded to recompute the whole document.");
+            reader.setPartialRestore(true);
+        }
         reader.readEndElement("StringHasher2");
         return;
     }
