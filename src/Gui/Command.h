@@ -699,7 +699,7 @@ protected:
 
 /** Abstract class to help implement a checkable command
  */
-class CheckableCommand : public Gui::Command
+class GuiExport CheckableCommand : public Gui::Command
 {
 public:
     CheckableCommand(const char *name);
