@@ -1,4 +1,19 @@
-Tip release (branch (LinkMerge)[https://github.com/realthunder/FreeCAD/tree/LinkMerge]) is merged with upstream 63a28557 2022.12.22
+Tip release (branch (LinkMerge)[https://github.com/realthunder/FreeCAD/tree/LinkMerge]) is merged with upstream aa3b2f39 2023.05.22
+
+# Tip 2023.07.29
+
+Merged with upstream aa3b2f39 2023.05.22
+Fix handling of vendor prefixed (Link branch) user configuration (#824, #833)
+Export NaviCube corner size setting through context menu
+Allow branding `IssuePage` (#837)
+Add new `SplitDark` overlay stylesheet
+Improve scene inspector (9d58c46b5)
+Implement late 3D picking, used by origin plane
+Improve handling of corrupted/incompatible string table in saved file
+Use checkbox for checkable menu item
+Expose preference package settings in Preference -> General -> Preference pack
+Sketcher: fix polyline command toggle (#349)
+Sketcher: fix deletion of multiple external edges
 
 # Tip 2023.05.21
 

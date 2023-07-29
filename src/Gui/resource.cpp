@@ -45,6 +45,7 @@
 #include "DlgSettingsObjects.h"
 #include "DlgReportViewImp.h"
 #include "DlgSettingsWorkbenchesImp.h"
+#include "DlgSettingsPreferencePack.h"
 
 #include "DlgToolbarsImp.h"
 #include "DlgActionsImp.h"
@@ -76,6 +77,7 @@ WidgetFactorySupplier::WidgetFactorySupplier()
     new PrefPageProducer<DlgSettingsCacheDirectory>( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgSettingsNotificationArea> ( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgReportViewImp>         ( QT_TRANSLATE_NOOP("QObject","General") );
+    new PrefPageProducer<DlgSettingsPreferencePack>( QT_TRANSLATE_NOOP("QObject","General") );
     new PrefPageProducer<DlgSettings3DViewImp>     ( QT_TRANSLATE_NOOP("QObject","Display") );
     DlgSettings3DViewImp::attachObserver();
     new PrefPageProducer<DlgSettingsUI>            ( QT_TRANSLATE_NOOP("QObject","Display") );
