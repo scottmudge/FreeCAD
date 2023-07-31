@@ -54,7 +54,6 @@ TaskScaledParameters::TaskScaledParameters(ViewProviderTransformed *TransformedV
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
     ui->setupUi(proxy);
-    QMetaObject::connectSlotsByName(this);
 
     this->groupLayout()->addWidget(proxy);
 
@@ -75,7 +74,6 @@ TaskScaledParameters::TaskScaledParameters(TaskMultiTransformParameters *parentT
     ui->setupUi(proxy);
     connect(ui->buttonOK, &QPushButton::pressed,
             parentTask, &TaskScaledParameters::onSubTaskButtonOK);
-    QMetaObject::connectSlotsByName(this);
 
     layout->addWidget(proxy);
 
@@ -88,7 +86,7 @@ TaskScaledParameters::TaskScaledParameters(TaskMultiTransformParameters *parentT
 
 void TaskScaledParameters::setupUI()
 {
-    TaskTransformedParameters::setupUI();
+    setupBaseUI();
 
     Base::connect(ui->spinFactor, QOverload<double>::of(&Gui::QuantitySpinBox::valueChanged),
             this, &TaskScaledParameters::onFactor);

@@ -29,6 +29,7 @@
 #endif
 
 #include <Base/Console.h>
+#include <Base/ExceptionSafeCall.h>
 #include <Base/Tools.h>
 #include <App/Application.h>
 #include <App/Document.h>
@@ -62,7 +63,6 @@ TaskGenericPatternParameters::TaskGenericPatternParameters(ViewProviderTransform
     proxy = new QWidget(this);
     ui = new Ui_TaskGenericPatternParameters();
     ui->setupUi(proxy);
-    QMetaObject::connectSlotsByName(this);
 
     this->groupLayout()->addWidget(proxy);
 
@@ -81,9 +81,8 @@ TaskGenericPatternParameters::TaskGenericPatternParameters(TaskMultiTransformPar
     proxy = new QWidget(parentTask);
     ui = new Ui_TaskGenericPatternParameters();
     ui->setupUi(proxy);
-    connect(ui->buttonOK, SIGNAL(clicked(bool)),
-            parentTask, SLOT(onSubTaskButtonOK()));
-    QMetaObject::connectSlotsByName(this);
+    connect(ui->buttonOK, &QToolButton::pressed,
+            parentTask, &TaskGenericPatternParameters::onSubTaskButtonOK);
 
     layout->addWidget(proxy);
 
@@ -98,12 +97,12 @@ TaskGenericPatternParameters::TaskGenericPatternParameters(TaskMultiTransformPar
 
 void TaskGenericPatternParameters::setupUI()
 {
-    TaskTransformedParameters::setupUI();
-
-    connect(ui->editExpression, SIGNAL(textChanged()), this, SLOT(onChangedExpression()));
-
+    setupBaseUI();
     updateUI();
 
+
+    connect(ui->editExpression, &Gui::ExpressionTextEdit::textChanged,
+            this, &TaskGenericPatternParameters::onChangedExpression);
     ui->editExpression->setDocumentObject(getObject());
 }
 

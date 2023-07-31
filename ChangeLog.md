@@ -1,5 +1,10 @@
 Tip release (branch (LinkMerge)[https://github.com/realthunder/FreeCAD/tree/LinkMerge]) is merged with upstream aa3b2f39 2023.05.22
 
+# Tip 2023.07.30
+
+Fix libfmt packaging problem
+PartDesign: fix auto recompute when editing pattern features (#839)
+
 # Tip 2023.07.29
 
 Merged with upstream aa3b2f39 2023.05.22
@@ -14,6 +19,8 @@ Use checkbox for checkable menu item
 Expose preference package settings in Preference -> General -> Preference pack
 Sketcher: fix polyline command toggle (#349)
 Sketcher: fix deletion of multiple external edges
+
+-- 20230730tip --
 
 # Tip 2023.05.21
 

@@ -66,7 +66,7 @@ protected:
 
 private:
     void setupUI();
-    void updateUI();
+    void updateUI() override;
 
 private:
     std::unique_ptr<Ui_TaskScaledParameters> ui;

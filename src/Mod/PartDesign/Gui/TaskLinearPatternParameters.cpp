@@ -34,6 +34,7 @@
 #include <App/DocumentObject.h>
 #include <App/Origin.h>
 #include <Base/Console.h>
+#include <Base/ExceptionSafeCall.h>
 #include <Base/Tools.h>
 #include <Gui/Application.h>
 #include <Gui/Selection.h>
@@ -62,7 +63,6 @@ TaskLinearPatternParameters::TaskLinearPatternParameters(ViewProviderTransformed
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
     ui->setupUi(proxy);
-    QMetaObject::connectSlotsByName(this);
 
     this->groupLayout()->addWidget(proxy);
 
@@ -82,7 +82,6 @@ TaskLinearPatternParameters::TaskLinearPatternParameters(TaskMultiTransformParam
     ui->setupUi(proxy);
     connect(ui->buttonOK, &QToolButton::pressed,
             parentTask, &TaskLinearPatternParameters::onSubTaskButtonOK);
-    QMetaObject::connectSlotsByName(this);
 
     layout->addWidget(proxy);
 
@@ -98,7 +97,7 @@ TaskLinearPatternParameters::TaskLinearPatternParameters(TaskMultiTransformParam
 
 void TaskLinearPatternParameters::setupUI()
 {
-    TaskTransformedParameters::setupUI();
+    setupBaseUI();
     ui->spinOccurrences->setMinimum(1);
 
     PartDesign::LinearPattern* pcLinearPattern = static_cast<PartDesign::LinearPattern*>(getObject());
@@ -139,16 +138,16 @@ void TaskLinearPatternParameters::setupUI()
 
     updateUI();
 
-    connect(ui->comboDirection, SIGNAL(activated(int)),
-            this, SLOT(onDirectionChanged(int)));
-    connect(ui->checkReverse, SIGNAL(toggled(bool)),
-            this, SLOT(onCheckReverse(bool)));
-    connect(ui->spinLength, SIGNAL(valueChanged(double)),
-            this, SLOT(onLength(double)));
-    connect(ui->spinOccurrences, SIGNAL(valueChanged(uint)),
-            this, SLOT(onOccurrences(uint)));
-    connect(ui->checkBoxUpdateView, SIGNAL(toggled(bool)),
-            this, SLOT(onUpdateView(bool)));
+    Base::connect(ui->comboDirection, qOverload<int>(&QComboBox::activated),
+            this, &TaskLinearPatternParameters::onDirectionChanged);
+    Base::connect(ui->checkReverse, &QCheckBox::toggled,
+            this, &TaskLinearPatternParameters::onCheckReverse);
+    Base::connect(ui->spinLength, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+            this, &TaskLinearPatternParameters::onLength);
+    Base::connect(ui->spinOccurrences, &Gui::UIntSpinBox::unsignedChanged,
+            this, &TaskLinearPatternParameters::onOccurrences);
+    Base::connect(ui->checkBoxUpdateView, &QCheckBox::toggled,
+            this, &TaskLinearPatternParameters::onUpdateView);
 }
 
 void TaskLinearPatternParameters::updateUI()

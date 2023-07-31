@@ -227,7 +227,7 @@ protected:
     void changeEvent(QEvent *e) override = 0;
     void onSelectionChanged(const Gui::SelectionChanges& msg) override;
     virtual void updateUI() = 0;
-    virtual void setupUI();
+    void setupBaseUI();
 
     void fillAxisCombo(ComboLinks &combolinks, Part::Part2DObject *sketch);
     void fillPlanesCombo(ComboLinks &combolinks, Part::Part2DObject *sketch);
@@ -235,7 +235,6 @@ protected:
     void refresh();
 
     void slotDiagnosis(QString msg);
-    virtual void connectSignals();
 
 protected:
     QWidget* proxy;

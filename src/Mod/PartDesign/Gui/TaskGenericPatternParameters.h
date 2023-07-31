@@ -53,23 +53,23 @@ class TaskGenericPatternParameters : public TaskTransformedParameters
 
 public:
     /// Constructor for task with ViewProvider
-    TaskGenericPatternParameters(ViewProviderTransformed *TransformedView, QWidget *parent = 0);
+    TaskGenericPatternParameters(ViewProviderTransformed *TransformedView, QWidget *parent = nullptr);
     /// Constructor for task with parent task (MultiTransform mode)
     TaskGenericPatternParameters(TaskMultiTransformParameters *parentTask, QLayout *layout);
-    virtual ~TaskGenericPatternParameters();
+    ~TaskGenericPatternParameters() override;
 
-    virtual void apply();
+    void apply() override;
 
 private Q_SLOTS:
     void onChangedExpression();
-    virtual void onUpdateView(bool);
+    void onUpdateView(bool) override;
 
 protected:
-    virtual void changeEvent(QEvent *e);
+    void changeEvent(QEvent *e) override;
 
 private:
     void setupUI();
-    void updateUI();
+    void updateUI() override;
 
 private:
     Ui_TaskGenericPatternParameters* ui;
@@ -84,7 +84,9 @@ class TaskDlgGenericPatternParameters : public TaskDlgTransformedParameters
 
 public:
     TaskDlgGenericPatternParameters(ViewProviderGenericPattern *GenericPatternView);
-    virtual ~TaskDlgGenericPatternParameters() {}
+    ~TaskDlgGenericPatternParameters() override
+    {
+    }
 };
 
 } //namespace PartDesignGui

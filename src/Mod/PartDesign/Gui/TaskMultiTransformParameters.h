@@ -87,7 +87,7 @@ protected:
     void changeEvent(QEvent *e) override;
 
 private:
-    void updateUI();
+    void updateUI() override;
     void closeSubTask();
     void moveTransformFeature(const int increment);
     void finishAdd(std::string &newFeatName);

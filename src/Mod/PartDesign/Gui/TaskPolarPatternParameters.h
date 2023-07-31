@@ -73,8 +73,8 @@ protected:
     unsigned getOccurrences() const;
 
 private:
-    void connectSignals() override;
-    void setupUI() override;
+    void connectSignals();
+    void setupUI();
     void updateUI() override;
 
 private:

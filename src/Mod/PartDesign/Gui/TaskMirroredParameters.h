@@ -67,7 +67,7 @@ protected:
 
 private:
     void setupUI();
-    void updateUI();
+    void updateUI() override;
     ComboLinks planeLinks;
 
 private:

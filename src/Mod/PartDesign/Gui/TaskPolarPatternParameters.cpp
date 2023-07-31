@@ -69,7 +69,6 @@ TaskPolarPatternParameters::TaskPolarPatternParameters(ViewProviderTransformed *
     // we need a separate container widget to add all controls to
     proxy = new QWidget(this);
     ui->setupUi(proxy);
-    QMetaObject::connectSlotsByName(this);
 
     this->groupLayout()->addWidget(proxy);
 
@@ -87,9 +86,8 @@ TaskPolarPatternParameters::TaskPolarPatternParameters(TaskMultiTransformParamet
 {
     proxy = new QWidget(parentTask);
     ui->setupUi(proxy);
-    connect(ui->buttonOK, &QToolButton::pressed,
+    Base::connect(ui->buttonOK, &QToolButton::pressed,
             parentTask, &TaskMultiTransformParameters::onSubTaskButtonOK);
-    QMetaObject::connectSlotsByName(this);
 
     layout->addWidget(proxy);
 
@@ -104,7 +102,6 @@ TaskPolarPatternParameters::TaskPolarPatternParameters(TaskMultiTransformParamet
 
 void TaskPolarPatternParameters::connectSignals()
 {
-    TaskTransformedParameters::connectSignals();
     Base::connect(ui->comboAxis, QOverload<int>::of(&QComboBox::currentIndexChanged),
                   this, &TaskPolarPatternParameters::onAxisChanged);
     Base::connect(ui->checkReverse, &QCheckBox::toggled, this, &TaskPolarPatternParameters::onCheckReverse);
@@ -117,8 +114,7 @@ void TaskPolarPatternParameters::connectSignals()
 
 void TaskPolarPatternParameters::setupUI()
 {
-    TaskTransformedParameters::setupUI();
-
+    setupBaseUI();
 
     PartDesign::PolarPattern* pcPolarPattern = static_cast<PartDesign::PolarPattern*>(getObject());
     ui->polarAngle->bind(pcPolarPattern->Angle);

@@ -220,13 +220,14 @@ bool TaskTransformedParameters::isEnabledTransaction() const
     return enableTransaction;
 }
 
-void TaskTransformedParameters::setupUI() {
+void TaskTransformedParameters::setupBaseUI() {
     if(!TransformedView || !proxy)
         return;
 
     updateViewTimer = new QTimer(this);
     updateViewTimer->setSingleShot(true);
-    connect(updateViewTimer, SIGNAL(timeout()), this, SLOT(onUpdateViewTimer()));
+    Base::connect(updateViewTimer, &QTimer::timeout,
+            this, &TaskTransformedParameters::onUpdateViewTimer);
     
     // remembers the initial transaction ID
     App::GetApplication().getActiveTransaction(&transactionID);
@@ -290,9 +291,9 @@ void TaskTransformedParameters::setupUI() {
     assert(layout);
 
     auto grid = PartDesignGui::addTaskCheckBox(TransformedView, proxy);
-    grid->addWidget(checkBoxParallel, 1, 1);
     grid->addWidget(checkBoxNewSolid, 2, 0);
     grid->addWidget(checkBoxSubTransform, 2, 1);
+    grid->addWidget(checkBoxParallel, 3, 0);
 
     splitter = new QSplitter(Qt::Vertical, this);
     splitter->addWidget(labelMessage);
@@ -380,10 +381,7 @@ void TaskTransformedParameters::setupUI() {
     }
 
     linkEditor->init(App::DocumentObjectT(&pcTransformed->OriginalSubs),false);
-}
 
-void TaskTransformedParameters::connectSignals()
-{
     QMetaObject::connectSlotsByName(this);
     Base::connect(checkBoxSubTransform, &QCheckBox::toggled, this, &TaskTransformedParameters::onChangedSubTransform);
     Base::connect(checkBoxParallel, &QCheckBox::toggled, this, &TaskTransformedParameters::onChangedParallelTransform);
@@ -653,10 +651,12 @@ TaskDlgTransformedParameters::TaskDlgTransformedParameters(
         Content.push_back(taskTransformOffset);
         taskTransformOffset->hideGroupBox();
 
-        connect(widget, SIGNAL(placementChanged(const QVariant &, bool, bool)),
-                parameter, SLOT(onChangedOffset(const QVariant &, bool, bool)));
-        connect(taskTransformOffset, SIGNAL(toggledExpansion()), this, SLOT(onToggledTaskOffset()));
-        connect(parameter, SIGNAL(toggledExpansion()), this, SLOT(onToggledTaskParameters()));
+        Base::connect(widget, &Gui::Dialog::Placement::placementChanged,
+                parameter, &TaskTransformedParameters::onChangedOffset);
+        Base::connect(taskTransformOffset, &Gui::TaskView::TaskBox::toggledExpansion,
+                this, &TaskDlgTransformedParameters::onToggledTaskOffset);
+        Base::connect(parameter, &TaskTransformedParameters::toggledExpansion,
+                this, &TaskDlgTransformedParameters::onToggledTaskParameters);
     }
 }
 
