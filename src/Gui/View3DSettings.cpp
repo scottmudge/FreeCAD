@@ -84,6 +84,7 @@ void View3DSettings::applySettings()
     OnChange(*hGrp,"UseBackgroundColorMid");
     OnChange(*hGrp,"ShowFPS");
     OnChange(*hGrp,"ShowNaviCube");
+    OnChange(*hGrp,"CornerNaviCube");
     OnChange(*hGrp,"UseVBO");
     OnChange(*hGrp,"RenderCache");
     OnChange(*hGrp,"Orthographic");
@@ -312,6 +313,12 @@ void View3DSettings::OnChange(ParameterGrp::SubjectType &rCaller,ParameterGrp::M
     else if (strcmp(Reason,"ShowNaviCube") == 0) {
         for (auto _viewer : _viewers) {
             _viewer->setEnabledNaviCube(rGrp.GetBool("ShowNaviCube", true));
+        }
+    }
+    else if (strcmp(Reason,"CornerNaviCube") == 0) {
+        int corner = hGrp->GetInt("CornerNaviCube", 1);
+        for (auto _viewer : _viewers) {
+            _viewer->setNaviCubeCorner(corner);
         }
     }
     else if (strcmp(Reason,"UseVBO") == 0) {

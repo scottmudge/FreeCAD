@@ -1130,15 +1130,13 @@ Base::BoundBox3d ViewProvider::getBoundingBox(
         const char *subname, const Base::Matrix4D *mat,
         bool transform, const View3DInventorViewer *viewer, int depth) const
 {
-    if (auto doc = getOwnerDocument()) {
-        if (doc->testStatus(App::Document::Restoring)) {
-            if (bboxCache) {
-                auto it = bboxCache->cache.find(BBoxKey(subname,mat,transform));
-                if (it != bboxCache->cache.end())
-                    return it->second;
-            }
-            return Base::BoundBox3d();
+    if (testStatus(Gui::isRestoring)) {
+        if (bboxCache) {
+            auto it = bboxCache->cache.find(BBoxKey(subname,mat,transform));
+            if (it != bboxCache->cache.end())
+                return it->second;
         }
+        return Base::BoundBox3d();
     }
 
     if(!bboxCache)

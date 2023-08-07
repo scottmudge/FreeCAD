@@ -1552,7 +1552,8 @@ SoFCRenderCacheManagerP::preShape(void *userdata,
   CoinPtr<SoFCVertexCache> prev;
   for (auto it=sensor.caches.begin(); it!=sensor.caches.end();) {
     auto & cache = *it;
-    if (!prev) prev = cache;
+    if (!prev)
+      prev = cache;
     if (cache->getNodeId() != node->getNodeId()) {
       it = sensor.caches.erase(it);
       continue;

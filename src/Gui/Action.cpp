@@ -1253,7 +1253,7 @@ void WorkbenchTabWidget::onWorkbenchActivated(const QString& name)
 WorkbenchGroup::WorkbenchGroup (  Command* pcCmd, QObject * parent )
   : ActionGroup( pcCmd, parent )
 {
-    _pimpl.reset(new Private(this, "User parameter:BaseApp/Workbenches"));
+    _pimpl.reset(new Private(this, "User parameter:BaseApp/Preferences/Workbenches"));
 
     // Start a list with 50 elements but extend it when requested
     for (int i=0; i<50; i++) {

@@ -320,6 +320,7 @@ struct EditData {
     int DragCurve;
     // dragged constraints
     std::set<int> DragConstraintSet;
+    int DragConstraintTransactionId = 0;
 
     SbColor PreselectOldColor;
     int PreselectPoint;
@@ -1188,16 +1189,16 @@ bool ViewProviderSketch::mouseButtonPressed(int Button, bool pressed, const SbVe
                     setSketchMode(STATUS_NONE);
                     return true;
                 case STATUS_SKETCH_DragConstraint:
-                    if (edit->DragConstraintSet.empty() == false) {
-                        getDocument()->openCommand(QT_TRANSLATE_NOOP("Command", "Drag Constraint"));
-                        auto idset = edit->DragConstraintSet;
+                    if (!edit->DragConstraintSet.empty()) {
+                        auto idset = std::move(edit->DragConstraintSet);
+                        edit->DragConstraintSet.clear();
                         for(int id : idset) {
                             moveConstraint(id, Base::Vector2d(x, y));
                             //updateColor();
                         }
-                        edit->PreselectConstraintSet = edit->DragConstraintSet;
-                        edit->DragConstraintSet.clear();
-                        getDocument()->commitCommand();
+                        edit->PreselectConstraintSet = std::move(idset);
+                        App::GetApplication().closeActiveTransaction();
+                        edit->DragConstraintTransactionId = 0;
                     }
                     setSketchMode(STATUS_NONE);
                     return true;
@@ -1686,7 +1687,11 @@ bool ViewProviderSketch::mouseMove(const SbVec2s &cursorPos, Gui::View3DInventor
             }
             return true;
         case STATUS_SKETCH_DragConstraint:
-            if (edit->DragConstraintSet.empty() == false) {
+            if (!edit->DragConstraintSet.empty()) {
+                if (edit->DragConstraintTransactionId == 0) {
+                    edit->DragConstraintTransactionId = App::GetApplication().setActiveTransaction(
+                            QT_TRANSLATE_NOOP("Command", "Drag Constraint"));
+                }
                 auto idset = edit->DragConstraintSet;
                 for(int id : idset)
                     moveConstraint(id, Base::Vector2d(x,y));
@@ -1729,7 +1734,7 @@ void ViewProviderSketch::moveConstraint(int constNum, const Base::Vector2d &toPo
         return;
 
     const std::vector<Sketcher::Constraint *> &constrlist = getSketchObject()->Constraints.getValues();
-    Constraint *Constr = constrlist[constNum];
+    std::unique_ptr<Constraint> Constr(constrlist[constNum]->clone());
 
 #ifdef _DEBUG
     int intGeoCount = getSketchObject()->getHighestCurveIndex() + 1;
@@ -1752,17 +1757,39 @@ void ViewProviderSketch::moveConstraint(int constNum, const Base::Vector2d &toPo
         if (Constr->SecondPos != Sketcher::PointPos::none) { // point to point distance
             p1 = getSolvedSketch().getPoint(Constr->First, Constr->FirstPos);
             p2 = getSolvedSketch().getPoint(Constr->Second, Constr->SecondPos);
-        } else if (Constr->Second != GeoEnum::GeoUndef) { // point to line distance
+        } else if (Constr->Second != GeoEnum::GeoUndef) { 
             p1 = getSolvedSketch().getPoint(Constr->First, Constr->FirstPos);
             const Part::Geometry *geo = GeoById(geomlist, Constr->Second);
             if (geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
-                const Part::GeomLineSegment *lineSeg = static_cast<const Part::GeomLineSegment *>(geo);
+                const Part::GeomLineSegment* lineSeg = static_cast<const Part::GeomLineSegment*>(geo);
                 Base::Vector3d l2p1 = lineSeg->getStartPoint();
                 Base::Vector3d l2p2 = lineSeg->getEndPoint();
-                // calculate the projection of p1 onto line2
-                p2.ProjectToLine(p1-l2p1, l2p2-l2p1);
-                p2 += p1;
-            } else
+                if (Constr->FirstPos != Sketcher::PointPos::none) {// point to line distance
+                    // calculate the projection of p1 onto line2
+                    p2.ProjectToLine(p1 - l2p1, l2p2 - l2p1);
+                    p2 += p1;
+                }
+                else {
+                    const Part::Geometry* geo1 = GeoById(geomlist, Constr->First);
+                    const Part::GeomCircle* circleSeg = static_cast<const Part::GeomCircle*>(geo1);
+                    Base::Vector3d ct = circleSeg->getCenter();
+                    double radius = circleSeg->getRadius();
+                    p1.ProjectToLine(ct - l2p1, l2p2 - l2p1);// project on the line translated to origin
+                    Base::Vector3d dir = p1;
+                    dir.Normalize();
+                    p1 += ct;
+                    p2 = ct + dir * radius;
+                }
+            }
+            else if (geo->getTypeId() == Part::GeomCircle::getClassTypeId()) {// circle to circle distance
+                const Part::Geometry* geo1 = GeoById(geomlist, Constr->First);
+                if (geo1->getTypeId() == Part::GeomCircle::getClassTypeId()) {
+                    const Part::GeomCircle* circleSeg1 = static_cast<const Part::GeomCircle*>(geo1);
+                    const Part::GeomCircle* circleSeg2 = static_cast<const Part::GeomCircle*>(geo);
+                    GetCirclesMinimalDistance(circleSeg1, circleSeg2, p1, p2);
+                }
+            }
+            else
                 return;
         } else if (Constr->FirstPos != Sketcher::PointPos::none) {
             p2 = getSolvedSketch().getPoint(Constr->First, Constr->FirstPos);
@@ -1925,6 +1952,9 @@ void ViewProviderSketch::moveConstraint(int constNum, const Base::Vector2d &toPo
     // delete the cloned objects
     for (std::vector<Part::Geometry *>::const_iterator it=geomlist.begin(); it != geomlist.end(); ++it)
         if (*it) delete *it;
+
+
+    getSketchObject()->Constraints.set1Value(constNum, std::move(Constr));
 
     draw(true,false);
 }
@@ -6211,21 +6241,46 @@ Restart:
                                 pnt1 = getSketchObject()->getPoint(Constr->First, Constr->FirstPos);
                                 pnt2 = getSketchObject()->getPoint(Constr->Second, Constr->SecondPos);
                             }
-                        } else if (Constr->Second != GeoEnum::GeoUndef) { // point to line distance
+                        } else if (Constr->Second != GeoEnum::GeoUndef) {
                             if (temp) {
                                 pnt1 = getSolvedSketch().getPoint(Constr->First, Constr->FirstPos);
                             } else {
                                 pnt1 = getSketchObject()->getPoint(Constr->First, Constr->FirstPos);
                             }
+
                             const Part::Geometry *geo = GeoById(*geomlist, Constr->Second);
                             if (geo->getTypeId() == Part::GeomLineSegment::getClassTypeId()) {
-                                const Part::GeomLineSegment *lineSeg = static_cast<const Part::GeomLineSegment *>(geo);
+                                const Part::GeomLineSegment* lineSeg = static_cast<const Part::GeomLineSegment*>(geo);
                                 Base::Vector3d l2p1 = lineSeg->getStartPoint();
                                 Base::Vector3d l2p2 = lineSeg->getEndPoint();
-                                // calculate the projection of p1 onto line2
-                                pnt2.ProjectToLine(pnt1-l2p1, l2p2-l2p1);
-                                pnt2 += pnt1;
-                            } else
+                                if (Constr->FirstPos != Sketcher::PointPos::none) {// point to line distance
+                                    // calculate the projection of p1 onto line2
+                                    pnt2.ProjectToLine(pnt1 - l2p1, l2p2 - l2p1);
+                                    pnt2 += pnt1;
+                                }
+                                else {
+                                    const Part::Geometry* geo1 = GeoById(*geomlist, Constr->First);
+                                    if (geo1->getTypeId() == Part::GeomCircle::getClassTypeId()) {// circle to line distance
+                                        const Part::GeomCircle* circleSeg = static_cast<const Part::GeomCircle*>(geo1);
+                                        Base::Vector3d ct = circleSeg->getCenter();
+                                        double radius = circleSeg->getRadius();
+                                        pnt1.ProjectToLine( ct - l2p1, l2p2 - l2p1);// project on the line translated to origin
+                                        Base::Vector3d dir = pnt1;
+                                        dir.Normalize();
+                                        pnt1 += ct;
+                                        pnt2 = ct + dir * radius;
+                                    }
+                                }
+                            }
+                            else if (geo->getTypeId() == Part::GeomCircle::getClassTypeId()) {
+                                const Part::Geometry* geo1 = GeoById(*geomlist, Constr->First);
+                                if (geo1->getTypeId() == Part::GeomCircle::getClassTypeId()) {// circle to circle distance
+                                    const Part::GeomCircle* circleSeg1 = static_cast<const Part::GeomCircle*>(geo1);
+                                    auto circleSeg2 = static_cast<const Part::GeomCircle*>(geo);
+                                    GetCirclesMinimalDistance(circleSeg1, circleSeg2, pnt1, pnt2);
+                                }
+                            }
+                            else
                                 break;
                         } else if (Constr->FirstPos != PointPos::none) {
                             if (temp) {
@@ -7242,6 +7297,9 @@ bool ViewProviderSketch::setEdit(int ModNum)
     assert(!edit);
     edit = std::make_unique<EditData>(this);
     snapManager = std::make_unique<SnapManager>(*this);
+
+    // Init icon, font and marker sizes
+    initParams();
 
     ParameterGrp::handle hSketch = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Mod/Sketcher");
     edit->handleEscapeButton = !hSketch->GetBool("LeaveSketchWithEscape", true);

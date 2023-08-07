@@ -187,6 +187,12 @@ void ViewProviderGeometryObject::updateBoundingBox() {
     }
 }
 
+void ViewProviderGeometryObject::finishRestoring()
+{
+    updateBoundingBox();
+    inherited::finishRestoring();
+}
+
 SoPickedPointList ViewProviderGeometryObject::getPickedPoints(const SbVec2s& pos, const View3DInventorViewer& viewer,bool pickAll) const
 {
     auto root = new SoSeparator;

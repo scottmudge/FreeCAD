@@ -70,7 +70,7 @@ public:
   void open(SoState * state);
   void close(SoState * state);
 
-  void renderTriangles(SoState * state, const int arrays = ALL, int part = -1, const SbPlane *plane = nullptr);
+  void renderTriangles(SoGLRenderAction *action, const int arrays = ALL, int part = -1, const SbPlane *plane = nullptr);
   void renderLines(SoState * state, const int arrays = ALL, int part = -1, bool noseam = false);
   void renderPoints(SoGLRenderAction * action, const int array = ALL, int part = -1);
 
@@ -128,6 +128,9 @@ public:
   SbBool hasOpaqueParts(void) const;
   int hasSolid(void) const;
   bool hasFlipNormal() const;
+  bool isEmpty() const;
+  bool shouldRenderTriangles() const;
+  bool shouldGLRender() const;
 
   uint32_t getFaceColor(int part) const;
   uint32_t getLineColor(int part) const;

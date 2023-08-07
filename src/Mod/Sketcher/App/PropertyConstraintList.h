@@ -75,6 +75,7 @@ public:
       responsibility of the caller to free the memory.
     */
     void set1Value(const int idx, const Constraint*);
+    void set1Value(const int idx, std::unique_ptr<Constraint> &&lValue);
     /*!
       Sets a single constraint to the property.
       The value is cloned inernally so it's in the

@@ -1,16 +1,23 @@
 Tip release (branch [LinkMerge](https://github.com/realthunder/FreeCAD/tree/LinkMerge)) is merged with upstream aa3b2f39 2023.05.22
 
-# Tip 2023.08.03
+# Tip 2023.08.06
 
 Fix unit system ordering problem (#859)
-
+Fix workbench enable/disable settings (#852)
+Fix navigation cube corner setting (#855)
+Fix stylesheet for checkbox with icon in menu
+Fix object bounding box restore
+Sketcher: support undo constraint dragging
+Sketcher: fix missing settings init (#854)
+Sketcher: fix external circular edge precision problem (#836, #827)
+Renderer: add support for some legacy Coin3D shape nodes (#856)
 
 # Tip 2023.07.30
 
 Fix libfmt packaging problem
 PartDesign: fix auto recompute when editing pattern features (#839)
 
--- 20230803 --
+-- 20230806tip --
 
 # Tip 2023.07.29
 

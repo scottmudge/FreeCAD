@@ -73,6 +73,7 @@ private:
     SoSeparator        *bboxSep, *textSep, *dimSep;
     SoCoordinate3      *bboxCoords;
     SoIndexedLineSet   *bboxLines;
+    SbBox3f            cachedBbox;
 };
 
 /**

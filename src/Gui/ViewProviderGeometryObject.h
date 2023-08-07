@@ -69,6 +69,8 @@ public:
     void attach(App::DocumentObject *pcObject) override;
     void updateData(const App::Property*) override;
 
+    void finishRestoring() override;
+
     /**
      * Returns a list of picked points from the geometry under \a getRoot().
      * If \a pickAll is false (the default) only the intersection point closest to the camera will be picked, otherwise

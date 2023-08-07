@@ -117,15 +117,20 @@ int PropertyConstraintList::getSize() const
 
 void PropertyConstraintList::set1Value(const int idx, const Constraint* lValue)
 {
-    if (lValue) {
+    set1Value(idx, std::unique_ptr<Constraint>(lValue->clone()));
+}
+
+void PropertyConstraintList::set1Value(const int idx, std::unique_ptr<Constraint> &&lValue)
+{
+    if (lValue && idx >= 0 && idx < getSize()) {
         aboutToSetValue();
         Constraint* oldVal = _lValueList[idx];
-        Constraint* newVal = lValue->clone();
+        Constraint* newVal = lValue.release();
 
         if (oldVal->Name != newVal->Name) {
             std::map<App::ObjectIdentifier, App::ObjectIdentifier> renamed;
 
-            renamed[makePath(idx, _lValueList[idx])] = makePath(idx, lValue);
+            renamed[makePath(idx, oldVal)] = makePath(idx, newVal);
             if (!renamed.empty())
                 signalConstraintsRenamed(renamed);
         }

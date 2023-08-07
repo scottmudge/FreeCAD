@@ -357,6 +357,8 @@ public:
         if (this->type == Line) {
           if (linewidth < other.linewidth) return true;
           if (linewidth > other.linewidth) return false;
+          if (linepattern < other.linepattern) return true;
+          if (linepattern > other.linepattern) return false;
         } else {
           if (pointsize < other.pointsize) return true;
           if (pointsize > other.pointsize) return false;

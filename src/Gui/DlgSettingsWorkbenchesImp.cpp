@@ -451,7 +451,7 @@ void DlgSettingsWorkbenchesImp::saveWorkbenches(const QStringList &enabled, cons
     QString disabled_wbs;
     ParameterGrp::handle hGrp;
 
-    hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Workbenches");
+    hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Workbenches");
     std::set<QString> wbset;
     if (enabled.isEmpty()) {
         enabled_wbs.append(QStringLiteral("NoneWorkbench"));

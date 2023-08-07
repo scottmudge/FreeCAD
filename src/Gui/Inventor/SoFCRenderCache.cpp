@@ -420,7 +420,7 @@ SoFCRenderCacheP::captureMaterial(SoState * state)
     m.materialbinding = SoMaterialBindingElement::get(state);
 
   if (_checkMaterial(state, m, Material::FLAG_LINE_PATTERN, this->linepatternelement))
-    m.linepattern = SoLinePatternElement::get(state);
+    m.linepattern = (SoLinePatternElement::getScaleFactor(state) << 16) | SoLinePatternElement::get(state);
 
   if (_checkMaterial(state, m, Material::FLAG_LINE_WIDTH, this->linewidthelement)) {
     m.linewidth = SoLineWidthElement::get(state);
@@ -1118,7 +1118,7 @@ SoFCRenderCache::beginChildCaching(SoState *state, SoFCVertexCache * cache)
 void
 SoFCRenderCache::endChildCaching(SoState * state, SoFCVertexCache * vcache)
 {
-  if (!vcache->getNumVertices()) {
+  if (vcache->isEmpty()) {
       if (PRIVATE(this)->caches.size()
           && PRIVATE(this)->caches.back().vcache == vcache)
     {
@@ -1131,7 +1131,7 @@ SoFCRenderCache::endChildCaching(SoState * state, SoFCVertexCache * vcache)
 void
 SoFCRenderCache::endChildCaching(SoState * state, SoFCRenderCache * cache)
 {
-  if (PRIVATE(cache)->caches.empty()) {
+  if (cache->isEmpty()) {
       if (PRIVATE(this)->caches.size()
           && PRIVATE(this)->caches.back().cache == cache)
     {
@@ -1443,7 +1443,7 @@ SoFCRenderCache::getVertexCaches(bool canmerge, int depth)
 
       auto vcache = entry.vcache;
 
-      if (entry.vcache->getNumTriangleIndices()) {
+      if (entry.vcache->shouldRenderTriangles()) {
         Material material = entry.material;
         material.type = Material::Triangle;
         if (!checkContext(material, ctx, vcache))

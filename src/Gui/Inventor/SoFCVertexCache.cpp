@@ -82,6 +82,10 @@
 #include <Inventor/misc/SoGLDriverDatabase.h>
 #include <Inventor/threads/SbMutex.h>
 
+#include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoText2.h>
+#include "SoFCBoundingBox.h"
+
 #include <Base/Console.h>
 #include "SoFCVertexCache.h"
 #include "SoFCDiffuseElement.h"
@@ -427,6 +431,7 @@ public:
   SbFCUniqueId cacheid;
 
   SoNode *node = nullptr;
+  bool glrender = false;
   SbFCUniqueId nodeid;
   SbFCUniqueId diffuseid;
   SbFCUniqueId transpid;
@@ -506,21 +511,26 @@ SoFCVertexCache::SoFCVertexCache(SoState * state, SoNode * node, SoFCVertexCache
   PRIVATE(this)->node = node;
   if (!PRIVATE(this)->tmp)
     PRIVATE(this)->tmp = new SoFCVertexCacheP::TempStorage;
-  if (node) {
-    if (node->isOfType(SoMarkerSet::getClassTypeId()))
-      PRIVATE(this)->markerindices = &static_cast<SoMarkerSet*>(node)->markerIndex;
-    else if (node->isOfType(SoIndexedMarkerSet::getClassTypeId())) {
-      PRIVATE(this)->markerindices = &static_cast<SoIndexedMarkerSet*>(node)->markerIndex;
-      PRIVATE(this)->tmp->ispointindexed = true;
-    }
-    else if (node->isOfType(SoVRMLIndexedFaceSet::getClassTypeId())) {
-      auto faceset = static_cast<SoVRMLIndexedFaceSet*>(node);
-      PRIVATE(this)->flipnormal = !faceset->ccw.getValue();
-      PRIVATE(this)->hassolid = faceset->solid.getValue() ? 2 : 0;
-    }
-    if (PRIVATE(this)->markerindices && !PRIVATE(this)->markerindices->getNum())
-      PRIVATE(this)->markerindices = nullptr;
+
+  if (node->isOfType(SoCube::getClassTypeId())
+      || node->isOfType(SoText2::getClassTypeId())
+      || node->isOfType(SoFCBoundingBox::getClassTypeId())) {
+    PRIVATE(this)->glrender = true;
   }
+  else if (node->isOfType(SoMarkerSet::getClassTypeId())) {
+    PRIVATE(this)->markerindices = &static_cast<SoMarkerSet*>(node)->markerIndex;
+  }
+  else if (node->isOfType(SoIndexedMarkerSet::getClassTypeId())) {
+    PRIVATE(this)->markerindices = &static_cast<SoIndexedMarkerSet*>(node)->markerIndex;
+    PRIVATE(this)->tmp->ispointindexed = true;
+  }
+  else if (node->isOfType(SoVRMLIndexedFaceSet::getClassTypeId())) {
+    auto faceset = static_cast<SoVRMLIndexedFaceSet*>(node);
+    PRIVATE(this)->flipnormal = !faceset->ccw.getValue();
+    PRIVATE(this)->hassolid = faceset->solid.getValue() ? 2 : 0;
+  }
+  if (PRIVATE(this)->markerindices && !PRIVATE(this)->markerindices->getNum())
+    PRIVATE(this)->markerindices = nullptr;
   PRIVATE(this)->tmp->state = state;
   PRIVATE(this)->elementselectable = true;
   PRIVATE(this)->ontoppattern = false;
@@ -568,6 +578,7 @@ SoFCVertexCache::SoFCVertexCache(SoFCVertexCache & prev)
   auto pprev = &prev;
 
   PRIVATE(this)->node = PRIVATE(pprev)->node;
+  PRIVATE(this)->glrender = PRIVATE(pprev)->glrender;
   PRIVATE(this)->markerindices = PRIVATE(pprev)->markerindices;
   PRIVATE(this)->diffuseid = PRIVATE(pprev)->diffuseid;
   PRIVATE(this)->transpid = PRIVATE(pprev)->transpid;
@@ -1150,8 +1161,26 @@ SoFCVertexCache::hasTransparency() const
 }
 
 void
-SoFCVertexCache::renderTriangles(SoState * state, const int arrays, int part, const SbPlane *viewplane)
+SoFCVertexCache::renderTriangles(SoGLRenderAction * action, const int arrays, int part, const SbPlane *viewplane)
 {
+  SoState *state = action->getState();
+  if (PRIVATE(this)->glrender) {
+    if (PRIVATE(this)->node) {
+      glPushAttrib(GL_ENABLE_BIT
+          | GL_DEPTH_BUFFER_BIT
+          | GL_STENCIL_BUFFER_BIT
+          | GL_CURRENT_BIT
+          | GL_POLYGON_BIT);
+      glPushMatrix();
+      state->push();
+      PRIVATE(this)->node->GLRender(action);
+      state->pop();
+      glPopAttrib();
+      glPopMatrix();
+    }
+    return;
+  }
+
   if (part >= 0) {
     PRIVATE(this)->render(state, PRIVATE(this)->triangleindexer, arrays, part, 3);
     return;
@@ -1711,6 +1740,24 @@ int
 SoFCVertexCache::getNumVertices(void) const
 {
   return PRIVATE(this)->vertexarray ? PRIVATE(this)->vertexarray.getLength() : 0;
+}
+
+bool
+SoFCVertexCache::isEmpty(void) const
+{
+  return !PRIVATE(this)->glrender && getNumVertices()==0;
+}
+
+bool
+SoFCVertexCache::shouldRenderTriangles() const
+{
+  return PRIVATE(this)->glrender || getNumTriangleIndices()!=0;
+}
+
+bool
+SoFCVertexCache::shouldGLRender() const
+{
+  return PRIVATE(this)->glrender;
 }
 
 const SbVec3f *

@@ -33,6 +33,7 @@
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
+#include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepOffsetAPI_NormalProjection.hxx>
 #include <BRepTools_WireExplorer.hxx>
 #include <ElCLib.hxx>
@@ -8134,8 +8135,9 @@ Part::Geometry* projectEdgeToLine(const TopoDS_Edge &edge,
 
     // Explicitly make the mesh, or else getBoundBox() will be very loosely
     // bound.
-    shape.meshShape(Part::PartParams::getMinimumDeviation(),
-                    Part::PartParams::getMinimumAngularDeflection());
+    //
+    // Use very small deflection to make more accurate measurement. Could be slow!
+    BRepMesh_IncrementalMesh aMesh(shape.getShape(), 0.005, false, 0.1, true);
 
     // Obtain the bounding box and move the extreme points back to its original
     // location
@@ -8553,44 +8555,63 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                             geos.emplace_back(gArc);
                         }
                     }
-                    else {
-                        // creates an ellipse or a segment
-
-                        // See comments above
-                        //
-                        // if (vec1.IsNormal(vec2, Precision::Angular())) // circle's normal vector in plane:
-                        if (minorRadius < Precision::Confusion()) {
-                            //   projection is a line
+                    else if (minorRadius < Precision::Confusion()) {
+                        //   projection is a line
+                        if (firstPoint.SquareDistance(lastPoint) >= Precision::Confusion()) {
+                            //   Arc projected to be a a line
                             done = false; // will handle later by projectEdgeToLine()
+                        } else {
+                            //   Circle projected to be a line
+                            //   define center by projection
+                            gp_Pnt cnt = circle.Location();
+                            GeomAPI_ProjectPointOnSurf proj(cnt, gPlane);
+                            cnt = proj.NearestPoint();
+
+                            gp_Dir dirOrientation = gp_Dir(vec1 ^ vec2);
+                            gp_Dir dirLine(dirOrientation);
+
+                            Part::GeomLineSegment* projectedSegment = new Part::GeomLineSegment();
+                            Geom_Line ligne(cnt, dirLine);// helper object to compute end points
+                            gp_Pnt P1, P2;                // end points of the segment, OCC style
+
+                            ligne.D0(-circle.Radius(), P1);
+                            ligne.D0(circle.Radius(), P2);
+                            Base::Vector3d p1(P1.X(), P1.Y(), P1.Z());// ends of segment FCAD style
+                            Base::Vector3d p2(P2.X(), P2.Y(), P2.Z());
+                            invPlm.multVec(p1, p1);
+                            invPlm.multVec(p2, p2);
+                            projectedSegment->setPoints(p1, p2);
+                            GeometryFacade::setConstruction(projectedSegment, true);
+                            geos.emplace_back(projectedSegment);
                         }
-                        else {  // general case, full circle
-                            Base::Vector3d p(cnt.X(),cnt.Y(),cnt.Z());  // converting to FCAD style vector
-                            invPlm.multVec(p,p);  // transforming towards sketch's (x,y) coordinates
+                    } else {  
+                        // Projection to an ellipse or elliptic arc
+                        Base::Vector3d p(cnt.X(),cnt.Y(),cnt.Z());  // converting to FCAD style vector
+                        invPlm.multVec(p,p);  // transforming towards sketch's (x,y) coordinates
 
-                            gp_Vec vecMajorAxis = vec1 ^ vec2;  // major axis in 3D space
-                            Base::Vector3d vectorMajorAxis(vecMajorAxis.X(),vecMajorAxis.Y(),vecMajorAxis.Z());  // maj axis into FCAD style vector
-                            invRot.multVec(vectorMajorAxis, vectorMajorAxis);  // transforming to sketch's (x,y) coordinates
-                            vecMajorAxis.SetXYZ(gp_XYZ(vectorMajorAxis[0], vectorMajorAxis[1], vectorMajorAxis[2]));  // back to OCC
+                        gp_Vec vecMajorAxis = vec1 ^ vec2;  // major axis in 3D space
+                        Base::Vector3d vectorMajorAxis(vecMajorAxis.X(),vecMajorAxis.Y(),vecMajorAxis.Z());  // maj axis into FCAD style vector
+                        invRot.multVec(vectorMajorAxis, vectorMajorAxis);  // transforming to sketch's (x,y) coordinates
+                        vecMajorAxis.SetXYZ(gp_XYZ(vectorMajorAxis[0], vectorMajorAxis[1], vectorMajorAxis[2]));  // back to OCC
 
-                            gp_Ax2 refFrameEllipse(gp_Pnt(gp_XYZ(p[0], p[1], p[2])), gp_Vec(0, 0, 1), vecMajorAxis);  // NB: force normal of ellipse to be normal of sketch's plane.
-                            Handle(Geom_Ellipse) curve = new Geom_Ellipse(refFrameEllipse, circle.Radius(), minorRadius);
+                        gp_Ax2 refFrameEllipse(gp_Pnt(gp_XYZ(p[0], p[1], p[2])), gp_Vec(0, 0, 1), vecMajorAxis);  // NB: force normal of ellipse to be normal of sketch's plane.
+                        Handle(Geom_Ellipse) curve = new Geom_Ellipse(refFrameEllipse, circle.Radius(), minorRadius);
 
-                            if (firstPoint.SquareDistance(lastPoint) < Precision::Confusion()) {
-                                Part::GeomEllipse* ellipse = new Part::GeomEllipse();
-                                ellipse->setHandle(curve);
-                                GeometryFacade::setConstruction(ellipse, true);
-                                geos.emplace_back(ellipse);
-                            } else {
-                                double firstParam, lastParam;
-                                adjustParameterRange(edge, gPlane, mov, curve, firstParam, lastParam);
+                        if (firstPoint.SquareDistance(lastPoint) < Precision::Confusion()) {
+                            Part::GeomEllipse* ellipse = new Part::GeomEllipse();
+                            ellipse->setHandle(curve);
+                            GeometryFacade::setConstruction(ellipse, true);
+                            geos.emplace_back(ellipse);
+                        } else {
+                            double firstParam, lastParam;
+                            adjustParameterRange(edge, gPlane, mov, curve, firstParam, lastParam);
 
-                                Part::GeomArcOfEllipse* gArc = new Part::GeomArcOfEllipse();
-                                Handle(Geom_TrimmedCurve) tCurve = 
-                                    new Geom_TrimmedCurve(curve, firstParam, lastParam);
-                                gArc->setHandle(tCurve);
-                                GeometryFacade::setConstruction(gArc, true);
-                                geos.emplace_back(gArc);
-                            }
+                            Part::GeomArcOfEllipse* gArc = new Part::GeomArcOfEllipse();
+                            Handle(Geom_TrimmedCurve) tCurve = 
+                                new Geom_TrimmedCurve(curve, firstParam, lastParam);
+                            gArc->setHandle(tCurve);
+                            GeometryFacade::setConstruction(gArc, true);
+                            geos.emplace_back(gArc);
                         }
                     }
                 }

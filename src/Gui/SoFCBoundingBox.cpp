@@ -149,23 +149,26 @@ void SoFCBoundingBox::GLRender (SoGLRenderAction *action)
     if(ViewParams::getRenderProjectedBBox())
         xbbox.transform(SoModelMatrixElement::get(state));
 
-    SbBox3f bbox = xbbox.project();
-
-    corner[0] = bbox.getMin();
-    corner[1] = bbox.getMax();
     coord     = coordsOn.getValue();
     dimension = dimensionsOn.getValue();
 
-    // set the coordinates for the LineSet to point to
-    vptr = bboxCoords->point.startEditing();
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 3; j++) {
-            vptr[i][j] = corner[bBoxVerts[i][j]][j];
-        }
-    }
+    SbBox3f bbox = xbbox.project();
 
-    // if coord is true then set the text nodes
-    if (coord) {
+    if (cachedBbox != bbox) {
+        cachedBbox = bbox;
+
+        corner[0] = bbox.getMin();
+        corner[1] = bbox.getMax();
+
+        // set the coordinates for the LineSet to point to
+        vptr = bboxCoords->point.startEditing();
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 3; j++) {
+                vptr[i][j] = corner[bBoxVerts[i][j]][j];
+            }
+        }
+
+        // if coord is true then set the text nodes
         ctr = (corner[1] - corner[0]) / 2.0f;
         for (int i = 0; i < 8; i++) {
             // create the string for the text
@@ -181,10 +184,8 @@ void SoFCBoundingBox::GLRender (SoGLRenderAction *action)
             SoText2* t = static_cast<SoText2 *>(sep->getChild(1));
             t->string.setValue(str.str().c_str());
         }
-    }
 
-    // if dimension is true then set the text nodes
-    if (dimension) {
+        // if dimension is true then set the text nodes
         ctr = (corner[1] - corner[0]) / 2.0f;
         for (int i = 0; i < 3; i++) {
             // create the string for the text
@@ -202,9 +203,9 @@ void SoFCBoundingBox::GLRender (SoGLRenderAction *action)
             SoText2* t = static_cast<SoText2 *>(sep->getChild(1));
             t->string.setValue(str.str().c_str());
         }
-    }
 
-    bboxCoords->point.finishEditing();
+        bboxCoords->point.finishEditing();
+    }
 
     // Avoid shading
     state->push();

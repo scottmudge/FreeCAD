@@ -187,9 +187,6 @@ QMenu QPushButton,
 QMenu QToolButton {
     color: #f5f5f5;
 }
-QMenu QLabel {
-    padding: 2px 16px; /* make room for icon at left */
-}
 
 QMenu QAbstractSpinBox:hover,
 QMenu QLineEdit:hover,

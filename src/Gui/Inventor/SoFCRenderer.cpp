@@ -186,6 +186,7 @@ public:
   {
     this->updateselection = false;
     memset(this->stats, 0, sizeof(this->stats));
+    dummynode = new SoGroup;
   }
 
   ~SoFCRendererP()
@@ -217,6 +218,11 @@ public:
   void pauseShadowRender(SoState *state, bool paused);
   void renderLines(SoState *state, int array, DrawEntry &draw_entry);
   void renderPoints(SoGLRenderAction *action, int array, DrawEntry &draw_entry);
+  void renderTriangles(const DrawEntry &draw_entry,
+                       SoGLRenderAction *action,
+                       const int arrays = SoFCVertexCache::ALL,
+                       int part = -1,
+                       const SbPlane *plane = nullptr);
 
   void renderOpaque(SoGLRenderAction * action,
                     SbFCVector<DrawEntry> & draw_entries,
@@ -306,6 +312,16 @@ public:
 
   char stats[512];
   int drawcallcount;
+
+  CoinPtr<SoNode> dummynode;
+  SbColor sbcolor;
+  SbColor *fromPackedColor(uint32_t col)
+  {
+    float t;
+    sbcolor.setPackedValue(col, t);
+    return &sbcolor;
+  }
+  uint32_t diffusecolor;
 };
 
 static std::map<const void *, HatchTexture> _HatchTextures;
@@ -545,6 +561,7 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
     pointsize = w;
   }
 
+  bool update_depth = false;
   if (first || this->material.depthtest != depthtest) {
     if (depthtest) {
       glEnable(GL_DEPTH_TEST);
@@ -553,6 +570,7 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
     }
     FC_GLERROR_CHECK;
     this->material.depthtest = depthtest;
+    update_depth = true;
   }
 
   if (first || this->material.depthclamp != next.depthclamp) {
@@ -568,12 +586,19 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
     glDepthMask(depthwrite ? GL_TRUE : GL_FALSE);
     FC_GLERROR_CHECK;
     this->material.depthwrite = depthwrite;
+    update_depth = true;
   }
 
   if (first || this->material.depthfunc != depthfunc) {
     setDepthFunc(depthfunc);
     this->material.depthfunc = depthfunc;
+    update_depth = true;
   }
+
+  if (update_depth)
+    SoDepthBufferElement::set(state, depthtest, depthwrite,
+        static_cast<SoDepthBufferElement::DepthWriteFunction>(depthfunc),
+        SbVec2f(0, 1));
 
   auto lightmodel = next.lightmodel;
   if (next.type != Material::Triangle)
@@ -594,6 +619,10 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
               (unsigned char)((col>>16)&0xff),
               (unsigned char)((col>>8)&0xff),
               (unsigned char)(col&0xff));
+  diffusecolor = col;
+  // in order to make SoLazyElement::setPacked() working
+  dummynode->touch();
+  SoLazyElement::setPacked(state, dummynode, 1, &diffusecolor, (col&0xff)!=0xff);
   FC_GLERROR_CHECK;
 
   if (overrideflags != this->material.overrideflags
@@ -619,6 +648,7 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
       }
     }
     glBlendFunc(sfactor, dfactor);
+    SoLazyElement::enableBlending(state, sfactor, dfactor);
     FC_GLERROR_CHECK;
   }
 
@@ -634,6 +664,7 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
 
   if (first || this->material.emissive != emissive) {
     setGLColor(GL_EMISSION, emissive);
+    SoLazyElement::setEmissive(state, fromPackedColor(emissive));
     this->material.emissive = emissive;
   }
 
@@ -642,6 +673,7 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
       glLineWidth(linewidth);
       FC_GLERROR_CHECK;
       this->material.linewidth = linewidth;
+      SoLineWidthElement::set(state, linewidth);
     }
 
     if (first || this->material.linepattern != linepattern) {
@@ -653,6 +685,7 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
       }
       FC_GLERROR_CHECK;
       this->material.linepattern = linepattern;
+      SoLinePatternElement::set(state, linepattern & 0xffff, linepattern>>16);
     }
     if (!first)
       return true;
@@ -661,8 +694,9 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
   if (next.type == Material::Point) {
     if (first || this->material.pointsize != pointsize) {
       glPointSize(pointsize);
-      this->material.pointsize = pointsize;
       FC_GLERROR_CHECK;
+      this->material.pointsize = pointsize;
+      SoPointSizeElement::set(state, pointsize);
     }
     if (!first)
       return true;
@@ -670,23 +704,28 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
 
   if (first || this->material.ambient != next.ambient) {
     setGLColor(GL_AMBIENT, next.ambient);
+    SoLazyElement::setAmbient(state, fromPackedColor(next.ambient));
     this->material.ambient = next.ambient;
   }
 
   if (first || this->material.specular != next.specular) {
     setGLColor(GL_SPECULAR, next.specular);
+    SoLazyElement::setSpecular(state, fromPackedColor(next.specular));
     this->material.specular = next.specular;
   }
 
   if (first || this->material.shininess != next.shininess) {
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, next.shininess*128.0f);
     FC_GLERROR_CHECK;
+    SoLazyElement::setShininess(state, next.shininess);
     this->material.shininess = next.shininess;
   }
 
   if (first || this->material.vertexordering != next.vertexordering) {
     glFrontFace(next.vertexordering == SoLazyElement::CW ? GL_CW : GL_CCW);
     FC_GLERROR_CHECK;
+    SoLazyElement::setVertexOrdering(state,
+        static_cast<SoLazyElement::VertexOrdering>(next.vertexordering));
     this->material.vertexordering = next.vertexordering;
   }
 
@@ -697,6 +736,7 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
     SoLazyElement::setTwosideLighting(state, twoside);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, twoside ? GL_TRUE : GL_FALSE);
     FC_GLERROR_CHECK;
+    SoLazyElement::setTwosideLighting(state, twoside);
     this->material.twoside = twoside;
   }
 
@@ -707,6 +747,7 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
     if (culling) glEnable(GL_CULL_FACE);
     else glDisable(GL_CULL_FACE);
     FC_GLERROR_CHECK;
+    SoLazyElement::setBackfaceCulling(state, culling);
     this->material.culling = culling;
   }
 
@@ -722,9 +763,11 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
     FC_GLERROR_CHECK;
+    SoDrawStyleElement::set(state, static_cast<SoDrawStyleElement::Style>(next.drawstyle));
     this->material.drawstyle = next.drawstyle;
   }
 
+  bool update_polygonoffset = false;
   if (first || this->material.polygonoffsetstyle != next.polygonoffsetstyle) {
     setGLFeature(GL_POLYGON_OFFSET_FILL,
                  this->material.polygonoffsetstyle,
@@ -739,6 +782,7 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
                  next.polygonoffsetstyle,
                  SoPolygonOffsetElement::POINTS);
     this->material.polygonoffsetstyle = next.polygonoffsetstyle;
+    update_polygonoffset = true;
   }
 
   if (first || this->material.polygonoffsetfactor != next.polygonoffsetfactor
@@ -747,6 +791,18 @@ SoFCRendererP::applyMaterial(SoGLRenderAction * action,
     FC_GLERROR_CHECK;
     this->material.polygonoffsetfactor = next.polygonoffsetfactor;
     this->material.polygonoffsetunits = next.polygonoffsetunits;
+    update_polygonoffset = true;
+  }
+
+  if (update_polygonoffset) {
+    SoPolygonOffsetElement::set(state,
+                                dummynode,
+                                next.polygonoffsetfactor,
+                                next.polygonoffsetunits,
+                                next.polygonoffsetstyle?
+                                  static_cast<SoPolygonOffsetElement::Style>(next.polygonoffsetstyle)
+                                  :SoPolygonOffsetElement::FILLED,
+                                next.polygonoffsetstyle!=0);
   }
   return true;
 }
@@ -1238,6 +1294,24 @@ SoFCRendererP::renderPoints(SoGLRenderAction *action, int array, DrawEntry &draw
 }
 
 void
+SoFCRendererP::renderTriangles(const DrawEntry &draw_entry,
+                                  SoGLRenderAction *action,
+                                  const int arrays,
+                                  int part,
+                                  const SbPlane *plane)
+{
+  auto cache = draw_entry.ventry->cache;
+  if (cache->shouldGLRender()) {
+    // TODO: can we assume none of the legacy shape nodes is suitable for
+    // shadow rendering?
+    if (this->shadowmapping)
+      return;
+    pauseShadowRender(action->getState(), true);
+  }
+  cache->renderTriangles(action, arrays, part, plane);
+}
+
+void
 SoFCRendererP::renderOutline(SoGLRenderAction *action,
                              DrawEntry &draw_entry,
                              bool highlight)
@@ -1339,21 +1413,15 @@ SoFCRendererP::renderOutline(SoGLRenderAction *action,
     glStencilFunc (GL_ALWAYS, 1, -1);
     glStencilOp (GL_KEEP, GL_REPLACE, GL_REPLACE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    draw_entry.ventry->cache->renderTriangles(state,
-                                              SoFCVertexCache::NON_SORTED_ARRAY,
-                                              partidx);
+    renderTriangles(draw_entry, action, SoFCVertexCache::NON_SORTED_ARRAY, partidx);
     ++this->drawcallcount;
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glStencilFunc(GL_NOTEQUAL, 1, -1);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    draw_entry.ventry->cache->renderTriangles(state,
-                                              SoFCVertexCache::NON_SORTED_ARRAY,
-                                              partidx);
+    renderTriangles(draw_entry, action, SoFCVertexCache::NON_SORTED_ARRAY, partidx);
     if (highlight || this->hiddenLineConfig.hideVertex) {
       glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-      draw_entry.ventry->cache->renderTriangles(state,
-                                                SoFCVertexCache::NON_SORTED_ARRAY,
-                                                partidx);
+      renderTriangles(draw_entry, action, SoFCVertexCache::NON_SORTED_ARRAY, partidx);
     }
     ++this->drawcallcount;
   }
@@ -1438,8 +1506,7 @@ SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
     }
     setupMatrix(action, draw_entry);
 
-    draw_entry.ventry->cache->renderTriangles(state,
-                                              SoFCVertexCache::NON_SORTED_ARRAY);
+    renderTriangles(draw_entry, action, SoFCVertexCache::NON_SORTED_ARRAY);
   }
 
   glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -1454,8 +1521,7 @@ SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
 
     setupMatrix(action, draw_entry);
 
-    draw_entry.ventry->cache->renderTriangles(state,
-                                              SoFCVertexCache::NON_SORTED_ARRAY);
+    renderTriangles(draw_entry, action, SoFCVertexCache::NON_SORTED_ARRAY);
     ++this->drawcallcount;
   }
 
@@ -1469,8 +1535,7 @@ SoFCRendererP::renderSceneOutline(SoGLRenderAction *action)
 
       setupMatrix(action, draw_entry);
 
-      draw_entry.ventry->cache->renderTriangles(state,
-                                                SoFCVertexCache::NON_SORTED_ARRAY);
+      renderTriangles(draw_entry, action, SoFCVertexCache::NON_SORTED_ARRAY);
       ++this->drawcallcount;
     }
   }
@@ -1855,7 +1920,7 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
       array ^= SoFCVertexCache::TEXCOORD;
     if (this->material.lightmodel == SoLazyElement::BASE_COLOR)
       array ^= SoFCVertexCache::NORMAL;
-    else if (!draw_entry.ventry->cache->getNormalArray()) {
+    else if (draw_entry.ventry->cache->getNumTriangleIndices() && !draw_entry.ventry->cache->getNormalArray()) {
       array ^= SoFCVertexCache::NORMAL;
       this->material.lightmodel = SoLazyElement::BASE_COLOR;
       glDisable(GL_LIGHTING);
@@ -1883,12 +1948,12 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
             || !(draw_entry.material->shadowstyle & SoShadowStyleElement::SHADOWED));
 
         if (!draw_entry.ventry->cache->hasTransparency()) {
-          draw_entry.ventry->cache->renderTriangles(state, array, draw_entry.ventry->partidx);
+          renderTriangles(draw_entry, action, array, draw_entry.ventry->partidx);
           ++this->drawcallcount;
         }
         else if (!this->material.pervertexcolor) {
           // this means override transparency (i.e. force opaque)
-          draw_entry.ventry->cache->renderTriangles(state, SoFCVertexCache::NON_SORTED, draw_entry.ventry->partidx);
+          renderTriangles(draw_entry, action, SoFCVertexCache::NON_SORTED, draw_entry.ventry->partidx);
           ++this->drawcallcount;
         }
         else {
@@ -1896,7 +1961,7 @@ SoFCRendererP::renderOpaque(SoGLRenderAction * action,
             SoLazyElement::setTwosideLighting(state, TRUE);
             glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
           }
-          draw_entry.ventry->cache->renderTriangles(state, array, draw_entry.ventry->partidx);
+          renderTriangles(draw_entry, action, array, draw_entry.ventry->partidx);
           ++this->drawcallcount;
           if (!this->material.twoside) {
             SoLazyElement::setTwosideLighting(state, FALSE);
@@ -2060,10 +2125,8 @@ SoFCRendererP::renderTransparency(SoGLRenderAction * action,
               }
             }
             
-            draw_entry.ventry->cache->renderTriangles(state,
-                                                      array,
-                                                      draw_entry.ventry->partidx,
-                                                      sort ? &this->prevplane : nullptr);
+            renderTriangles(draw_entry, action, array, draw_entry.ventry->partidx,
+                            sort ? &this->prevplane : nullptr);
 
             if (restoreDepthTest) {
               if (!this->material.depthtest)
