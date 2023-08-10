@@ -204,6 +204,7 @@ Document::Document(App::Document* pcDocument,Application * app)
     d->_hasExpansion = false;
     d->_pcAppWnd = app;
     d->_pcDocument = pcDocument;
+    d->thumb.setUpdateOnSave(pcDocument->SaveThumbnail.getValue());
     d->_editViewProvider = nullptr;
     d->_editRootNode = nullptr;
     d->_editingObject = nullptr;
@@ -1537,22 +1538,15 @@ void Document::Save (Base::Writer &writer) const
 {
     writer.addFile("GuiDocument.xml", this);
 
-    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath("User parameter:BaseApp/Preferences/Document");
-    if (hGrp->GetBool("SaveThumbnail",false)) {
-        int size = hGrp->GetInt("ThumbnailSize", 128);
-        size = Base::clamp<int>(size, 64, 512);
-        std::list<MDIView*> mdi = getMDIViews();
-        for (const auto & it : mdi) {
-            if (it->getTypeId().isDerivedFrom(View3DInventor::getClassTypeId())) {
-                View3DInventorViewer* view = static_cast<View3DInventor*>(it)->getViewer();
-                d->thumb.setFileName(d->_pcDocument->FileName.getValue());
-                d->thumb.setSize(size);
-                d->thumb.setViewer(view);
-                d->thumb.Save(writer);
-                break;
-            }
+    d->thumb.setViewer(nullptr);
+    for (auto view : d->baseViews) {
+        if (view->isDerivedFrom(View3DInventor::getClassTypeId())) {
+            d->thumb.setViewer(static_cast<View3DInventor*>(view)->getViewer());
+            break;
         }
     }
+    d->thumb.setFileName(d->_pcDocument->FileName.getValue());
+    d->thumb.Save(writer);
 }
 
 /**
@@ -1561,6 +1555,8 @@ void Document::Save (Base::Writer &writer) const
 void Document::Restore(Base::XMLReader &reader)
 {
     reader.addFile("GuiDocument.xml",this);
+    d->thumb.Restore(reader);
+
     // hide all elements to avoid to update the 3d view when loading data files
     // RestoreDocFile then restores the visibility status again
     std::map<const App::DocumentObject*,ViewProviderDocumentObject*>::iterator it;
@@ -2910,6 +2906,20 @@ void Document::slotChangePropertyEditor(const App::Document &doc, const App::Pro
     if(getDocument() == &doc) {
         FC_LOG(Prop.getFullName() << " editor changed");
         setModified(true);
+
+        if (&Prop == &doc.ThumbnailFile) {
+            if (!doc.testStatus(App::Document::Restoring))
+                d->thumb.setImageFile(doc.ThumbnailFile.getValue());
+            if (!doc.ThumbnailFile.getStrValue().empty())
+                getDocument()->SaveThumbnail.setValue(false);
+        } else if (&Prop == &doc.SaveThumbnail) {
+            if (doc.SaveThumbnail.getValue() &&
+                !doc.ThumbnailFile.getStrValue().empty())
+            {
+                getDocument()->ThumbnailFile.setValue("");
+            }
+            d->thumb.setUpdateOnSave(doc.SaveThumbnail.getValue());
+        }
     }
 }
 

@@ -26,6 +26,7 @@
 #include "PropertyContainer.h"
 #include "PropertyLinks.h"
 #include "PropertyStandard.h"
+#include "PropertyFile.h"
 
 #include <memory>
 #include <map>
@@ -119,6 +120,10 @@ public:
     PropertyBool SplitXML;
     /// Prefer binary format when saving
     PropertyBool PreferBinary;
+    /// Specify user defined thumbnail
+    PropertyFile ThumbnailFile;
+    /// Indicate whether to auto update thumbnail on saving document
+    PropertyBool SaveThumbnail;
     //@}
 
     /** @name Signals of the document */

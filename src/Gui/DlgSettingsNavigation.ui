@@ -99,6 +99,26 @@
         <property name="prefPath" stdset="0">
          <cstring>View</cstring>
         </property>
+        <item>
+         <property name="text">
+          <string>Top left</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Top right</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Bottom left</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Bottom right</string>
+         </property>
+        </item>
        </widget>
       </item>
       <item row="1" column="0" colspan="2">
@@ -569,7 +589,7 @@ Select a set and then press the button to view said configurations.</string>
   </customwidget>
   <customwidget>
    <class>Gui::PrefComboBox</class>
-   <extends>QWidget</extends>
+   <extends>QComboBox</extends>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
  </customwidgets>

@@ -1,5 +1,14 @@
 Tip release (branch [LinkMerge](https://github.com/realthunder/FreeCAD/tree/LinkMerge)) is merged with upstream aa3b2f39 2023.05.22
 
+# Tip 2023.08.10
+
+Support user defined document thumbnail through document property ThumbnailFile (cac98c12)
+Fix navigation cube corner setting (#855)
+Enable user site package for Python 3.11 (#864)
+Sketcher: fix editing through App::Link
+
+-- 20230810tip --
+
 # Tip 2023.08.06
 
 Fix unit system ordering problem (#859)
@@ -16,8 +25,6 @@ Renderer: add support for some legacy Coin3D shape nodes (#856)
 
 Fix libfmt packaging problem
 PartDesign: fix auto recompute when editing pattern features (#839)
-
--- 20230806tip --
 
 # Tip 2023.07.29
 

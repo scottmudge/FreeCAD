@@ -869,6 +869,15 @@ Document::Document(const char* documentName)
     ADD_PROPERTY_TYPE(Id, (""), 0, Prop_None, "ID of the document");
     ADD_PROPERTY_TYPE(Uid, (id), 0, Prop_ReadOnly, "UUID of the document");
 
+    ADD_PROPERTY_TYPE(SaveThumbnail, (DocumentParams::getSaveThumbnail()), 0, Prop_None,
+            "Whether to auto update thumbnail on saving the document");
+    ADD_PROPERTY_TYPE(ThumbnailFile, (""), 0, Prop_None,
+            "User defined thumnail file. The thumnail will be saved into the\n"
+            "document file. It will only be updated oncei when the user changes\n"
+            "this property. An non-empty value of this property will also disable\n"
+            "thumbnail auto update regardless of setting in SaveThumbnail.");
+    ThumbnailFile.setFilter("Image files (*.jpg *.jpeg *.png *.bmp *.gif);;All files (*)");
+
     // license stuff
     auto index = static_cast<int>(DocumentParams::getprefLicenseType());
     const char* name = App::licenseItems.at(index).at(App::posnOfFullName);

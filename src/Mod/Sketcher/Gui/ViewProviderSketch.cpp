@@ -8137,7 +8137,8 @@ const Sketcher::Sketch &ViewProviderSketch::getSolvedSketch(void) const
 void ViewProviderSketch::deleteSelected()
 {
     std::vector<Gui::SelectionObject> selection;
-    selection = Gui::Selection().getSelectionEx(0, Sketcher::SketchObject::getClassTypeId());
+    selection = Gui::Selection().getSelectionEx(0,
+            Sketcher::SketchObject::getClassTypeId(), Gui::ResolveMode::FollowLink);
 
     // only one sketch with its subelements are allowed to be selected
     if (selection.size() != 1) {

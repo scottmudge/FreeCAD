@@ -25,6 +25,7 @@
 #define GUI_THUMBNAIL_H
 
 #include <Base/Persistence.h>
+#include <QImage>
 #include <QUrl>
 
 class QImage;
@@ -35,12 +36,15 @@ class View3DInventorViewer;
 class Thumbnail : public Base::Persistence
 {
 public:
-    Thumbnail(int s = 128);
+    Thumbnail(int s = 0);
     ~Thumbnail() override;
 
     void setViewer(View3DInventorViewer*);
     void setSize(int);
     void setFileName(const char*);
+    void setImageFile(const char*);
+    void setUpdateOnSave(bool);
+    const QImage &getImage() const;
 
     /** @name I/O of the document */
     //@{
@@ -57,8 +61,10 @@ public:
 
 private:
     QUrl uri;
+    mutable QImage image;
     View3DInventorViewer* viewer;
     int size;
+    bool updateOnSave = true;
 };
 
 }

@@ -2837,7 +2837,7 @@ bool ViewProviderLink::getDetailPath(
     return false;
 }
 
-bool ViewProviderLink::onDelete(const std::vector<std::string> &) {
+bool ViewProviderLink::onDelete(const std::vector<std::string> &subElements) {
     auto element = freecad_dynamic_cast<App::LinkElement>(getObject());
     if (element && !element->canDelete())
         return false;
@@ -2858,6 +2858,10 @@ bool ViewProviderLink::onDelete(const std::vector<std::string> &) {
             for (const auto &name : objs)
                 doc->removeObject(name.c_str());
         }
+        return true;
+    }
+    if (auto linkedView = getLinkedViewProvider()) {
+        return linkedView->onDelete(subElements);
     }
     return true;
 }

@@ -487,9 +487,9 @@ void TaskSketcherElements::onSelectionChanged(const Gui::SelectionChanges& msg)
     else if (msg.Type == Gui::SelectionChanges::AddSelection ||
              msg.Type == Gui::SelectionChanges::RmvSelection) {
         bool select = (msg.Type == Gui::SelectionChanges::AddSelection);
+        App::DocumentObject *selObj = msg.Object.getObject();
         // is it this object??
-        if (strcmp(msg.pDocName,sketchView->getSketchObject()->getDocument()->getName())==0 &&
-            strcmp(msg.pObjectName,sketchView->getSketchObject()->getNameInDocument())== 0) {
+        if (selObj && selObj->getLinkedObject() == sketchView->getObject()) {
             if (!msg.pSubName)
                 return;
             int GeoId;
