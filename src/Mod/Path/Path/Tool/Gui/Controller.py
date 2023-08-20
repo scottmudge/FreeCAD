@@ -119,7 +119,7 @@ class ViewProvider:
 
     def claimChildren(self):
         obj = self.vobj.Object
-        if obj and obj.Proxy and obj.Tool:
+        if obj and obj.Proxy and hasattr(obj,'Tool'):
             return [obj.Tool]
         return []
 

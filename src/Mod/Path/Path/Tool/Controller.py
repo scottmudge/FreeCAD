@@ -152,7 +152,7 @@ class ToolController:
         obj.setEditorMode("Placement", 2)
 
     def onDelete(self, obj, arg2=None):
-        if hasattr(obj.Tool, "InList") and len(obj.Tool.InList) == 1:
+        if hasattr(obj, 'Tool') and hasattr(obj.Tool, "InList") and len(obj.Tool.InList) == 1:
             if hasattr(obj.Tool.Proxy, "onDelete"):
                 obj.Tool.Proxy.onDelete(obj.Tool)
 
@@ -266,7 +266,7 @@ class ToolController:
             "spindledirection": toolchange.SpindleDirection.OFF,
         }
 
-        if hasattr(obj.Tool, "SpindlePower"):
+        if hasattr(obj, 'Tool') and hasattr(obj.Tool, "SpindlePower"):
             if not obj.Tool.SpindlePower:
                 args["spindledirection"] = toolchange.SpindleDirection.OFF
             else:
@@ -293,7 +293,7 @@ class ToolController:
     def getTool(self, obj):
         """returns the tool associated with this tool controller"""
         Path.Log.track()
-        return obj.Tool
+        return getattr(obj, 'Tool', None)
 
     def ensureToolBit(self, obj):
         if not hasattr(obj, "Tool"):
@@ -344,7 +344,7 @@ def FromTemplate(template, assignViewProvider=True):
     name = template.get(ToolControllerTemplate.Name, ToolControllerTemplate.Label)
     obj = Create(name, assignViewProvider=True, assignTool=False)
     obj.Proxy.setFromTemplate(obj, template)
-    if obj.Tool:
+    if hasattr(obj, 'Tool') and obj.Tool:
         return obj
     FreeCAD.ActiveDocument.removeObject(obj.Name)
     return None

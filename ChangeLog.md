@@ -1,5 +1,10 @@
 Tip release (branch [LinkMerge](https://github.com/realthunder/FreeCAD/tree/LinkMerge)) is merged with upstream aa3b2f39 2023.05.22
 
+# Tip 2023.08.11
+
+Second try to fix Python 3.11 not using user site package issue (#864)
+Path: fix legacy Controller object backward compatibility issue
+
 # Tip 2023.08.10
 
 Support user defined document thumbnail through document property ThumbnailFile (cac98c12)
@@ -7,7 +12,7 @@ Fix navigation cube corner setting (#855)
 Enable user site package for Python 3.11 (#864)
 Sketcher: fix editing through App::Link
 
--- 20230810tip --
+-- 20230811tip --
 
 # Tip 2023.08.06
 

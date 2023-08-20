@@ -569,10 +569,9 @@ void initInterpreter(int argc,char *argv[])
 {
     PyStatus status;
     PyConfig config;
-    PyConfig_InitIsolatedConfig(&config);
-    config.safe_path = 0;
-    config.use_environment = 1;
-    config.user_site_directory = 1;
+    PyConfig_InitPythonConfig(&config);
+    config.parse_argv = 0;
+    config.install_signal_handlers = 0;
 
     status = PyConfig_SetBytesArgv(&config, argc, argv);
     if (PyStatus_Exception(status)) {
