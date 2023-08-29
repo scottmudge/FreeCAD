@@ -100,7 +100,10 @@ View3DInventor::View3DInventor(Gui::Document* pcDocument, QWidget* parent,
 {
     ADD_PROPERTY(DrawStyle, (0L));
     DrawStyle.setEnums(drawStyleNames());
-    ADD_PROPERTY(ShowNaviCube, (0L));
+    ADD_PROPERTY_TYPE(ShowNaviCube, (false), nullptr, App::Prop_None,
+            "Show navigation cube in this view");
+    ADD_PROPERTY_TYPE(ThumbnailView, (false), nullptr, App::Prop_None,
+            "Mark this view for capturing document thumbnail on saving");
 
     stack = new QStackedWidget(this);
     // important for highlighting

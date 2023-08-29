@@ -85,6 +85,7 @@ enum ViewStatus {
     UpdatingView = 3,
     TouchDocument = 4,
     SecondaryView = 5,
+    CanLinkOnDelete = 6,
 };
 
 

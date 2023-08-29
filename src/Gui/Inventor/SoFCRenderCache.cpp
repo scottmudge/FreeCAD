@@ -621,8 +621,8 @@ canSetMaterial(SoFCRenderCache::Material & res,
                const SoFCRenderCache::Material & parent,
                uint32_t flag, uint32_t mask)
 {
-  return (parent.overrideflags.test(flag)
-      || (!res.maskflags.test(mask) && parent.maskflags.test(mask)));
+  return (flag && parent.overrideflags.test(flag))
+      || (!res.maskflags.test(mask) && parent.maskflags.test(mask));
 }
 
 template<class T>

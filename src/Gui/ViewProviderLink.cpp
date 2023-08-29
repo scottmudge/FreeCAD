@@ -2861,7 +2861,9 @@ bool ViewProviderLink::onDelete(const std::vector<std::string> &subElements) {
         return true;
     }
     if (auto linkedView = getLinkedViewProvider()) {
-        return linkedView->onDelete(subElements);
+        if (linkedView->testStatus(ViewStatus::CanLinkOnDelete)) {
+            return linkedView->onDelete(subElements);
+        }
     }
     return true;
 }

@@ -296,7 +296,7 @@ Property *DocumentObjectT::getProperty() const {
     const char *dot = strchr(prop, '.');
 
     if (!object.empty()) {
-        auto obj = getObject();
+        obj = getObject();
         if (!obj)
             return nullptr;
         if (!dot)

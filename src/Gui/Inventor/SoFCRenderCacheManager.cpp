@@ -29,6 +29,7 @@
 #include <Inventor/elements/SoCacheElement.h>
 #include <Inventor/elements/SoShapeStyleElement.h>
 #include <Inventor/elements/SoModelMatrixElement.h>
+#include <Inventor/annex/FXViz/nodes/SoShadowStyle.h>
 #include <Inventor/nodes/SoGroup.h>
 #include <Inventor/nodes/SoShape.h>
 #include <Inventor/nodes/SoResetTransform.h>
@@ -61,9 +62,12 @@
 #include <Inventor/misc/SoChildList.h>
 #include <Inventor/errors/SoDebugError.h>
 
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/container/flat_set.hpp>
 #include <unordered_map>
 #include <map>
 
+#include <Base/Console.h>
 #include "../ViewParams.h"
 #include "../InventorBase.h"
 #include "../SoFCUnifiedSelection.h"
@@ -75,6 +79,8 @@
 #include "SoFCRenderCacheManager.h"
 
 using namespace Gui;
+
+FC_LOG_LEVEL_INIT("Renderer", true, true)
 
 // ---------------------------------------------------------------
 
@@ -220,6 +226,7 @@ public:
   static SoCallbackAction::Response postClipPlane(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response preAutoZoom(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response postAutoZoom(void *, SoCallbackAction *action, const SoNode * node);
+  static SoCallbackAction::Response postShadowStyle(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response postLightModel(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response postLight(void *, SoCallbackAction *action, const SoNode * node);
   static SoCallbackAction::Response postVRMLLight(void *, SoCallbackAction *action, const SoNode * node);
@@ -341,17 +348,15 @@ public:
     {
       setFunction([](void *, SoSensor *sensor) {
         auto self = static_cast<LatePickPathSensor*>(sensor);
-        if (self->tmpPath->getLength() == self->attachedPath->getLength())
-          return;
         self->detach();
         self->master->latepickpaths.truncate(0);
         self->master->latepicktable.erase(self->tmpPath);
-        return;
       });
     }
 
     virtual void notify(SoNotList * l) {
       (void)l;
+      master->latepickpaths.truncate(0);
       if (!isScheduled())
         schedule();
     }
@@ -372,6 +377,7 @@ public:
                      PathHasher<PathPtr>,
                      PathHasher<PathPtr>> latepicktable;
   mutable SoPathList latepickpaths;
+  bool obeysrules;
   RenderCachePtr highlightcache;
   CoinPtr<SoPath> highlightpath;
   bool nosectionontop = false;
@@ -391,7 +397,7 @@ public:
   SbFCVector<RenderCachePtr> stack;
   SbFCVector<SbFCUniqueId> selnodeid;
   SbFCUniqueId sceneid;
-  std::unordered_set<const SoNode *> nodeset;
+  boost::container::flat_set<const SoNode *> nodeset;
   const SoNode * prunenode;
   int traversedepth;
   SoFCRenderer *renderer;
@@ -424,6 +430,7 @@ getMaxShapeTypeId()
 
 SoFCRenderCacheManagerP::SoFCRenderCacheManagerP()
 {
+  this->obeysrules = boost::ends_with(SoDB::getVersion(), "rt");
   this->prunenode = nullptr;
   this->selid = 0;
   this->sceneid = 0;
@@ -497,6 +504,7 @@ void SoFCRenderCacheManagerP::initAction()
   this->action->addPostCallback(SoTexture3Transform::getClassTypeId(), &postTextureTransform, this);
   this->action->addPostCallback(SoVRMLTextureTransform::getClassTypeId(), &postTextureTransform, this);
   this->action->addPostCallback(SoLightModel::getClassTypeId(), &postLightModel, this);
+  this->action->addPostCallback(SoShadowStyle::getClassTypeId(), &postShadowStyle, this);
   this->action->addPostCallback(SoMaterial::getClassTypeId(), &postMaterial, this);
   this->action->addPostCallback(SoVRMLMaterial::getClassTypeId(), &postVRMLMaterial, this);
   this->action->addPostCallback(SoBaseColor::getClassTypeId(), &postColor, this);
@@ -1286,9 +1294,10 @@ void SoFCRenderCacheManagerP::doLatePick(SoRayPickAction *action) const
   if (latepickpaths.getLength() == 0) {
     for (auto &v : latepicktable)
       latepickpaths.append(v.first);
-    latepickpaths.sort();
+    if (obeysrules)
+      latepickpaths.sort();
   }
-  action->apply(latepickpaths, TRUE);
+  action->apply(latepickpaths, obeysrules);
 }
 
 SoCallbackAction::Response
@@ -1378,6 +1387,19 @@ SoFCRenderCacheManagerP::postLightModel(void *userdata,
   assert(node && node->isOfType(SoLightModel::getClassTypeId()));
   const SoLightModel *lightmodel = static_cast<const SoLightModel*>(node);
   self->stack.back()->setLightModel(action->getState(), lightmodel);
+  return SoCallbackAction::CONTINUE;
+}
+
+SoCallbackAction::Response
+SoFCRenderCacheManagerP::postShadowStyle(void *userdata,
+                                        SoCallbackAction *action,
+                                        const SoNode * node)
+{
+  (void)userdata;
+  assert(node && node->isOfType(SoShadowStyle::getClassTypeId()));
+  const SoShadowStyle *shadowstyle = static_cast<const SoShadowStyle*>(node);
+  // This is a work around of the fact that SoShadowStyle does not handle SoCallbackAction
+  SoShadowStyleElement::set(action->getState(), const_cast<SoNode*>(node), shadowstyle->style.getValue());
   return SoCallbackAction::CONTINUE;
 }
 

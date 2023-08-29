@@ -1539,10 +1539,14 @@ void Document::Save (Base::Writer &writer) const
     writer.addFile("GuiDocument.xml", this);
 
     d->thumb.setViewer(nullptr);
-    for (auto view : d->baseViews) {
-        if (view->isDerivedFrom(View3DInventor::getClassTypeId())) {
-            d->thumb.setViewer(static_cast<View3DInventor*>(view)->getViewer());
-            break;
+    for (auto v : d->baseViews) {
+        if (auto view = Base::freecad_dynamic_cast<View3DInventor>(v)) {
+            if (view->ThumbnailView.getValue()) {
+                d->thumb.setViewer(view->getViewer());
+                break;
+            } else if (!d->thumb.getViewer()) {
+                d->thumb.setViewer(view->getViewer());
+            }
         }
     }
     d->thumb.setFileName(d->_pcDocument->FileName.getValue());

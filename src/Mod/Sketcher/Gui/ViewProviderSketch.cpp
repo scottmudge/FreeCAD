@@ -435,6 +435,8 @@ ViewProviderSketch::ViewProviderSketch()
     combrepscalehyst(0),
     isShownVirtualSpace(false)
 {
+    setStatus(Gui::ViewStatus::CanLinkOnDelete, true);
+
     PartGui::ViewProviderAttachExtension::initExtension(this);
     PartGui::ViewProviderGridExtension::initExtension(this);
 

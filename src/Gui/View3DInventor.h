@@ -92,6 +92,7 @@ public:
     
     App::PropertyEnumeration DrawStyle;
     App::PropertyBool ShowNaviCube;
+    App::PropertyBool ThumbnailView;
 
     View3DInventor(Gui::Document* pcDocument, QWidget* parent, const QtGLWidget* sharewidget = nullptr, Qt::WindowFlags wflags=Qt::WindowFlags());
     ~View3DInventor() override;

@@ -40,6 +40,11 @@ public:
     ~Thumbnail() override;
 
     void setViewer(View3DInventorViewer*);
+
+    View3DInventorViewer *getViewer() const {
+        return viewer;
+    }
+
     void setSize(int);
     void setFileName(const char*);
     void setImageFile(const char*);
