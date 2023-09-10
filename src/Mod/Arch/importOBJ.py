@@ -126,7 +126,10 @@ def export(exportList,filename,colors=None):
             except Exception:
                 pass
 
-    _export({(o,'') for o in exportList}, filename, colorMap)
+    if exportList:
+        _export({(o,'') for o in exportList}, filename, colorMap)
+    else:
+        FreeCAD.Console.PrintError("No shape selected for export\n")
 
 
 def exportSelection(filename, colors=None):
@@ -148,7 +151,10 @@ def exportSelection(filename, colors=None):
             continue
         for sub in subs:
             objset.add((sel.Object, Part.splitSubname(sub)[0]))
-    _export(objset, filename, colors)
+    if objset:
+        _export(objset, filename, colors)
+    else:
+        FreeCAD.Console.PrintError("No shape selected for export\n")
 
 def _export(exportSet, filename, colors):
     '''Internal function used to export a list of object to OBJ format.

@@ -135,7 +135,7 @@ DrawViewSection::DrawViewSection() : m_waitingForCut(false), m_shapeSize(0.0)
     static const char* ggroup = "Cut Operation";
 
     //general section properties
-    ADD_PROPERTY_TYPE(SectionSymbol, (""), sgroup, App::Prop_Output,
+    ADD_PROPERTY_TYPE(SectionSymbol, (""), sgroup, App::Prop_None,
                       "The identifier for this section");
     ADD_PROPERTY_TYPE(BaseView, (nullptr), sgroup, App::Prop_None,
                       "2D View source for this Section");

@@ -67,11 +67,6 @@ using namespace TechDrawGui;
 using namespace std;
 using DU = DrawUtil;
 
-#define GEOMETRYEDGE 0
-#define COSMETICEDGE 1
-#define CENTERLINE 2
-
-
 const float lineScaleFactor = Rez::guiX(1.);// temp fiddle for devel
 
 QGIViewPart::QGIViewPart() : m_isExporting(false)
@@ -514,11 +509,11 @@ void QGIViewPart::drawViewPart()
             item->setStyle(Qt::SolidLine);
             if ((*itGeom)->getCosmetic()) {
                 int source = (*itGeom)->source();
-                if (source == COSMETICEDGE) {
+                if (source == BaseGeom::CosmeticEdge) {
                     std::string cTag = (*itGeom)->getCosmeticTag();
                     showItem = formatGeomFromCosmetic(cTag, item);
                 }
-                else if (source == CENTERLINE) {
+                else if (source == BaseGeom::CenterLine) {
                     std::string cTag = (*itGeom)->getCosmeticTag();
                     showItem = formatGeomFromCenterLine(cTag, item);
                 }

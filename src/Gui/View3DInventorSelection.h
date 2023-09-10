@@ -66,6 +66,7 @@ public:
     void refreshGroupOnTop();
     void clearGroupOnTop(bool alt=false);
     bool isInGroupOnTop(const App::SubObjectT &objT, bool altOnly=true) const;
+    bool hasOnTopObject() const;
     const std::set<App::SubObjectT> &getObjectsOnTop() const;
 
     SoGroup *getAuxRoot() const;
@@ -104,8 +105,12 @@ private:
         void clearElements();
     };
 
-    std::set<App::SubObjectT> objectsOnTop;
-    std::map<App::SubObjectT,OnTopInfo> objectsOnTopSel;
+    // Objects explicitly added to on top group
+    std::set<App::SubObjectT> objectsOnTop; 
+
+    // Objects explicitly or implicitly added to on top group
+    std::map<App::SubObjectT,OnTopInfo> objectsOnTopSel; 
+
     std::map<App::SubObjectT,OnTopInfo> objectsOnTopPreSel;
 
     std::unique_ptr<SoSelectionElementAction> selAction;

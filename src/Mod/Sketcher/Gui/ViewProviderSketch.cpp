@@ -2461,20 +2461,23 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point,
             if (!preselect)
                 return true;
 
-            bool accepted =
-            Gui::Selection().setPreselect(SEL_PARAMS
+            switch(Gui::Selection().setPreselect(SEL_PARAMS
                                          ,Point->getPoint()[0]
                                          ,Point->getPoint()[1]
-                                         ,Point->getPoint()[2]) != 0;
-            edit->blockedPreselection = !accepted;
-            if (accepted) {
+                                         ,Point->getPoint()[2]))
+            {
+            case Gui::SelectionSingleton::PreselectResult::OK:
+            case Gui::SelectionSingleton::PreselectResult::Same:
                 setPreselectPoint(PtIndex);
                 edit->PreselectCurve = -1;
                 edit->PreselectCross = -1;
                 edit->PreselectConstraintSet.clear();
                 if (edit->sketchHandler)
                     edit->sketchHandler->applyCursor();
+                edit->blockedPreselection = false;
                 return true;
+            default:
+                edit->blockedPreselection = true;
             }
         } else if (GeoIndex != -1 && (!preselect || GeoIndex != edit->PreselectCurve)) {  // if a new curve is hit
             std::stringstream ss;
@@ -2487,20 +2490,23 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point,
             if (!preselect)
                 return true;
 
-            bool accepted =
-            Gui::Selection().setPreselect(SEL_PARAMS
+            switch(Gui::Selection().setPreselect(SEL_PARAMS
                                          ,Point->getPoint()[0]
                                          ,Point->getPoint()[1]
-                                         ,Point->getPoint()[2]) != 0;
-            edit->blockedPreselection = !accepted;
-            if (accepted) {
+                                         ,Point->getPoint()[2]))
+            {
+            case Gui::SelectionSingleton::PreselectResult::OK:
+            case Gui::SelectionSingleton::PreselectResult::Same:
                 resetPreselectPoint();
                 edit->PreselectCurve = GeoIndex;
                 edit->PreselectCross = -1;
                 edit->PreselectConstraintSet.clear();
                 if (edit->sketchHandler)
                     edit->sketchHandler->applyCursor();
+                edit->blockedPreselection = false;
                 return true;
+            default:
+                edit->blockedPreselection = true;
             }
         } else if (CrossIndex != -1 && (!preselect || CrossIndex != edit->PreselectCross)) {  // if a cross line is hit
             std::stringstream ss;
@@ -2514,13 +2520,14 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point,
             if (!preselect)
                 return true;
 
-            bool accepted =
-            Gui::Selection().setPreselect(SEL_PARAMS
+            switch(Gui::Selection().setPreselect(SEL_PARAMS
                                          ,Point->getPoint()[0]
                                          ,Point->getPoint()[1]
-                                         ,Point->getPoint()[2]) != 0;
-            edit->blockedPreselection = !accepted;
-            if (accepted) {
+                                         ,Point->getPoint()[2]))
+            {
+            case Gui::SelectionSingleton::PreselectResult::OK:
+            case Gui::SelectionSingleton::PreselectResult::Same:
+                edit->blockedPreselection = false;
                 if (CrossIndex == 0)
                     setPreselectPoint(-1);
                 else
@@ -2531,6 +2538,8 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point,
                 if (edit->sketchHandler)
                     edit->sketchHandler->applyCursor();
                 return true;
+            default:
+                edit->blockedPreselection = true;
             }
         } else if (constrIndices.empty() == false
                     && (!preselect || constrIndices != edit->PreselectConstraintSet)) { // if a constraint is hit
@@ -2544,12 +2553,17 @@ bool ViewProviderSketch::detectPreselection(const SoPickedPoint *Point,
                 if (!preselect)
                     return true;
 
-                accepted &=
-                Gui::Selection().setPreselect(SEL_PARAMS
+                switch(Gui::Selection().setPreselect(SEL_PARAMS
                                              ,Point->getPoint()[0]
                                              ,Point->getPoint()[1]
-                                             ,Point->getPoint()[2]) != 0;
-
+                                             ,Point->getPoint()[2]))
+                {
+                case Gui::SelectionSingleton::PreselectResult::OK:
+                case Gui::SelectionSingleton::PreselectResult::Same:
+                    break;
+                default:
+                    accepted = false;
+                }
                 edit->blockedPreselection = !accepted;
                 //TODO: Should we clear preselections that went through, if one fails?
             }

@@ -163,7 +163,7 @@ void CosmeticEdge::initialize()
     m_geometry->setClassOfEdge(ecHARD);
     m_geometry->setHlrVisible( true);
     m_geometry->setCosmetic(true);
-    m_geometry->source(COSMETICEDGE);
+    m_geometry->source(BaseGeom::CosmeticEdge);
 
     createNewTag();
     m_geometry->setCosmeticTag(getTagAsString());
@@ -188,7 +188,7 @@ TechDraw::BaseGeomPtr CosmeticEdge::scaledGeometry(double scale)
     newGeom->setClassOfEdge(ecHARD);
     newGeom->setHlrVisible( true);
     newGeom->setCosmetic(true);
-    newGeom->source(COSMETICEDGE);
+    newGeom->source(BaseGeom::CosmeticEdge);
     newGeom->setCosmeticTag(getTagAsString());
     return newGeom;
 }

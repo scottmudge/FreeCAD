@@ -104,42 +104,42 @@ DrawViewDimension::DrawViewDimension()
                       "3D Geometry References");
     References3D.setScope(App::LinkScope::Global);
 
-    ADD_PROPERTY_TYPE(FormatSpec, (getDefaultFormatSpec()), "Format", App::Prop_Output,
+    ADD_PROPERTY_TYPE(FormatSpec, (getDefaultFormatSpec()), "Format", App::Prop_None,
                       "Dimension format");
     ADD_PROPERTY_TYPE(FormatSpecOverTolerance, (getDefaultFormatSpec(true)), "Format",
-                      App::Prop_Output, "Dimension overtolerance format");
+                      App::Prop_None, "Dimension overtolerance format");
     ADD_PROPERTY_TYPE(FormatSpecUnderTolerance, (getDefaultFormatSpec(true)), "Format",
-                      App::Prop_Output, "Dimension undertolerance format");
-    ADD_PROPERTY_TYPE(Arbitrary, (false), "Format", App::Prop_Output, "Value overridden by user");
-    ADD_PROPERTY_TYPE(ArbitraryTolerances, (false), "Format", App::Prop_Output,
+                      App::Prop_None, "Dimension undertolerance format");
+    ADD_PROPERTY_TYPE(Arbitrary, (false), "Format", App::Prop_None, "Value overridden by user");
+    ADD_PROPERTY_TYPE(ArbitraryTolerances, (false), "Format", App::Prop_None,
                       "Tolerance values overridden by user");
 
     Type.setEnums(TypeEnums);//dimension type: length, radius etc
     ADD_PROPERTY(Type, ((long)0));
     MeasureType.setEnums(MeasureTypeEnums);
     ADD_PROPERTY(MeasureType, ((long)1));//Projected (or True) measurement
-    ADD_PROPERTY_TYPE(TheoreticalExact, (false), "", App::Prop_Output,
+    ADD_PROPERTY_TYPE(TheoreticalExact, (false), "", App::Prop_None,
                       "If theoretical exact (basic) dimension");
-    ADD_PROPERTY_TYPE(EqualTolerance, (true), "", App::Prop_Output,
+    ADD_PROPERTY_TYPE(EqualTolerance, (true), "", App::Prop_None,
                       "If over- and undertolerance are equal");
 
-    ADD_PROPERTY_TYPE(OverTolerance, (0.0), "", App::Prop_Output,
+    ADD_PROPERTY_TYPE(OverTolerance, (0.0), "", App::Prop_None,
                       "Overtolerance value\nIf 'Equal Tolerance' is true this is also\nthe negated "
                       "value for 'Under Tolerance'");
     OverTolerance.setUnit(Base::Unit::Length);
     OverTolerance.setConstraints(&ToleranceConstraint);
-    ADD_PROPERTY_TYPE(UnderTolerance, (0.0), "", App::Prop_Output,
+    ADD_PROPERTY_TYPE(UnderTolerance, (0.0), "", App::Prop_None,
                       "Undertolerance value\nIf 'Equal Tolerance' is true it will be replaced\nby "
                       "negative value of 'Over Tolerance'");
     UnderTolerance.setUnit(Base::Unit::Length);
     UnderTolerance.setConstraints(&ToleranceConstraint);
-    ADD_PROPERTY_TYPE(Inverted, (false), "", App::Prop_Output,
+    ADD_PROPERTY_TYPE(Inverted, (false), "", App::Prop_None,
                       "The dimensional value is displayed inverted");
 
-    ADD_PROPERTY_TYPE(AngleOverride, (false), "Override", App::Prop_Output,
+    ADD_PROPERTY_TYPE(AngleOverride, (false), "Override", App::Prop_None,
                       "User specified angles");
-    ADD_PROPERTY_TYPE(LineAngle, (0.0), "Override", App::Prop_Output, "Dimension line angle");
-    ADD_PROPERTY_TYPE(ExtensionAngle, (0.0), "Override", App::Prop_Output, "Extension line angle");
+    ADD_PROPERTY_TYPE(LineAngle, (0.0), "Override", App::Prop_None, "Dimension line angle");
+    ADD_PROPERTY_TYPE(ExtensionAngle, (0.0), "Override", App::Prop_None, "Extension line angle");
 
     ADD_PROPERTY_TYPE(SavedGeometry, ()  ,"References",(App::PropertyType)(App::Prop_None),"Reference Geometry");
     SavedGeometry.setOrderRelevant(true);

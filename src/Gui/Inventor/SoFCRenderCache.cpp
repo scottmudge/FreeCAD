@@ -1788,9 +1788,9 @@ SoFCRenderCache::buildHighlightCache(SbFCMap<int, VertexCachePtr> &sharedcache,
       if (detail) {
         if (pctx || fctx || lctx) {
           // If there is detail context, make sure it matches to the node
-          if ((!pctx || (child.first.type == Material::Point && pctx != ventry.cache->getNode()))
-              && (!lctx || (child.first.type == Material::Line && lctx != ventry.cache->getNode()))
-              && (!fctx || (child.first.type == Material::Triangle && fctx != ventry.cache->getNode())))
+          if ((pctx && child.first.type == Material::Point && pctx != ventry.cache->getNode())
+              || (lctx && child.first.type == Material::Line && lctx != ventry.cache->getNode())
+              || (fctx && child.first.type == Material::Triangle && fctx != ventry.cache->getNode()))
             continue;
         }
         if (ventry.mergecount)

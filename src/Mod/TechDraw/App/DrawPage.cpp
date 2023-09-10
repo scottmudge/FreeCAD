@@ -63,7 +63,7 @@ DrawPage::DrawPage(void)
     forceRedraw(false);
 
     ADD_PROPERTY_TYPE(KeepUpdated, (Preferences::keepPagesUpToDate()), group,
-                      (App::PropertyType)(App::Prop_Output), "Keep page in sync with model");
+                      (App::PropertyType)(App::Prop_None), "Keep page in sync with model");
     ADD_PROPERTY_TYPE(Template, (nullptr), group, (App::PropertyType)(App::Prop_None),
                       "Attached Template");
     Template.setScope(App::LinkScope::Global);

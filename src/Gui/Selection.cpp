@@ -811,12 +811,13 @@ App::SubObjectT SelectionSingleton::getExtendedContext(App::DocumentObject *obj)
     return App::SubObjectT();
 }
 
-int SelectionSingleton::setPreselect(const char* pDocName, const char* pObjectName, const char* pSubName,
+SelectionSingleton::PreselectResult
+SelectionSingleton::setPreselect(const char* pDocName, const char* pObjectName, const char* pSubName,
                                      float x, float y, float z, SelectionChanges::MsgSource signal, bool msg)
 {
     if (!pDocName || !pObjectName) {
         rmvPreselect();
-        return 0;
+        return PreselectResult::None;
     }
     if (!pSubName) pSubName = "";
 
@@ -840,7 +841,7 @@ int SelectionSingleton::setPreselect(const char* pDocName, const char* pObjectNa
             notify(Chng);
 #endif
         }
-        return -1;
+        return PreselectResult::Same;
     }
 
     // Do not restore cursor to prevent causing flash of cursor
@@ -850,13 +851,13 @@ int SelectionSingleton::setPreselect(const char* pDocName, const char* pObjectNa
         App::Document* pDoc = getDocument(pDocName);
         if (!pDoc || !pObjectName) {
             ActiveGate->restoreCursor();
-            return 0;
+            return PreselectResult::None;
         }
         std::pair<std::string,std::string> elementName;
         auto pObject = pDoc->getObject(pObjectName);
         if(!pObject) {
             ActiveGate->restoreCursor();
-            return 0;
+            return PreselectResult::None;
         }
 
         const char *subelement = pSubName;
@@ -866,7 +867,7 @@ int SelectionSingleton::setPreselect(const char* pDocName, const char* pObjectNa
             pObject = App::GeoFeature::resolveElement(pObject,pSubName,elementName);
             if (!pObject) {
                 ActiveGate->restoreCursor();
-                return 0;
+                return PreselectResult::None;
             }
             if (gateResolve > ResolveMode::OldStyleElement)
                 subelement = !newElementName.empty() ? newElementName.c_str() : oldElementName.c_str();
@@ -890,7 +891,7 @@ int SelectionSingleton::setPreselect(const char* pDocName, const char* pObjectNa
 
                 DocName = pDocName; // So that rmvPreselect() will restore the cursor
             }
-            return -2;
+            return PreselectResult::Blocked;
         }
         ActiveGate->restoreCursor();
     }
@@ -926,7 +927,7 @@ int SelectionSingleton::setPreselect(const char* pDocName, const char* pObjectNa
     notify(Chng);
 
     // It is possible the preselect is removed during notification
-    return DocName.empty()?0:1;
+    return DocName.empty() ? PreselectResult::None : PreselectResult::OK;
 }
 
 void SelectionSingleton::setPreselectCoord( float x, float y, float z)
@@ -976,6 +977,9 @@ QString SelectionSingleton::format(const char *docname,
         if (sobj->Label.getStrValue() != sobj->getNameInDocument())
             ts << QString::fromUtf8(sobj->Label.getValue()) << " | ";
     }
+    else
+        return QString();
+
     if(x != 0. || y != 0. || z != 0.) {
         auto fmt = [this](double v) -> QString {
             Base::Quantity q(v, Base::Quantity::MilliMetre.getUnit());

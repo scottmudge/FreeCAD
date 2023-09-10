@@ -253,8 +253,7 @@ public:
     std::vector<PickedInfo> getPickedList(SoHandleEventAction* action,
                                           bool singlePick) const;
 
-    static void postProcessPickedList(std::vector<PickedInfo> &,
-                                      bool singlePick);
+    void postProcessPickedList(std::vector<PickedInfo> &, bool singlePick) const;
 
     typedef std::set<std::pair<ViewProvider*, std::string> > Filter;
     void getPickedInfo(std::vector<PickedInfo> &,
@@ -296,6 +295,7 @@ public:
     SbViewportRegion preselViewport;
 
     mutable int pickBackFace = 0;
+    mutable int pickBackFaceDelay = 0;
 };
 
 SO_NODE_SOURCE(SoFCUnifiedSelection)
@@ -634,18 +634,38 @@ SoFCUnifiedSelection::Private::getPickedList(SoHandleEventAction* action,
 std::vector<PickedInfo>
 SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
                                              const SbViewportRegion &viewport,
-                                             bool singlePick) const
+                                             bool _singlePick) const
 {
+    bool singlePick = _singlePick;
     std::vector<PickedInfo> ret;
     Filter filter;
 
     FC_TIME_INIT(t);
+
+    if (pickBackFace && pcViewer->hasOnTopObject())
+        singlePick = false;
 
     float radius = ViewParams::getPickRadius();
     this->rayPickAction.setRadius(radius);
     this->rayPickAction.setViewportRegion(viewport);
     this->rayPickAction.setPoint(pos);
     this->rayPickAction.setPickAll(!singlePick || !ViewParams::getUseNewRayPick());
+
+    if (!singlePick || !pickBackFace) {
+        if (singlePick && ViewParams::hiddenLineSelectionOnTop())
+            this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::EdgeVertexOrFrontFace);
+        else
+            this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::FrontFace);
+    }
+    else if (pickBackFace == 1) {
+        this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::EdgeVertexOrBackFace);
+    }
+    else if (pickBackFace > 1) {
+        this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::BackFace, pickBackFace-1);
+    }
+    else {
+        this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::BackFace, pickBackFace);
+    }
 
     SoPickStyleElement::set(this->rayPickAction.getState(),
             (this->rayPickAction.getPickMode() != SoFCRayPickAction::PickMode::FrontFace && singlePick) ?
@@ -657,40 +677,18 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
 
     this->rayPickAction.cleanup();
 
-    // Only if back face picking is inactive, shall we pick objects in on top
-    // group first. If back face picking, then do pick through all objects in
-    // order to let user choose all ray hitting faces.
-    if (!pickBackFace && singlePick) {
-        if (ViewParams::hiddenLineSelectionOnTop()) {
-            this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::EdgeVertexOrFrontFace);
-        }
-        else {
-            this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::FrontFace);
-        }
+    this->rayPickAction.setResetClipPlane(ViewParams::getNoSectionOnTop());
 
-        this->rayPickAction.setResetClipPlane(ViewParams::getNoSectionOnTop());
+    getPickedInfoOnTop(ret, singlePick, filter);
 
-        getPickedInfoOnTop(ret, singlePick, filter);
-
-        this->rayPickAction.setResetClipPlane(false);
-    }
+    this->rayPickAction.setResetClipPlane(false);
 
     if(ret.empty() || !singlePick) {
         applyOverrideMode(this->rayPickAction.getState());
         SoOverrideElement::setPickStyleOverride(this->rayPickAction.getState(),0,false);
 
-        if (!singlePick || !pickBackFace) {
+        if (!singlePick || !pickBackFace)
             this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::FrontFace);
-        }
-        else if (pickBackFace == 1) {
-            this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::EdgeVertexOrBackFace);
-        }
-        else if (pickBackFace > 1) {
-            this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::BackFace, pickBackFace-1);
-        }
-        else {
-            this->rayPickAction.setPickMode(SoFCRayPickAction::PickMode::BackFace, pickBackFace);
-        }
 
         auto backPick = [&]() {
             if (auto paths = pcViewer->getLatePickPaths()) {
@@ -753,16 +751,31 @@ SoFCUnifiedSelection::Private::getPickedList(const SbVec2s &pos,
     // point and the highest priority will be returned.
     //
     if(this->rayPickAction.isPickAll())
-        postProcessPickedList(ret, singlePick);
+        postProcessPickedList(ret, _singlePick);
     return ret;
 }
 
 void
 SoFCUnifiedSelection::Private::postProcessPickedList(std::vector<PickedInfo> &ret,
-                                                     bool singlePick)
+                                                     bool singlePick) const
 {
     if(ret.size()<=1)
         return;
+
+    if(pickBackFace) {
+        if (pickBackFace > static_cast<int>(ret.size()))
+            pickBackFace = -1;
+        else if (pickBackFace < -static_cast<int>(ret.size())) {
+            pickBackFace = 1;
+            ret.erase(ret.begin(), ret.end()-1);
+        }
+        else if (pickBackFace < 0)
+            ret.erase(ret.begin(), ret.begin()-pickBackFace-1);
+        else
+            ret.erase(ret.begin(), ret.end()-pickBackFace);
+        ret.resize(1);
+        return;
+    }
 
     // To identify the picking of lines in a concave area we have to
     // get all intersection points. If we have two or more intersection
@@ -1174,12 +1187,16 @@ SoFCUnifiedSelection::Private::setHighlight(SoFullPath *path,
         const char *objname = vpd->getObject()->getNameInDocument();
 
         this->preSelection = 1;
-        int ret = Gui::Selection().setPreselect(docname,objname,subname,x,y,z,
-                SelectionChanges::MsgSource::Any,true);
-        if(ret > 0 || ret == -1) {
+        switch(Gui::Selection().setPreselect(docname,objname,subname,x,y,z,
+                SelectionChanges::MsgSource::Any,true))
+        {
+        case SelectionSingleton::PreselectResult::OK:
+        case SelectionSingleton::PreselectResult::Same:
             clearHighlight();
             currentHighlight->append(path);
             highlighted = true;
+        default:
+            break;
         }
     }
 
@@ -1535,6 +1552,7 @@ SoFCUnifiedSelection::Private::handleEvent(SoHandleEventAction * action)
     }
     if (shiftDown) {
         if(!pickBackFace) {
+            pickBackFaceDelay = ViewParams::getPickBackFaceDelay();
             pickBackFace = 1;
             doPick = true;
         }
@@ -1560,17 +1578,23 @@ SoFCUnifiedSelection::Private::handleEvent(SoHandleEventAction * action)
             if (shiftDown && event->wasCtrlDown()) {
                 auto wev = static_cast<const SoMouseWheelEvent*>(event);
                 if (wev->getDelta() > 0) {
-                    if(pickBackFace == 1) {
-                        pickBackFace = -1;
-                    } else
-                        --pickBackFace;
+                    if (++pickBackFaceDelay >= ViewParams::getPickBackFaceDelay()) {
+                        pickBackFaceDelay = 0;
+                        if(pickBackFace == 1) {
+                            pickBackFace = -1;
+                        } else
+                            --pickBackFace;
+                    }
                     doPick = true;
                     action->setHandled();
                 } else if (wev->getDelta() < 0) {
-                    if(pickBackFace == -1)
-                        pickBackFace = 1;
-                    else
-                        ++pickBackFace;
+                    if (++pickBackFaceDelay >= ViewParams::getPickBackFaceDelay()) {
+                        pickBackFaceDelay = 0;
+                        if(pickBackFace == -1)
+                            pickBackFace = 1;
+                        else
+                            ++pickBackFace;
+                    }
                     doPick = true;
                     action->setHandled();
                 }

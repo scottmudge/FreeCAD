@@ -52,7 +52,7 @@ DrawSVGTemplate::DrawSVGTemplate()
 {
     static const char *group = "Template";
 
-    ADD_PROPERTY_TYPE(PageResult, (nullptr),  group, App::Prop_Output,    "Embedded SVG code for template. For system use.");   //n/a for users
+    ADD_PROPERTY_TYPE(PageResult, (nullptr),  group, App::Prop_None,    "Embedded SVG code for template. For system use.");   //n/a for users
     ADD_PROPERTY_TYPE(Template,   (""), group, App::Prop_None, "Template file name.");
 
     // Width and Height properties shouldn't be set by the user

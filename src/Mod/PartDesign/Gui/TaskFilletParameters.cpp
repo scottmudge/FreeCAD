@@ -39,6 +39,7 @@
 #include <Gui/BitmapFactory.h>
 #include <Gui/WaitCursor.h>
 #include <Base/Console.h>
+#include <Base/ExceptionSafeCall.h>
 #include <Base/Tools.h>
 #include <Gui/Selection.h>
 #include <Gui/ViewProvider.h>
@@ -120,19 +121,19 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
 
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->filletRadius, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+    Base::connect(ui->filletRadius, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
         this, &TaskFilletParameters::onLengthChanged);
 
     setup(ui->message, ui->treeWidgetReferences, ui->buttonRefAdd);
 
     ui->treeWidgetReferences->setItemDelegate(new FilletSegmentDelegate(this));
 
-    QObject::connect(ui->btnClear, &QPushButton::clicked, [this](){clearSegments();});
-    QObject::connect(ui->btnAdd, &QPushButton::clicked, [this](){newSegment();});
-    QObject::connect(ui->btnRemove, &QPushButton::clicked, [this](){removeSegments();});
+    Base::connect(ui->btnClear, &QPushButton::clicked, this, &TaskFilletParameters::clearSegments);
+    Base::connect(ui->btnAdd, &QPushButton::clicked, this, &TaskFilletParameters::newSegment);
+    Base::connect(ui->btnRemove, &QPushButton::clicked, this, &TaskFilletParameters::removeSegments);
 
-    QObject::connect(ui->treeWidgetReferences, &QTreeWidget::itemChanged,
-        [this](QTreeWidgetItem *item, int column) { updateSegment(item, column); });
+    Base::connect(ui->treeWidgetReferences, &QTreeWidget::itemChanged,
+        this, &TaskFilletParameters::updateSegment);
 
     ui->treeWidgetReferences->header()->setToolTip(tr(
 "Click '+' key to add new segment for various radius fillet.\n"
@@ -150,7 +151,7 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
             ui->treeWidgetReferences->header()->resizeSection(i, size);
     }
 
-    QObject::connect(ui->treeWidgetReferences->header(), &QHeaderView::sectionResized,
+    Base::connect(ui->treeWidgetReferences->header(), &QHeaderView::sectionResized,
         [hParam](int idx, int, int newSize) {
             std::string key("ColumnSize");
             key += std::to_string(idx+1);
@@ -158,7 +159,10 @@ TaskFilletParameters::TaskFilletParameters(ViewProviderDressUp *DressUpView,QWid
         });
       
     createAddAllEdgesAction(ui->treeWidgetReferences);
-    connect(addAllEdgesAction, &QAction::triggered, this, &TaskFilletParameters::onAddAllEdges);
+    Base::connect(addAllEdgesAction, &QAction::triggered, this, &TaskFilletParameters::onAddAllEdges);
+
+    Base::connect(ui->checkBoxUseAllEdges, &QCheckBox::toggled,
+        this, &TaskFilletParameters::onCheckBoxUseAllEdgesToggled);
 
     refresh();
 }

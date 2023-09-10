@@ -163,7 +163,8 @@ in Part workbench, and equivalent features in PartDesign.</string>
        <widget class="Gui::PrefCheckBox" name="checkBoxValidateShape">
         <property name="toolTip">
          <string>Validate on changing shape. If the shape is invalid, a warning icon
-will appear in the corresponding tree view item.
+will appear in the corresponding tree view item. Be aware that enabling
+this option on complex shape may cause slow down.
 
 Note, this option only applies to newly created object. For existing
 object, you can manually change its 'ValidShape' property.</string>
@@ -175,7 +176,7 @@ object, you can manually change its 'ValidShape' property.</string>
          <bool>true</bool>
         </property>
         <property name="prefEntry" stdset="0">
-         <cstring>FixShape</cstring>
+         <cstring>AutoValidateShape</cstring>
         </property>
         <property name="prefPath" stdset="0">
          <cstring>Mod/Part</cstring>
@@ -195,7 +196,7 @@ newly created object.</string>
          <bool>false</bool>
         </property>
         <property name="prefEntry" stdset="0">
-         <cstring>ValidateShape</cstring>
+         <cstring>FixShape</cstring>
         </property>
         <property name="prefPath" stdset="0">
          <cstring>Mod/Part</cstring>

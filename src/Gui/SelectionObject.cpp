@@ -66,22 +66,30 @@ SelectionObject::~SelectionObject()
 {
 }
 
-const App::DocumentObject * SelectionObject::getObject() const
+const App::DocumentObject * SelectionObject::getObject(bool resolveLink) const
 {
     if (!DocName.empty()) {
         App::Document *doc = App::GetApplication().getDocument(DocName.c_str());
-        if (doc && !FeatName.empty())
-            return doc->getObject(FeatName.c_str());
+        if (doc && !FeatName.empty()) {
+            auto obj = doc->getObject(FeatName.c_str());
+            if (obj && resolveLink)
+                obj = obj->getLinkedObject();
+            return obj;
+        }
     }
     return nullptr;
 }
 
-App::DocumentObject * SelectionObject::getObject()
+App::DocumentObject * SelectionObject::getObject(bool resolveLink)
 {
     if (!DocName.empty()) {
         App::Document *doc = App::GetApplication().getDocument(DocName.c_str());
-        if (doc && !FeatName.empty())
-            return doc->getObject(FeatName.c_str());
+        if (doc && !FeatName.empty()) {
+            auto obj = doc->getObject(FeatName.c_str());
+            if (obj && resolveLink)
+                obj = obj->getLinkedObject();
+            return obj;
+        }
     }
     return nullptr;
 }

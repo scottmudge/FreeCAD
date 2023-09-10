@@ -494,6 +494,8 @@ void DrawViewPart::postFaceExtractionTasks(void)
     //  until all the geometry (including centerlines dependent on faces) exists.
     std::vector<TechDraw::DrawViewDimension*> dims = getDimensions();
     for (auto& d : dims) {
+        Base::ObjectStatusLocker<App::ObjectStatus, App::DocumentObject> guard(App::ObjectStatus::NoTouch, d);
+        d->enforceRecompute();
         d->recomputeFeature();
     }
 

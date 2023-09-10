@@ -213,9 +213,6 @@ QMenu QToolButton:selected {
     color: white;
     background-color: #4d82bf; /* same as QMenu::item:selected and QMenu::item:pressed */
 }
-QMenu QLabel {
-    padding: 2px 16px; /* make room for icon at left */
-}
 
 QMenu QLabel:disabled,
 QMenu QRadioButton:disabled,

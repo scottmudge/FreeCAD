@@ -4415,13 +4415,13 @@ void TreeWidget::onPreSelectTimer() {
     else if(!obj->redirectSubName(ss,parent,nullptr))
         ss << obj->getNameInDocument() << '.';
 
-    int res = Selection().setPreselect(
+    auto res = Selection().setPreselect(
             parent->getDocument()->getName(),
             parent->getNameInDocument(),
             ss.str().c_str(), 0, 0, 0,
             SelectionChanges::MsgSource::TreeView);
     if (!_DraggingActive) {
-        if (res == -2)
+        if (res == SelectionSingleton::PreselectResult::Blocked)
             pimpl->setForbidCursor();
         else
             pimpl->restoreCursor();

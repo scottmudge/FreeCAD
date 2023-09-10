@@ -367,7 +367,7 @@ SoFCSelection::handleEvent(SoHandleEventAction * action)
             const SoPickedPoint * pp = this->getPickedPoint(action);
             if (pp && pp->getPath()->containsPath(action->getCurPath())) {
                 if (!highlighted) {
-                    if (Gui::Selection().setPreselect(documentName.getValue().getString()
+                    switch(Gui::Selection().setPreselect(documentName.getValue().getString()
                                            ,objectName.getValue().getString()
                                            ,subElementName.getValue().getString()
                                            ,pp->getPoint()[0]
@@ -375,12 +375,16 @@ SoFCSelection::handleEvent(SoHandleEventAction * action)
                                            ,pp->getPoint()[2],
                                            SelectionChanges::MsgSource::Any, true))
                     {
+                    case SelectionSingleton::PreselectResult::OK:
+                    case SelectionSingleton::PreselectResult::Same:
                         SoFCSelection::turnoffcurrent(action);
                         SoFCSelection::currenthighlight = static_cast<SoFullPath*>(action->getCurPath()->copy());
                         SoFCSelection::currenthighlight->ref();
                         highlighted = true;
                         this->touch(); // force scene redraw
                         this->redrawHighlighted(action, true);
+                    default:
+                        break;
                     }
                 }
             }

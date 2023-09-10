@@ -69,15 +69,15 @@ DrawView::DrawView():
     static const char *group = "Base";
     ADD_PROPERTY_TYPE(X, (0.0), group, (App::PropertyType)(App::Prop_None), "X position");
     ADD_PROPERTY_TYPE(Y, (0.0), group, (App::PropertyType)(App::Prop_None), "Y position");
-    ADD_PROPERTY_TYPE(LockPosition, (false), group, App::Prop_Output, "Lock View position to parent Page or Group");
-    ADD_PROPERTY_TYPE(Rotation, (0.0), group, App::Prop_Output, "Rotation in degrees counterclockwise");
+    ADD_PROPERTY_TYPE(LockPosition, (false), group, App::Prop_None, "Lock View position to parent Page or Group");
+    ADD_PROPERTY_TYPE(Rotation, (0.0), group, App::Prop_None, "Rotation in degrees counterclockwise");
 
     ScaleType.setEnums(ScaleTypeEnums);
-    ADD_PROPERTY_TYPE(ScaleType, (prefScaleType()), group, App::Prop_Output, "Scale Type");
+    ADD_PROPERTY_TYPE(ScaleType, (prefScaleType()), group, App::Prop_None, "Scale Type");
     ADD_PROPERTY_TYPE(Scale, (prefScale()), group, App::Prop_None, "Scale factor of the view. Scale factors like 1:100 can be written as =1/100");
     Scale.setConstraints(&scaleRange);
 
-    ADD_PROPERTY_TYPE(Caption, (""), group, App::Prop_Output, "Short text about the view");
+    ADD_PROPERTY_TYPE(Caption, (""), group, App::Prop_None, "Short text about the view");
 
     setScaleAttribute();
 }

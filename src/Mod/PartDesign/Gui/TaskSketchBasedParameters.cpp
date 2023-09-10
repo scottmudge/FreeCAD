@@ -228,6 +228,7 @@ LinkSubWidget::LinkSubWidget(TaskSketchBasedParameters *parent,
     if (button->toolTip().isEmpty())
         button->setToolTip(tr("Click to enter selection mode"));
 
+    listWidget->setItemDelegate(new LinkSubWidgetDelegate(this));
     listWidget->setViewMode(QListView::IconMode);
     listWidget->setWrapping(false);
     listWidget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);

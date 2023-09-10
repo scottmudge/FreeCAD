@@ -202,6 +202,7 @@ Params = [
     ParamBool('ShowHighlightEdgeOnly', False,
        "Show pre-selection highlight edge only"),
     ParamFloat('PreSelectionDelay', 0.1),
+    ParamInt('PickBackFaceDelay', 2),
     ParamBool('UseNewRayPick', True),
     ParamFloat('ViewSelectionExtendFactor', 0.5),
     ParamBool('UseTightBoundingBox', True,

@@ -933,6 +933,11 @@ bool View3DInventorViewer::isInGroupOnTop(const App::SubObjectT &objT, bool altO
     return inventorSelection->isInGroupOnTop(objT, altOnly);
 }
 
+bool View3DInventorViewer::hasOnTopObject() const
+{
+    return inventorSelection->hasOnTopObject();
+}
+
 void View3DInventorViewer::refreshGroupOnTop()
 {
     inventorSelection->refreshGroupOnTop();

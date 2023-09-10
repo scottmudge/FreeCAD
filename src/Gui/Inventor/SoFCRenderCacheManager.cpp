@@ -577,6 +577,12 @@ SoFCRenderCacheManager::isOnTop(const std::string & key, bool altonly) const
   return false;
 }
 
+bool
+SoFCRenderCacheManager::hasOnTopObject() const
+{
+  return !PRIVATE(this)->selcaches.empty();
+}
+
 SoPath *
 SoFCRenderCacheManager::getHighlightPath() const
 {

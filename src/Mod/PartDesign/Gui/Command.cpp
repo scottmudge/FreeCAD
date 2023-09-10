@@ -1790,11 +1790,23 @@ bool dressupGetSelected(Gui::Command* cmd, const std::string& which,
     // if 1 Part::Feature object selected, but no subobjects, select all edges for the user
     // but only for fillet and chamfer (not for draft or thickness)
     if (selection[0].getSubNames().empty() && (which.compare("Fillet") == 0 || which.compare("Chamfer") == 0)){
+#if 0
+        // Since we are explicitly adding all edges, why bother setting
+        // UseAllEdges, which will disable tree widget, requiring extra action
+        // from user if he ever want to make changes.
+        //
+        // It would be better to either explicitly add all edges, or set
+        // UseAllEdges, but not both.
+        //
+        (void)useAllEdges;
+#else
         useAllEdges = true;
+#endif
         std::string edgeTypeName = Part::TopoShape::shapeName(TopAbs_EDGE); //"Edge"
         int count = TopShape.countSubElements(edgeTypeName.c_str());
         std::string docName = App::GetApplication().getDocumentName(base->getDocument());
         std::string objName = base->getNameInDocument();
+        Gui::Selection().clearSelection();
         for (int ii = 0; ii < count; ii++){
             std::ostringstream edgeName;
             edgeName << edgeTypeName << ii+1;

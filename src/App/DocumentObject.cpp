@@ -226,10 +226,12 @@ void DocumentObject::touch(bool noRecompute)
 {
     if(!noRecompute) {
         StatusBits.set(ObjectStatus::Enforce);
-        if(++_revision == 0)
-            ++_revision;
         FC_TRACE("enforce recompute " << _revision << " " << getFullName());
         _enforceRecompute = true;
+        if (testStatus(ObjectStatus::NoTouch))
+            return;
+        if(++_revision == 0)
+            ++_revision;
     }
     StatusBits.set(ObjectStatus::Touch);
     if (_pDoc)

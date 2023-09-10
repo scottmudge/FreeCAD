@@ -252,15 +252,15 @@ public:
 
     // Auto generated code (C:\Development\FreeCAD\FreeCAD\src\Tools\params_utils.py:122)
     //@{
-    /// Accessor for parameter ValidateShape
-    static const bool & getValidateShape();
-    static const bool & defaultValidateShape();
-    static void removeValidateShape();
-    static void setValidateShape(const bool &v);
-    static const char *docValidateShape();
+    /// Accessor for parameter AutoValidateShape
+    static const bool & getAutoValidateShape();
+    static const bool & defaultAutoValidateShape();
+    static void removeAutoValidateShape();
+    static void setAutoValidateShape(const bool &v);
+    static const char *docAutoValidateShape();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter FixShape
     static const bool & getFixShape();
@@ -270,7 +270,7 @@ public:
     static const char *docFixShape();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter MinimumDeviation
     static const double & getMinimumDeviation();

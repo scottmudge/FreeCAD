@@ -67,7 +67,7 @@ Feature::Feature()
     Placement.setStatus(App::Property::Hidden, true);
     BaseFeature.setStatus(App::Property::Hidden, true);
 
-    ValidateShape.setValue(Part::PartParams::getValidateShape());
+    ValidateShape.setValue(Part::PartParams::getAutoValidateShape());
 
     ADD_PROPERTY_TYPE(NewSolid,(false),"Base",App::Prop_None,
                      "Create a new separated solid from this feature");

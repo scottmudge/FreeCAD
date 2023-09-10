@@ -77,6 +77,8 @@ public:
 
   bool isOnTop(const std::string & key, bool altonly = true) const;
 
+  bool hasOnTopObject() const;
+
   const SbFCMap<int, Gui::CoinPtr<SoPath> > & getSelectionPaths() const;
 
   void getBoundingBox(SbBox3f & bbox) const;

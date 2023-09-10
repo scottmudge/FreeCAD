@@ -59,7 +59,7 @@ public:
     bool AutoHideOrigins;
     bool SplitEllipsoid;
     long ParallelRunThreshold;
-    bool ValidateShape;
+    bool AutoValidateShape;
     bool FixShape;
     double MinimumDeviation;
     double MeshDeviation;
@@ -107,8 +107,8 @@ public:
         funcs["SplitEllipsoid"] = &PartParamsP::updateSplitEllipsoid;
         ParallelRunThreshold = handle->GetInt("ParallelRunThreshold", 100);
         funcs["ParallelRunThreshold"] = &PartParamsP::updateParallelRunThreshold;
-        ValidateShape = handle->GetBool("ValidateShape", true);
-        funcs["ValidateShape"] = &PartParamsP::updateValidateShape;
+        AutoValidateShape = handle->GetBool("AutoValidateShape", false);
+        funcs["AutoValidateShape"] = &PartParamsP::updateAutoValidateShape;
         FixShape = handle->GetBool("FixShape", false);
         funcs["FixShape"] = &PartParamsP::updateFixShape;
         MinimumDeviation = handle->GetFloat("MinimumDeviation", 0.05);
@@ -209,15 +209,15 @@ public:
     static void updateParallelRunThreshold(PartParamsP *self) {
         self->ParallelRunThreshold = self->handle->GetInt("ParallelRunThreshold", 100);
     }
-    // Auto generated code (Tools/params_utils.py:238)
-    static void updateValidateShape(PartParamsP *self) {
-        self->ValidateShape = self->handle->GetBool("ValidateShape", true);
+    // Auto generated code (Tools/params_utils.py:288)
+    static void updateAutoValidateShape(PartParamsP *self) {
+        self->AutoValidateShape = self->handle->GetBool("AutoValidateShape", false);
     }
-    // Auto generated code (Tools/params_utils.py:238)
+    // Auto generated code (Tools/params_utils.py:288)
     static void updateFixShape(PartParamsP *self) {
         self->FixShape = self->handle->GetBool("FixShape", false);
     }
-    // Auto generated code (Tools/params_utils.py:238)
+    // Auto generated code (Tools/params_utils.py:288)
     static void updateMinimumDeviation(PartParamsP *self) {
         self->MinimumDeviation = self->handle->GetFloat("MinimumDeviation", 0.05);
     }
@@ -734,61 +734,61 @@ void PartParams::removeParallelRunThreshold() {
     instance()->handle->RemoveInt("ParallelRunThreshold");
 }
 
-// Auto generated code (Tools/params_utils.py:288)
-const char *PartParams::docValidateShape() {
+// Auto generated code (Tools/params_utils.py:350)
+const char *PartParams::docAutoValidateShape() {
     return "";
 }
 
-// Auto generated code (Tools/params_utils.py:294)
-const bool & PartParams::getValidateShape() {
-    return instance()->ValidateShape;
+// Auto generated code (Tools/params_utils.py:358)
+const bool & PartParams::getAutoValidateShape() {
+    return instance()->AutoValidateShape;
 }
 
-// Auto generated code (Tools/params_utils.py:300)
-const bool & PartParams::defaultValidateShape() {
-    const static bool def = true;
+// Auto generated code (Tools/params_utils.py:366)
+const bool & PartParams::defaultAutoValidateShape() {
+    const static bool def = false;
     return def;
 }
 
-// Auto generated code (Tools/params_utils.py:307)
-void PartParams::setValidateShape(const bool &v) {
-    instance()->handle->SetBool("ValidateShape",v);
-    instance()->ValidateShape = v;
+// Auto generated code (Tools/params_utils.py:375)
+void PartParams::setAutoValidateShape(const bool &v) {
+    instance()->handle->SetBool("AutoValidateShape",v);
+    instance()->AutoValidateShape = v;
 }
 
-// Auto generated code (Tools/params_utils.py:314)
-void PartParams::removeValidateShape() {
-    instance()->handle->RemoveBool("ValidateShape");
+// Auto generated code (Tools/params_utils.py:384)
+void PartParams::removeAutoValidateShape() {
+    instance()->handle->RemoveBool("AutoValidateShape");
 }
 
-// Auto generated code (Tools/params_utils.py:288)
+// Auto generated code (Tools/params_utils.py:350)
 const char *PartParams::docFixShape() {
     return "";
 }
 
-// Auto generated code (Tools/params_utils.py:294)
+// Auto generated code (Tools/params_utils.py:358)
 const bool & PartParams::getFixShape() {
     return instance()->FixShape;
 }
 
-// Auto generated code (Tools/params_utils.py:300)
+// Auto generated code (Tools/params_utils.py:366)
 const bool & PartParams::defaultFixShape() {
     const static bool def = false;
     return def;
 }
 
-// Auto generated code (Tools/params_utils.py:307)
+// Auto generated code (Tools/params_utils.py:375)
 void PartParams::setFixShape(const bool &v) {
     instance()->handle->SetBool("FixShape",v);
     instance()->FixShape = v;
 }
 
-// Auto generated code (Tools/params_utils.py:314)
+// Auto generated code (Tools/params_utils.py:384)
 void PartParams::removeFixShape() {
     instance()->handle->RemoveBool("FixShape");
 }
 
-// Auto generated code (Tools/params_utils.py:288)
+// Auto generated code (Tools/params_utils.py:350)
 const char *PartParams::docMinimumDeviation() {
     return "";
 }

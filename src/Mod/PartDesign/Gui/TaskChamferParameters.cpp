@@ -38,6 +38,7 @@
 #include <App/Document.h>
 #include <App/Expression.h>
 #include <Base/Console.h>
+#include <Base/ExceptionSafeCall.h>
 #include <Base/Tools.h>
 #include <Base/UnitsApi.h>
 #include <Gui/Application.h>
@@ -166,24 +167,25 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
 
     QMetaObject::connectSlotsByName(this);
 
-    connect(ui->chamferType, qOverload<int>(&QComboBox::currentIndexChanged),
+    Base::connect(ui->chamferType, qOverload<int>(&QComboBox::currentIndexChanged),
         this, &TaskChamferParameters::onTypeChanged);
-    connect(ui->chamferSize, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+    Base::connect(ui->chamferSize, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
         this, &TaskChamferParameters::onSizeChanged);
-    connect(ui->chamferSize2, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+    Base::connect(ui->chamferSize2, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
         this, &TaskChamferParameters::onSize2Changed);
-    connect(ui->chamferAngle, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
+    Base::connect(ui->chamferAngle, qOverload<double>(&Gui::QuantitySpinBox::valueChanged),
         this, &TaskChamferParameters::onAngleChanged);
-    connect(ui->flipDirection, &QCheckBox::toggled,
+    Base::connect(ui->flipDirection, &QCheckBox::toggled,
         this, &TaskChamferParameters::onFlipDirection);
 
     setup(ui->message, ui->treeWidgetReferences, ui->buttonRefAdd);
 
     ui->treeWidgetReferences->setItemDelegate(new ChamferInfoDelegate(this));
 
-    QObject::connect(ui->btnClear, &QPushButton::clicked, [this](){clearItems();});
-    QObject::connect(ui->treeWidgetReferences, &QTreeWidget::itemChanged,
-        [this](QTreeWidgetItem *item, int column) { updateItem(item, column); });
+    Base::connect(ui->btnClear, &QPushButton::clicked,
+            this, &TaskChamferParameters::clearItems);
+    Base::connect(ui->treeWidgetReferences, &QTreeWidget::itemChanged,
+            this, &TaskChamferParameters::onUpdateItem);
 
     static const char *_ParamPath = "User parameter:BaseApp/Preferences/General/Widgets/TaskChamferParameters";
     auto hParam = App::GetApplication().GetParameterGroupByPath(_ParamPath);
@@ -194,7 +196,7 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
             ui->treeWidgetReferences->header()->resizeSection(i, size);
     }
 
-    QObject::connect(ui->treeWidgetReferences->header(), &QHeaderView::sectionResized,
+    Base::connect(ui->treeWidgetReferences->header(), &QHeaderView::sectionResized,
         [hParam](int idx, int, int newSize) {
             std::string key("ColumnSize");
             key += std::to_string(idx+1);
@@ -203,11 +205,11 @@ TaskChamferParameters::TaskChamferParameters(ViewProviderDressUp *DressUpView,QW
 
     refresh();
 
-    connect(ui->checkBoxUseAllEdges, &QCheckBox::toggled,
+    Base::connect(ui->checkBoxUseAllEdges, &QCheckBox::toggled,
             this, &TaskChamferParameters::onCheckBoxUseAllEdgesToggled);
 
     createAddAllEdgesAction(ui->treeWidgetReferences);
-    connect(addAllEdgesAction, &QAction::triggered, this, &TaskChamferParameters::onAddAllEdges);
+    Base::connect(addAllEdgesAction, &QAction::triggered, this, &TaskChamferParameters::onAddAllEdges);
 }
 
 void TaskChamferParameters::setUpUI(PartDesign::Chamfer* pcChamfer)
@@ -341,7 +343,7 @@ Part::TopoShape::ChamferInfo TaskChamferParameters::getChamferInfo(QTreeWidgetIt
     return info;
 }
 
-void TaskChamferParameters::updateItem(QTreeWidgetItem *item, int column)
+void TaskChamferParameters::onUpdateItem(QTreeWidgetItem *item, int column)
 {
     if (column<1 || column>4)
         return;

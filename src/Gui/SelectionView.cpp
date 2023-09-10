@@ -638,7 +638,10 @@ struct SubMenuInfo {
     std::map<std::string, std::map<std::string, ElementInfo> > items;
 };
 
-App::SubObjectT SelectionMenu::doPick(const std::vector<App::SubObjectT> &sels) {
+static bool _HasOverrideCursor;
+
+App::SubObjectT SelectionMenu::doPick(const std::vector<App::SubObjectT> &sels)
+{
     clear();
 
     std::ostringstream ss;
@@ -759,6 +762,10 @@ App::SubObjectT SelectionMenu::doPick(const std::vector<App::SubObjectT> &sels) 
 
     Gui::Selection().rmvPreselect();
     QAction* picked = PieMenu::exec(this, QCursor::pos(), "Std_PickGeometry");
+    if (_HasOverrideCursor) {
+        _HasOverrideCursor = false;
+        QApplication::restoreOverrideCursor();
+    }
     if(toggle)
         Gui::Selection().enablePickedList(false);
     return onPicked(picked);
@@ -815,6 +822,10 @@ App::SubObjectT SelectionMenu::doPick(const std::vector<App::SubObjectT> &sels,
     this->installEventFilter(this);
     auto res = onPicked(this->exec(QCursor::pos()));
     _HasPicked = !res.getObjectName().empty();
+    if (_HasOverrideCursor) {
+        _HasOverrideCursor = false;
+        QApplication::restoreOverrideCursor();
+    }
     return res;
 }
 
@@ -849,6 +860,10 @@ static bool setPreselect(QMenu *menu,
 {
     auto sel = qvariant_cast<App::SubObjectT>(action->data());
     if (sel.getObjectName().empty()) {
+        if (_HasOverrideCursor) {
+            _HasOverrideCursor = false;
+            QApplication::restoreOverrideCursor();
+        }
         Gui::Selection().rmvPreselect();
         ToolTip::hideText();
         return false;
@@ -858,9 +873,24 @@ static bool setPreselect(QMenu *menu,
     if(!needElement)
         sel.setSubName(sel.getSubNameNoElement().c_str());
 
-    Gui::Selection().setPreselect(sel.getDocumentName().c_str(),
+    auto res = Gui::Selection().setPreselect(sel.getDocumentName().c_str(),
             sel.getObjectName().c_str(), sel.getSubName().c_str(),0,0,0,
             SelectionChanges::MsgSource::TreeView);
+
+    if (res == SelectionSingleton::PreselectResult::Blocked) {
+        if (!_HasOverrideCursor) {
+            _HasOverrideCursor = true;
+            QApplication::setOverrideCursor(Qt::ForbiddenCursor);
+        }
+        return false;
+    }
+
+    if (_HasOverrideCursor) {
+        _HasOverrideCursor = false;
+        QApplication::restoreOverrideCursor();
+    }
+    if (res != SelectionSingleton::PreselectResult::OK)
+        return false;
 
     if(!needTooltip
             ||!(QApplication::queryKeyboardModifiers() 

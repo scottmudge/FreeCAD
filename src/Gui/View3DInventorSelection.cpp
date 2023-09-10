@@ -249,6 +249,14 @@ bool View3DInventorSelection::isInGroupOnTop(const App::SubObjectT &_objT, bool 
     return it!=objectsOnTopSel.end() && (!altOnly || it->second.alt);
 }
 
+bool View3DInventorSelection::hasOnTopObject() const
+{
+    auto manager = selectionRoot->getRenderManager();
+    if (manager)
+        return manager->hasOnTopObject();
+    return !objectsOnTopSel.empty();
+}
+
 void View3DInventorSelection::refreshGroupOnTop()
 {
     std::vector<App::SubObjectT> objs;

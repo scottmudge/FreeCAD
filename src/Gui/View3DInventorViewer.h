@@ -179,6 +179,7 @@ public:
     void clearGroupOnTop(bool alt=false);
 
     bool isInGroupOnTop(const App::SubObjectT &objT, bool altOnly=true) const;
+    bool hasOnTopObject() const;
     const std::set<App::SubObjectT> &getObjectsOnTop() const;
 
     SoDirectionalLight* getBacklight() const;

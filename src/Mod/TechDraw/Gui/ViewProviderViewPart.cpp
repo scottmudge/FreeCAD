@@ -31,9 +31,11 @@
 #endif
 
 #include <App/Application.h>
+#include <App/AutoTransaction.h>
 #include <App/Document.h>
 #include <App/DocumentObject.h>
 #include <Base/Parameter.h>
+#include <Gui/Command.h>
 #include <Gui/Control.h>
 #include <Gui/MainWindow.h>
 #include <Gui/Selection.h>
@@ -298,8 +300,52 @@ void ViewProviderViewPart::handleChangedPropertyType(Base::XMLReader &reader, co
     }
 }
 
-bool ViewProviderViewPart::onDelete(const std::vector<std::string> &)
+bool ViewProviderViewPart::onDelete(const std::vector<std::string> &subElements)
 {
+    auto objFeat = Base::freecad_dynamic_cast<TechDraw::DrawViewPart>(getObject());
+    if (objFeat && !subElements.empty()) {
+        std::vector<std::string> cv2Delete;
+        std::vector<std::string> ce2Delete;
+        std::vector<std::string> cl2Delete;
+        for (const auto &s : subElements) {
+            int idx = TechDraw::DrawUtil::getIndexFromName(s);
+            std::string geomType = TechDraw::DrawUtil::getGeomTypeFromName(s);
+            if (geomType == "Edge") {
+                TechDraw::BaseGeomPtr bg = objFeat->getGeomByIndex(idx);
+                if (bg && bg->getCosmetic()) {
+                    int source = bg->source();
+                    std::string tag = bg->getCosmeticTag();
+                    if (source == BaseGeom::CosmeticEdge) {
+                        ce2Delete.push_back(tag);
+                    } else if (source == BaseGeom::CenterLine) {
+                        cl2Delete.push_back(tag);
+                    }
+                }
+            } else if (geomType == "Vertex") {
+                if (TechDraw::VertexPtr tdv = objFeat->getProjVertexByIndex(idx)) {
+                    std::string delTag = tdv->getCosmeticTag();
+                    if (!delTag.empty()) {
+                        cv2Delete.push_back(delTag);
+                    }
+                }
+            }
+        }
+        if (!(cv2Delete.empty() && cl2Delete.empty() && ce2Delete.empty())) {
+            App::AutoTransaction guard(QT_TRANSLATE_NOOP("Command", "Delete comsetics"));
+            if (!cv2Delete.empty()) {
+                objFeat->removeCosmeticVertex(cv2Delete);
+            }
+            if (!ce2Delete.empty()) {
+                objFeat->removeCosmeticEdge(ce2Delete);
+            }
+            if (!cl2Delete.empty()) {
+                objFeat->removeCenterLine(cl2Delete);
+            }
+            Gui::Command::updateActive();
+            return false;
+        }
+    }
+
     // we cannot delete if the view has a section or detail view
 
     QString bodyMessage;
@@ -308,27 +354,10 @@ bool ViewProviderViewPart::onDelete(const std::vector<std::string> &)
     // get child views
     auto viewSection = getViewObject()->getSectionRefs();
     auto viewDetail = getViewObject()->getDetailRefs();
-    auto viewLeader = getViewObject()->getLeaders();
 
-    if (!viewSection.empty()) {
+    if (!viewSection.empty() || !viewDetail.empty()) {
         bodyMessageStream << qApp->translate("Std_Delete",
-            "You cannot delete this view because it has a section view that would become broken.");
-        QMessageBox::warning(Gui::getMainWindow(),
-            qApp->translate("Std_Delete", "Object dependencies"), bodyMessage,
-            QMessageBox::Ok);
-        return false;
-    }
-    else if (!viewDetail.empty()) {
-        bodyMessageStream << qApp->translate("Std_Delete",
-            "You cannot delete this view because it has a detail view that would become broken.");
-        QMessageBox::warning(Gui::getMainWindow(),
-            qApp->translate("Std_Delete", "Object dependencies"), bodyMessage,
-            QMessageBox::Ok);
-        return false;
-    }
-    else if (!viewLeader.empty()) {
-        bodyMessageStream << qApp->translate("Std_Delete",
-            "You cannot delete this view because it has a leader line that would become broken.");
+            "You cannot delete this view because it has one or more dependent views that would become broken.");
         QMessageBox::warning(Gui::getMainWindow(),
             qApp->translate("Std_Delete", "Object dependencies"), bodyMessage,
             QMessageBox::Ok);

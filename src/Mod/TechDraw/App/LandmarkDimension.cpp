@@ -57,7 +57,7 @@ LandmarkDimension::LandmarkDimension()
 {
     static const char *group = "Landmark";
     //this leaves a blank entry in position 1.
-    ADD_PROPERTY_TYPE(ReferenceTags, ("") , group, App::Prop_Output, "Tags of Dimension Endpoints");
+    ADD_PROPERTY_TYPE(ReferenceTags, ("") , group, App::Prop_None, "Tags of Dimension Endpoints");
     std::vector<std::string> noTags;
     ReferenceTags.setValues(noTags);
 }

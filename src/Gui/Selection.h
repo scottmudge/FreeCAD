@@ -448,8 +448,20 @@ public:
      */
     App::SubObjectT getExtendedContext(App::DocumentObject *obj = nullptr) const;
 
+    /// Result code for setPreselect()
+    enum class PreselectResult {
+        /// No object pre-selected
+        None,
+        /// Object pre-selected
+        OK,
+        /// Object has already been pre-selected
+        Same,
+        /// Object is blocked by selection filter
+        Blocked,
+    };
+
     /// set the preselected object (mostly by the 3D view)
-    int setPreselect(const char* pDocName, const char* pObjectName, const char* pSubName,
+    PreselectResult setPreselect(const char* pDocName, const char* pObjectName, const char* pSubName,
                      float x=0, float y=0, float z=0,
                      SelectionChanges::MsgSource signal=SelectionChanges::MsgSource::Any,
                      bool msg=false);

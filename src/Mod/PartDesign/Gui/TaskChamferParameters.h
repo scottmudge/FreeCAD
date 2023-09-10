@@ -79,7 +79,7 @@ protected:
     void removeItems();
     void clearItems();
     void updateItems(QTreeWidgetItem *);
-    void updateItem(QTreeWidgetItem *, int column);
+    void onUpdateItem(QTreeWidgetItem *, int column);
     void updateItem(QTreeWidgetItem *);
     void setItem(QTreeWidgetItem *item, const Part::TopoShape::ChamferInfo &);
 

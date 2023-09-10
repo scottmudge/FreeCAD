@@ -139,6 +139,12 @@ class TechDrawExport BaseGeom : public std::enable_shared_from_this<BaseGeom>
         void setOCCEdge(TopoDS_Edge newEdge)  { occEdge = newEdge; }
         bool getCosmetic()  { return cosmetic; }
         void setCosmetic (bool state)  { cosmetic = state; }
+
+        enum Type {
+            GeometryEdge = 0,
+            CosmeticEdge = 1,
+            CenterLine = 2
+        };
         int source() { return m_source; }
         void source(int s) { m_source = s; }
         int sourceIndex() { return m_sourceIndex; }

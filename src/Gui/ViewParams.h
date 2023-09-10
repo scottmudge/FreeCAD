@@ -34,14 +34,14 @@ import ViewParams
 ViewParams.declare_begin()
 ]]]*/
 
-// Auto generated code (Gui/ViewParams.py:435)
+// Auto generated code (Gui/ViewParams.py:437)
 #include <QString>
 
-// Auto generated code (Tools/params_utils.py:72)
+// Auto generated code (Tools/params_utils.py:82)
 #include <Base/Parameter.h>
 
 
-// Auto generated code (Tools/params_utils.py:78)
+// Auto generated code (Tools/params_utils.py:90)
 namespace Gui {
 /** Convenient class to obtain view provider related parameters
 
@@ -77,7 +77,7 @@ class GuiExport ViewParams {
 public:
     static ParameterGrp::handle getHandle();
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter UseNewSelection
     static const bool & getUseNewSelection();
@@ -87,7 +87,7 @@ public:
     static const char *docUseNewSelection();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter UseSelectionRoot
     static const bool & getUseSelectionRoot();
@@ -97,7 +97,7 @@ public:
     static const char *docUseSelectionRoot();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter EnableSelection
     static const bool & getEnableSelection();
@@ -107,7 +107,7 @@ public:
     static const char *docEnableSelection();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter EnablePreselection
     static const bool & getEnablePreselection();
@@ -117,7 +117,7 @@ public:
     static const char *docEnablePreselection();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RenderCache
     static const long & getRenderCache();
@@ -128,7 +128,7 @@ public:
     static void onRenderCacheChanged();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RandomColor
     static const bool & getRandomColor();
@@ -138,7 +138,7 @@ public:
     static const char *docRandomColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter BoundingBoxColor
     static const unsigned long & getBoundingBoxColor();
@@ -148,7 +148,7 @@ public:
     static const char *docBoundingBoxColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter AnnotationTextColor
     static const unsigned long & getAnnotationTextColor();
@@ -158,7 +158,7 @@ public:
     static const char *docAnnotationTextColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HighlightColor
     static const unsigned long & getHighlightColor();
@@ -168,7 +168,7 @@ public:
     static const char *docHighlightColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionColor
     static const unsigned long & getSelectionColor();
@@ -178,7 +178,7 @@ public:
     static const char *docSelectionColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter MarkerSize
     static const long & getMarkerSize();
@@ -188,7 +188,7 @@ public:
     static const char *docMarkerSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter DefaultLinkColor
     static const unsigned long & getDefaultLinkColor();
@@ -198,7 +198,7 @@ public:
     static const char *docDefaultLinkColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter DefaultShapeLineColor
     static const unsigned long & getDefaultShapeLineColor();
@@ -208,7 +208,7 @@ public:
     static const char *docDefaultShapeLineColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter DefaultShapeVertexColor
     static const unsigned long & getDefaultShapeVertexColor();
@@ -218,7 +218,7 @@ public:
     static const char *docDefaultShapeVertexColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter DefaultShapeColor
     static const unsigned long & getDefaultShapeColor();
@@ -228,7 +228,7 @@ public:
     static const char *docDefaultShapeColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter DefaultShapeTransparency
     static const long & getDefaultShapeTransparency();
@@ -238,7 +238,7 @@ public:
     static const char *docDefaultShapeTransparency();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter DefaultShapeLineWidth
     static const long & getDefaultShapeLineWidth();
@@ -248,7 +248,7 @@ public:
     static const char *docDefaultShapeLineWidth();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter DefaultShapePointSize
     static const long & getDefaultShapePointSize();
@@ -258,7 +258,7 @@ public:
     static const char *docDefaultShapePointSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter CoinCycleCheck
     static const bool & getCoinCycleCheck();
@@ -268,7 +268,7 @@ public:
     static const char *docCoinCycleCheck();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter EnablePropertyViewForInactiveDocument
     static const bool & getEnablePropertyViewForInactiveDocument();
@@ -278,7 +278,7 @@ public:
     static const char *docEnablePropertyViewForInactiveDocument();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShowSelectionBoundingBox
     ///
@@ -290,7 +290,7 @@ public:
     static const char *docShowSelectionBoundingBox();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShowSelectionBoundingBoxThreshold
     ///
@@ -302,7 +302,7 @@ public:
     static const char *docShowSelectionBoundingBoxThreshold();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter UpdateSelectionVisual
     static const bool & getUpdateSelectionVisual();
@@ -312,7 +312,7 @@ public:
     static const char *docUpdateSelectionVisual();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter LinkChildrenDirect
     static const bool & getLinkChildrenDirect();
@@ -322,7 +322,7 @@ public:
     static const char *docLinkChildrenDirect();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShowSelectionOnTop
     ///
@@ -335,7 +335,7 @@ public:
     static void onShowSelectionOnTopChanged();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShowPreSelectedFaceOnTop
     ///
@@ -347,7 +347,7 @@ public:
     static const char *docShowPreSelectedFaceOnTop();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShowPreSelectedFaceOutline
     ///
@@ -359,7 +359,7 @@ public:
     static const char *docShowPreSelectedFaceOutline();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShowSelectedFaceOutline
     ///
@@ -371,7 +371,7 @@ public:
     static const char *docShowSelectedFaceOutline();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter OutlineThicken
     ///
@@ -383,7 +383,7 @@ public:
     static const char *docOutlineThicken();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter NoSelFaceHighlightWithOutline
     ///
@@ -395,7 +395,7 @@ public:
     static const char *docNoSelFaceHighlightWithOutline();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter NoPreSelFaceHighlightWithOutline
     ///
@@ -407,7 +407,7 @@ public:
     static const char *docNoPreSelFaceHighlightWithOutline();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter AutoTransparentPick
     ///
@@ -419,7 +419,7 @@ public:
     static const char *docAutoTransparentPick();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectElementOnTop
     ///
@@ -431,7 +431,7 @@ public:
     static const char *docSelectElementOnTop();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter TransparencyOnTop
     ///
@@ -443,7 +443,7 @@ public:
     static const char *docTransparencyOnTop();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineSelectionOnTop
     ///
@@ -455,7 +455,7 @@ public:
     static const char *docHiddenLineSelectionOnTop();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PartialHighlightOnFullSelect
     ///
@@ -467,7 +467,7 @@ public:
     static const char *docPartialHighlightOnFullSelect();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionLineThicken
     ///
@@ -479,7 +479,7 @@ public:
     static const char *docSelectionLineThicken();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionLineMaxWidth
     ///
@@ -491,7 +491,7 @@ public:
     static const char *docSelectionLineMaxWidth();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionPointScale
     ///
@@ -504,7 +504,7 @@ public:
     static const char *docSelectionPointScale();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionPointMaxSize
     ///
@@ -516,7 +516,7 @@ public:
     static const char *docSelectionPointMaxSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PickRadius
     static const double & getPickRadius();
@@ -526,7 +526,7 @@ public:
     static const char *docPickRadius();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionTransparency
     static const double & getSelectionTransparency();
@@ -536,7 +536,7 @@ public:
     static const char *docSelectionTransparency();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionLinePattern
     static const long & getSelectionLinePattern();
@@ -546,7 +546,7 @@ public:
     static const char *docSelectionLinePattern();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionLinePatternScale
     static const long & getSelectionLinePatternScale();
@@ -556,7 +556,7 @@ public:
     static const char *docSelectionLinePatternScale();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionHiddenLineWidth
     ///
@@ -568,7 +568,7 @@ public:
     static const char *docSelectionHiddenLineWidth();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionBBoxLineWidth
     static const double & getSelectionBBoxLineWidth();
@@ -578,7 +578,7 @@ public:
     static const char *docSelectionBBoxLineWidth();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShowHighlightEdgeOnly
     ///
@@ -590,7 +590,7 @@ public:
     static const char *docShowHighlightEdgeOnly();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PreSelectionDelay
     static const double & getPreSelectionDelay();
@@ -600,7 +600,17 @@ public:
     static const char *docPreSelectionDelay();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
+    //@{
+    /// Accessor for parameter PickBackFaceDelay
+    static const long & getPickBackFaceDelay();
+    static const long & defaultPickBackFaceDelay();
+    static void removePickBackFaceDelay();
+    static void setPickBackFaceDelay(const long &v);
+    static const char *docPickBackFaceDelay();
+    //@}
+
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter UseNewRayPick
     static const bool & getUseNewRayPick();
@@ -610,7 +620,7 @@ public:
     static const char *docUseNewRayPick();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ViewSelectionExtendFactor
     static const double & getViewSelectionExtendFactor();
@@ -620,7 +630,7 @@ public:
     static const char *docViewSelectionExtendFactor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter UseTightBoundingBox
     ///
@@ -632,7 +642,7 @@ public:
     static const char *docUseTightBoundingBox();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter UseBoundingBoxCache
     static const bool & getUseBoundingBoxCache();
@@ -642,7 +652,7 @@ public:
     static const char *docUseBoundingBoxCache();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RenderProjectedBBox
     ///
@@ -655,7 +665,7 @@ public:
     static const char *docRenderProjectedBBox();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionFaceWire
     ///
@@ -667,7 +677,7 @@ public:
     static const char *docSelectionFaceWire();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter NewDocumentCameraScale
     static const double & getNewDocumentCameraScale();
@@ -677,7 +687,7 @@ public:
     static const char *docNewDocumentCameraScale();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter MaxOnTopSelections
     static const long & getMaxOnTopSelections();
@@ -687,7 +697,7 @@ public:
     static const char *docMaxOnTopSelections();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter MaxViewSelections
     static const long & getMaxViewSelections();
@@ -697,7 +707,7 @@ public:
     static const char *docMaxViewSelections();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter MaxSelectionNotification
     static const long & getMaxSelectionNotification();
@@ -707,7 +717,7 @@ public:
     static const char *docMaxSelectionNotification();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter MapChildrenPlacement
     ///
@@ -722,7 +732,7 @@ public:
     static void onMapChildrenPlacementChanged();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter EditingTransparency
     ///
@@ -734,7 +744,7 @@ public:
     static const char *docEditingTransparency();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineTransparency
     ///
@@ -746,7 +756,7 @@ public:
     static const char *docHiddenLineTransparency();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineOverrideTransparency
     ///
@@ -758,7 +768,7 @@ public:
     static const char *docHiddenLineOverrideTransparency();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineFaceColor
     static const unsigned long & getHiddenLineFaceColor();
@@ -768,7 +778,7 @@ public:
     static const char *docHiddenLineFaceColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineOverrideFaceColor
     ///
@@ -780,7 +790,7 @@ public:
     static const char *docHiddenLineOverrideFaceColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineColor
     static const unsigned long & getHiddenLineColor();
@@ -790,7 +800,7 @@ public:
     static const char *docHiddenLineColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineOverrideColor
     ///
@@ -802,7 +812,7 @@ public:
     static const char *docHiddenLineOverrideColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineBackground
     static const unsigned long & getHiddenLineBackground();
@@ -812,7 +822,7 @@ public:
     static const char *docHiddenLineBackground();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineOverrideBackground
     static const bool & getHiddenLineOverrideBackground();
@@ -822,7 +832,7 @@ public:
     static const char *docHiddenLineOverrideBackground();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineShaded
     ///
@@ -834,7 +844,7 @@ public:
     static const char *docHiddenLineShaded();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineShowOutline
     ///
@@ -846,7 +856,7 @@ public:
     static const char *docHiddenLineShowOutline();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLinePerFaceOutline
     ///
@@ -858,7 +868,7 @@ public:
     static const char *docHiddenLinePerFaceOutline();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineSceneOutline
     ///
@@ -870,7 +880,7 @@ public:
     static const char *docHiddenLineSceneOutline();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineOutlineWidth
     static const double & getHiddenLineOutlineWidth();
@@ -880,7 +890,7 @@ public:
     static const char *docHiddenLineOutlineWidth();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineWidth
     static const double & getHiddenLineWidth();
@@ -890,7 +900,7 @@ public:
     static const char *docHiddenLineWidth();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLinePointSize
     static const double & getHiddenLinePointSize();
@@ -900,7 +910,7 @@ public:
     static const char *docHiddenLinePointSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineHideSeam
     ///
@@ -912,7 +922,7 @@ public:
     static const char *docHiddenLineHideSeam();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineHideVertex
     ///
@@ -924,7 +934,7 @@ public:
     static const char *docHiddenLineHideVertex();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HiddenLineHideFace
     ///
@@ -936,7 +946,7 @@ public:
     static const char *docHiddenLineHideFace();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter StatusMessageTimeout
     static const long & getStatusMessageTimeout();
@@ -946,7 +956,7 @@ public:
     static const char *docStatusMessageTimeout();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowFlatLines
     ///
@@ -958,7 +968,7 @@ public:
     static const char *docShadowFlatLines();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowDisplayMode
     ///
@@ -970,7 +980,7 @@ public:
     static const char *docShadowDisplayMode();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowSpotLight
     ///
@@ -982,7 +992,7 @@ public:
     static const char *docShadowSpotLight();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowLightIntensity
     static const double & getShadowLightIntensity();
@@ -992,7 +1002,7 @@ public:
     static const char *docShadowLightIntensity();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowLightDirectionX
     static const double & getShadowLightDirectionX();
@@ -1002,7 +1012,7 @@ public:
     static const char *docShadowLightDirectionX();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowLightDirectionY
     static const double & getShadowLightDirectionY();
@@ -1012,7 +1022,7 @@ public:
     static const char *docShadowLightDirectionY();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowLightDirectionZ
     static const double & getShadowLightDirectionZ();
@@ -1022,7 +1032,7 @@ public:
     static const char *docShadowLightDirectionZ();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowLightColor
     static const unsigned long & getShadowLightColor();
@@ -1032,7 +1042,7 @@ public:
     static const char *docShadowLightColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowShowGround
     ///
@@ -1046,7 +1056,7 @@ public:
     static const char *docShadowShowGround();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowGroundBackFaceCull
     ///
@@ -1058,7 +1068,7 @@ public:
     static const char *docShadowGroundBackFaceCull();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowGroundScale
     ///
@@ -1071,7 +1081,7 @@ public:
     static const char *docShadowGroundScale();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowGroundColor
     static const unsigned long & getShadowGroundColor();
@@ -1081,7 +1091,7 @@ public:
     static const char *docShadowGroundColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowGroundBumpMap
     static const std::string & getShadowGroundBumpMap();
@@ -1091,7 +1101,7 @@ public:
     static const char *docShadowGroundBumpMap();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowGroundTexture
     static const std::string & getShadowGroundTexture();
@@ -1101,7 +1111,7 @@ public:
     static const char *docShadowGroundTexture();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowGroundTextureSize
     ///
@@ -1114,7 +1124,7 @@ public:
     static const char *docShadowGroundTextureSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowGroundTransparency
     ///
@@ -1128,7 +1138,7 @@ public:
     static const char *docShadowGroundTransparency();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowGroundShading
     ///
@@ -1141,7 +1151,7 @@ public:
     static const char *docShadowGroundShading();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowExtraRedraw
     static const bool & getShadowExtraRedraw();
@@ -1151,7 +1161,7 @@ public:
     static const char *docShadowExtraRedraw();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowSmoothBorder
     ///
@@ -1165,7 +1175,7 @@ public:
     static const char *docShadowSmoothBorder();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowSpreadSize
     ///
@@ -1178,7 +1188,7 @@ public:
     static const char *docShadowSpreadSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowSpreadSampleSize
     ///
@@ -1193,7 +1203,7 @@ public:
     static const char *docShadowSpreadSampleSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowPrecision
     ///
@@ -1207,7 +1217,7 @@ public:
     static const char *docShadowPrecision();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowEpsilon
     ///
@@ -1221,7 +1231,7 @@ public:
     static const char *docShadowEpsilon();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowThreshold
     ///
@@ -1233,7 +1243,7 @@ public:
     static const char *docShadowThreshold();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowBoundBoxScale
     ///
@@ -1247,7 +1257,7 @@ public:
     static const char *docShadowBoundBoxScale();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowMaxDistance
     ///
@@ -1261,7 +1271,7 @@ public:
     static const char *docShadowMaxDistance();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowTransparentShadow
     ///
@@ -1273,7 +1283,7 @@ public:
     static const char *docShadowTransparentShadow();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShadowUpdateGround
     ///
@@ -1286,7 +1296,7 @@ public:
     static const char *docShadowUpdateGround();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PropertyViewTimer
     static const unsigned long & getPropertyViewTimer();
@@ -1296,7 +1306,7 @@ public:
     static const char *docPropertyViewTimer();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter HierarchyAscend
     ///
@@ -1309,7 +1319,7 @@ public:
     static const char *docHierarchyAscend();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter CommandHistorySize
     ///
@@ -1321,7 +1331,7 @@ public:
     static const char *docCommandHistorySize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuIconSize
     ///
@@ -1333,7 +1343,7 @@ public:
     static const char *docPieMenuIconSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuRadius
     ///
@@ -1345,7 +1355,7 @@ public:
     static const char *docPieMenuRadius();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuTriggerRadius
     ///
@@ -1357,7 +1367,7 @@ public:
     static const char *docPieMenuTriggerRadius();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuFontSize
     ///
@@ -1369,7 +1379,7 @@ public:
     static const char *docPieMenuFontSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuTriggerDelay
     ///
@@ -1381,7 +1391,7 @@ public:
     static const char *docPieMenuTriggerDelay();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuTriggerAction
     ///
@@ -1393,7 +1403,7 @@ public:
     static const char *docPieMenuTriggerAction();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuAnimationDuration
     ///
@@ -1405,7 +1415,7 @@ public:
     static const char *docPieMenuAnimationDuration();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuAnimationCurve
     ///
@@ -1417,7 +1427,7 @@ public:
     static const char *docPieMenuAnimationCurve();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuCenterRadius
     ///
@@ -1429,7 +1439,7 @@ public:
     static const char *docPieMenuCenterRadius();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PieMenuPopup
     ///
@@ -1441,7 +1451,7 @@ public:
     static const char *docPieMenuPopup();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter StickyTaskControl
     ///
@@ -1453,7 +1463,7 @@ public:
     static const char *docStickyTaskControl();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ColorOnTop
     ///
@@ -1465,7 +1475,7 @@ public:
     static const char *docColorOnTop();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter AutoSortWBList
     ///
@@ -1477,7 +1487,7 @@ public:
     static const char *docAutoSortWBList();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter MaxCameraAnimatePeriod
     ///
@@ -1489,7 +1499,7 @@ public:
     static const char *docMaxCameraAnimatePeriod();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter TaskNoWheelFocus
     ///
@@ -1501,7 +1511,7 @@ public:
     static const char *docTaskNoWheelFocus();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter GestureLongPressRotationCenter
     ///
@@ -1513,7 +1523,7 @@ public:
     static const char *docGestureLongPressRotationCenter();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter CheckWidgetPlacementOnRestore
     ///
@@ -1525,7 +1535,7 @@ public:
     static const char *docCheckWidgetPlacementOnRestore();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter TextCursorWidth
     ///
@@ -1538,7 +1548,7 @@ public:
     static void onTextCursorWidthChanged();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PreselectionToolTipCorner
     ///
@@ -1550,7 +1560,7 @@ public:
     static const char *docPreselectionToolTipCorner();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PreselectionToolTipOffsetX
     ///
@@ -1562,7 +1572,7 @@ public:
     static const char *docPreselectionToolTipOffsetX();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PreselectionToolTipOffsetY
     ///
@@ -1574,7 +1584,7 @@ public:
     static const char *docPreselectionToolTipOffsetY();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter PreselectionToolTipFontSize
     ///
@@ -1586,7 +1596,7 @@ public:
     static const char *docPreselectionToolTipFontSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SectionFill
     ///
@@ -1598,7 +1608,7 @@ public:
     static const char *docSectionFill();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SectionFillInvert
     ///
@@ -1610,7 +1620,7 @@ public:
     static const char *docSectionFillInvert();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SectionConcave
     ///
@@ -1622,7 +1632,7 @@ public:
     static const char *docSectionConcave();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter NoSectionOnTop
     ///
@@ -1634,7 +1644,7 @@ public:
     static const char *docNoSectionOnTop();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SectionHatchTextureScale
     ///
@@ -1646,7 +1656,7 @@ public:
     static const char *docSectionHatchTextureScale();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SectionHatchTexture
     ///
@@ -1659,7 +1669,7 @@ public:
     static void onSectionHatchTextureChanged();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SectionHatchTextureEnable
     ///
@@ -1671,7 +1681,7 @@ public:
     static const char *docSectionHatchTextureEnable();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SectionFillGroup
     ///
@@ -1684,7 +1694,7 @@ public:
     static const char *docSectionFillGroup();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ShowClipPlane
     ///
@@ -1696,7 +1706,7 @@ public:
     static const char *docShowClipPlane();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ClipPlaneSize
     ///
@@ -1708,7 +1718,7 @@ public:
     static const char *docClipPlaneSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ClipPlaneColor
     ///
@@ -1720,7 +1730,7 @@ public:
     static const char *docClipPlaneColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ClipPlaneLineWidth
     ///
@@ -1732,7 +1742,7 @@ public:
     static const char *docClipPlaneLineWidth();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter TransformOnTop
     static const bool & getTransformOnTop();
@@ -1742,7 +1752,7 @@ public:
     static const char *docTransformOnTop();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionColorDifference
     ///
@@ -1755,7 +1765,7 @@ public:
     static const char *docSelectionColorDifference();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RenderCacheMergeCount
     ///
@@ -1769,7 +1779,7 @@ public:
     static const char *docRenderCacheMergeCount();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RenderCacheMergeCountMin
     ///
@@ -1781,7 +1791,7 @@ public:
     static const char *docRenderCacheMergeCountMin();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RenderCacheMergeCountMax
     ///
@@ -1793,7 +1803,7 @@ public:
     static const char *docRenderCacheMergeCountMax();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RenderCacheMergeDepthMax
     ///
@@ -1805,7 +1815,7 @@ public:
     static const char *docRenderCacheMergeDepthMax();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RenderCacheMergeDepthMin
     ///
@@ -1817,7 +1827,7 @@ public:
     static const char *docRenderCacheMergeDepthMin();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RenderHighlightPolygonOffsetFactor
     static const double & getRenderHighlightPolygonOffsetFactor();
@@ -1827,7 +1837,7 @@ public:
     static const char *docRenderHighlightPolygonOffsetFactor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter RenderHighlightPolygonOffsetUnits
     static const double & getRenderHighlightPolygonOffsetUnits();
@@ -1837,7 +1847,7 @@ public:
     static const char *docRenderHighlightPolygonOffsetUnits();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ForceSolidSingleSideLighting
     ///
@@ -1851,7 +1861,7 @@ public:
     static void onForceSolidSingleSideLightingChanged();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter DefaultFontSize
     static const long & getDefaultFontSize();
@@ -1862,7 +1872,7 @@ public:
     static void onDefaultFontSizeChanged();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter EnableTaskPanelKeyTranslate
     static const bool & getEnableTaskPanelKeyTranslate();
@@ -1873,7 +1883,7 @@ public:
     static void onEnableTaskPanelKeyTranslateChanged();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter EnableMenuBarCheckBox
     static const bool & getEnableMenuBarCheckBox();
@@ -1883,7 +1893,7 @@ public:
     static const char *docEnableMenuBarCheckBox();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter EnableBacklight
     static const bool & getEnableBacklight();
@@ -1893,7 +1903,7 @@ public:
     static const char *docEnableBacklight();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter BacklightColor
     static const unsigned long & getBacklightColor();
@@ -1903,7 +1913,7 @@ public:
     static const char *docBacklightColor();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter BacklightIntensity
     static const double & getBacklightIntensity();
@@ -1913,7 +1923,7 @@ public:
     static const char *docBacklightIntensity();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter OverrideSelectability
     ///
@@ -1925,7 +1935,7 @@ public:
     static const char *docOverrideSelectability();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter SelectionStackSize
     ///
@@ -1937,7 +1947,7 @@ public:
     static const char *docSelectionStackSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter DefaultDrawStyle
     ///
@@ -1949,7 +1959,7 @@ public:
     static const char *docDefaultDrawStyle();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ToolTipIconSize
     ///
@@ -1963,7 +1973,7 @@ public:
     static const char *docToolTipIconSize();
     //@}
 
-    // Auto generated code (Tools/params_utils.py:122)
+    // Auto generated code (Tools/params_utils.py:138)
     //@{
     /// Accessor for parameter ToolTipDisable
     static const bool & getToolTipDisable();
@@ -1973,7 +1983,7 @@ public:
     static const char *docToolTipDisable();
     //@}
 
-    // Auto generated code (Gui/ViewParams.py:441)
+    // Auto generated code (Gui/ViewParams.py:443)
     static const std::vector<QString> AnimationCurveTypes;
 //[[[end]]]
 
@@ -1995,11 +2005,11 @@ public:
 ViewParams.declare_end()
 ]]]*/
 
-// Auto generated code (Tools/params_utils.py:150)
+// Auto generated code (Tools/params_utils.py:178)
 }; // class ViewParams
 } // namespace Gui
 
-// Auto generated code (Gui/ViewParams.py:449)
+// Auto generated code (Gui/ViewParams.py:451)
 namespace Gui {
 /// Obtain all draw style names, terminated by nullptr entry.
 GuiExport const char **drawStyleNames();

@@ -1113,10 +1113,6 @@ void execLine2Points(Gui::Command* cmd)
 // TechDraw_CosmeticEraser
 //===========================================================================
 
-#define GEOMETRYEDGE 0
-#define COSMETICEDGE 1
-#define CENTERLINE 2
-
 DEF_STD_CMD_A(CmdTechDrawCosmeticEraser)
 
 CmdTechDrawCosmeticEraser::CmdTechDrawCosmeticEraser()
@@ -1154,74 +1150,70 @@ void CmdTechDrawCosmeticEraser::activated(int iMsg)
         return;
     }
 
+    std::vector<std::string> subNames;
+    TechDraw::DrawViewPart * objFeat = nullptr;
     for (auto& s: selection) {
-        TechDraw::DrawViewPart * objFeat = static_cast<TechDraw::DrawViewPart*> (s.getObject());
-        if (!objFeat->isDerivedFrom(TechDraw::DrawViewPart::getClassTypeId())) {
+        if (auto feat = Base::freecad_dynamic_cast<TechDraw::DrawViewPart>(s.getObject(/*resolveLink*/true))) {
+            if (objFeat) {
+                QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
+                                QObject::tr("More than one object selected."));
+                return;
+            }
+            objFeat = feat;
+            subNames = s.getSubNames();
+        } else {
             QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
                             QObject::tr("At least 1 object in selection is not a part view"));
             return;
         }
     }
 
-    TechDraw::DrawViewPart * objFeat = nullptr;
-    std::vector<std::string> subNames;
-    std::vector<Gui::SelectionObject>::iterator itSel = selection.begin();
-    for (; itSel != selection.end(); itSel++)  {
-        if ((*itSel).getObject()->isDerivedFrom(TechDraw::DrawViewPart::getClassTypeId())) {
-            objFeat = static_cast<TechDraw::DrawViewPart*> ((*itSel).getObject());
-            subNames = (*itSel).getSubNames();
-        }
-        if (!objFeat) {
-            break;
-        }
-        std::vector<std::string> cv2Delete;
-        std::vector<std::string> ce2Delete;
-        std::vector<std::string> cl2Delete;
-        for (auto& s: subNames) {
-            int idx = TechDraw::DrawUtil::getIndexFromName(s);
-            std::string geomType = TechDraw::DrawUtil::getGeomTypeFromName(s);
-            if (geomType == "Edge") {
-                TechDraw::BaseGeomPtr bg = objFeat->getGeomByIndex(idx);
-                if (bg && bg->getCosmetic()) {
-                    int source = bg->source();
-                    std::string tag = bg->getCosmeticTag();
-                    if (source == COSMETICEDGE) {
-                        ce2Delete.push_back(tag);
-                    } else if (source == CENTERLINE) {
-                        cl2Delete.push_back(tag);
-                    } else {
-                        Base::Console().Message(
-                            "CMD::CosmeticEraser - edge: %d is confused - source: %d\n", idx, source);
-                    }
+    std::vector<std::string> cv2Delete;
+    std::vector<std::string> ce2Delete;
+    std::vector<std::string> cl2Delete;
+    for (auto& s: subNames) {
+        int idx = TechDraw::DrawUtil::getIndexFromName(s);
+        std::string geomType = TechDraw::DrawUtil::getGeomTypeFromName(s);
+        if (geomType == "Edge") {
+            TechDraw::BaseGeomPtr bg = objFeat->getGeomByIndex(idx);
+            if (bg && bg->getCosmetic()) {
+                int source = bg->source();
+                std::string tag = bg->getCosmeticTag();
+                if (source == BaseGeom::CosmeticEdge) {
+                    ce2Delete.push_back(tag);
+                } else if (source == BaseGeom::CenterLine) {
+                    cl2Delete.push_back(tag);
+                } else {
+                    Base::Console().Message(
+                        "CMD::CosmeticEraser - edge: %d is confused - source: %d\n", idx, source);
                 }
-            } else if (geomType == "Vertex") {
-                TechDraw::VertexPtr tdv = objFeat->getProjVertexByIndex(idx);
-                if (!tdv)
-                    Base::Console().Message("CMD::eraser - geom: %d not found!\n", idx);
-
-                std::string delTag = tdv->getCosmeticTag();
-                if (delTag.empty())
-                    Base::Console().Warning("Vertex%d is not cosmetic! Can not erase.\n", idx);
-                cv2Delete.push_back(delTag);
-            } else {
-                QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
-                           QObject::tr("Unknown object type in selection"));
-                return;
             }
+        } else if (geomType == "Vertex") {
+            TechDraw::VertexPtr tdv = objFeat->getProjVertexByIndex(idx);
+            if (!tdv)
+                Base::Console().Message("CMD::eraser - geom: %d not found!\n", idx);
 
+            std::string delTag = tdv->getCosmeticTag();
+            if (delTag.empty())
+                Base::Console().Warning("Vertex%d is not cosmetic! Can not erase.\n", idx);
+            cv2Delete.push_back(delTag);
+        } else {
+            QMessageBox::warning(Gui::getMainWindow(), QObject::tr("Wrong selection"),
+                        QObject::tr("Unknown object type in selection"));
+            return;
         }
-        if (!cv2Delete.empty()) {
-            objFeat->removeCosmeticVertex(cv2Delete);
-        }
-
-        if (!ce2Delete.empty()) {
-            objFeat->removeCosmeticEdge(ce2Delete);
-        }
-        if (!cl2Delete.empty()) {
-            objFeat->removeCenterLine(cl2Delete);
-        }
-    objFeat->recomputeFeature();
     }
+
+    if (!cv2Delete.empty()) {
+        objFeat->removeCosmeticVertex(cv2Delete);
+    }
+    if (!ce2Delete.empty()) {
+        objFeat->removeCosmeticEdge(ce2Delete);
+    }
+    if (!cl2Delete.empty()) {
+        objFeat->removeCenterLine(cl2Delete);
+    }
+    objFeat->recomputeFeature();
 }
 
 bool CmdTechDrawCosmeticEraser::isActive()

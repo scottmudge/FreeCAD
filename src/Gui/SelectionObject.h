@@ -71,9 +71,9 @@ public:
     inline const std::vector<Base::Vector3d> getPickedPoints() const { return SelPoses; }
 
     /// returns the selected DocumentObject or NULL if the object is already deleted
-    const App::DocumentObject *getObject() const;
+    const App::DocumentObject *getObject(bool resultLink=false) const;
     /// returns the selected DocumentObject or NULL if the object is already deleted
-    App::DocumentObject *getObject();
+    App::DocumentObject *getObject(bool resultLink=false);
 
     /// check the selected object is a special type or derived of
     bool isObjectTypeOf(const Base::Type& typeId) const;
