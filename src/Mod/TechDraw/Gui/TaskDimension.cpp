@@ -144,8 +144,8 @@ TaskDimension::~TaskDimension()
 bool TaskDimension::accept()
 {
     Gui::Document* doc = m_dimensionVP->getDocument();
-    m_dimensionVP->getObject()->purgeTouched();
-    doc->commitCommand();
+    Gui::Command::updateActive();
+    Gui::Command::commitCommand();
     doc->resetEdit();
 
     return true;
@@ -157,7 +157,6 @@ bool TaskDimension::reject()
     doc->abortCommand();
     recomputeFeature();
     m_parent->updateView(true);
-    m_dimensionVP->getObject()->purgeTouched();
     doc->resetEdit();
 
     return true;

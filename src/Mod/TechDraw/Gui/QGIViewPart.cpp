@@ -29,10 +29,12 @@
 #endif// #ifndef _PreComp_
 
 #include <App/Application.h>
+#include <App/AutoTransaction.h>
 #include <App/Document.h>
 #include <Base/Console.h>
 #include <Base/Parameter.h>
 #include <Base/Vector3D.h>
+#include <Gui/Command.h>
 #include <Mod/TechDraw/App/CenterLine.h>
 #include <Mod/TechDraw/App/Cosmetic.h>
 #include <Mod/TechDraw/App/DrawComplexSection.h>
@@ -979,12 +981,11 @@ void QGIViewPart::drawHighlight(TechDraw::DrawViewDetail* viewDetail, bool b)
         //        double fontSize = getPrefFontSize();
         double fontSize = Preferences::labelFontSizeMM();
         QGIHighlight* highlight = new QGIHighlight();
-        scene()->addItem(highlight);
         highlight->setReference(viewDetail->Reference.getValue());
         highlight->setStyle((Qt::PenStyle)vp->HighlightLineStyle.getValue());
         App::Color color = Preferences::getAccessibleColor(vp->HighlightLineColor.getValue());
         highlight->setColor(color.asValue<QColor>());
-        highlight->setFeatureName(viewDetail->getNameInDocument());
+        highlight->setFeature(viewDetail);
         highlight->setInteractive(true);
 
         addToGroup(highlight);
@@ -1001,6 +1002,7 @@ void QGIViewPart::drawHighlight(TechDraw::DrawViewDetail* viewDetail, bool b)
         highlight->setFont(getFont(), fontSize);
         highlight->setZValue(ZVALUE::HIGHLIGHT);
         highlight->setReferenceAngle(vpDetail->HighlightAdjust.getValue());
+        highlight->setReferenceOffset(vpDetail->HighlightOffset.getValue());
 
         //handle conversion of apparent X,Y to rotated
         QPointF rotCenter = highlight->mapFromParent(transformOriginPoint());
@@ -1009,20 +1011,6 @@ void QGIViewPart::drawHighlight(TechDraw::DrawViewDetail* viewDetail, bool b)
         double rotation = viewPart->Rotation.getValue();
         highlight->setRotation(rotation);
         highlight->draw();
-    }
-}
-
-void QGIViewPart::highlightMoved(QGIHighlight* highlight, QPointF newPos)
-{
-    std::string highlightName = highlight->getFeatureName();
-    App::Document* doc = getViewObject()->getDocument();
-    App::DocumentObject* docObj = doc->getObject(highlightName.c_str());
-    auto detail = dynamic_cast<DrawViewDetail*>(docObj);
-    auto oldAnchor = detail->AnchorPoint.getValue();
-    if (detail) {
-        Base::Vector3d delta = Rez::appX(DrawUtil::toVector3d(newPos)) / getViewObject()->getScale();
-        delta = DrawUtil::invertY(delta);
-        detail->AnchorPoint.setValue(oldAnchor + delta);
     }
 }
 

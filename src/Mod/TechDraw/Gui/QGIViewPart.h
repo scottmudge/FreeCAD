@@ -80,8 +80,6 @@ public:
     void draw() override;
     void rotateView() override;
 
-    virtual void highlightMoved(QGIHighlight* highlight, QPointF newPos);
-
     static QPainterPath geomToPainterPath(TechDraw::BaseGeomPtr baseGeom, double rotation = 0.0);
     /// Helper for pathArc()
     /*!

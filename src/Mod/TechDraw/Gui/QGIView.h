@@ -164,6 +164,8 @@ public:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 
+    virtual void setPreselect(bool enable=true);
+
     boost::signals2::signal<void (QGIView*, QPointF)> signalSelectPoint;
 
 public Q_SLOTS:
@@ -174,8 +176,8 @@ protected:
 
     QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
     // Preselection events:
-    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
-    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) final;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) final;
     virtual QRectF customChildrenBoundingRect() const;
     void dumpRect(const char* text, QRectF rect);
 
@@ -206,7 +208,6 @@ private:
     double m_lockHeight;
     int m_dragState;
     int m_zOrder;
-
 };
 
 } // namespace

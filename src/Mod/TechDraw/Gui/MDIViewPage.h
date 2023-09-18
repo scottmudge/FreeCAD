@@ -25,6 +25,7 @@
 
 #include <QPrinter>
 
+#include <App/DocumentObserver.h>
 #include <Base/SmartPtrPy.h>
 #include <CXX/Extensions.hxx>
 #include <Gui/MDIView.h>
@@ -53,6 +54,7 @@ class ViewProviderPage;
 class QGVPage;
 class QGSPage;
 class QGIView;
+class QGIHighlight;
 
 class TechDrawGuiExport MDIViewPage : public Gui::MDIView, public Gui::SelectionObserver
 {
@@ -74,6 +76,8 @@ public:
     void selectQGIView(App::DocumentObject *obj, bool isSelected);
     void clearSceneSelection();
     void blockSceneSelection(bool isBlocked);
+
+    QGIHighlight *findHighlight(const App::DocumentObject *obj);
 
     bool onMsg(const char* pMsg, const char** ppReturn) override;
     bool onHasMsg(const char* pMsg) const override;
@@ -152,8 +156,10 @@ private:
 
     std::string m_objectName;
     std::string m_documentName;
-    bool isSelectionBlocked;
+    int isSelectionBlocked;
     QPointer<QGSPage> m_scene;
+    QPointer<QGIView> m_preselection;
+    App::DocumentObjectT m_preselect_detail;
 
     QString m_currentPath;
     ViewProviderPage* m_vpPage;

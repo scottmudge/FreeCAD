@@ -38,6 +38,7 @@ class QGCustomText;
 
 class TechDrawGuiExport QGIViewAnnotation : public QGIView
 {
+    Q_OBJECT
 public:
 
     explicit QGIViewAnnotation();
@@ -54,15 +55,19 @@ public:
     void draw() override;
     void rotateView() override;
 
+    void setPreselect(bool enable) override;
+
 protected:
     void drawAnnotation();
 
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
 
     QGCustomText *m_textItem;
     QColor m_colNormal;
     QColor m_colSel;
     QColor m_colPre;
+    bool m_hasHover = false;
 };
 
 } // end namespace TechDrawGui

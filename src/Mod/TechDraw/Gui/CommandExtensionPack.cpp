@@ -139,6 +139,7 @@ void execHoleCircle(Gui::Command* cmd)
     cmd->getSelection().clearSelection();
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 }// namespace TechDrawGui
@@ -214,6 +215,7 @@ void execCircleCenterLines(Gui::Command* cmd)
     cmd->getSelection().clearSelection();
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -370,6 +372,7 @@ void execThreadHoleSide(Gui::Command* cmd)
     cmd->getSelection().clearSelection();
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -422,6 +425,7 @@ void execThreadBoltSide(Gui::Command* cmd)
     cmd->getSelection().clearSelection();
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -474,6 +478,7 @@ void execThreadHoleBottom(Gui::Command* cmd)
     cmd->getSelection().clearSelection();
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -526,6 +531,7 @@ void execThreadBoltBottom(Gui::Command* cmd)
     cmd->getSelection().clearSelection();
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -785,6 +791,7 @@ void CmdTechDrawExtensionChangeLineAttributes::activated(int iMsg)
     getSelection().clearSelection();
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -850,6 +857,7 @@ void CmdTechDrawExtensionVertexAtIntersection::activated(int iMsg)
     getSelection().clearSelection();
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -888,6 +896,7 @@ void execDrawCosmArc(Gui::Command* cmd)
         objFeat->refreshCEGeoms();
         objFeat->requestPaint();
         cmd->getSelection().clearSelection();
+        Gui::Command::updateActive();
         Gui::Command::commitCommand();
     }
 }
@@ -951,6 +960,7 @@ void execDrawCosmCircle(Gui::Command* cmd)
         objFeat->refreshCEGeoms();
         objFeat->requestPaint();
         cmd->getSelection().clearSelection();
+        Gui::Command::updateActive();
         Gui::Command::commitCommand();
     }
 }
@@ -1015,6 +1025,7 @@ void execDrawCosmCircle3Points(Gui::Command* cmd)
         objFeat->refreshCEGeoms();
         objFeat->requestPaint();
         cmd->getSelection().clearSelection();
+        Gui::Command::updateActive();
         Gui::Command::commitCommand();
     }
 }
@@ -1219,6 +1230,7 @@ void execLineParallelPerpendicular(Gui::Command* cmd, bool isParallel)
             cmd->getSelection().clearSelection();
         }
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1428,6 +1440,7 @@ void CmdTechDrawExtensionLockUnlockView::activated(int iMsg)
         lockPosition = !lockPosition;
         objFeat->LockPosition.setValue(lockPosition);
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1591,6 +1604,7 @@ void execExtendShortenLine(Gui::Command* cmd, bool extend)
             }
         }
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1900,9 +1914,8 @@ void CmdTechDrawExtensionAreaAnnotation::activated(int iMsg)
         viewProvider->LineVisible.setValue(false);
         viewProvider->Color.setValue(App::Color(1.0f, 0.0f, 0.0f));
     }
-    Gui::Command::commitCommand();
-    objFeat->touch(true);
     Gui::Command::updateActive();
+    Gui::Command::commitCommand();
 }
 
 bool CmdTechDrawExtensionAreaAnnotation::isActive()

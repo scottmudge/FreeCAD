@@ -52,6 +52,7 @@
 
 #include "PreferencesGui.h"
 #include "QGIView.h"
+#include "QGIHighlight.h"
 #include "TaskDetail.h"
 #include "ViewProviderViewPart.h"
 
@@ -119,7 +120,9 @@ ViewProviderViewPart::ViewProviderViewPart()
                         "Set highlight line style if applicable");
     ADD_PROPERTY_TYPE(HighlightLineColor, (prefHighlightColor()), hgroup, App::Prop_None,
                         "Set highlight line color if applicable");
-    ADD_PROPERTY_TYPE(HighlightAdjust, (0.0), hgroup, App::Prop_None, "Adjusts the rotation of the Detail highlight");
+    ADD_PROPERTY_TYPE(HighlightAdjust, (0.0), hgroup, App::Prop_None, "Adjusts the rotation of the Detail highlight label");
+
+    ADD_PROPERTY_TYPE(HighlightOffset ,(0.0), hgroup, App::Prop_None, "Adjust offset of the Detail highlight label");
 
     ADD_PROPERTY_TYPE(ShowAllEdges ,(false)    ,dgroup, App::Prop_None, "Temporarily show invisible lines");
 }
@@ -131,17 +134,28 @@ ViewProviderViewPart::~ViewProviderViewPart()
 
 void ViewProviderViewPart::onChanged(const App::Property* prop)
 {
-    if (auto part = getViewPart(); part && part->isDerivedFrom(TechDraw::DrawViewDetail::getClassTypeId()) &&
-        prop == &(HighlightAdjust)) {
-        auto detail = static_cast<DrawViewDetail*>(getViewPart());
-        auto baseDvp = dynamic_cast<DrawViewPart*>(detail->BaseView.getValue());
-        if (baseDvp) {
-            baseDvp->requestPaint();
+    if (prop == &(HighlightAdjust) || prop == &HighlightOffset) {
+        if (!prop->testStatus(App::Property::User1)) {
+            if (auto detail = Base::freecad_dynamic_cast<TechDraw::DrawViewDetail>(getObject())) {
+                if (auto baseDvp = Base::freecad_dynamic_cast<ViewProviderViewPart>(
+                        Gui::Application::Instance->getViewProvider(detail->BaseView.getValue()))) {
+                    if (auto view = baseDvp->getQView()) {
+                        for (auto child : view->childItems()) {
+                            if (auto highlight = qgraphicsitem_cast<QGIHighlight*>(child)) {
+                                if (highlight->getFeature() == detail) {
+                                    highlight->setReferenceAngle(HighlightAdjust.getValue());
+                                    highlight->setReferenceOffset(HighlightOffset.getValue());
+                                    highlight->draw();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-        return;
     }
-
-    if (prop == &(LineWidth)   ||
+    else if (prop == &(LineWidth)   ||
         prop == &(HiddenWidth) ||
         prop == &(IsoWidth) ||
         prop == &(ExtraWidth) ||

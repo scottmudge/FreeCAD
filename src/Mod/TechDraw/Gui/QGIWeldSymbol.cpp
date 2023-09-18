@@ -362,30 +362,19 @@ std::vector<QGITile*> QGIWeldSymbol::getQGITiles() const
      return result;
 }
 
-void QGIWeldSymbol::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
+void QGIWeldSymbol::setPreselect(bool enable)
 {
-    Q_UNUSED(event);
-    if (isSelected()) {
+    if (enable) {
         setCurrentColor(getSelectColor());
         setPrettySel();
-    } else {
-        setCurrentColor(getPreColor());
-        setPrettyPre();
-    }
-    QGIView::hoverEnterEvent(event);
-}
-
-void QGIWeldSymbol::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
-{
-    Q_UNUSED(event);
-    if(isSelected()) {
+    } else if (isSelected()) {
         setCurrentColor(getSelectColor());
         setPrettySel();
     } else {
         setCurrentColor(getNormalColor());
         setPrettyNormal();
     }
-    QGIView::hoverLeaveEvent(event);
+    QGIView::setPreselect(enable);
 }
 
 void QGIWeldSymbol::drawBorder()

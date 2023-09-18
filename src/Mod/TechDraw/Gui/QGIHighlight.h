@@ -23,17 +23,18 @@
 #ifndef TECHDRAWGUI_QGIHIGHLIGHT_H
 #define TECHDRAWGUI_QGIHIGHLIGHT_H
 
+#include <App/DocumentObserver.h>
 #include <Mod/TechDraw/TechDrawGlobal.h>
+#include <Mod/TechDraw/App/DrawViewDetail.h>
 
 #include <QColor>
 #include <QFont>
-#include <QGraphicsEllipseItem>
 #include <QGraphicsScene>
 #include <QPointF>
 
 #include "QGCustomText.h"
-#include "QGCustomRect.h"
 #include "QGIDecoration.h"
+#include "QGIEdge.h"
 
 
 namespace TechDrawGui
@@ -57,32 +58,48 @@ public:
     void setFont(QFont f, double fsize);
     virtual void draw() override;
     void setInteractive(bool state);
-    void setFeatureName(std::string name) { m_featureName = name; }
-    std::string getFeatureName() { return m_featureName; }
+    void setFeature(TechDraw::DrawViewDetail *feature);
+    TechDraw::DrawViewDetail *getFeature() const;
+    const App::DocumentObjectT & getFeatureT() const { return m_feature; }
+
+    void setReferenceOffset(double offset) { m_referenceOffset = offset; }
     void setReferenceAngle(double angle) { m_referenceAngle = angle; }
 
     void onDragFinished() override;
+
+    QPainterPath shape() const override;
+
+    void setPreselect(bool enable = true);
 
 protected:
     QColor getHighlightColor();
     Qt::PenStyle getHighlightStyle();
     void makeHighlight();
     void makeReference();
+    void updateReferencePos();
     void setTools();
     int getHoleStyle(void);
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
+    bool sceneEventFilter(QGraphicsItem *watched, QEvent *event) override;
 
 private:
     QString            m_refText;
-    QGraphicsEllipseItem* m_circle;
-    QGCustomRect*      m_rect;
+    QGIEdge*           m_shape;
     QGCustomText*      m_reference;
     std::string        m_refFontName;
     QFont              m_refFont;
     double             m_refSize;
     QPointF            m_start;
     QPointF            m_end;
-    std::string        m_featureName;
+    QPointF            m_referenceOldPos;
+    App::DocumentObjectT m_feature;
     double             m_referenceAngle;
+    double             m_referenceOffset;
+    bool               m_hasHover = false;
+    bool               m_busy = false;
+    bool               m_filterInstalled = false;
 };
 
 }

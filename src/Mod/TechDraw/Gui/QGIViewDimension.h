@@ -182,6 +182,8 @@ public:
     void setNormalColorAll();
     TechDraw::DrawViewDimension* getDimFeat() { return dvDimension; }
 
+    void setPreselect(bool enable) override;
+
 public Q_SLOTS:
     void onPrettyChanged(int state);
     void datumLabelDragged(bool ctrl);

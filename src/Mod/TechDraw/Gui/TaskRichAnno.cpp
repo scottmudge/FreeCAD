@@ -324,15 +324,8 @@ void TaskRichAnno::createAnnoFeature()
         }
     }
 
-    Gui::Command::commitCommand();
     Gui::Command::updateActive();
-
-    //trigger claimChildren in tree
-    if (m_baseFeat) {
-        m_baseFeat->touch();
-    }
-
-    m_basePage->touch();
+    Gui::Command::commitCommand();
 
     if (m_annoFeat) {
         m_annoFeat->requestPaint();
@@ -474,6 +467,7 @@ bool TaskRichAnno::accept()
 
     m_annoFeat->requestPaint();
 
+    Gui::Command::doCommand(Gui::Command::Gui, "App.activeDocument().recompute()");
     Gui::Command::doCommand(Gui::Command::Gui, "Gui.ActiveDocument.resetEdit()");
 
     return true;

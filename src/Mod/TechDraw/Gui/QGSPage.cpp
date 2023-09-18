@@ -557,6 +557,7 @@ void QGSPage::createBalloon(QPointF origin, DrawView* parent)
     Command::doCommand(Command::Doc, "App.activeDocument().%s.addView(App.activeDocument().%s)",
                        pageName.c_str(), featName.c_str());
 
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 

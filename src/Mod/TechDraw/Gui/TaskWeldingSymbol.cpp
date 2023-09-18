@@ -603,7 +603,6 @@ bool TaskWeldingSymbol::accept()
         updateTiles();
         Gui::Command::updateActive();
         Gui::Command::commitCommand();
-        m_weldFeat->recomputeFeature();
     //    m_weldFeat->requestPaint();    //not a dv!
     } else {
         Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Edit WeldSymbol"));
@@ -617,7 +616,6 @@ bool TaskWeldingSymbol::accept()
 
         Gui::Command::updateActive();
         Gui::Command::commitCommand();
-        m_weldFeat->recomputeFeature();
     //    m_weldFeat->requestPaint();    //not a dv!
     }
     Gui::Command::doCommand(Gui::Command::Gui, "Gui.ActiveDocument.resetEdit()");

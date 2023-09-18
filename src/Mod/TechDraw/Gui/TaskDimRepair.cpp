@@ -239,9 +239,8 @@ bool TaskDimRepair::accept()
     Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Repair Dimension"));
     replaceReferences();
     m_dim->Type.setValue(m_dimType);
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
-
-    m_dim->recomputeFeature();
     return true;
 }
 

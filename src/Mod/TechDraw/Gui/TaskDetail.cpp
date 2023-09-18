@@ -28,7 +28,7 @@
 #include <Base/UnitsApi.h>
 #include <Gui/Application.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/Command.h>
+#include <Gui/CommandT.h>
 #include <Gui/Document.h>
 #include <Gui/Selection.h>
 #include <Gui/ViewProvider.h>
@@ -436,8 +436,8 @@ void TaskDetail::createDetail()
 
     m_detailName = m_doc->getUniqueObjectName("Detail");
 
-    Gui::Command::doCommand(Command::Doc, "App.activeDocument().addObject('TechDraw::DrawViewDetail', '%s')",
-                            m_detailName.c_str());
+    Gui::cmdAppDocumentArgs(m_doc, "addObject('TechDraw::DrawViewDetail', '%s')",
+                            m_detailName);
     App::DocumentObject *docObj = m_doc->getObject(m_detailName.c_str());
     TechDraw::DrawViewDetail* dvd = dynamic_cast<TechDraw::DrawViewDetail *>(docObj);
     if (!dvd) {
@@ -447,16 +447,16 @@ void TaskDetail::createDetail()
 
     dvd->Source.setValues(getBaseFeat()->Source.getValues());
 
-    Gui::Command::doCommand(Command::Doc, "App.activeDocument().%s.BaseView = App.activeDocument().%s",
-                            m_detailName.c_str(), m_baseName.c_str());
-    Gui::Command::doCommand(Command::Doc, "App.activeDocument().%s.Direction = App.activeDocument().%s.Direction",
-                            m_detailName.c_str(), m_baseName.c_str());
-    Gui::Command::doCommand(Command::Doc, "App.activeDocument().%s.XDirection = App.activeDocument().%s.XDirection",
-                            m_detailName.c_str(), m_baseName.c_str());
-    Gui::Command::doCommand(Command::Doc, "App.activeDocument().%s.Scale = App.activeDocument().%s.Scale",
-                            m_detailName.c_str(), m_baseName.c_str());
-    Gui::Command::doCommand(Command::Doc, "App.activeDocument().%s.addView(App.activeDocument().%s)",
-                            m_pageName.c_str(), m_detailName.c_str());
+    Gui::cmdAppObjectArgs(m_detailFeat, "BaseView = %s",
+                Command::getObjectCmd(m_baseFeat));
+    Gui::cmdAppObjectArgs(m_detailFeat, "Direction = %s.Direction",
+                Command::getObjectCmd(m_baseFeat));
+    Gui::cmdAppObjectArgs(m_detailFeat, "XDirection = %s.XDirection",
+                Command::getObjectCmd(m_baseFeat));
+    Gui::cmdAppObjectArgs(m_detailFeat, "Scale = %s.Scale",
+                Command::getObjectCmd(m_baseFeat));
+    Gui::cmdAppObjectArgs(m_basePage, "addView(%s)",
+                Command::getObjectCmd(m_detailFeat));
 
     Gui::Command::updateActive();
     Gui::Command::commitCommand();

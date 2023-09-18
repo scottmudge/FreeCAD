@@ -31,7 +31,7 @@
 #include <Base/Console.h>
 #include <Base/Tools.h>
 #include <Gui/BitmapFactory.h>
-#include <Gui/Command.h>
+#include <Gui/CommandT.h>
 #include <Gui/Control.h>
 #include <Gui/MainWindow.h>
 #include <Gui/Selection.h>
@@ -561,44 +561,34 @@ void TaskComplexSection::createComplexSection()
         m_sectionName = m_page->getDocument()->getUniqueObjectName("ComplexSection");
         std::string sectionType = "TechDraw::DrawComplexSection";
 
-        Command::doCommand(Command::Doc, "App.ActiveDocument.addObject('%s', '%s')",
-                           sectionType.c_str(), m_sectionName.c_str());
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.addView(App.ActiveDocument.%s)",
-                           m_page->getNameInDocument(), m_sectionName.c_str());
-
-        QString qTemp = ui->leSymbol->text();
-        std::string temp = Base::Tools::toStdString(qTemp);
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.SectionSymbol = '%s'",
-                           m_sectionName.c_str(), temp.c_str());
-        std::string lblText = "Section " + temp + " - " + temp;
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.Label = '%s'",
-                           m_sectionName.c_str(), lblText.c_str());
-
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.Scale = %0.6f",
-                           m_sectionName.c_str(), ui->sbScale->value());
-        int scaleType = ui->cmbScaleType->currentIndex();
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.ScaleType = %d",
-                           m_sectionName.c_str(), scaleType);
-        int projectionStrategy = ui->cmbStrategy->currentIndex();
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.ProjectionStrategy = %d",
-                           m_sectionName.c_str(), projectionStrategy);
-
-        Command::doCommand(Command::Doc,
-                           "App.activeDocument().%s.SectionOrigin = FreeCAD.Vector(0.0, 0.0, 0.0)",
-                           m_sectionName.c_str());
-        Command::doCommand(Command::Doc, "App.activeDocument().%s.SectionDirection = 'Aligned'",
-                           m_sectionName.c_str());
+        Gui::cmdAppDocument(m_page, std::ostringstream() 
+                << "addObject('" << sectionType << "','" << m_sectionName << "')");
 
         App::DocumentObject* newObj = m_page->getDocument()->getObject(m_sectionName.c_str());
         m_section = dynamic_cast<TechDraw::DrawComplexSection*>(newObj);
         if (!newObj || !m_section) {
             throw Base::RuntimeError("TaskComplexSection - new section object not found");
         }
+        Gui::cmdAppObjectArgs(m_page, "addView(%s)", Gui::Command::getObjectCmd(m_section));
+
+        QString qTemp = ui->leSymbol->text();
+        std::string temp = Base::Tools::toStdString(qTemp);
+        Gui::cmdAppObjectArgs(m_section, "SectionSymbol = '%s'", temp.c_str());
+        std::string lblText = "Section " + temp + " - " + temp;
+        Gui::cmdAppObjectArgs(m_section, "Label = '%s'", lblText.c_str());
+
+        Gui::cmdAppObjectArgs(m_section, "Scale = %0.6f", ui->sbScale->value());
+        int scaleType = ui->cmbScaleType->currentIndex();
+        Gui::cmdAppObjectArgs(m_section, "ScaleType = %d", scaleType);
+        int projectionStrategy = ui->cmbStrategy->currentIndex();
+        Gui::cmdAppObjectArgs(m_section, "ProjectionStrategy = %d", projectionStrategy);
+
+        Gui::cmdAppObjectArgs(m_section, "SectionOrigin = FreeCAD.Vector(0.0, 0.0, 0.0)");
+        Gui::cmdAppObjectArgs(m_section, "SectionDirection = 'Aligned'");
+
         Base::Vector3d localUnit = m_viewDirectionWidget->value();
         if (m_baseView) {
-            Command::doCommand(Command::Doc,
-                               "App.ActiveDocument.%s.BaseView = App.ActiveDocument.%s",
-                               m_sectionName.c_str(), m_baseView->getNameInDocument());
+            Gui::cmdAppObjectArgs(m_section, "BaseView = ", Gui::Command::getObjectCmd(m_baseView));
             m_section->setCSFromBase(localUnit * -1.0);
             m_section->Source.setValues(m_baseView->Source.getValues());
             m_section->XSource.setValues(m_baseView->XSource.getValues());
@@ -625,9 +615,9 @@ void TaskComplexSection::createComplexSection()
         //auto orientation of view relative to base view
         double viewDirectionAngle = m_compass->positiveValue();
         double rotation = requiredRotation(viewDirectionAngle);
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.Rotation = %.6f",
-                           m_sectionName.c_str(), rotation);
+        Gui::cmdAppObjectArgs(m_section, "Rotation = %.6f", rotation);
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -643,22 +633,17 @@ void TaskComplexSection::updateComplexSection()
     if (m_section) {
         QString qTemp = ui->leSymbol->text();
         std::string temp = Base::Tools::toStdString(qTemp);
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.SectionSymbol = '%s'",
-                           m_sectionName.c_str(), temp.c_str());
+        Gui::cmdAppObjectArgs(m_section, "SectionSymbol = '%s'", temp.c_str());
         std::string lblText = "Section " + temp + " - " + temp;
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.Label = '%s'",
+        Gui::cmdAppObjectArgs(m_section, "Label = '%s'",
                            m_sectionName.c_str(), lblText.c_str());
 
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.Scale = %0.6f",
-                           m_sectionName.c_str(), ui->sbScale->value());
+        Gui::cmdAppObjectArgs(m_section, "Scale = %0.6f", ui->sbScale->value());
         int scaleType = ui->cmbScaleType->currentIndex();
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.ScaleType = %d",
-                           m_sectionName.c_str(), scaleType);
+        Gui::cmdAppObjectArgs(m_section, "ScaleType = %d", scaleType);
         int projectionStrategy = ui->cmbStrategy->currentIndex();
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.ProjectionStrategy = %d",
-                           m_sectionName.c_str(), projectionStrategy);
-        Command::doCommand(Command::Doc, "App.activeDocument().%s.SectionDirection = 'Aligned'",
-                           m_sectionName.c_str());
+        Gui::cmdAppObjectArgs(m_section, "ProjectionStrategy = %d", projectionStrategy);
+        Gui::cmdAppObjectArgs(m_section, "SectionDirection = 'Aligned'");
         m_section->CuttingToolWireObject.setValue(m_profileObject);
         m_section->SectionDirection.setValue("Aligned");
         Base::Vector3d localUnit = m_viewDirectionWidget->value();
@@ -676,8 +661,7 @@ void TaskComplexSection::updateComplexSection()
         //auto orientation of view relative to base view
         double viewDirectionAngle = m_compass->positiveValue();
         double rotation = requiredRotation(viewDirectionAngle);
-        Command::doCommand(Command::Doc, "App.ActiveDocument.%s.Rotation = %.6f",
-                           m_sectionName.c_str(), rotation);
+        Gui::cmdAppObjectArgs(m_section, "Rotation = %.6f", rotation);
     }
     Gui::Command::commitCommand();
 }
@@ -754,11 +738,8 @@ bool TaskComplexSection::reject()
 
     if (m_createMode) {
         std::string SectionName = m_section->getNameInDocument();
-        Gui::Command::doCommand(Gui::Command::Gui,
-                                "App.ActiveDocument.%s.removeView(App.ActiveDocument.%s)",
-                                m_savePageName.c_str(), SectionName.c_str());
-        Gui::Command::doCommand(Gui::Command::Gui, "App.ActiveDocument.removeObject('%s')",
-                                SectionName.c_str());
+        Gui::cmdAppObjectArgs(m_page, "removeView(%s)", Gui::Command::getObjectCmd(m_section));
+        Gui::cmdAppDocumentArgs(m_doc, "removeObject('%s')", SectionName);
     } else {
         if (m_modelIsDirty) {
             restoreSectionState();

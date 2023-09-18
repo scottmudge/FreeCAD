@@ -356,7 +356,6 @@ void TaskCenterLine::createCenterLine()
     cl->m_format.m_visible = true;
     m_partFeat->addCenterLine(cl);
 
-    m_partFeat->recomputeFeature();
     Gui::Command::updateActive();
     Gui::Command::commitCommand();
 

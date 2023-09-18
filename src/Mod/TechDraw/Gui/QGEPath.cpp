@@ -161,9 +161,7 @@ QVariant QGEPath::itemChange(GraphicsItemChange change, const QVariant &value)
 void QGEPath::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_EMIT hover(true);
-    if (!isSelected()) {
-        setPrettyPre();
-    }
+    setPrettyPre();
     QGIPrimPath::hoverEnterEvent(event);
 }
 
@@ -179,7 +177,9 @@ void QGEPath::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
     if (parent) {
         parentSel = parent->isSelected();
     }
-    if (!parentSel  && !isSelected()) {
+    if (parentSel  || isSelected()) {
+        setPrettySel();
+    } else {
         setPrettyNormal();
     }
     QGraphicsPathItem::hoverLeaveEvent(event);

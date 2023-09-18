@@ -75,7 +75,7 @@
 #include "OverlayWidgets.h"
 #include "NaviCube.h"
 
-FC_LOG_LEVEL_INIT("Dock", true, true);
+FC_LOG_LEVEL_INIT("Dock", true, true, true);
 
 using namespace Gui;
 
@@ -638,20 +638,27 @@ int OverlayTabWidget::testAlpha(const QPoint &_pos, int radiusScale)
 
 void OverlayTabWidget::paintEvent(QPaintEvent *ev)
 {
-    Base::StateLocker guard(repainting);
-    repaintTimer.stop();
+    ++repainting;
     if (!_image.isNull())
         _image = QImage();
     QTabWidget::paintEvent(ev);
+    --repainting;
 }
 
 void OverlayTabWidget::onRepaint()
 {
-    Base::StateLocker guard(repainting);
-    repaintTimer.stop();
+    if (repainting > 0) {
+        --repainting;
+        return;
+    }
+    FC_TRACE("repainting");
+    ++repainting;
     if (!_image.isNull())
         _image = QImage();
     splitter->repaint();
+
+    // Delay --repainting to avoid infinite repaint trigger
+    repaintTimer.start(1);
 }
 
 void OverlayTabWidget::scheduleRepaint()
@@ -4400,8 +4407,9 @@ void OverlayManager::Private::interceptEvent(QWidget *widget, QEvent *ev)
     auto getChildAt = [](QWidget *w, const QPoint &pos) {
         QWidget *res = w;
         for (; w; w = w->childAt(w->mapFromGlobal(pos))) {
-            if (qobject_cast<QGraphicsView*>(w))
-                return w;
+            if (auto scrollArea = qobject_cast<QAbstractScrollArea*>(w)) {
+                return scrollArea->viewport();
+            }
             res = w;
         }
         return res;
@@ -4426,10 +4434,6 @@ void OverlayManager::Private::interceptEvent(QWidget *widget, QEvent *ev)
     case QEvent::Wheel: {
         auto we = static_cast<QWheelEvent*>(ev);
         lastIntercept = getChildAt(widget, we->globalPos());
-        for (auto parent=lastIntercept->parentWidget(); parent; parent=parent->parentWidget()) {
-            if (qobject_cast<QGraphicsView*>(parent))
-                lastIntercept = parent;
-        }
 #if QT_VERSION >= QT_VERSION_CHECK(5,12,0)
         QWheelEvent wheelEvent(lastIntercept->mapFromGlobal(we->globalPos()),
                                we->globalPos(),

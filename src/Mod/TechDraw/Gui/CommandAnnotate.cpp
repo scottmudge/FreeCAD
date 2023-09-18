@@ -347,9 +347,8 @@ void execMidpoints(Gui::Command* cmd)
         dvp->addCosmeticVertex(mid / scale);
     }
 
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
-
-    dvp->recomputeFeature();
 }
 
 void execQuadrants(Gui::Command* cmd)
@@ -375,9 +374,8 @@ void execQuadrants(Gui::Command* cmd)
             }
     }
 
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
-
-    dvp->recomputeFeature();
 }
 
 DEF_STD_CMD_A(CmdTechDrawCosmeticVertex)

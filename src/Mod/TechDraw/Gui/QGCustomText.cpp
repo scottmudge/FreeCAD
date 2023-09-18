@@ -129,15 +129,17 @@ QVariant QGCustomText::itemChange(GraphicsItemChange change, const QVariant &val
 
 void QGCustomText::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
-    if (!isSelected()) {
-        setPrettyPre();
-    }
+    m_hasHover = true;
+    setPrettyPre();
     QGraphicsTextItem::hoverEnterEvent(event);
 }
 
 void QGCustomText::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
-    if(!isSelected()) {
+    m_hasHover = false;
+    if(isSelected()) {
+        setPrettySel();
+    } else {
         setPrettyNormal();
     }
     QGraphicsTextItem::hoverLeaveEvent(event);
@@ -212,10 +214,15 @@ QRectF QGCustomText::tightBoundingRect() const
 // Calculate the amount of difference between tight and relaxed bounding boxes
 QPointF QGCustomText::tightBoundingAdjust() const
 {
-    QRectF original = QGraphicsTextItem::boundingRect();
+    QRectF original = relaxedBoundingRect();
     QRectF tight = tightBoundingRect();
 
     return QPointF(tight.x()-original.x(), tight.y()-original.y());
+}
+
+QRectF QGCustomText::relaxedBoundingRect() const
+{
+    return QGraphicsTextItem::boundingRect();
 }
 
 QColor QGCustomText::getNormalColor()    //preference!
@@ -252,4 +259,3 @@ void QGCustomText::makeMark(Base::Vector3d v)
 {
     makeMark(v.x, v.y);
 }
-

@@ -152,7 +152,7 @@ bool TaskGeomHatch::accept()
 //    Base::Console().Message("TGH::accept()\n");
     updateValues();
     Gui::cmdGuiDocument(m_hatch, "resetEdit()");
-    m_hatch->recomputeFeature();                     //create the hatch lines
+    Gui::Command::updateActive();
     TechDraw::DrawView* dv = static_cast<TechDraw::DrawView*>(m_source);
     dv->requestPaint();
     return true;

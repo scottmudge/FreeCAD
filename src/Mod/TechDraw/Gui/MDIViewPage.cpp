@@ -61,11 +61,13 @@
 #include <Mod/TechDraw/App/DrawPage.h>
 #include <Mod/TechDraw/App/DrawPagePy.h>
 #include <Mod/TechDraw/App/DrawTemplate.h>
+#include <Mod/TechDraw/App/DrawViewDetail.h>
 #include <Mod/TechDraw/App/Preferences.h>
 
 #include "MDIViewPage.h"
 #include "QGIEdge.h"
 #include "QGIFace.h"
+#include "QGIHighlight.h"
 #include "QGITemplate.h"
 #include "QGIVertex.h"
 #include "QGIView.h"
@@ -110,7 +112,7 @@ MDIViewPage::MDIViewPage(ViewProviderPage* pageVp, Gui::Document* doc, QWidget* 
     m_printAllAction = new QAction(tr("Print All Pages"), this);
     connect(m_printAllAction, &QAction::triggered, this, qOverload<>(&MDIViewPage::printAll));
 
-    isSelectionBlocked = false;
+    isSelectionBlocked = 0;
 
     QString tabText = QString::fromUtf8(pageVp->getDrawPage()->getNameInDocument());
     tabText += QString::fromUtf8("[*]");
@@ -734,6 +736,7 @@ void MDIViewPage::saveDXF(std::string fileName)
     Gui::Command::doCommand(Gui::Command::Doc,
                             "TechDraw.writeDXFPage(App.activeDocument().%s, u\"%s\")",
                             PageName.c_str(), (const char*)fileName.c_str());
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -828,7 +831,13 @@ void MDIViewPage::preSelectionChanged(const QPoint& pos)
 }
 
 //flag to prevent selection activity within mdivp
-void MDIViewPage::blockSceneSelection(const bool isBlocked) { isSelectionBlocked = isBlocked; }
+void MDIViewPage::blockSceneSelection(const bool isBlocked)
+{
+    if (isBlocked)
+        ++isSelectionBlocked;
+    else if (isSelectionBlocked)
+        --isSelectionBlocked;
+}
 
 
 //Set all QGIViews to unselected state
@@ -866,12 +875,32 @@ void MDIViewPage::clearSceneSelection()
     blockSceneSelection(false);
 }
 
+QGIHighlight *MDIViewPage::findHighlight(const App::DocumentObject *obj)
+{
+    if (auto details = Base::freecad_dynamic_cast<const DrawViewDetail>(obj)) {
+        if (auto baseView = m_scene->findQViewForDocObj(details->BaseView.getValue())) {
+            for (auto child : baseView->childItems()) {
+                if (auto highlight = qgraphicsitem_cast<QGIHighlight*>(child)) {
+                    if (highlight->getFeature() == details)
+                        return highlight;
+                }
+            }
+        }
+
+    }
+    return nullptr;
+}
+
 //!Update QGIView's selection state based on Selection made outside Drawing Interface
 void MDIViewPage::selectQGIView(App::DocumentObject* obj, const bool isSelected)
 {
     QGIView* view = m_scene->findQViewForDocObj(obj);
 
     blockSceneSelection(true);
+    if (auto highlight = findHighlight(obj)) {
+        highlight->setSelected(isSelected);
+        highlight->update();
+    }
     if (view) {
         view->setGroupSelection(isSelected);
         view->updateView();
@@ -884,14 +913,14 @@ void MDIViewPage::selectQGIView(App::DocumentObject* obj, const bool isSelected)
 void MDIViewPage::onSelectionChanged(const Gui::SelectionChanges& msg)
 {
     //    Base::Console().Message("MDIVP::onSelectionChanged()\n");
-    std::vector<Gui::SelectionSingleton::SelObj> selObjs =
-        Gui::Selection().getSelection(msg.pDocName);
     if (msg.Type == Gui::SelectionChanges::ClrSelection) {
         clearSceneSelection();
     }
     else if (msg.Type == Gui::SelectionChanges::SetSelection) {//replace entire selection set
         clearSceneSelection();
         blockSceneSelection(true);
+        std::vector<Gui::SelectionSingleton::SelObj> selObjs =
+            Gui::Selection().getSelection(msg.pDocName);
         for (auto& so : selObjs) {
             if (so.pObject->isDerivedFrom(TechDraw::DrawView::getClassTypeId())) {
                 selectQGIView(so.pObject, true);
@@ -901,12 +930,43 @@ void MDIViewPage::onSelectionChanged(const Gui::SelectionChanges& msg)
     }
     else if (msg.Type == Gui::SelectionChanges::AddSelection) {
         blockSceneSelection(true);
+        std::vector<Gui::SelectionSingleton::SelObj> selObjs =
+            Gui::Selection().getSelection(msg.pDocName);
         for (auto& so : selObjs) {
             if (so.pObject->isDerivedFrom(TechDraw::DrawView::getClassTypeId())) {
                 selectQGIView(so.pObject, true);
             }
         }
         blockSceneSelection(false);
+    }
+    else if (msg.Type == Gui::SelectionChanges::SetPreselect
+            || msg.Type == Gui::SelectionChanges::RmvPreselect) {
+        if (auto drawView = Base::freecad_dynamic_cast<TechDraw::DrawView>(msg.Object.getObject())) {
+            if (QGIView* view = m_scene->findQViewForDocObj(drawView)) {
+                if (msg.Type == Gui::SelectionChanges::RmvPreselect || m_preselection != view) {
+                    if (m_preselection) {
+                        m_preselection->setPreselect(false);
+                        if (auto highlight = findHighlight(m_preselect_detail.getObject())) {
+                            highlight->setPreselect(false);
+                            m_preselect_detail = App::DocumentObjectT();
+                        }
+                    }
+                    if (msg.Type == Gui::SelectionChanges::SetPreselect) {
+                        m_preselection = view;
+                        view->setPreselect(true);
+                        if (auto highlight = findHighlight(drawView)) {
+                            m_preselect_detail = drawView;
+                            highlight->setPreselect(true);
+                        }
+                    }
+                    return;
+                }
+            }
+        }
+        if (m_preselection) {
+            m_preselection->setPreselect(false);
+            m_preselection = nullptr;
+        }
     }
 }
 
@@ -985,11 +1045,22 @@ void MDIViewPage::setTreeToSceneSelect()
     blockSceneSelection(true);
     Gui::Selection().clearSelection();
     QList<QGraphicsItem*> sceneSel = m_qgSceneSelected;
+
+    auto findHighlight = [](QGraphicsItem *item) -> QGIHighlight* {
+        if (item) {
+            if (auto res = qgraphicsitem_cast<QGIHighlight*>(item))
+                return res;
+
+            if (auto res = qgraphicsitem_cast<QGIHighlight*>(item->parentItem()))
+                return res;
+        }
+        return nullptr;
+    };
+
     for (QList<QGraphicsItem*>::iterator it = sceneSel.begin(); it != sceneSel.end(); ++it) {
         QGIView* itemView = dynamic_cast<QGIView*>(*it);
         if (!itemView) {
-            QGIEdge* edge = dynamic_cast<QGIEdge*>(*it);
-            if (edge) {
+            if (QGIEdge* edge = dynamic_cast<QGIEdge*>(*it)) {
                 QGraphicsItem* parent = edge->parentItem();
                 if (!parent) {
                     continue;
@@ -1012,9 +1083,7 @@ void MDIViewPage::setTreeToSceneSelect()
                               ss.str().c_str());
                 continue;
             }
-
-            QGIVertex* vert = dynamic_cast<QGIVertex*>(*it);
-            if (vert) {
+            else if (QGIVertex* vert = dynamic_cast<QGIVertex*>(*it)) {
                 QGraphicsItem* parent = vert->parentItem();
                 if (!parent) {
                     continue;
@@ -1037,9 +1106,7 @@ void MDIViewPage::setTreeToSceneSelect()
                               ss.str().c_str());
                 continue;
             }
-
-            QGIFace* face = dynamic_cast<QGIFace*>(*it);
-            if (face) {
+            else if (QGIFace* face = dynamic_cast<QGIFace*>(*it)) {
                 QGraphicsItem* parent = face->parentItem();
                 if (!parent) {
                     continue;
@@ -1062,9 +1129,7 @@ void MDIViewPage::setTreeToSceneSelect()
                               ss.str().c_str());
                 continue;
             }
-
-            QGIDatumLabel* dimLabel = dynamic_cast<QGIDatumLabel*>(*it);
-            if (dimLabel) {
+            else if (QGIDatumLabel* dimLabel = dynamic_cast<QGIDatumLabel*>(*it)) {
                 QGraphicsItem* dimParent = dimLabel->QGraphicsItem::parentItem();
                 if (!dimParent) {
                     continue;
@@ -1090,9 +1155,7 @@ void MDIViewPage::setTreeToSceneSelect()
                 static_cast<void>(Gui::Selection().addSelection(dimObj->getDocument()->getName(),
                                                                 dimObj->getNameInDocument()));
             }
-
-            QGMText* mText = dynamic_cast<QGMText*>(*it);
-            if (mText) {
+            else if (QGMText* mText = dynamic_cast<QGMText*>(*it)) {
                 QGraphicsItem* textParent = mText->QGraphicsItem::parentItem();
                 if (!textParent) {
                     continue;
@@ -1116,6 +1179,11 @@ void MDIViewPage::setTreeToSceneSelect()
                 //bool accepted =
                 static_cast<void>(Gui::Selection().addSelection(
                     parentFeat->getDocument()->getName(), parentFeat->getNameInDocument()));
+            }
+            else if (auto highlight = findHighlight(*it)) {
+                Gui::Selection().addSelection(
+                        highlight->getFeatureT().getDocumentName().c_str(),
+                        highlight->getFeatureT().getObjectName().c_str());
             }
         }
         else {

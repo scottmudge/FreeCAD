@@ -297,7 +297,7 @@ private:
     QTimer timer;
     QTimer repaintTimer;
     OverlayAutoMode autoMode = NoAutoMode;
-    bool repainting = false;
+    int repainting = 0;
     bool overlayed = false;
     bool currentTransparent = false;
     bool touched = false;

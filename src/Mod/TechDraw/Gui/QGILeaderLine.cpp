@@ -149,24 +149,19 @@ void QGILeaderLine::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
     QGraphicsItem::mouseReleaseEvent(event);
 }
 
-void QGILeaderLine::hoverEnterEvent(QGraphicsSceneHoverEvent* event)
+void QGILeaderLine::setPreselect(bool enable)
 {
-    //    Base::Console().Message("QGILL::hoverEnter() - selected; %d\n", isSelected());
-    m_hasHover = true;
-    if (!isSelected()) {
+    m_hasHover = enable;
+    if (enable) {
         setPrettyPre();
     }
-    QGIView::hoverEnterEvent(event);
-}
-
-void QGILeaderLine::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
-{
-    //    Base::Console().Message("QGILL::hoverLeave() - selected; %d\n", isSelected());
-    m_hasHover = false;
-    if (!isSelected()) {
+    else if (!isSelected()) {
+        setPrettySel();
+    }
+    else {
         setPrettyNormal();
     }
-    QGIView::hoverLeaveEvent(event);
+    QGIView::setPreselect(enable);
 }
 
 void QGILeaderLine::onSourceChange(TechDraw::DrawView* newParent)

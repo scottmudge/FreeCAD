@@ -90,6 +90,18 @@ void QGIViewAnnotation::updateView(bool update)
     QGIView::updateView(update);
 }
 
+void QGIViewAnnotation::setPreselect(bool enable)
+{
+    m_hasHover = enable;
+    if (m_hasHover)
+        m_textItem->setPrettyPre();
+    else if (isSelected())
+        m_textItem->setPrettySel();
+    else
+        m_textItem->setPrettyNormal();
+    QGIView::setPreselect(enable);
+}
+
 void QGIViewAnnotation::draw()
 {
     //    Base::Console().Message("QGIVA::draw()\n");
@@ -164,6 +176,13 @@ void QGIViewAnnotation::drawAnnotation()
     }
     ss << "</p>\n</body>\n</html> ";
 
+    if (m_hasHover)
+        m_textItem->setPrettyPre();
+    else if (isSelected())
+        m_textItem->setPrettySel();
+    else
+        m_textItem->setPrettyNormal();
+
     prepareGeometryChange();
     m_textItem->setTextWidth(Rez::guiX(viewAnno->MaxWidth.getValue()));
     QString qs = QString::fromUtf8(ss.str().c_str());
@@ -198,3 +217,20 @@ void QGIViewAnnotation::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
         App::GetApplication().closeActiveTransaction();
     }
 }
+
+QVariant QGIViewAnnotation::itemChange(GraphicsItemChange change, const QVariant& value)
+{
+    if (change == ItemSelectedHasChanged && scene()) {
+        if (isSelected()) {
+            m_textItem->setSelected(true);
+        }
+        else {
+            m_textItem->setSelected(false);
+        }
+        draw();
+    }
+    return QGIView::itemChange(change, value);
+}
+
+
+#include <Mod/TechDraw/Gui/moc_QGIViewAnnotation.cpp>

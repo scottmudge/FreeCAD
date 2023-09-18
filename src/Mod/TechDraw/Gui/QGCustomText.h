@@ -51,6 +51,7 @@ public:
     virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = nullptr ) override;
     virtual QRectF boundingRect() const override;
     QRectF tightBoundingRect() const;
+    QRectF relaxedBoundingRect() const;
     QPointF tightBoundingAdjust() const;
 
     void setHighlighted(bool state);
@@ -78,6 +79,8 @@ public:
     void makeMark(double x, double y);
     void makeMark(Base::Vector3d v);
 
+    bool hasHover() const {return m_hasHover;}
+
 protected:
     virtual void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
     virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
@@ -89,6 +92,7 @@ protected:
     bool tightBounding;  // Option to use tighter boundingRect(), works only for plaintext QGCustomText
     QColor m_colCurrent;
     QColor m_colNormal;
+    bool m_hasHover = false;
 
 private:
 

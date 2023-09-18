@@ -751,6 +751,7 @@ bool TaskLeaderLine::accept()
     m_trackerMode = QGTracker::TrackerMode::None;
     removeTracker();
 
+    Gui::Command::updateActive();
     Gui::Command::doCommand(Gui::Command::Gui, "Gui.ActiveDocument.resetEdit()");
 
     if (m_vpp->getMDIViewPage())

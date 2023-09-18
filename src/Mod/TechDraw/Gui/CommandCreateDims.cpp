@@ -80,8 +80,11 @@ void execDiameter(Gui::Command* cmd);
 
 void execExtent(Gui::Command* cmd, int direction);
 
-DrawViewDimension* dimensionMaker(TechDraw::DrawViewPart* dvp, std::string dimType,
-                                  ReferenceVector references2d, ReferenceVector references3d);
+DrawViewDimension* dimensionMaker(TechDraw::DrawViewPart* dvp,
+                                  std::string dimType,
+                                  ReferenceVector references2d,
+                                  ReferenceVector references3d,
+                                  bool doPosition=true);
 
 void positionDimText(DrawViewDimension* dim);
 
@@ -238,7 +241,7 @@ void execRadius(Gui::Command* cmd)
 
     //build the dimension
     //    DrawViewDimension* dim =
-    dimensionMaker(partFeat, "Radius", references2d, references3d);
+    dimensionMaker(partFeat, "Radius", references2d, references3d, false);
 }
 
 
@@ -361,7 +364,7 @@ void execDiameter(Gui::Command* cmd)
 
     //build the dimension
     //    DrawViewDimension* dim =
-    dimensionMaker(partFeat, "Diameter", references2d, references3d);
+    dimensionMaker(partFeat, "Diameter", references2d, references3d, false);
 
 }
 
@@ -454,11 +457,7 @@ void execDistance(Gui::Command* cmd)
     }
 
     //build the dimension
-    DrawViewDimension* dim = dimensionMaker(partFeat, "Distance", references2d, references3d);
-
-    //position the Dimension text on the view
-    positionDimText(dim);
-
+    dimensionMaker(partFeat, "Distance", references2d, references3d);
 }
 
 //===========================================================================
@@ -549,12 +548,7 @@ void execDistanceX(Gui::Command* cmd)
     }
 
     //build the dimension
-    DrawViewDimension* dim = dimensionMaker(partFeat, "DistanceX", references2d, references3d);
-
-
-    //position the Dimension text on the view
-    positionDimText(dim);
-
+    dimensionMaker(partFeat, "DistanceX", references2d, references3d);
 }
 
 //===========================================================================
@@ -644,11 +638,7 @@ void execDistanceY(Gui::Command* cmd)
     }
 
     //build the dimension
-    DrawViewDimension* dim = dimensionMaker(partFeat, "DistanceY", references2d, references3d);
-
-    //position the Dimension text on the view
-    positionDimText(dim);
-
+    dimensionMaker(partFeat, "DistanceY", references2d, references3d);
 }
 
 //===========================================================================
@@ -737,10 +727,7 @@ void execAngle(Gui::Command* cmd)
     }
 
     //build the dimension
-    DrawViewDimension* dim = dimensionMaker(partFeat, "Angle", references2d, references3d);
-
-    //position the Dimension text on the view
-    positionDimText(dim);
+    dimensionMaker(partFeat, "Angle", references2d, references3d);
 }
 
 //===========================================================================
@@ -829,9 +816,7 @@ void execAngle3Pt(Gui::Command* cmd)
     }
 
     //build the dimension
-    DrawViewDimension* dim = dimensionMaker(partFeat, "Angle3Pt", references2d, references3d);
-    //position the Dimension text on the view
-    positionDimText(dim);
+    dimensionMaker(partFeat, "Angle3Pt", references2d, references3d);
 }
 
 //! link 3D geometry to Dimension(s) on a Page
@@ -1309,9 +1294,8 @@ void CmdTechDrawLandmarkDimension::activated(int iMsg)
     dim->References3D.setValues(objects, subs);
     Gui::cmdAppObject(page,std::ostringstream() << "addView(" << getObjectCmd(dim) << ")");
 
+    updateActive();
     commitCommand();
-    dim->touch(true);
-    dim->recomputeFeature();
 }
 
 bool CmdTechDrawLandmarkDimension::isActive()
@@ -1346,8 +1330,11 @@ void CreateTechDrawCommandsDims()
 //------------------------------------------------------------------------------
 
 //Common code to build a dimension feature
-DrawViewDimension* dimensionMaker(TechDraw::DrawViewPart* dvp, std::string dimType,
-                                  ReferenceVector references2d, ReferenceVector references3d)
+DrawViewDimension* dimensionMaker(TechDraw::DrawViewPart* dvp,
+                                  std::string dimType,
+                                  ReferenceVector references2d,
+                                  ReferenceVector references3d,
+                                  bool doPosition)
 {
     TechDraw::DrawPage* page = dvp->findParentPage();
     std::string PageName = page->getNameInDocument();
@@ -1372,8 +1359,10 @@ DrawViewDimension* dimensionMaker(TechDraw::DrawViewPart* dvp, std::string dimTy
 
     Gui::cmdAppObject(page,std::ostringstream() << "addView(" << dim->getFullName(true) << ")");
 
+    if (doPosition)
+        positionDimText(dim);
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
-    dim->recomputeFeature();
     return dim;
 }
 

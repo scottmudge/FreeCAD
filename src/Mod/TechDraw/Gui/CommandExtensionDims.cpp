@@ -116,6 +116,7 @@ void execInsertPrefixChar(Gui::Command* cmd, std::string prefixChar) {
             dim->FormatSpec.setValue(formatSpec);
         }
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -207,6 +208,7 @@ void execRemovePrefixChar(Gui::Command* cmd) {
             }
         }
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -383,6 +385,7 @@ void execIncreaseDecreaseDecimal(Gui::Command* cmd, int delta) {
             }
         }
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -576,6 +579,7 @@ void execPosHorizChainDimension(Gui::Command* cmd) {
         Base::Vector3d p2 = pp.second();
         dim->X.setValue((p1.x + p2.x) / 2.0);
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -638,6 +642,7 @@ void execPosVertChainDimension(Gui::Command* cmd) {
         Base::Vector3d p2 = pp.second();
         dim->Y.setValue((p1.y + p2.y) / -2.0 + 0.5 * fontSize);
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -705,6 +710,7 @@ void execPosObliqueChainDimension(Gui::Command* cmd) {
         dim->X.setValue(p3.x);
         dim->Y.setValue(p3.y);
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -889,6 +895,7 @@ void execCascadeHorizDimension(Gui::Command* cmd) {
         dim->X.setValue((p1.x + p2.x) / 2.0);
         yMaster = yMaster + dimDistance;
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -956,6 +963,7 @@ void execCascadeVertDimension(Gui::Command* cmd) {
         dim->Y.setValue((p1.y + p2.y) / -2.0 + 0.5 * fontSize);
         xMaster = xMaster + dimDistance;
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1031,6 +1039,7 @@ void execCascadeObliqueDimension(Gui::Command* cmd) {
         dim->Y.setValue(p3.y);
         i = i + 1;
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1221,6 +1230,7 @@ void execCreateHorizChainDimension(Gui::Command* cmd) {
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
     cmd->getSelection().clearSelection();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1288,6 +1298,7 @@ void execCreateVertChainDimension(Gui::Command* cmd) {
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
     cmd->getSelection().clearSelection();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1379,6 +1390,7 @@ void execCreateObliqueChainDimension(Gui::Command* cmd) {
         objFeat->refreshCEGeoms();
         objFeat->requestPaint();
         cmd->getSelection().clearSelection();
+        Gui::Command::updateActive();
         Gui::Command::commitCommand();
     }
 }
@@ -1567,6 +1579,7 @@ void execCreateHorizCoordDimension(Gui::Command* cmd) {
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
     cmd->getSelection().clearSelection();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1640,6 +1653,7 @@ void execCreateVertCoordDimension(Gui::Command* cmd) {
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
     cmd->getSelection().clearSelection();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1739,6 +1753,7 @@ void execCreateObliqueCoordDimension(Gui::Command* cmd) {
     objFeat->refreshCEGeoms();
     objFeat->requestPaint();
     cmd->getSelection().clearSelection();
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -1934,6 +1949,7 @@ void execCreateHorizChamferDimension(Gui::Command* cmd) {
         objFeat->requestPaint();
         cmd->getSelection().clearSelection();
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -2003,6 +2019,7 @@ void execCreateVertChamferDimension(Gui::Command* cmd) {
         objFeat->requestPaint();
         cmd->getSelection().clearSelection();
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -2203,6 +2220,7 @@ void CmdTechDrawExtensionCreateLengthArc::activated(int iMsg) {
         objFeat->requestPaint();
         getSelection().clearSelection();
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 

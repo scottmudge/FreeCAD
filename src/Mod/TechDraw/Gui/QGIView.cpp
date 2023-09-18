@@ -30,6 +30,7 @@
 #endif
 
 #include <App/Application.h>
+#include <App/AutoTransaction.h>
 #include <App/DocumentObject.h>
 #include <Base/Console.h>
 #include <Gui/Application.h>
@@ -37,6 +38,7 @@
 #include <Gui/Selection.h>
 #include <Gui/Tools.h>
 #include <Gui/ViewProvider.h>
+#include <Gui/Command.h>
 #include <Mod/TechDraw/App/DrawPage.h>
 #include <Mod/TechDraw/App/DrawProjGroup.h>
 #include <Mod/TechDraw/App/DrawProjGroupItem.h>
@@ -226,13 +228,18 @@ void QGIView::mouseReleaseEvent(QGraphicsSceneMouseEvent * event)
 //    Base::Console().Message("QGIV::mouseReleaseEvent() - %s\n", getViewName());
 //    if(scene() && this == scene()->mouseGrabberItem()) {
     if (m_dragState == DRAGGING && !m_locked) {
+        auto obj = getViewObject();
+        std::string name = QT_TRANSLATE_NOOP("Command", "Move ");
+        name += obj->Label.getValue();
+        App::AutoTransaction guard(name.c_str());
         if (!isInnerView()) {
             double tempX = x(),
                    tempY = getY();
-            getViewObject()->setPosition(Rez::appX(tempX), Rez::appX(tempY));
+            obj->setPosition(Rez::appX(tempX), Rez::appX(tempY));
         } else {
-            getViewObject()->setPosition(Rez::appX(x()), Rez::appX(getYInClip(y())));
+            obj->setPosition(Rez::appX(x()), Rez::appX(getYInClip(y())));
         }
+        Gui::Command::updateActive();
     }
     m_dragState = NODRAG;
 
@@ -243,24 +250,33 @@ void QGIView::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
 //    Base::Console().Message("QGIV::hoverEnterEvent()\n");
     Q_UNUSED(event);
-    // TODO don't like this but only solution at the minute (MLP)
-    if (isSelected()) {
-        m_colCurrent = getSelectColor();
-    } else {
+    setPreselect(true);
+}
+
+void QGIView::setPreselect(bool enable)
+{
+    if (enable) {
         m_colCurrent = getPreColor();
     }
-    drawBorder();
+    else {
+        // TODO don't like this but only solution at the minute (MLP)
+        if (isSelected()) {
+            m_colCurrent = getSelectColor();
+        } else {
+            m_colCurrent = PreferencesGui::getAccessibleQColor(PreferencesGui::normalQColor());
+        }
+    }
+    m_caption->setDefaultTextColor(m_colCurrent);
+    m_label->setDefaultTextColor(m_colCurrent);
+    m_decorPen.setColor(m_colCurrent);
+    m_border->setPen(m_decorPen);
+    update();
 }
 
 void QGIView::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_UNUSED(event);
-    if(isSelected()) {
-        m_colCurrent = getSelectColor();
-    } else {
-        m_colCurrent = PreferencesGui::getAccessibleQColor(PreferencesGui::normalQColor());
-    }
-    drawBorder();
+    setPreselect(false);
 }
 
 //sets position in /Gui(graphics), not /App

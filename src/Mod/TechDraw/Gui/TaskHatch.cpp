@@ -187,7 +187,7 @@ void TaskHatch::apply(bool forceUpdate)
         //only need requestPaint to hatch the face
 //        m_dvp->requestPaint();
         //need a recompute in order to claimChildren in tree
-        m_dvp->recomputeFeature();
+        Gui::Command::updateActive();
     }
 }
 
@@ -226,6 +226,7 @@ void TaskHatch::createHatch()
     } else {
         Base::Console().Error("TaskHatch - Hatch has no ViewProvider\n");
     }
+    Command::updateActive();
     Command::commitCommand();
 }
 
@@ -247,6 +248,7 @@ void TaskHatch::updateHatch()
     m_vp->HatchRotation.setValue(ui->dsbRotation->value());
     Base::Vector3d offset(ui->dsbOffsetX->value(), ui->dsbOffsetY->value(), 0.0);
     m_vp->HatchOffset.setValue(offset);
+    Command::updateActive();
     Command::commitCommand();
 }
 

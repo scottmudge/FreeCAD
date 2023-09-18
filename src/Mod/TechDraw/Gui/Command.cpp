@@ -991,6 +991,7 @@ void CmdTechDrawBalloon::activated(int iMsg)
             if (view && _checkDirectPlacement(view, selection[0].getSubNames(), placement)) {
                 //this creates the balloon if something is already selected
                 scenePage->createBalloon(placement, objFeat);
+                updateActive();
             }
         }
     }
@@ -1517,6 +1518,7 @@ void CmdTechDrawExportPageDXF::activated(int iMsg)
     fileName = Base::Tools::escapeEncodeFilename(fileName);
     doCommand(Doc,"TechDraw.writeDXFPage(%s,u'%s')",
             getObjectCmd(page).c_str(), fileName.toUtf8().constData());
+    updateActive();
     commitCommand();
 }
 

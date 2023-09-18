@@ -199,6 +199,7 @@ bool TaskCustomizeFormat::accept()
         auto balloon = dynamic_cast<TechDraw::DrawViewBalloon*>(selectedObject);
         balloon->Text.setValue(formatString);
     }
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
     return true;
 }

@@ -134,6 +134,7 @@ void CmdTechDrawHatch::activated(int iMsg)
                 Gui::cmdAppDocument(r.second, std::ostringstream() << "removeObject('" << r.second->getNameInDocument() << "')");
             }
         }
+        updateActive();
         commitCommand();
     }
 
@@ -201,12 +202,11 @@ void CmdTechDrawGeometricHatch::activated(int iMsg)
     if (!hvp) {
         return;
     }
-    objFeat->touch(true);
-    getDocument()->recompute();
 
     // dialog to fill in hatch values
     Gui::Control().showDialog(new TaskDlgGeomHatch(geomhatch, hvp, true));
 
+    updateActive();
     commitCommand();
 }
 

@@ -22,17 +22,25 @@
 
 #include "PreCompiled.h"
 #ifndef _PreComp_
+# include <cmath>
 # include <QPainter>
+# include <QGraphicsSceneMouseEvent>
+# include <QGraphicsSceneHoverEvent>
 # include <QStyleOptionGraphicsItem>
+# include <QTimer>
 #endif
 
+#include <App/AutoTransaction.h>
 #include <Base/Tools.h>
+#include <Gui/Application.h>
+#include <Gui/Command.h>
 #include <Mod/TechDraw/App/DrawUtil.h>
 
 #include "QGIHighlight.h"
 #include "PreferencesGui.h"
 #include "QGIViewPart.h"
 #include "Rez.h"
+#include "ViewProviderViewPart.h"
 
 
 using namespace TechDrawGui;
@@ -42,21 +50,18 @@ QGIHighlight::QGIHighlight() :
     m_referenceAngle(0.0)
 {
     m_refSize = 0.0;
-    setInteractive(false);
 
-    m_circle = new QGraphicsEllipseItem();
-    addToGroup(m_circle);
-    m_circle->setFlag(QGraphicsItem::ItemIsSelectable, false);
-
-    m_rect = new QGCustomRect();
-    addToGroup(m_rect);
-    m_rect->setFlag(QGraphicsItem::ItemIsSelectable, false);
+    m_shape = new QGIEdge(0);
+    addToGroup(m_shape);
 
     m_reference = new QGCustomText();
+    m_reference->setTightBounding(true);
     addToGroup(m_reference);
-    m_reference->setFlag(QGraphicsItem::ItemIsSelectable, false);
 
     setWidth(Rez::guiX(0.75));
+    m_brushCurrent = Qt::NoBrush;
+
+    setInteractive(false);
 }
 
 QGIHighlight::~QGIHighlight()
@@ -66,17 +71,35 @@ QGIHighlight::~QGIHighlight()
 
 void QGIHighlight::onDragFinished()
 {
-//    Base::Console().Message("QGIH::onDragFinished - pos: %s\n",
-//                            DrawUtil::formatVector(pos()).c_str());
     QGraphicsItem* parent = parentItem();
     auto qgivp = dynamic_cast<QGIViewPart*>(parent);
-    if (qgivp) {
-        qgivp->highlightMoved(this, pos());
-    }
+    if (!qgivp)
+        return;
+    DrawViewDetail *detail = getFeature();
+    if (!detail)
+        return;
+    auto anchor = detail->AnchorPoint.getValue();
+    Base::Vector3d delta = Rez::appX(DrawUtil::toVector3d(pos())) / qgivp->getViewObject()->getScale();
+    anchor += DrawUtil::invertY(delta);
+    App::DocumentObjectT objT(m_feature);
+
+    // Must not recompute inside graphics scene event loop because of graphics item deletion.
+    QTimer::singleShot(0, [objT, anchor]() {
+        if (auto detail = Base::freecad_dynamic_cast<DrawViewDetail>(objT.getObject())) {
+            App::AutoTransaction guard(QT_TRANSLATE_NOOP("Command", "Move detail view"));
+            detail->AnchorPoint.setValue(anchor);
+            Gui::Command::updateActive();
+        }
+    });
 }
 
 void QGIHighlight::draw()
 {
+    if (!m_filterInstalled) {
+        m_filterInstalled = true;
+        m_shape->installSceneEventFilter(this);
+        m_reference->installSceneEventFilter(this);
+    }
     prepareGeometryChange();
     makeHighlight();
     makeReference();
@@ -85,16 +108,60 @@ void QGIHighlight::draw()
 
 void QGIHighlight::makeHighlight()
 {
+    QPainterPath path;
     QRectF r(m_start, m_end);
-    m_circle->setRect(r);
-    m_rect->setRect(r);
+
     if (getHoleStyle() == 0) {
-        m_rect->hide();
-        m_circle->show();
+        path.addEllipse(r);
     } else {
-        m_rect->show();
-        m_circle->hide();
+        path.addRect(r);
     }
+    m_shape->setPath(path);
+}
+
+void QGIHighlight::setFeature(TechDraw::DrawViewDetail *detail)
+{
+    m_feature = App::DocumentObjectT(detail);
+}
+
+TechDraw::DrawViewDetail *QGIHighlight::getFeature() const
+{
+    return Base::freecad_dynamic_cast<TechDraw::DrawViewDetail>(m_feature.getObject());
+}
+
+void QGIHighlight::updateReferencePos()
+{
+    QRectF r(m_start, m_end);
+    auto pos = m_reference->pos() - r.center();
+
+    double l = sqrt(pos.x()*pos.x() + pos.y()*pos.y());
+    if (l < 1e-6) {
+        m_referenceAngle = 0;
+    }
+    else {
+        m_referenceAngle = acos(pos.x()/l) * 180 / M_PI ;
+        if (pos.y() > 0)
+            m_referenceAngle = 360 - m_referenceAngle;
+    }
+    m_referenceOffset = l - r.width() / 2.0;
+
+    if (auto detailVp = Base::freecad_dynamic_cast<ViewProviderViewPart>(
+                Gui::Application::Instance->getViewProvider(getFeature()))) {
+
+        try {
+            App::AutoTransaction guard(QT_TRANSLATE_NOOP("Command", "Move highlight"),
+                    /* tmpName */false, /* recordViewObject */true);
+            Base::ObjectStatusLocker<App::Property::Status,App::Property> guard1(App::Property::User1, &detailVp->HighlightAdjust);
+            Base::ObjectStatusLocker<App::Property::Status,App::Property> guard2(App::Property::User1, &detailVp->HighlightOffset);
+            detailVp->HighlightAdjust.setValue(m_referenceAngle);
+            detailVp->HighlightOffset.setValue(m_referenceOffset);
+        } catch (const Base::Exception &e) {
+            e.ReportException();
+        }
+    }
+
+    makeReference();
+    update();
 }
 
 void QGIHighlight::makeReference()
@@ -111,7 +178,7 @@ void QGIHighlight::makeReference()
         m_referenceAngle <= 180.0) {
         //above the X axis
         //referenceText is positioned by top-left, need to adjust upwards by text height
-        vertOffset = m_reference->boundingRect().height();
+        vertOffset = m_reference->relaxedBoundingRect().height();
     } else {
         //below X axis. need to adjust upwards a bit because there is blank space above text
         vertOffset = m_reference->tightBoundingAdjust().y();
@@ -121,12 +188,18 @@ void QGIHighlight::makeReference()
     if (m_referenceAngle > 90.0 &&
         m_referenceAngle < 270.0) {
         //to left of Y axis
-        horizOffset = -m_reference->boundingRect().width();
+        horizOffset = -m_reference->relaxedBoundingRect().width();
     }
     QRectF r(m_start, m_end);
     double radius = r.width() / 2.0;
     QPointF center = r.center();
     double angleRad = m_referenceAngle * M_PI / 180.0;
+    if (m_referenceOffset != 0.0) {
+        horizOffset = 0;
+        vertOffset = 0;
+        radius +=  m_referenceOffset;
+    }
+
     double posX = center.x() + cos(angleRad) * radius + horizOffset;
     double posY = center.y() - sin(angleRad) * radius - vertOffset;
     m_reference->setPos(posX, posY);
@@ -142,11 +215,64 @@ void QGIHighlight::makeReference()
 
 void QGIHighlight::setInteractive(bool state)
 {
-//    setAcceptHoverEvents(state);
-    setFlag(QGraphicsItem::ItemIsSelectable, state);
+    setHandlesChildEvents(false);
+    setAcceptHoverEvents(false);
+    setFlag(QGraphicsItem::ItemIsSelectable, true);
+
     setFlag(QGraphicsItem::ItemIsMovable, state);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, state);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges, state);
+
+    m_shape->setFlag(QGraphicsItem::ItemIsSelectable, state);
+    m_shape->setAcceptHoverEvents(state);
+
+    m_reference->setFlag(QGraphicsItem::ItemIsSelectable, state);
+    m_reference->setFlag(QGraphicsItem::ItemIsMovable, state);
+    m_reference->setAcceptHoverEvents(state);
+}
+
+bool QGIHighlight::sceneEventFilter(QGraphicsItem *watched, QEvent *event)
+{
+    if (watched == m_shape) {
+        switch(event->type()) {
+        case QEvent::GraphicsSceneMousePress:
+            mousePressEvent(static_cast<QGraphicsSceneMouseEvent*>(event));
+            return true;
+        case QEvent::GraphicsSceneMouseMove:
+            mouseMoveEvent(static_cast<QGraphicsSceneMouseEvent*>(event));
+            return true;
+        case QEvent::GraphicsSceneMouseRelease:
+            mouseReleaseEvent(static_cast<QGraphicsSceneMouseEvent*>(event));
+            return true;
+        case QEvent::GraphicsSceneHoverEnter:
+            hoverEnterEvent(static_cast<QGraphicsSceneHoverEvent*>(event));
+            return true;
+        case QEvent::GraphicsSceneHoverLeave:
+            hoverLeaveEvent(static_cast<QGraphicsSceneHoverEvent*>(event));
+            return true;
+        default:
+            return false;
+        }
+    }
+    if (watched == m_reference) {
+        switch(event->type()) {
+        case QEvent::GraphicsSceneMousePress:
+            m_referenceOldPos = m_reference->pos();
+            break;
+        case QEvent::GraphicsSceneMouseRelease:
+            if (!m_busy) {
+                Base::StateLocker guard(m_busy);
+                scene()->sendEvent(watched, event);
+                if (m_referenceOldPos != watched->pos())
+                    updateReferencePos();
+                return true;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    return false;
 }
 
 void QGIHighlight::setBounds(double x1, double y1, double x2, double y2)
@@ -201,9 +327,73 @@ void QGIHighlight::setTools()
     m_brush.setStyle(m_brushCurrent);
     m_brush.setColor(m_colCurrent);
 
-    m_circle->setPen(m_pen);
-    m_rect->setPen(m_pen);
+    m_shape->setWidth(m_width);
+    m_shape->setStyle(m_styleCurrent);
 
-    m_reference->setDefaultTextColor(m_colCurrent);
+    if (m_hasHover) {
+        m_shape->setPrettyPre();
+        m_reference->setPrettyPre();
+    } else if (isSelected()) {
+        m_shape->setPrettySel();
+        if (m_reference->hasHover())
+            m_reference->setPrettyPre();
+        else
+            m_reference->setPrettySel();
+    } else {
+        m_shape->setNormalColor(m_colCurrent);
+        if (m_reference->hasHover())
+            m_reference->setPrettyPre();
+        else if (m_reference->isSelected())
+            m_reference->setPrettySel();
+        else
+            m_reference->setDefaultTextColor(m_colCurrent);
+    }
 }
 
+QPainterPath QGIHighlight::shape() const
+{
+    return QPainterPath();
+}
+
+QVariant QGIHighlight::itemChange(GraphicsItemChange change, const QVariant &value)
+{
+    if (change == ItemSelectedHasChanged && scene()) {
+        if(isSelected()) {
+            m_shape->setPrettySel();
+            m_reference->setPrettySel();
+        } else {
+            m_shape->setPrettyNormal();
+            m_reference->setPrettyNormal();
+        }
+    }
+    return QGIDecoration::itemChange(change, value);
+}
+
+void QGIHighlight::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
+{
+    m_hasHover = true;
+    m_shape->setPrettyPre();
+    m_reference->setPrettyPre();
+    QGIDecoration::hoverEnterEvent(event);
+}
+
+void QGIHighlight::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
+{
+    m_hasHover = false;
+    if(isSelected() || m_shape->isSelected()) {
+        m_shape->setPrettySel();
+        m_reference->setPrettySel();
+    } else {
+        m_shape->setPrettyNormal();
+        m_reference->setPrettyNormal();
+    }
+    QGIDecoration::hoverLeaveEvent(event);
+}
+
+void QGIHighlight::setPreselect(bool enable)
+{
+    if (m_hasHover != enable) {
+        m_hasHover = enable;
+        update();
+    }
+}

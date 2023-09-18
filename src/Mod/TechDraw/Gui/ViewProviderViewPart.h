@@ -59,6 +59,7 @@ public:
     App::PropertyEnumeration   HighlightLineStyle;
     App::PropertyColor  HighlightLineColor;
     App::PropertyFloat  HighlightAdjust;
+    App::PropertyFloat  HighlightOffset;
     App::PropertyBool   ShowAllEdges;
 
     static const char* LineStyleEnums[];

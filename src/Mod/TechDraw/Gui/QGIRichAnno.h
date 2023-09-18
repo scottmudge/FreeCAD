@@ -77,6 +77,7 @@ public:
     void setExporting(bool b) { m_isExporting = b; }
     bool getExporting(void) { return m_isExporting; }
 
+    void setPreselect(bool enable) override;
 
 public Q_SLOTS:
 /*    void textDragging(void);*/
@@ -85,6 +86,7 @@ public Q_SLOTS:
 /*    void select(bool state);*/
 
 protected:
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
     virtual void draw() override;
     void setLineSpacing(int lineSpacing);
     double prefPointSize(void);

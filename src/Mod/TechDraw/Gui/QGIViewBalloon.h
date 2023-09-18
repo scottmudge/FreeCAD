@@ -209,6 +209,8 @@ public:
         return dvBalloon;
     }
 
+    void setPreselect(bool enable) override;
+
 public Q_SLOTS:
     void balloonLabelDragged(bool ctrl);
     void balloonLabelDragFinished();

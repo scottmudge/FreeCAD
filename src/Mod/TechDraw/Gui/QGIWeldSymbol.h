@@ -89,11 +89,11 @@ public:
 
     void getTileFeats();
 
+    void setPreselect(bool enable=true) override;
+
 protected:
     QVariant itemChange( GraphicsItemChange change,
                                  const QVariant &value ) override;
-    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
-    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
 
     void draw() override;
     void drawTile(TechDraw::DrawTileWeld* tileFeat);

@@ -107,8 +107,8 @@ TaskBalloon::~TaskBalloon()
 bool TaskBalloon::accept()
 {
     Gui::Document* doc = m_balloonVP->getDocument();
-    m_balloonVP->getObject()->purgeTouched();
-    doc->commitCommand();
+    Gui::Command::updateActive();
+    Gui::Command::commitCommand();
     doc->resetEdit();
 
     return true;
@@ -120,7 +120,6 @@ bool TaskBalloon::reject()
     doc->abortCommand();
     recomputeFeature();
     m_parent->updateView(true);
-    m_balloonVP->getObject()->purgeTouched();
     doc->resetEdit();
 
     return true;

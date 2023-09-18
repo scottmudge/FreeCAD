@@ -163,6 +163,10 @@ ViewProviderDocumentObject::ViewProviderDocumentObject()
     OnTopWhenSelected.setEnums(OnTopEnum);
 
     sPixmap = "Feature";
+
+    signalChangedChildren.connect([](const ViewProviderDocumentObject &vpd) {
+        const_cast<ViewProviderDocumentObject&>(vpd).updateChildren();
+    });
 }
 
 ViewProviderDocumentObject::~ViewProviderDocumentObject()

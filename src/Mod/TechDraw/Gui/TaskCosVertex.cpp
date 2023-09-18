@@ -140,6 +140,7 @@ void TaskCosVertex::addCosVertex(QPointF qPos)
     (void) m_baseFeat->addCosmeticVertex(pos);
     m_baseFeat->requestPaint();
 
+    Gui::Command::updateActive();
     Gui::Command::commitCommand();
 }
 
@@ -308,6 +309,7 @@ bool TaskCosVertex::accept()
     m_baseFeat->requestPaint();
     m_vpp->getMDIViewPage()->setContextMenuPolicy(m_saveContextPolicy);
     m_trackerMode = QGTracker::TrackerMode::None;
+    Gui::Command::updateActive();
     Gui::Command::doCommand(Gui::Command::Gui, "Gui.ActiveDocument.resetEdit()");
 
     return true;

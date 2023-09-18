@@ -57,7 +57,7 @@ QGIRichAnno::QGIRichAnno() :
     m_isExporting(false), m_hasHover(false)
 {
     setHandlesChildEvents(false);
-    setAcceptHoverEvents(false);
+    setAcceptHoverEvents(true);
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemIsMovable, true);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, true);
@@ -75,20 +75,21 @@ QGIRichAnno::QGIRichAnno() :
     m_rect->centerAt(0.0, 0.0);
 
     setZValue(ZVALUE::DIMENSION);
-
 }
 
-//void QGIRichAnno::select(bool state)
-//{
-//    setSelected(state);
-//    draw();
-//}
-
-//void QGIRichAnno::hover(bool state)
-//{
-//    m_hasHover = state;
-//    draw();
-//}
+QVariant QGIRichAnno::itemChange(GraphicsItemChange change, const QVariant& value)
+{
+    if (change == ItemSelectedHasChanged && scene()) {
+        if (isSelected()) {
+            m_text->setSelected(true);
+        }
+        else {
+            m_text->setSelected(false);
+        }
+        draw();
+    }
+    return QGIView::itemChange(change, value);
+}
 
 void QGIRichAnno::updateView(bool update)
 {
@@ -119,6 +120,18 @@ void QGIRichAnno::drawBorder()
 //    QGIView::drawBorder();   //good for debugging
 }
 
+void QGIRichAnno::setPreselect(bool enable)
+{
+    m_hasHover = enable;
+    if (m_hasHover) {
+        m_text->setPrettyPre();
+    } else if (isSelected()) {
+        m_text->setPrettySel();
+    } else {
+        m_text->setPrettyNormal();
+    }
+    QGIView::setPreselect(enable);
+}
 
 void QGIRichAnno::draw()
 {
@@ -136,6 +149,14 @@ void QGIRichAnno::draw()
     if (!vp) {
 //        Base::Console().Message("QGIRA::draw - no viewprovider\n");
         return;
+    }
+
+    if (m_hasHover) {
+        m_text->setPrettyPre();
+    } else if (isSelected()) {
+        m_text->setPrettySel();
+    } else {
+        m_text->setPrettyNormal();
     }
 
     setTextItem();
@@ -236,13 +257,6 @@ void QGIRichAnno::setLineSpacing(int lineSpacing)
 //        }
     }
 }
-
-//void QGIRichAnno::drawBorder()
-//{
-//////Leaders have no border!
-////    QGIView::drawBorder();   //good for debugging
-//}
-
 
 TechDraw::DrawRichAnno* QGIRichAnno::getFeature()
 {
