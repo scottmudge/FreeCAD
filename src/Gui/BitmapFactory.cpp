@@ -675,6 +675,9 @@ QPixmap BitmapFactoryInst::merge(const QPixmap& p1, const QPixmap& p2, bool vert
 
 QPixmap BitmapFactoryInst::merge(const QPixmap& p1, const QPixmap& p2, Position pos) const
 {
+    if (p2.isNull()) return p1;
+    else if (p1.isNull()) return p2;
+
     // does the similar as the method above except that this method does not resize the resulting pixmap
     int x = 0, y = 0;
     qreal dpr1 = p1.devicePixelRatio();
