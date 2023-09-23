@@ -885,6 +885,11 @@ ChangePointVector DrawComplexSection::getChangePointsFromSectionLine()
     return result;
 }
 
+void DrawComplexSection::setChangePoints(const ChangePointVector &points)
+{
+    (void)points;
+}
+
 gp_Ax2 DrawComplexSection::getCSFromBase(const std::string sectionName) const
 {
     //    Base::Console().Message("DCS::getCSFromBase()\n");

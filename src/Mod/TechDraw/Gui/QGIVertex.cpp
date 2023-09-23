@@ -53,17 +53,3 @@ void QGIVertex::setRadius(float r)
     p.addEllipse(-r/2.0, -r/2.0, r, r);
     setPath(p);
 }
-
-void QGIVertex::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
-{
-    QStyleOptionGraphicsItem myOption(*option);
-    myOption.state &= ~QStyle::State_Selected;
-
-//    painter->setPen(Qt::blue);
-//    painter->drawRect(boundingRect());          //good for debugging
-
-//    m_brush.setColor(m_colCurrent);
-//    m_brush.setStyle(m_fill);
-//    setBrush(m_brush);
-    QGIPrimPath::paint (painter, &myOption, widget);
-}

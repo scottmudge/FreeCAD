@@ -141,6 +141,7 @@ QGEPath::QGEPath(QGILeaderLine* leader) :
     m_ghost->setPrettyNormal();
     m_ghost->hide();
 
+    setStrokeWidth(getEdgeFuzz() * 2.0);
 }
 
 QVariant QGEPath::itemChange(GraphicsItemChange change, const QVariant &value)
@@ -161,29 +162,13 @@ QVariant QGEPath::itemChange(GraphicsItemChange change, const QVariant &value)
 void QGEPath::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
     Q_EMIT hover(true);
-    setPrettyPre();
-    QGIPrimPath::hoverEnterEvent(event);
+    inherited::hoverEnterEvent(event);
 }
 
 void QGEPath::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
-    QGIView *view = dynamic_cast<QGIView *> (parentItem());
-    assert(view);
-    Q_UNUSED(view);
-
     Q_EMIT hover(false);
-    QGraphicsItem* parent = parentItem();
-    bool parentSel(false);
-    if (parent) {
-        parentSel = parent->isSelected();
-    }
-    if (parentSel  || isSelected()) {
-        setPrettySel();
-    } else {
-        setPrettyNormal();
-    }
-    QGraphicsPathItem::hoverLeaveEvent(event);
-//    QGIPrimPath::hoverLeaveEvent(event);  //QGIPP::hoverleave will reset pretty to normal
+    inherited::hoverLeaveEvent(event);
 }
 
 void QGEPath::startPathEdit(std::vector<QPointF> pathPoints)
@@ -365,25 +350,6 @@ void QGEPath::setStartAdjust(double adj)
 void QGEPath::setEndAdjust(double adj)
 {
     m_endAdj = Rez::guiX(adj);
-}
-
-QRectF QGEPath::boundingRect() const
-{
-    return shape().controlPointRect();
-}
-
-QPainterPath QGEPath::shape() const
-{
-    QPainterPath outline;
-    QPainterPathStroker stroker;
-    stroker.setWidth(getEdgeFuzz() * 2.0);
-    outline = stroker.createStroke(path()).simplified();
-    return outline;
-}
-
- double QGEPath::getEdgeFuzz() const
-{
-    return PreferencesGui::edgeFuzz();
 }
 
 void QGEPath::dumpGhostPoints(const char* text)

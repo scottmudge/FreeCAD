@@ -49,6 +49,8 @@ QGIEdge::QGIEdge(int index) :
     m_width = 1.0;
     setCosmetic(isCosmetic);
     setFill(Qt::NoBrush);
+
+    setStrokeWidth(getEdgeFuzz());
 }
 
 //NOTE this refers to Qt cosmetic lines
@@ -71,13 +73,11 @@ void QGIEdge::setHiddenEdge(bool b) {
 }
 
 void QGIEdge::setPrettyNormal() {
-//    Base::Console().Message("QGIE::setPrettyNormal()\n");
     if (isHiddenEdge) {
         m_colCurrent = getHiddenColor();
     } else {
         m_colCurrent = getNormalColor();
     }
-    //should call QGIPP::setPrettyNormal()?
 }
 
 QColor QGIEdge::getHiddenColor()
@@ -94,22 +94,7 @@ Qt::PenStyle QGIEdge::getHiddenStyle()
     return hidStyle;
 }
 
- double QGIEdge::getEdgeFuzz() const
+double QGIEdge::getEdgeFuzz() const
 {
     return PreferencesGui::edgeFuzz();
-}
-
-
-QRectF QGIEdge::boundingRect() const
-{
-    return shape().controlPointRect();
-}
-
-QPainterPath QGIEdge::shape() const
-{
-    QPainterPath outline;
-    QPainterPathStroker stroker;
-    stroker.setWidth(getEdgeFuzz());
-    outline = stroker.createStroke(path());
-    return outline;
 }

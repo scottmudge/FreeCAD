@@ -386,11 +386,7 @@ TechDraw::GeometryObjectPtr DrawViewPart::buildGeometryObject(TopoDS_Shape& shap
         //https://github.com/KDE/clazy/blob/1.11/docs/checks/README-connect-3arg-lambda.md
         connectHlrWatcher = QObject::connect(&m_hlrWatcher, &QFutureWatcherBase::finished,
                                              &m_hlrWatcher, [this] { this->onHlrFinished(); });
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-        m_hlrFuture = QtConcurrent::run(go.get(), &GeometryObject::projectShape, shape, viewAxis);
-#else
-        m_hlrFuture = QtConcurrent::run(&GeometryObject::projectShape, go.get(), shape, viewAxis);
-#endif
+        m_hlrFuture = QtConcurrent::run([=]{go->projectShape(shape, viewAxis);});
         m_hlrWatcher.setFuture(m_hlrFuture);
         waitingForHlr(true);
     }
@@ -1021,6 +1017,20 @@ Base::Vector3d DrawViewPart::projectPoint(const Base::Vector3d& pt, bool invert)
         result = DrawUtil::invertY(result);
     }
     return result;
+}
+
+Base::Vector3d DrawViewPart::inverseProjectPoint(const Base::Vector3d& pt, bool invert) const
+{
+    Base::Vector3d stdOrg(0.0, 0.0, 0.0);
+    gp_Ax2 viewAxis = getProjectionCS(stdOrg);
+    gp_Pnt gPt(pt.x, pt.y, pt.z);
+
+    if (invert)
+        gPt.SetY(-pt.y);
+
+    HLRAlgo_Projector projector(viewAxis);
+    gPt.Transform(projector.InvertedTransformation());
+    return DrawUtil::toVector3d(gPt);
 }
 
 //project a loose edge onto the paper plane

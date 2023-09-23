@@ -34,6 +34,7 @@
 #include <Base/Console.h>
 #include <Base/Parameter.h>
 #include <Base/Vector3D.h>
+#include <Gui/Application.h>
 #include <Gui/Command.h>
 #include <Mod/TechDraw/App/CenterLine.h>
 #include <Mod/TechDraw/App/Cosmetic.h>
@@ -61,6 +62,7 @@
 #include "ViewProviderGeomHatch.h"
 #include "ViewProviderHatch.h"
 #include "ViewProviderViewPart.h"
+#include "ViewProviderViewSection.h"
 #include "ZVALUE.h"
 
 
@@ -790,9 +792,16 @@ void QGIViewPart::drawSectionLine(TechDraw::DrawViewSection* viewSection, bool b
     float lineWidthThin = vp->HiddenWidth.getValue() * lineScaleFactor;//thin
 
     if (b) {
+        auto vpSection = Base::freecad_dynamic_cast<ViewProviderViewSection>(
+                Gui::Application::Instance->getViewProvider(viewSection));
         QGISectionLine* sectionLine = new QGISectionLine();
+        sectionLine->setFeature(viewSection);
         addToGroup(sectionLine);
         sectionLine->setSymbol(const_cast<char*>(viewSection->SectionSymbol.getValue()));
+        if (vpSection) {
+            sectionLine->setSymbolOffsets(DU::toQPointF(vpSection->SymbolOffset1.getValue()),
+                                          DU::toQPointF(vpSection->SymbolOffset2.getValue()));
+        }
         sectionLine->setSectionStyle(vp->SectionLineStyle.getValue());
         App::Color color = Preferences::getAccessibleColor(vp->SectionLineColor.getValue());
         sectionLine->setSectionColor(color.asValue<QColor>());
@@ -824,7 +833,7 @@ void QGIViewPart::drawSectionLine(TechDraw::DrawViewSection* viewSection, bool b
             //change points have Rez::guiX applied in sectionLine
             points.front().setLocation(location0);
             points.back().setLocation(location1);
-            sectionLine->setChangePoints(points);
+            sectionLine->setChangePoints(points, true);
         }
         else {
             sectionLine->clearChangePoints();
@@ -875,6 +884,7 @@ void QGIViewPart::drawComplexSectionLine(TechDraw::DrawViewSection* viewSection,
     Base::Vector3d vEnd = Rez::guiX(ends.second);
 
     QGISectionLine* sectionLine = new QGISectionLine();
+    sectionLine->setFeature(viewSection);
     addToGroup(sectionLine);
     sectionLine->setSymbol(const_cast<char*>(viewSection->SectionSymbol.getValue()));
     sectionLine->setSectionStyle(vp->SectionLineStyle.getValue());
@@ -884,7 +894,7 @@ void QGIViewPart::drawComplexSectionLine(TechDraw::DrawViewSection* viewSection,
     sectionLine->setPath(wirePath);
     sectionLine->setEnds(vStart, vEnd);
     if (vp->SectionLineMarks.getValue()) {
-        sectionLine->setChangePoints(dcs->getChangePointsFromSectionLine());
+        sectionLine->setChangePoints(dcs->getChangePointsFromSectionLine(), false);
     }
     else {
         sectionLine->clearChangePoints();

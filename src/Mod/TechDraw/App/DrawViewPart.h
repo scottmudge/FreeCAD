@@ -154,6 +154,7 @@ public:
 
 
     virtual Base::Vector3d projectPoint(const Base::Vector3d& pt, bool invert = true) const;
+    virtual Base::Vector3d inverseProjectPoint(const Base::Vector3d& pt, bool invert=true) const;
     virtual BaseGeomPtr projectEdge(const TopoDS_Edge& e) const;
     virtual BaseGeomPtrVector projectWire(const TopoDS_Wire& inWire) const;
 

@@ -25,7 +25,7 @@
 
 #include <Mod/TechDraw/TechDrawGlobal.h>
 
-# include "QGIPrimPath.h"
+# include "QGIEdge.h"
 
 QT_BEGIN_NAMESPACE
 class QPainter;
@@ -35,8 +35,9 @@ QT_END_NAMESPACE
 namespace TechDrawGui
 {
 
-class TechDrawGuiExport QGIDimLines : public QGIPrimPath
+class TechDrawGuiExport QGIDimLines : public QGIEdge
 {
+    using inherited = QGIEdge;
 public:
     explicit QGIDimLines();
     ~QGIDimLines() {}
@@ -44,7 +45,6 @@ public:
     enum {Type = QGraphicsItem::UserType + 175};
     int type() const override { return Type;}
     virtual QRectF boundingRect() const override;
-    virtual QPainterPath shape() const override;
 
 public:
     void draw();
@@ -55,8 +55,6 @@ public:
 
 protected:
     //QVariant itemChange(GraphicsItemChange change, const QVariant &value);
-    double getEdgeFuzz(void) const;
-
 
 private:
 };

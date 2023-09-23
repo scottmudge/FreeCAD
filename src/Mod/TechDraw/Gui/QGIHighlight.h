@@ -42,6 +42,7 @@ namespace TechDrawGui
 
 class TechDrawGuiExport QGIHighlight : public QGIDecoration
 {
+    using inherited = QGIDecoration;
 public:
     explicit QGIHighlight();
     ~QGIHighlight();
@@ -58,9 +59,6 @@ public:
     void setFont(QFont f, double fsize);
     virtual void draw() override;
     void setInteractive(bool state);
-    void setFeature(TechDraw::DrawViewDetail *feature);
-    TechDraw::DrawViewDetail *getFeature() const;
-    const App::DocumentObjectT & getFeatureT() const { return m_feature; }
 
     void setReferenceOffset(double offset) { m_referenceOffset = offset; }
     void setReferenceAngle(double angle) { m_referenceAngle = angle; }
@@ -68,8 +66,6 @@ public:
     void onDragFinished() override;
 
     QPainterPath shape() const override;
-
-    void setPreselect(bool enable = true);
 
 protected:
     QColor getHighlightColor();
@@ -79,10 +75,11 @@ protected:
     void updateReferencePos();
     void setTools();
     int getHoleStyle(void);
-    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
-    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
-    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
-    bool sceneEventFilter(QGraphicsItem *watched, QEvent *event) override;
+    void setPrettyNormal() override;
+    void setPrettyPre() override;
+    void setPrettySel() override;
+    void setupEventFilter() override;
+    void onItemMoved(QGraphicsItem *item, QPointF &oldPos, QGraphicsSceneMouseEvent *) override;
 
 private:
     QString            m_refText;
@@ -93,13 +90,8 @@ private:
     double             m_refSize;
     QPointF            m_start;
     QPointF            m_end;
-    QPointF            m_referenceOldPos;
-    App::DocumentObjectT m_feature;
     double             m_referenceAngle;
     double             m_referenceOffset;
-    bool               m_hasHover = false;
-    bool               m_busy = false;
-    bool               m_filterInstalled = false;
 };
 
 }

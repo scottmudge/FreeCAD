@@ -190,6 +190,7 @@ void CompassWidget::setDialAngle(double newAngle)
     if (dsbAngle) {
         dsbAngle->setValue(m_angle);
     }
+    Q_EMIT angleChanged(m_angle);
 }
 
 //slot for updates from spinbox on Enter/Return press.

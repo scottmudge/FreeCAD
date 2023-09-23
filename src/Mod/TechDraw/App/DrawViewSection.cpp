@@ -389,7 +389,7 @@ void DrawViewSection::sectionExec(TopoDS_Shape& baseShape)
         waitingForCut(true);
     }
     catch (...) {
-        Base::Console().Message("DVS::sectionExec - failed to make section cut");
+        Base::Console().Error("DVS::sectionExec - failed to make section cut");
         return;
     }
 }
@@ -451,13 +451,13 @@ void DrawViewSection::makeSectionCut(const TopoDS_Shape& baseShape)
     Bnd_Box testBox;
     BRepBndLib::AddOptimal(m_cutPieces, testBox);
     testBox.SetGap(0.0);
+
+    waitingForCut(false);
     if (testBox.IsVoid()) {//prism & input don't intersect.  rawShape is garbage, don't bother.
         Base::Console().Warning("DVS::makeSectionCut - prism & input don't intersect - %s\n",
                                 Label.getValue());
         return;
     }
-
-    waitingForCut(false);
 }
 
 //position, scale and rotate shape for  buildGeometryObject
@@ -492,7 +492,7 @@ TopoDS_Shape DrawViewSection::prepareShape(const TopoDS_Shape& rawShape, double 
         }
     }
     catch (Standard_Failure& e1) {
-        Base::Console().Warning("DVS::prepareShape - failed to build shape %s - %s **\n",
+        Base::Console().Error("DVS::prepareShape - failed to build shape %s - %s **\n",
                                 getNameInDocument(), e1.GetMessageString());
     }
     return preparedShape;
@@ -773,7 +773,7 @@ TopoDS_Shape DrawViewSection::makeFaceFromWires(std::vector<TopoDS_Wire> &inWire
         }
 
         if (!mkFace.IsDone()) {
-            Base::Console().Warning("DVS::makeFaceFromWires - %s - failed to make section face.\n",
+            Base::Console().Error("DVS::makeFaceFromWires - %s - failed to make section face.\n",
                                     getNameInDocument());
             return TopoDS_Shape();
         }
@@ -821,50 +821,89 @@ std::vector<TechDraw::FacePtr> DrawViewSection::makeTDSectionFaces(TopoDS_Compou
 std::pair<Base::Vector3d, Base::Vector3d> DrawViewSection::sectionLineEnds()
 {
     std::pair<Base::Vector3d, Base::Vector3d> result;
+    DrawViewPart *baseDvp = getBaseDVP();
+    if (!baseDvp)
+        return result;
+
+    Base::Placement pla;
+
     Base::Vector3d stdZ(0.0, 0.0, 1.0);
-    double baseRotation = getBaseDVP()->Rotation.getValue();//Qt degrees are clockwise
+    double baseRotation = baseDvp->Rotation.getValue();//Qt degrees are clockwise
     Base::Rotation rotator(stdZ, baseRotation * M_PI / 180.0);
     Base::Rotation unrotator(stdZ, -baseRotation * M_PI / 180.0);
 
     auto sNorm = SectionNormal.getValue();
-    auto axis = getBaseDVP()->Direction.getValue();
+    auto axis = baseDvp->Direction.getValue();
     Base::Vector3d stdOrg(0.0, 0.0, 0.0);
     Base::Vector3d sectionLineDir = -axis.Cross(sNorm);
     sectionLineDir.Normalize();
-    sectionLineDir = getBaseDVP()->projectPoint(sectionLineDir);//convert to base view CS
+    pla.setRotation(Base::Rotation(Base::Vector3d(0,0,1), sectionLineDir));
+
+    sectionLineDir = baseDvp->projectPoint(sectionLineDir);//convert to base view CS
     sectionLineDir.Normalize();
 
-    Base::Vector3d sectionOrg = SectionOrigin.getValue() - getBaseDVP()->getOriginalCentroid();
-    sectionOrg = getBaseDVP()->projectPoint(sectionOrg);//convert to base view CS
-    double halfSize = getBaseDVP()->getSizeAlongVector(sectionLineDir) / 2.0;
+    pla.setPosition(SectionOrigin.getValue());
+
+    Base::Vector3d sectionOrg = SectionOrigin.getValue() - baseDvp->getOriginalCentroid();
+    sectionOrg = baseDvp->projectPoint(sectionOrg);//convert to base view CS
+    double halfSize = baseDvp->getSizeAlongVector(sectionLineDir) / 2.0;
     result.first = sectionOrg + sectionLineDir * halfSize;
     result.second = sectionOrg - sectionLineDir * halfSize;
-
     return result;
 }
 
 //find the points and directions to make the change point marks.
 ChangePointVector DrawViewSection::getChangePointsFromSectionLine()
 {
-    //    Base::Console().Message("Dvs::getChangePointsFromSectionLine()\n");
     ChangePointVector result;
+    DrawViewPart *baseDvp = getBaseDVP();
+    if (!baseDvp)
+        return result;
+
     std::vector<gp_Pnt> allPoints;
-    DrawViewPart* baseDvp = dynamic_cast<DrawViewPart*>(BaseView.getValue());
-    if (baseDvp) {
-        std::pair<Base::Vector3d, Base::Vector3d> lineEnds = sectionLineEnds();
-        //make start and end marks
-        gp_Pnt location0 = DU::togp_Pnt(lineEnds.first);
-        gp_Pnt location1 = DU::togp_Pnt(lineEnds.second);
-        gp_Dir postDir = gp_Dir(location1.XYZ() - location0.XYZ());
-        gp_Dir preDir = postDir.Reversed();
-        ChangePoint startPoint(location0, preDir, postDir);
-        result.push_back(startPoint);
-        preDir = gp_Dir(location0.XYZ() - location1.XYZ());
-        postDir = preDir.Reversed();
-        ChangePoint endPoint(location1, preDir, postDir);
-        result.push_back(endPoint);
-    }
+    std::pair<Base::Vector3d, Base::Vector3d> lineEnds = sectionLineEnds();
+    //make start and end marks
+    gp_Pnt location0 = DU::togp_Pnt(lineEnds.first);
+    gp_Pnt location1 = DU::togp_Pnt(lineEnds.second);
+    gp_Dir postDir = gp_Dir(location1.XYZ() - location0.XYZ());
+    gp_Dir preDir = postDir.Reversed();
+    ChangePoint startPoint(location0, preDir, postDir);
+    result.push_back(startPoint);
+    preDir = gp_Dir(location0.XYZ() - location1.XYZ());
+    postDir = preDir.Reversed();
+    ChangePoint endPoint(location1, preDir, postDir);
+    result.push_back(endPoint);
     return result;
+}
+
+void DrawViewSection::setChangePoints(const ChangePointVector &points)
+{
+    auto baseDvp = getBaseDVP();
+    if (!baseDvp)
+        return;
+
+    auto lineEnds = sectionLineEnds();
+
+    // current section line mid point in proj cs
+    Base::Vector3d oldMid = baseDvp->projectPoint((lineEnds.first+lineEnds.second)/2);
+
+    Base::Vector3d p0 = DU::toVector3d(points.front().getLocation());
+    Base::Vector3d p1 = DU::toVector3d(points.back().getLocation());
+    Base::Vector3d newMid = (p1+p0)/2;
+
+    if (!DU::vectorEqual(oldMid, newMid)) {
+        Base::Vector3d centroid = baseDvp->getOriginalCentroid();
+
+        newMid = baseDvp->inverseProjectPoint(newMid) + centroid; // new mid point in view cs
+        SectionOrigin.setValue(newMid);
+    }
+
+    Base::Vector3d oldDir = lineEnds.second - lineEnds.first;
+    oldDir.Normalize();
+    Base::Vector3d newDir = p1 - p0;
+    newDir.Normalize();
+    if (!DU::vectorEqual(oldDir, newDir))
+        setCSFromBase(Base::Vector3d(-newDir.y, -newDir.x, 0));
 }
 
 //this should really be in BoundBox.h
@@ -1066,22 +1105,12 @@ TopoDS_Face DrawViewSection::getSectionTopoDSFace(int i)
 
 TechDraw::DrawViewPart* DrawViewSection::getBaseDVP() const
 {
-    App::DocumentObject* base = BaseView.getValue();
-    if (base && base->getTypeId().isDerivedFrom(TechDraw::DrawViewPart::getClassTypeId())) {
-        TechDraw::DrawViewPart* baseDVP = static_cast<TechDraw::DrawViewPart*>(base);
-        return baseDVP;
-    }
-    return nullptr;
+    return Base::freecad_dynamic_cast<DrawViewPart>(BaseView.getValue());
 }
 
 TechDraw::DrawProjGroupItem* DrawViewSection::getBaseDPGI() const
 {
-    App::DocumentObject* base = BaseView.getValue();
-    if (base && base->getTypeId().isDerivedFrom(TechDraw::DrawProjGroupItem::getClassTypeId())) {
-        TechDraw::DrawProjGroupItem* baseDPGI = static_cast<TechDraw::DrawProjGroupItem*>(base);
-        return baseDPGI;
-    }
-    return nullptr;
+    return Base::freecad_dynamic_cast<DrawProjGroupItem>(BaseView.getValue());
 }
 
 // setup / tear down routines

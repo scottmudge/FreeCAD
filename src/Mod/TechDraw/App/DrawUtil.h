@@ -23,6 +23,7 @@
 #ifndef DrawUtil_h_
 #define DrawUtil_h_
 
+#include <cmath>
 #include <string>
 
 #include <QByteArray>
@@ -156,38 +157,50 @@ public:
     static Base::Vector2d Intersect2d(Base::Vector2d p1, Base::Vector2d d1, Base::Vector2d p2,
                                       Base::Vector2d d2);
 
-    static Base::Vector3d toVector3d(const gp_Pnt gp)
+    static Base::Vector3d toVector3d(const gp_Pnt &gp)
     {
         return Base::Vector3d(gp.X(), gp.Y(), gp.Z());
     }
-    static Base::Vector3d toVector3d(const gp_Dir gp)
+    static Base::Vector3d toVector3d(const gp_Dir &gp)
     {
         return Base::Vector3d(gp.X(), gp.Y(), gp.Z());
     }
-    static Base::Vector3d toVector3d(const gp_Vec gp)
+    static Base::Vector3d toVector3d(const gp_Vec &gp)
     {
         return Base::Vector3d(gp.X(), gp.Y(), gp.Z());
     }
-    static Base::Vector3d toVector3d(const QPointF gp)
+    static Base::Vector3d toVector3d(const QPointF &gp)
     {
         return Base::Vector3d(gp.x(), gp.y(), 0.0);
     }
 
-    static gp_Pnt togp_Pnt(const Base::Vector3d v)
+    static gp_Pnt togp_Pnt(const Base::Vector3d &v)
     {
         return gp_Pnt(v.x, v.y, v.z);
     }
-    static gp_Dir togp_Dir(const Base::Vector3d v)
+    static gp_Pnt togp_Pnt(const QPointF &v)
+    {
+        return gp_Pnt(v.x(), v.y(), 0);
+    }
+    static gp_Dir togp_Dir(const Base::Vector3d &v)
     {
         return gp_Dir(v.x, v.y, v.z);
     }
-    static gp_Vec togp_Vec(const Base::Vector3d v)
+    static gp_Vec togp_Vec(const Base::Vector3d &v)
     {
         return gp_Vec(v.x, v.y, v.z);
     }
-    static QPointF toQPointF(const Base::Vector3d v)
+    static QPointF toQPointF(const Base::Vector3d &v)
     {
         return QPointF(v.x, v.y);
+    }
+
+    static QPointF normalize(const QPointF &v, double tolerance = FLT_EPSILON)
+    {
+        double l = sqrt(v.x()*v.x() + v.y()*v.y());
+        if (fpCompare(l, 0, tolerance))
+            return v;
+        return QPointF(v.x()/l, v.y()/l);
     }
 
     static std::string shapeToString(TopoDS_Shape s);

@@ -74,6 +74,7 @@ class QGIVertex;
 
 class TechDrawGuiExport  QGIView : public QObject, public QGraphicsItemGroup
 {
+    using inherited = QGraphicsItemGroup;
     Q_OBJECT
 public:
     QGIView();
@@ -208,6 +209,7 @@ private:
     double m_lockHeight;
     int m_dragState;
     int m_zOrder;
+    bool m_hasHover = false;
 };
 
 } // namespace

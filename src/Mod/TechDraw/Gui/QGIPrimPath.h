@@ -39,17 +39,14 @@ QT_END_NAMESPACE
 namespace TechDrawGui
 {
 
-class TechDrawGuiExport QGIPrimPath : public QGraphicsPathItem
+class TechDrawGuiExport QGIPrimPath : public QGraphicsItem
 {
+    using inherited = QGraphicsItem;
 public:
     explicit QGIPrimPath();
     ~QGIPrimPath() {}
 
     enum {Type = QGraphicsItem::UserType + 170};
-
-    int type() const override { return Type;}
-    virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = nullptr ) override;
-    virtual QPainterPath shape() const override { return path(); }
 
     void setHighlighted(bool state);
     virtual void setPrettyNormal();
@@ -76,11 +73,27 @@ public:
 
     bool hasHover() const { return m_hasHover; }
 
+    QPainterPath path() const;
+    virtual void setPath(const QPainterPath &path);
+
+    double getStrokeWidth() const { return m_strokeWidth; }
+    void setStrokeWidth(double width);
+
+    int type() const override { return Type;}
+    QRectF boundingRect() const override;
+    QPainterPath shape() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
+    QPainterPath opaqueArea() const override;
+
+    static QPainterPath shapeFromPath(const QPainterPath &path, const QPen &pen);
+
+    virtual void setPreselect(bool enable);
+    virtual void setTools() const;
+
 protected:
     virtual void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
     virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
     virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
-    virtual void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 
     virtual QColor getNormalColor(void);
     virtual QColor getPreColor(void);
@@ -88,9 +101,7 @@ protected:
     Base::Reference<ParameterGrp> getParmGroup(void);
     virtual Qt::PenCapStyle prefCapStyle(void);
 
-    bool isHighlighted;
-
-    QPen m_pen;
+    mutable QPen m_pen;
     QColor m_colCurrent;
     QColor m_colNormal;
     bool   m_colOverride;
@@ -98,7 +109,7 @@ protected:
     double m_width;
     Qt::PenCapStyle m_capStyle;
 
-    QBrush m_brush;
+    mutable QBrush m_brush;
     Qt::BrushStyle m_fillStyleCurrent;                 //current fill style
     QColor m_fillColorCurrent;                         //current fill color
 
@@ -110,6 +121,12 @@ protected:
 
     bool m_fillOverride;
     bool m_hasHover = false;
+
+    double m_strokeWidth = 0.0;
+
+    QPainterPath m_path;
+    mutable QPainterPath m_shapePath;
+    mutable QRectF m_boundingRect;
 
 private:
 

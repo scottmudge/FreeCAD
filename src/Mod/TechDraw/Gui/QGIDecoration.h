@@ -23,6 +23,8 @@
 #ifndef DRAWINGGUI_QGIDECORATION_H
 #define DRAWINGGUI_QGIDECORATION_H
 
+#include <unordered_map>
+
 #include <Mod/TechDraw/TechDrawGlobal.h>
 
 #include <QBrush>
@@ -35,9 +37,12 @@ class QPainter;
 class QStyleOptionGraphicsItem;
 QT_END_NAMESPACE
 
+#include <App/DocumentObserver.h>
 #include <Base/Parameter.h>
 #include <Base/Console.h>
 #include <Base/Vector3D.h>
+#include <Base/Tools.h>
+#include <Gui/Application.h>
 #include <Mod/TechDraw/TechDrawGlobal.h>
 
 namespace TechDrawGui
@@ -49,6 +54,7 @@ namespace TechDrawGui
 
 class TechDrawGuiExport QGIDecoration : public QGraphicsItemGroup
 {
+    using inherited = QGraphicsItemGroup;
 public:
     explicit QGIDecoration(void);
     ~QGIDecoration() {}
@@ -77,10 +83,39 @@ public:
     void makeMark(double x, double y);
     void makeMark(Base::Vector3d v);
 
+    void setFeature(App::DocumentObject *feature);
+    App::DocumentObject *getFeature() const;
+
+    template<class T>
+    T *getFeatureAs() const {
+        return Base::freecad_dynamic_cast<T>(getFeature());
+    }
+
+    template<class T>
+    T *getFeatureViewProvider() const {
+        return Base::freecad_dynamic_cast<T>(
+                Gui::Application::Instance->getViewProvider(getFeature()));
+    }
+
+    const App::DocumentObjectT & getFeatureT() const { return m_feature; }
+
+    virtual void setPreselect(bool enable);
+
 protected:
-    void setPrettyNormal();
-    void setPrettyPre();
-    void setPrettySel();
+    void addMovableItem(QGraphicsItem *item);
+    void removeMovableItem(QGraphicsItem *item);
+    void clearMovableItems();
+    virtual void onItemMoved(QGraphicsItem *item, QPointF &oldPos, QGraphicsSceneMouseEvent *);
+
+    bool sceneEventFilter(QGraphicsItem *watched, QEvent *event) override;
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
+    virtual void setPrettyNormal() {}
+    virtual void setPrettyPre() {}
+    virtual void setPrettySel() {}
+    virtual void setupEventFilter();
+
     virtual QColor prefNormalColor(void);
     virtual QColor prefPreColor(void);
     virtual QColor prefSelectColor(void);
@@ -91,10 +126,18 @@ protected:
     double m_width;
     Qt::PenStyle m_styleCurrent;
     Qt::BrushStyle m_brushCurrent;
+    App::DocumentObjectT m_feature;
 
     int m_dragState;
+    QGraphicsItem *m_moveProxy = nullptr;
+    bool m_filterInstalled = false;
+    bool m_hasHover = false;
+
+    std::unordered_map<QGraphicsItem*, QPointF> m_moveableItems;
+    QPointF m_oldPos;
 
 private:
+    bool m_busy = false;
 };
 
 }

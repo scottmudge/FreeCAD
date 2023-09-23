@@ -64,7 +64,9 @@ public:
     QPointF getLocation() const { return m_location; }
     void setLocation(QPointF newLocation) { m_location = newLocation; }
     QPointF getPreDirection() const { return m_preDirection; }
+    void setPreDirection(QPointF newDirection) { m_preDirection = newDirection; }
     QPointF getPostDirection() const { return m_postDirection; }
+    void setPostDirection(QPointF newDirection) { m_postDirection = newDirection; }
     void scale(double scaleFactor);
 
 private:
@@ -162,6 +164,8 @@ public:
     static const char* CutSurfaceEnums[];
 
     virtual std::pair<Base::Vector3d, Base::Vector3d> sectionLineEnds();
+
+    virtual void setChangePoints(const ChangePointVector &points);
     virtual ChangePointVector getChangePointsFromSectionLine();
 
     bool showSectionEdges(void);

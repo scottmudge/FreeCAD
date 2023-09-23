@@ -129,11 +129,10 @@ void Thumbnail::SaveDocFile (Base::Writer &writer) const
         } else if (App::DocumentParams::getAddThumbnailLogo()) {
             // Create a small "Fc" Application icon in the bottom right of the thumbnail
             // only scale app icon if an offscreen image could be created
-            QPixmap img_pm;
-            if (img_pm.convertFromImage(img)) {
-                appIcon = appIcon.scaled(imageSize / 4, imageSize /4, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                img = BitmapFactory().merge(img_pm, appIcon, BitmapFactoryInst::BottomRight).toImage();
-            }
+            appIcon = appIcon.scaled(imageSize / 4, imageSize /4, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            QPixmap px(QPixmap::fromImage(img));
+            if (!px.isNull() && !appIcon.isNull())
+                img = BitmapFactory().merge(px, appIcon, BitmapFactoryInst::BottomRight).toImage();
         }
         image = img;
     }

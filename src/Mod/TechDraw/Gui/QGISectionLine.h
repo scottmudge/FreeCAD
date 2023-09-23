@@ -33,8 +33,8 @@
 #include <Base/Vector3D.h>
 #include <Mod/TechDraw/App/DrawViewSection.h>
 
-#include "QGCustomText.h"
 #include "QGIDecoration.h"
+#include "QGCustomText.h"
 
 
 namespace TechDrawGui
@@ -42,9 +42,11 @@ namespace TechDrawGui
 
 class QGIArrow;
 class QGCustomText;
+class QGIEdge;
 
 class TechDrawGuiExport QGISectionLine : public QGIDecoration
 {
+    using inherited = QGIDecoration;
 public:
     explicit QGISectionLine();
     ~QGISectionLine() {}
@@ -52,25 +54,36 @@ public:
     enum {Type = QGraphicsItem::UserType + 172};
     int type() const { return Type;}
 
-    virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = nullptr );
-
-    void setEnds(Base::Vector3d l1, Base::Vector3d l2);
+    void setEnds(const Base::Vector3d &l1, const Base::Vector3d &l2);
+    void setEnds(const QPointF &start, const QPointF &end);
     void setBounds(double x1, double y1, double x2, double y2);
-    void setPath(QPainterPath& path);
+    void setPath(const QPainterPath& path);
     void setSymbol(char* sym);
     void setDirection(double xDir, double yDir);
-    void setDirection(Base::Vector3d dir);
-    void setArrowDirections(Base::Vector3d dir1, Base::Vector3d dir2);
+    void setDirection(const Base::Vector3d &dir);
+    void setArrowDirections(const Base::Vector3d &dir1, const Base::Vector3d &dir2);
     void setFont(QFont f, double fsize);
     void setSectionStyle(int style);
-    void setSectionColor(QColor c);
+    void setSectionColor(const QColor &c);
     void setPathMode(bool mode) { m_pathMode = mode; }
     bool pathMode() { return m_pathMode; }
-    void setChangePoints(TechDraw::ChangePointVector changePoints);
+    void setChangePoints(const TechDraw::ChangePointVector &changePoints, bool moveable=false);
     void clearChangePoints();
     virtual void draw();
+    void setInteractive(bool enable);
+    QPainterPath shape() const override;
+
+    void setSymbolOffsets(const QPointF &p1, const QPointF &p2);
 
 protected:
+    void updateSymbolOffset();
+    void calcSymbolPos(QPointF &symPos1, QPointF &symPos2);
+    void setPrettyNormal() override;
+    void setPrettyPre() override;
+    void setPrettySel() override;
+    void setupEventFilter() override;
+    bool sceneEventFilter(QGraphicsItem *watched, QEvent *event) override;
+    void onItemMoved(QGraphicsItem *item, QPointF &oldPos, QGraphicsSceneMouseEvent *) override;
     QColor getSectionColor();
     Qt::PenStyle getSectionStyle();
     void makeSectionLine();
@@ -79,25 +92,23 @@ protected:
     void makeArrowsTrad();
     void makeArrowsISO();
     void makeSymbols();
-    void makeSymbolsTrad();
-    void makeSymbolsISO();
     void makeChangePointMarks();
     void setTools();
     int  getPrefSectionStandard();
     void extensionEndsISO();
     void extensionEndsTrad();
-    double getArrowRotation(Base::Vector3d arrowDir);
-    QPointF getArrowPosition(Base::Vector3d arrowDir, QPointF refPoint);
+    double getArrowRotation(const Base::Vector3d &arrowDir);
+    QPointF getArrowPosition(const Base::Vector3d &arrowDir, const QPointF &refPoint);
     void clearChangePointMarks();
-
-    static QPointF normalizeQPointF(QPointF inPoint);
 
 private:
     char* m_symbol;
-    QGraphicsPathItem* m_line;
-    QGraphicsPathItem* m_extend;
+    QGIEdge          * m_line;
+    QGIEdge          * m_extend;
     QGIArrow*          m_arrow1;
     QGIArrow*          m_arrow2;
+    QPointF            m_symbolOffset1;
+    QPointF            m_symbolOffset2;
     QGCustomText*      m_symbol1;
     QGCustomText*      m_symbol2;
     QPointF            m_start;         //start of section line
@@ -108,8 +119,6 @@ private:
     double             m_symSize;
     double             m_arrowSize;
     double             m_extLen;
-    Base::Vector3d     m_l1;            //end of main section line
-    Base::Vector3d     m_l2;            //end of main section line
     QPointF            m_beginExt1;     //start of extension line 1
     QPointF            m_endExt1;       //end of extension line 1
     QPointF            m_beginExt2;     //start of extension line 2
@@ -120,8 +129,10 @@ private:
     Base::Vector3d     m_arrowDir2;
     QPointF            m_arrowPos1;
     QPointF            m_arrowPos2;
-    std::vector<QGraphicsPathItem*> m_changePointMarks;
+    std::vector<QGIEdge*> m_changePointMarks;
     TechDraw::ChangePointVector m_changePointData;
+    bool               m_movablePoints = false;
+    bool               m_interactive = false;
 };
 
 }

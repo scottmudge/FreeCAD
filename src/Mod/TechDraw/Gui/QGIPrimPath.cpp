@@ -54,16 +54,11 @@ QGIPrimPath::QGIPrimPath():
     setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
     setAcceptHoverEvents(true);
 
-    isHighlighted = false;
-
     m_colOverride = false;
     m_colNormal = getNormalColor();
     m_colCurrent = m_colNormal;
     m_styleCurrent = Qt::SolidLine;
-    m_pen.setStyle(m_styleCurrent);
     m_capStyle = prefCapStyle();
-    m_pen.setCapStyle(m_capStyle);
-    m_pen.setWidthF(m_width);
 
     m_styleDef = Qt::NoBrush;
     m_styleSelect = Qt::SolidPattern;
@@ -79,7 +74,6 @@ QGIPrimPath::QGIPrimPath():
 
 QVariant QGIPrimPath::itemChange(GraphicsItemChange change, const QVariant &value)
 {
-//    Base::Console().Message("QGIPP::itemChange(%d) - type: %d\n", change, type() - QGraphicsItem::UserType);
     if (change == ItemSelectedHasChanged && scene()) {
         if(isSelected()) {
             setPrettySel();
@@ -87,43 +81,36 @@ QVariant QGIPrimPath::itemChange(GraphicsItemChange change, const QVariant &valu
             setPrettyNormal();
         }
     }
-    return QGraphicsPathItem::itemChange(change, value);
+    return inherited::itemChange(change, value);
 }
 
 void QGIPrimPath::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
-//    Base::Console().Message("QGIPP::hoverEnter() - selected; %d\n", isSelected());
-    m_hasHover = true;
-    setPrettyPre();
-    QGraphicsPathItem::hoverEnterEvent(event);
+    setPreselect(true);
+    inherited::hoverEnterEvent(event);
 }
 
 void QGIPrimPath::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
-//    Base::Console().Message("QGIPP::hoverLeave() - selected; %d\n", isSelected());
-    m_hasHover = false;
-    if(isSelected()) {
-        setPrettySel();
-    } else {
-        setPrettyNormal();
-    }
-
-    QGraphicsPathItem::hoverLeaveEvent(event);
+    setPreselect(false);
+    inherited::hoverLeaveEvent(event);
 }
 
-//set highlighted is obsolete
-void QGIPrimPath::setHighlighted(bool b)
+void QGIPrimPath::setPreselect(bool enable)
 {
-    isHighlighted = b;
-    if(isHighlighted) {
-        setPrettySel();
-    } else {
-        setPrettyNormal();
+    if (m_hasHover != enable) {
+        m_hasHover = enable;
+        if (enable)
+            setPrettyPre();
+        else if (isSelected())
+            setPrettySel();
+        else
+            setPrettyNormal();
+        update();
     }
 }
 
 void QGIPrimPath::setPrettyNormal() {
-//    Base::Console().Message("QGIPP::setPrettyNormal()\n");
     m_colCurrent = m_colNormal;
     m_fillColorCurrent = m_colNormalFill;
 }
@@ -199,11 +186,20 @@ QColor QGIPrimPath::getSelectColor()
     return PreferencesGui::selectQColor();
 }
 
+void QGIPrimPath::setStrokeWidth(double w)
+{
+    if (w != m_strokeWidth) {
+        prepareGeometryChange();
+        m_strokeWidth = w;
+        m_boundingRect = QRectF();
+        m_shapePath = QPainterPath();
+        update();
+    }
+}
+
 void QGIPrimPath::setWidth(double w)
 {
-//    Base::Console().Message("QGIPP::setWidth(%.3f)\n", w);
     m_width = w;
-    m_pen.setWidthF(m_width);
 }
 
 void QGIPrimPath::setStyle(Qt::PenStyle s)
@@ -229,12 +225,31 @@ void QGIPrimPath::setNormalColor(QColor c)
 void QGIPrimPath::setCapStyle(Qt::PenCapStyle c)
 {
     m_capStyle = c;
-    m_pen.setCapStyle(c);
 }
 
 Base::Reference<ParameterGrp> QGIPrimPath::getParmGroup()
 {
     return Preferences::getPreferenceGroup("Colors");
+}
+
+void QGIPrimPath::setTools() const
+{
+    m_pen.setWidth(m_width);
+    m_pen.setColor(m_colCurrent);
+    m_pen.setStyle(m_styleCurrent);
+    m_pen.setCapStyle(m_capStyle);
+    m_brush.setStyle(m_fillStyleCurrent);
+    m_brush.setColor(m_fillColorCurrent);
+}
+
+QPainterPath QGIPrimPath::opaqueArea() const
+{
+    QBrush brush;
+    brush.setStyle(m_fillStyleCurrent);
+    brush.setColor(m_fillColorCurrent);
+    if (brush.isOpaque())
+        return isClipped() ? clipPath() : shape();
+    return QGraphicsItem::opaqueArea();
 }
 
 //EdgeCapStyle param changed from UInt (Qt::PenCapStyle) to Int (QComboBox index)
@@ -257,26 +272,6 @@ Qt::PenCapStyle QGIPrimPath::prefCapStyle()
             result = static_cast<Qt::PenCapStyle>(0x20);
     }
     return result;
-}
-
-void QGIPrimPath::mousePressEvent(QGraphicsSceneMouseEvent * event)
-{
-    //wf: this seems a bit of a hack. does it mess up selection of QGIPP??
-    QGIView *parent;
-    QGraphicsItem* qparent = parentItem();
-    if (qparent) {
-        parent = dynamic_cast<QGIView *> (qparent);
-        if (parent) {
-//            Base::Console().Message("QGIPP::mousePressEvent - passing event to QGIV parent\n");
-            parent->mousePressEvent(event);
-        } else {
-//            qparent->mousePressEvent(event);  //protected!
-            QGraphicsPathItem::mousePressEvent(event);
-        }
-    } else {
-//        Base::Console().Message("QGIPP::mousePressEvent - passing event to ancestor\n");
-        QGraphicsPathItem::mousePressEvent(event);
-    }
 }
 
 void QGIPrimPath::setFill(QColor c, Qt::BrushStyle s) {
@@ -305,20 +300,71 @@ void QGIPrimPath::setFillColor(QColor c)
 //    m_colDefFill = c;
 }
 
-
-void QGIPrimPath::paint ( QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget) {
-    QStyleOptionGraphicsItem myOption(*option);
-    myOption.state &= ~QStyle::State_Selected;
-
-    m_pen.setWidthF(m_width);
-    m_pen.setColor(m_colCurrent);
-    m_pen.setStyle(m_styleCurrent);
-    setPen(m_pen);
-
-    m_brush.setColor(m_fillColorCurrent);
-    m_brush.setStyle(m_fillStyleCurrent);
-    setBrush(m_brush);
-
-    QGraphicsPathItem::paint (painter, &myOption, widget);
+void QGIPrimPath::paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget) {
+    (void)option;
+    (void)widget;
+    setTools();
+    painter->setPen(m_pen);
+    painter->setBrush(m_brush);
+    painter->drawPath(path());
 }
 
+QPainterPath QGIPrimPath::path() const
+{
+    return m_path;
+}
+
+void QGIPrimPath::setPath(const QPainterPath &path)
+{
+    if (m_path == path)
+        return;
+    prepareGeometryChange();
+    m_path = path;
+    m_shapePath = QPainterPath();
+    m_boundingRect = QRectF();
+    update();
+}
+
+// Copied from Qt's qgraphicsitem.cpp
+QPainterPath QGIPrimPath::shapeFromPath(const QPainterPath &path, const QPen &pen)
+{
+    // We unfortunately need this hack as QPainterPathStroker will set a width of 1.0
+    // if we pass a value of 0.0 to QPainterPathStroker::setWidth()
+    const qreal penWidthZero = qreal(0.00000001);
+
+    if (path == QPainterPath() || pen == Qt::NoPen)
+        return path;
+    QPainterPathStroker ps;
+    ps.setCapStyle(pen.capStyle());
+    if (pen.widthF() <= 0.0)
+        ps.setWidth(penWidthZero);
+    else
+        ps.setWidth(pen.widthF());
+    ps.setJoinStyle(pen.joinStyle());
+    ps.setMiterLimit(pen.miterLimit());
+    QPainterPath p = ps.createStroke(path);
+    p.addPath(path);
+    return p;
+}
+
+QPainterPath QGIPrimPath::shape() const
+{
+    if (m_shapePath.isEmpty()) {
+        QPen pen;
+        pen.setWidthF(m_strokeWidth);
+        m_shapePath = shapeFromPath(m_path, pen);
+    }
+    return m_shapePath;
+}
+
+QRectF QGIPrimPath::boundingRect() const
+{
+    if (m_boundingRect.isNull()) {
+        if (m_strokeWidth == 0.0)
+            m_boundingRect = m_path.controlPointRect();
+        else {
+            m_boundingRect = shape().controlPointRect();
+        }
+    }
+    return m_boundingRect;
+}

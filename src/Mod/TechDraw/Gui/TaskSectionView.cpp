@@ -35,6 +35,7 @@
 #include <Gui/BitmapFactory.h>
 #include <Gui/CommandT.h>
 #include <Gui/Control.h>
+#include <Gui/Document.h>
 #include <Gui/MainWindow.h>
 #include <Gui/Selection.h>
 #include <Gui/ViewProvider.h>
@@ -58,11 +59,9 @@ TaskSectionView::TaskSectionView(TechDraw::DrawViewPart* base) :
     ui(new Ui_TaskSectionView),
     m_base(base),
     m_section(nullptr),
-    m_saveScale(1.0),
     m_dirName(""),
     m_doc(nullptr),
     m_createMode(true),
-    m_saved(false),
     m_applyDeferred(0),
     m_directionIsSet(false),
     m_modelIsDirty(false)
@@ -80,6 +79,8 @@ TaskSectionView::TaskSectionView(TechDraw::DrawViewPart* base) :
 
     m_applyDeferred = 0;//setting the direction widgets causes an increment of the deferred count,
                         //so we reset the counter and the message.
+
+    init();
 }
 
 //ctor for edit
@@ -87,10 +88,8 @@ TaskSectionView::TaskSectionView(TechDraw::DrawViewSection* section) :
     ui(new Ui_TaskSectionView),
     m_base(nullptr),
     m_section(section),
-    m_saveScale(1.0),
     m_doc(nullptr),
     m_createMode(false),
-    m_saved(false),
     m_applyDeferred(0),
     m_directionIsSet(true),
     m_modelIsDirty(false)
@@ -111,12 +110,22 @@ TaskSectionView::TaskSectionView(TechDraw::DrawViewSection* section) :
     ui->setupUi(this);
 
     m_dirName = m_section->SectionDirection.getValueAsString();
-    saveSectionState();
     setUiEdit();
 
     m_applyDeferred = 0;//setting the direction widgets causes an increment of the deferred count,
                         //so we reset the counter and the message.
     ui->lPendingUpdates->setText(QString());
+
+    init();
+}
+
+void TaskSectionView::init()
+{
+    m_param = App::GetApplication().GetParameterGroupByPath("User parameter::BaseApp/Preferences/Mod/TechDraw/General");
+    ui->cbLiveUpdate->setChecked(m_param->GetBool("SectionLiveUpdate", true));
+    setupTransaction();
+    m_timer.setSingleShot(true);
+    connect(&m_timer, &QTimer::timeout, this, [this]{apply(true);});
 }
 
 void TaskSectionView::setUiPrimary()
@@ -229,39 +238,6 @@ void TaskSectionView::setUiCommon(Base::Vector3d origin)
     editLayout->addWidget(m_viewDirectionWidget);
     connect(m_viewDirectionWidget, &VectorEditWidget::valueChanged, this,
             &TaskSectionView::slotViewDirectionChanged);
-}
-
-//save the start conditions
-void TaskSectionView::saveSectionState()
-{
-    //    Base::Console().Message("TSV::saveSectionState()\n");
-    if (m_section) {
-        m_saveSymbol = m_section->SectionSymbol.getValue();
-        m_saveScale = m_section->getScale();
-        m_saveScaleType = m_section->ScaleType.getValue();
-        m_saveNormal = m_section->SectionNormal.getValue();
-        m_normal = m_saveNormal;
-        m_saveDirection = m_section->Direction.getValue();
-        m_saveOrigin = m_section->SectionOrigin.getValue();
-        m_saveDirName = m_section->SectionDirection.getValueAsString();
-        m_saved = true;
-    }
-}
-
-//restore the start conditions
-void TaskSectionView::restoreSectionState()
-{
-    //    Base::Console().Message("TSV::restoreSectionState()\n");
-    if (!m_section)
-        return;
-
-    m_section->SectionSymbol.setValue(m_saveSymbol);
-    m_section->Scale.setValue(m_saveScale);
-    m_section->ScaleType.setValue(m_saveScaleType);
-    m_section->SectionNormal.setValue(m_saveNormal);
-    m_section->Direction.setValue(m_saveDirection);
-    m_section->SectionOrigin.setValue(m_saveOrigin);
-    m_section->SectionDirection.setValue(m_saveDirName.c_str());
 }
 
 //the VectorEditWidget reports a change in direction
@@ -412,7 +388,10 @@ void TaskSectionView::enableAll(bool enable)
     }
 }
 
-void TaskSectionView::liveUpdateClicked() { apply(true); }
+void TaskSectionView::liveUpdateClicked() {
+    m_param->SetBool("SectionLiveUpdate", ui->cbLiveUpdate->isChecked());
+    apply(true);
+}
 
 void TaskSectionView::updateNowClicked() { apply(true); }
 
@@ -421,7 +400,11 @@ bool TaskSectionView::apply(bool forceUpdate)
 {
     //    Base::Console().Message("TSV::apply() - liveUpdate: %d force: %d deferred: %d\n",
     //                            ui->cbLiveUpdate->isChecked(), forceUpdate, m_applyDeferred);
-    if (!ui->cbLiveUpdate->isChecked() && !forceUpdate) {
+    if (!forceUpdate) {
+        if (ui->cbLiveUpdate->isChecked()) {
+            m_timer.start(std::max(100L, m_param->GetInt("SectionUpdateDelay", 300)));
+            return false;
+        }
         //nothing to do
         m_applyDeferred++;
         QString msgLiteral =
@@ -429,7 +412,9 @@ bool TaskSectionView::apply(bool forceUpdate)
         QString msgNumber = QString::number(m_applyDeferred);
         ui->lPendingUpdates->setText(msgNumber + msgLiteral);
         return false;
-    }
+    };
+
+    m_timer.stop();
 
     Gui::WaitCursor wc;
     m_modelIsDirty = true;
@@ -497,7 +482,7 @@ TechDraw::DrawViewSection* TaskSectionView::createSectionView(void)
 
     std::string sectionName;
 
-    Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Create SectionView"));
+    setupTransaction();
     if (!m_section) {
         m_sectionName = m_base->getDocument()->getUniqueObjectName("SectionView");
         std::string sectionType = "TechDraw::DrawViewSection";
@@ -547,7 +532,6 @@ TechDraw::DrawViewSection* TaskSectionView::createSectionView(void)
         Gui::cmdAppObjectArgs(m_section, "Rotation = %.6f", rotation);
     }
     Gui::Command::updateActive();
-    Gui::Command::commitCommand();
     return m_section;
 }
 
@@ -559,7 +543,7 @@ void TaskSectionView::updateSectionView()
         return;
     }
 
-    Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Edit SectionView"));
+    setupTransaction();
     if (m_section) {
         Gui::cmdAppObjectArgs(m_section, "SectionDirection = '%s'", m_dirName);
         Gui::cmdAppObjectArgs(m_section, "SectionOrigin = FreeCAD.Vector(%.3f,%.3f,%.3f)",
@@ -591,7 +575,6 @@ void TaskSectionView::updateSectionView()
         Gui::cmdAppObjectArgs(m_section, "Rotation = %.6f", rotation);
     }
     Gui::Command::updateActive();
-    Gui::Command::commitCommand();
 }
 
 void TaskSectionView::failNoObject(void)
@@ -639,6 +622,22 @@ double TaskSectionView::requiredRotation(double inputAngle)
     return rotation;
 }
 
+void TaskSectionView::setupTransaction() {
+    int tid = 0;
+    const char *name = App::GetApplication().getActiveTransaction(&tid);
+    if(tid && tid == m_transactionID)
+        return;
+
+    std::string n(QT_TRANSLATE_NOOP("Command", "Edit "));
+    n += m_sectionName;
+    if(!name || n != name)
+        App::GetApplication().setActiveTransaction(n.c_str());
+
+    if(!m_transactionID)
+        m_transactionID = tid;
+}
+
+
 //******************************************************************************
 
 bool TaskSectionView::accept()
@@ -665,25 +664,18 @@ bool TaskSectionView::reject()
         return false;
     }
 
-    if (m_createMode) {
-        std::string SectionName = m_section->getNameInDocument();
-        App::DocumentObject *page = m_section->getDocument()->getObject(m_savePageName.c_str());
-        Gui::cmdAppObjectArgs(page, "removeView(App.activeDocument().%s)", SectionName);
-        Gui::cmdAppDocument(m_section, std::ostringstream() << "removeObject('" << SectionName << "')");
-    } else {
-        if (m_modelIsDirty) {
-            restoreSectionState();
-            m_section->recomputeFeature();
-            m_section->requestPaint();
+    if (m_transactionID) {
+        int tid = 0;
+        App::GetApplication().getActiveTransaction(&tid);
+        if (m_transactionID == tid) {
+            App::GetApplication().closeActiveTransaction(/*abort*/true);
         }
-    }
-
-    if (isBaseValid()) {
-        m_base->requestPaint();
+        else if (m_doc) {
+            m_doc->undo(m_transactionID);
+        }
     }
     Gui::Command::updateActive();
     Gui::Command::doCommand(Gui::Command::Gui, "Gui.ActiveDocument.resetEdit()");
-
     return false;
 }
 

@@ -4335,11 +4335,13 @@ bool OverlayManager::eventFilter(QObject *o, QEvent *ev)
 
         for (OverlayTabWidget *tabWidget : _Overlays) {
             if (tabWidget->getProxyWidget()->hitTest(pos) > 1) {
-                if (ev->type() == QEvent::MouseButtonRelease
-                        && static_cast<QMouseEvent*>(ev)->button() == Qt::LeftButton)
+                if ((ev->type() == QEvent::MouseButtonRelease
+                        || ev->type() == QEvent::MouseButtonPress)
+                    && static_cast<QMouseEvent*>(ev)->button() == Qt::LeftButton)
                 {
-                    tabWidget->getProxyWidget()->onMousePress();
-                    return false;
+                    if (ev->type() == QEvent::MouseButtonRelease)
+                        tabWidget->getProxyWidget()->onMousePress();
+                    return true;
                 }
             }
         }

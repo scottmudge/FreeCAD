@@ -51,8 +51,6 @@ public:
 
     enum {Type = QGraphicsItem::UserType + 104};
     int type() const override { return Type;}
-    QRectF boundingRect() const override;
-    QPainterPath shape() const override;
 
 public:
     enum fillMode {

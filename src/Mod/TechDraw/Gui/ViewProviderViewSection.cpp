@@ -32,6 +32,8 @@
 
 #include <App/DocumentObject.h>
 #include <Base/Parameter.h>
+#include <Gui/Application.h>
+#include <Gui/Document.h>
 #include <Gui/Control.h>
 #include <Gui/Selection.h>
 
@@ -59,6 +61,7 @@ ViewProviderViewSection::ViewProviderViewSection()
 {
     static const char *sgroup = "Cut Surface";
     static const char *hgroup = "Surface Hatch";
+    static const char *slgroup = "Section Line";
     sPixmap = "TechDraw_TreeSection";
     //ShowCutSurface is obsolete - use CutSurfaceDisplay
     ADD_PROPERTY_TYPE(ShowCutSurface ,(true), sgroup, App::Prop_Hidden, "Show/hide the cut surface");
@@ -72,6 +75,9 @@ ViewProviderViewSection::ViewProviderViewSection()
                         hgroup, App::Prop_None, "The color of the Geometric hatch pattern");
 
     ADD_PROPERTY_TYPE(WeightPattern, (0.1), hgroup, App::Prop_None, "GeomHatch pattern line thickness");
+
+    ADD_PROPERTY_TYPE(SymbolOffset1, (0, 0, 0), slgroup, App::Prop_None, "First symbol label offset");
+    ADD_PROPERTY_TYPE(SymbolOffset2, (0, 0, 0), slgroup, App::Prop_None, "Second symbol label offset");
 
     getParameters();
 
@@ -141,7 +147,7 @@ bool ViewProviderViewSection::setEdit(int ModNum)
 
 bool ViewProviderViewSection::doubleClicked()
 {
-    setEdit(ViewProvider::Default);
+    Gui::Application::Instance->activeDocument()->setEdit(this, ViewProvider::Default);
     return true;
 }
 

@@ -29,7 +29,7 @@
 #include <QGraphicsSceneHoverEvent>
 #include <QObject>
 
-#include "QGIPrimPath.h"
+#include "QGIEdge.h"
 #include "QGIVertex.h"
 
 namespace TechDrawGui
@@ -72,8 +72,10 @@ private:
 
 //******************************************************************************
 
-class TechDrawGuiExport QGEPath : public QObject, public QGIPrimPath
+class TechDrawGuiExport QGEPath : public QObject, public QGIEdge
 {
+    using inherited = QGIEdge;
+
     Q_OBJECT
 
 public:
@@ -82,8 +84,6 @@ public:
 
     enum {Type = QGraphicsItem::UserType + 301};
     int type() const override { return Type;}
-    QRectF boundingRect() const override;
-    QPainterPath shape() const override;
 
     void inEdit(bool isInEdit) { m_inEdit = isInEdit; }
     bool inEdit() const { return m_inEdit; }
@@ -123,7 +123,6 @@ protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
-    double getEdgeFuzz() const;
 
 private:
     std::vector<QPointF> m_ghostPoints;

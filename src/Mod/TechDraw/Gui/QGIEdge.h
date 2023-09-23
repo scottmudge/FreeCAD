@@ -32,15 +32,14 @@ namespace TechDrawGui
 
 class TechDrawGuiExport QGIEdge : public QGIPrimPath
 {
+    using inherited = QGIPrimPath;
 public:
-    explicit QGIEdge(int index);
+    explicit QGIEdge(int index=-1);
     ~QGIEdge() {}
 
     enum {Type = QGraphicsItem::UserType + 103};
 
     int type() const override { return Type;}
-    virtual QRectF boundingRect() const override;
-    virtual QPainterPath shape() const override;
 
     int getProjIndex() const { return projIndex; }
 
@@ -61,8 +60,6 @@ protected:
     bool isSmoothEdge;
     QColor getHiddenColor();
     Qt::PenStyle getHiddenStyle();
-
-private:
 };
 
 }

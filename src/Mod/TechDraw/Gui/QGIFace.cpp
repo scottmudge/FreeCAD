@@ -707,13 +707,3 @@ void QGIFace::getParameters()
 
     m_defClearFace = Preferences::getPreferenceGroup("Colors")->GetBool("ClearFace", false);
 }
-
-QRectF QGIFace::boundingRect() const
-{
-    return shape().controlPointRect();
-}
-
-QPainterPath QGIFace::shape() const
-{
-    return path();
-}

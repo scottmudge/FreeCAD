@@ -23,6 +23,8 @@
 #ifndef GUI_TASKVIEW_TASKSECTIONVIEW_H
 #define GUI_TASKVIEW_TASKSECTIONVIEW_H
 
+#include <QTimer>
+#include <Base/Parameter.h>
 #include <Gui/TaskView/TaskDialog.h>
 #include <Gui/TaskView/TaskView.h>
 #include <Mod/TechDraw/TechDrawGlobal.h>
@@ -54,9 +56,8 @@ public:
     virtual bool reject();
 
 protected:
+    void init();
     void changeEvent(QEvent *event) override;
-    void saveSectionState();
-    void restoreSectionState();
 
     bool apply(bool forceUpdate = false);
     void applyQuick(std::string dir);
@@ -94,6 +95,7 @@ protected Q_SLOTS:
 
 private:
     double requiredRotation(double inputAngle);
+    void setupTransaction();
 
     std::unique_ptr<Ui_TaskSectionView> ui;
     TechDraw::DrawViewPart* m_base;
@@ -103,21 +105,12 @@ private:
     Base::Vector3d m_direction;
     Base::Vector3d m_origin;
 
-    std::string m_saveSymbol;
-    std::string m_saveDirName;
-    Base::Vector3d m_saveNormal;
-    Base::Vector3d m_saveDirection;
-    Base::Vector3d m_saveOrigin;
-    double m_saveScale;
-    int m_saveScaleType;
-
     std::string m_dirName;
     std::string m_sectionName;
     std::string m_baseName;
     App::Document* m_doc;
 
     bool m_createMode;
-    bool m_saved;
 
     std::string m_saveBaseName;
     std::string m_savePageName;
@@ -127,6 +120,10 @@ private:
     VectorEditWidget* m_viewDirectionWidget;
     bool m_directionIsSet;
     bool m_modelIsDirty;
+    int m_transactionID = 0;
+
+    QTimer m_timer;
+    ParameterGrp::handle m_param;
 };
 
 class TaskDlgSectionView : public Gui::TaskView::TaskDialog

@@ -51,7 +51,7 @@ QGIHighlight::QGIHighlight() :
 {
     m_refSize = 0.0;
 
-    m_shape = new QGIEdge(0);
+    m_shape = new QGIEdge;
     addToGroup(m_shape);
 
     m_reference = new QGCustomText();
@@ -75,7 +75,7 @@ void QGIHighlight::onDragFinished()
     auto qgivp = dynamic_cast<QGIViewPart*>(parent);
     if (!qgivp)
         return;
-    DrawViewDetail *detail = getFeature();
+    auto detail = getFeatureAs<DrawViewDetail>();
     if (!detail)
         return;
     auto anchor = detail->AnchorPoint.getValue();
@@ -93,17 +93,20 @@ void QGIHighlight::onDragFinished()
     });
 }
 
+void QGIHighlight::setupEventFilter()
+{
+    addMovableItem(m_reference);
+    m_moveProxy = m_shape;
+    inherited::setupEventFilter();
+}
+
 void QGIHighlight::draw()
 {
-    if (!m_filterInstalled) {
-        m_filterInstalled = true;
-        m_shape->installSceneEventFilter(this);
-        m_reference->installSceneEventFilter(this);
-    }
     prepareGeometryChange();
     makeHighlight();
     makeReference();
-    update();
+    setTools();
+    inherited::draw();
 }
 
 void QGIHighlight::makeHighlight()
@@ -117,16 +120,6 @@ void QGIHighlight::makeHighlight()
         path.addRect(r);
     }
     m_shape->setPath(path);
-}
-
-void QGIHighlight::setFeature(TechDraw::DrawViewDetail *detail)
-{
-    m_feature = App::DocumentObjectT(detail);
-}
-
-TechDraw::DrawViewDetail *QGIHighlight::getFeature() const
-{
-    return Base::freecad_dynamic_cast<TechDraw::DrawViewDetail>(m_feature.getObject());
 }
 
 void QGIHighlight::updateReferencePos()
@@ -145,11 +138,9 @@ void QGIHighlight::updateReferencePos()
     }
     m_referenceOffset = l - r.width() / 2.0;
 
-    if (auto detailVp = Base::freecad_dynamic_cast<ViewProviderViewPart>(
-                Gui::Application::Instance->getViewProvider(getFeature()))) {
-
+    if (auto detailVp = getFeatureViewProvider<ViewProviderViewPart>()) {
         try {
-            App::AutoTransaction guard(QT_TRANSLATE_NOOP("Command", "Move highlight"),
+            App::AutoTransaction guard(QT_TRANSLATE_NOOP("Command", "Move detail view reference"),
                     /* tmpName */false, /* recordViewObject */true);
             Base::ObjectStatusLocker<App::Property::Status,App::Property> guard1(App::Property::User1, &detailVp->HighlightAdjust);
             Base::ObjectStatusLocker<App::Property::Status,App::Property> guard2(App::Property::User1, &detailVp->HighlightOffset);
@@ -160,8 +151,11 @@ void QGIHighlight::updateReferencePos()
         }
     }
 
+    // For verification
+#if 0
     makeReference();
     update();
+#endif
 }
 
 void QGIHighlight::makeReference()
@@ -231,48 +225,10 @@ void QGIHighlight::setInteractive(bool state)
     m_reference->setAcceptHoverEvents(state);
 }
 
-bool QGIHighlight::sceneEventFilter(QGraphicsItem *watched, QEvent *event)
+void QGIHighlight::onItemMoved(QGraphicsItem *item, QPointF &, QGraphicsSceneMouseEvent *)
 {
-    if (watched == m_shape) {
-        switch(event->type()) {
-        case QEvent::GraphicsSceneMousePress:
-            mousePressEvent(static_cast<QGraphicsSceneMouseEvent*>(event));
-            return true;
-        case QEvent::GraphicsSceneMouseMove:
-            mouseMoveEvent(static_cast<QGraphicsSceneMouseEvent*>(event));
-            return true;
-        case QEvent::GraphicsSceneMouseRelease:
-            mouseReleaseEvent(static_cast<QGraphicsSceneMouseEvent*>(event));
-            return true;
-        case QEvent::GraphicsSceneHoverEnter:
-            hoverEnterEvent(static_cast<QGraphicsSceneHoverEvent*>(event));
-            return true;
-        case QEvent::GraphicsSceneHoverLeave:
-            hoverLeaveEvent(static_cast<QGraphicsSceneHoverEvent*>(event));
-            return true;
-        default:
-            return false;
-        }
-    }
-    if (watched == m_reference) {
-        switch(event->type()) {
-        case QEvent::GraphicsSceneMousePress:
-            m_referenceOldPos = m_reference->pos();
-            break;
-        case QEvent::GraphicsSceneMouseRelease:
-            if (!m_busy) {
-                Base::StateLocker guard(m_busy);
-                scene()->sendEvent(watched, event);
-                if (m_referenceOldPos != watched->pos())
-                    updateReferencePos();
-                return true;
-            }
-            break;
-        default:
-            break;
-        }
-    }
-    return false;
+    if (item == m_reference)
+        updateReferencePos();
 }
 
 void QGIHighlight::setBounds(double x1, double y1, double x2, double y2)
@@ -311,12 +267,7 @@ int QGIHighlight::getHoleStyle()
 }
 
 void QGIHighlight::paint ( QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget) {
-    QStyleOptionGraphicsItem myOption(*option);
-//    myOption.state &= ~QStyle::State_Selected;
-
-    setTools();
-//    painter->drawRect(boundingRect());          //good for debugging
-    QGIDecoration::paint (painter, &myOption, widget);
+    inherited::paint (painter, option, widget);
 }
 
 void QGIHighlight::setTools()
@@ -329,25 +280,32 @@ void QGIHighlight::setTools()
 
     m_shape->setWidth(m_width);
     m_shape->setStyle(m_styleCurrent);
+}
 
-    if (m_hasHover) {
-        m_shape->setPrettyPre();
+void QGIHighlight::setPrettyPre()
+{
+    m_shape->setPrettyPre();
+    m_reference->setPrettyPre();
+}
+
+void QGIHighlight::setPrettySel()
+{
+    m_shape->setPrettySel();
+    if (m_reference->hasHover())
         m_reference->setPrettyPre();
-    } else if (isSelected()) {
-        m_shape->setPrettySel();
-        if (m_reference->hasHover())
-            m_reference->setPrettyPre();
-        else
-            m_reference->setPrettySel();
-    } else {
-        m_shape->setNormalColor(m_colCurrent);
-        if (m_reference->hasHover())
-            m_reference->setPrettyPre();
-        else if (m_reference->isSelected())
-            m_reference->setPrettySel();
-        else
-            m_reference->setDefaultTextColor(m_colCurrent);
-    }
+    else
+        m_reference->setPrettySel();
+}
+
+void QGIHighlight::setPrettyNormal()
+{
+    m_shape->setNormalColor(m_colCurrent);
+    if (m_reference->hasHover())
+        m_reference->setPrettyPre();
+    else if (m_reference->isSelected())
+        m_reference->setPrettySel();
+    else
+        m_reference->setDefaultTextColor(m_colCurrent);
 }
 
 QPainterPath QGIHighlight::shape() const
@@ -355,45 +313,3 @@ QPainterPath QGIHighlight::shape() const
     return QPainterPath();
 }
 
-QVariant QGIHighlight::itemChange(GraphicsItemChange change, const QVariant &value)
-{
-    if (change == ItemSelectedHasChanged && scene()) {
-        if(isSelected()) {
-            m_shape->setPrettySel();
-            m_reference->setPrettySel();
-        } else {
-            m_shape->setPrettyNormal();
-            m_reference->setPrettyNormal();
-        }
-    }
-    return QGIDecoration::itemChange(change, value);
-}
-
-void QGIHighlight::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
-{
-    m_hasHover = true;
-    m_shape->setPrettyPre();
-    m_reference->setPrettyPre();
-    QGIDecoration::hoverEnterEvent(event);
-}
-
-void QGIHighlight::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
-{
-    m_hasHover = false;
-    if(isSelected() || m_shape->isSelected()) {
-        m_shape->setPrettySel();
-        m_reference->setPrettySel();
-    } else {
-        m_shape->setPrettyNormal();
-        m_reference->setPrettyNormal();
-    }
-    QGIDecoration::hoverLeaveEvent(event);
-}
-
-void QGIHighlight::setPreselect(bool enable)
-{
-    if (m_hasHover != enable) {
-        m_hasHover = enable;
-        update();
-    }
-}

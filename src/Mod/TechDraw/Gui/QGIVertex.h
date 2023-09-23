@@ -33,12 +33,11 @@ namespace TechDrawGui
 class TechDrawGuiExport QGIVertex : public QGIPrimPath
 {
 public:
-    explicit QGIVertex(int index);
+    explicit QGIVertex(int index=-1);
     ~QGIVertex() {}
 
     enum {Type = QGraphicsItem::UserType + 105};
     int type() const override { return Type;}
-    virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = nullptr ) override;
 
     int getProjIndex() const { return projIndex; }
 

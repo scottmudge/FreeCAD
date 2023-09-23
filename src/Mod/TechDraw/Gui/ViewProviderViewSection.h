@@ -49,6 +49,8 @@ public:
     App::PropertyColor  HatchColor;
     App::PropertyColor  GeomHatchColor;
     App::PropertyFloat  WeightPattern;
+    App::PropertyVector SymbolOffset1;
+    App::PropertyVector SymbolOffset2;
 
     void updateData(const App::Property*) override;
     void onChanged(const App::Property *prop) override;

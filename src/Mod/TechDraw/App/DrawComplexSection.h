@@ -81,6 +81,7 @@ public Q_SLOTS:
     TopoDS_Wire makeSectionLineWire();
 
     ChangePointVector getChangePointsFromSectionLine() override;
+    void setChangePoints(const ChangePointVector &points) override;
 
     bool validateProfilePosition(TopoDS_Wire profileWire, gp_Ax2 sectionCS,
                                  gp_Dir& gClosestBasis) const;

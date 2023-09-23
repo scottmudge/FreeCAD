@@ -73,7 +73,7 @@ using namespace TechDraw;
 const float labelCaptionFudge = 0.2f;   // temp fiddle for devel
 
 QGIView::QGIView()
-    :QGraphicsItemGroup(),
+    :inherited(),
      viewObj(nullptr),
      m_locked(false),
      m_innerView(false),
@@ -200,7 +200,7 @@ QVariant QGIView::itemChange(GraphicsItemChange change, const QVariant &value)
         drawBorder();
     }
 
-    return QGraphicsItemGroup::itemChange(change, value);
+    return inherited::itemChange(change, value);
 }
 
 void QGIView::mousePressEvent(QGraphicsSceneMouseEvent * event)
@@ -248,13 +248,15 @@ void QGIView::mouseReleaseEvent(QGraphicsSceneMouseEvent * event)
 
 void QGIView::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
-//    Base::Console().Message("QGIV::hoverEnterEvent()\n");
-    Q_UNUSED(event);
     setPreselect(true);
+    inherited::hoverEnterEvent(event);
 }
 
 void QGIView::setPreselect(bool enable)
 {
+    if (enable == m_hasHover)
+        return;
+    m_hasHover = enable;
     if (enable) {
         m_colCurrent = getPreColor();
     }
@@ -275,8 +277,8 @@ void QGIView::setPreselect(bool enable)
 
 void QGIView::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
-    Q_UNUSED(event);
     setPreselect(false);
+    inherited::hoverLeaveEvent(event);
 }
 
 //sets position in /Gui(graphics), not /App
@@ -531,7 +533,7 @@ void QGIView::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, Q
 //    painter->setPen(Qt::red);
 //    painter->drawRect(boundingRect());          //good for debugging
 
-    QGraphicsItemGroup::paint(painter, &myOption, widget);
+    inherited::paint(painter, &myOption, widget);
 }
 
 QRectF QGIView::customChildrenBoundingRect() const
@@ -755,7 +757,8 @@ void QGIView::dumpRect(const char* text, QRectF rect) {
 //letter height = nominalSize
 int QGIView::exactFontSize(std::string fontFamily, double nominalSize)
 {
-    double sceneSize = Rez::guiX(nominalSize);      //desired height in scene units
+    // Clamp minimum size to avoid Qt warning message in setPixelSize()
+    double sceneSize = std::max(2., Rez::guiX(nominalSize));      //desired height in scene units
     QFont font;
     font.setFamily(QString::fromUtf8(fontFamily.c_str()));
     font.setPixelSize(sceneSize);
