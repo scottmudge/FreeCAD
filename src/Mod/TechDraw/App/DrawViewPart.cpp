@@ -25,8 +25,10 @@
 #include "PreCompiled.h"
 
 #ifndef _PreComp_
+#include <Standard_Version.hxx>
 #include <BRepAlgo_NormalProjection.hxx>
 #include <BRepBndLib.hxx>
+#include <BRepAlgoAPI_Common.hxx>
 #include <BRepBuilderAPI_Copy.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
@@ -58,6 +60,7 @@
 #include <Base/Console.h>
 #include <Base/Exception.h>
 #include <Base/Parameter.h>
+#include <Base/Sequencer.h>
 
 #include "Cosmetic.h"
 #include "CenterLine.h"
@@ -91,12 +94,9 @@ using DU = DrawUtil;
 PROPERTY_SOURCE_WITH_EXTENSIONS(TechDraw::DrawViewPart, TechDraw::DrawView)
 
 DrawViewPart::DrawViewPart(void)
-    : geometryObject(nullptr), m_tempGeometryObject(nullptr), m_waitingForFaces(false),
-      m_waitingForHlr(false)
 {
     static const char* group = "Projection";
     static const char* sgroup = "HLR Parameters";
-    nowUnsetting = false;
     m_handleFaces = false;
 
     CosmeticExtension::initExtension(this);
@@ -146,16 +146,20 @@ DrawViewPart::DrawViewPart(void)
 
 DrawViewPart::~DrawViewPart()
 {
-    //don't delete this object while it still has dependent threads running
-    if (m_hlrFuture.isRunning()) {
-        Base::Console().Message("%s is waiting for HLR to finish\n", Label.getValue());
-        m_hlrFuture.waitForFinished();
-    }
-    if (m_faceFuture.isRunning()) {
-        Base::Console().Message("%s is waiting for face finding to finish\n", Label.getValue());
-        m_faceFuture.waitForFinished();
-    }
+    abortMakeGeometry();
     removeAllReferencesFromGeom();
+}
+
+void DrawViewPart::abortMakeGeometry()
+{
+    if (m_progress) {
+        m_progress->setCanceled(true);
+        m_progress.reset();
+    }
+    m_hlrWatcher.reset();
+    m_faceWatcher.reset();
+    waitingForHlr(false);
+    waitingForFaces(false);
 }
 
 std::vector<TopoDS_Shape> DrawViewPart::getSourceShape2d() const
@@ -205,8 +209,11 @@ std::vector<App::DocumentObject*> DrawViewPart::getAllSources() const
 
 //pick supported 2d shapes out of the Source properties and
 //add them directly to the geometry without going through HLR
-void DrawViewPart::addShapes2d(void)
+void DrawViewPart::addShapes2d()
 {
+    if (!m_geometryObject)
+        return;
+
     std::vector<TopoDS_Shape> shapes = getSourceShape2d();
     for (auto& s : shapes) {
         //just vertices for now
@@ -217,7 +224,7 @@ void DrawViewPart::addShapes2d(void)
             //need to offset the point to match the big projection
             Base::Vector3d projected = projectPoint(vp * getScale());
             TechDraw::VertexPtr v1(std::make_shared<TechDraw::Vertex>(projected));
-            geometryObject->addVertex(v1);
+            m_geometryObject->addVertex(v1);
         }
         else if (s.ShapeType() == TopAbs_EDGE) {
             //not supporting edges yet.
@@ -230,7 +237,7 @@ void DrawViewPart::addShapes2d(void)
             //            TopoDS_Edge edge = TopoDS::Edge(sMirror);
             //            BaseGeomPtr bg = projectEdge(edge);
 
-            //            geometryObject->addEdge(bg);
+            //            m_geometryObject->addEdge(bg);
             //save connection between source feat and this edge
         }
     }
@@ -242,11 +249,6 @@ App::DocumentObjectExecReturn* DrawViewPart::execute(void)
     if (!keepUpdated()) {
         return DrawView::execute();
     }
-
-    if (waitingForHlr()) {
-        return DrawView::execute();
-    }
-
     TopoDS_Shape shape = getSourceShape();
     if (shape.IsNull()) {
         Base::Console().Message("DVP::execute - %s - Source shape is Null.\n", getNameInDocument());
@@ -297,22 +299,11 @@ void DrawViewPart::onChanged(const App::Property* prop)
 
 void DrawViewPart::partExec(TopoDS_Shape& shape)
 {
-    //    Base::Console().Message("DVP::partExec() - %s\n", getNameInDocument());
-    if (waitingForHlr()) {
-        //finish what we are already doing before starting a new cycle
-        return;
-    }
-
-    //we need to keep using the old geometryObject until the new one is fully populated
-    m_tempGeometryObject = makeGeometryForShape(shape);
-    if (CoarseView.getValue()) {
-        onHlrFinished();//poly algo does not run in separate thread, so we need to invoke
-                        //the post hlr processing manually
-    }
+    makeGeometryForShape(shape);
 }
 
 //prepare the shape for HLR processing by centering, scaling and rotating it
-GeometryObjectPtr DrawViewPart::makeGeometryForShape(TopoDS_Shape& shape)
+void DrawViewPart::makeGeometryForShape(TopoDS_Shape& shape)
 {
 //    Base::Console().Message("DVP::makeGeometryForShape() - %s\n", getNameInDocument());
 
@@ -328,7 +319,7 @@ GeometryObjectPtr DrawViewPart::makeGeometryForShape(TopoDS_Shape& shape)
     m_saveCentroid = DU::toVector3d(gCentroid);
     m_saveShape = centerScaleRotate(this, localShape, m_saveCentroid);
 
-    return buildGeometryObject(localShape, getProjectionCS());
+    buildGeometryObject(localShape, getProjectionCS());
 }
 
 //Modify a shape by centering, scaling and rotating and return the centered (but not rotated) shape
@@ -351,11 +342,9 @@ TopoDS_Shape DrawViewPart::centerScaleRotate(DrawViewPart* dvp, TopoDS_Shape& in
 }
 
 //create a geometry object and trigger the HLR process in another thread
-TechDraw::GeometryObjectPtr DrawViewPart::buildGeometryObject(TopoDS_Shape& shape,
-                                                              const gp_Ax2& viewAxis)
+void DrawViewPart::buildGeometryObject(TopoDS_Shape& shape, const gp_Ax2& viewAxis)
 {
-//    Base::Console().Message("DVP::buildGeometryObject() - %s\n", getNameInDocument());
-    showProgressMessage(getNameInDocument(), "is finding hidden lines");
+    abortMakeGeometry();
 
     TechDraw::GeometryObjectPtr go(
         std::make_shared<TechDraw::GeometryObject>(getNameInDocument(), this));
@@ -369,83 +358,107 @@ TechDraw::GeometryObjectPtr DrawViewPart::buildGeometryObject(TopoDS_Shape& shap
         //the polygon approximation HLR process runs quickly, so doesn't need to be in a
         //separate thread
         go->projectShapeWithPolygonAlgo(shape, viewAxis);
+        onHlrFinished(go);
     }
     else {
-        // TODO: we should give the thread its own copy of the shape because the passed one will be
-        // destroyed when the call stack we followed to get here unwinds and the thread could still be
-        // running.
-        // Should we pass a smart pointer instead of const& ??
-    //    bool copyGeometry = true;
-    //    bool copyMesh = false;
-    //    BRepBuilderAPI_Copy copier(shape, copyGeometry, copyMesh);
-    //    copier.Shape();
+        m_hlrWatcher.reset(new QFutureWatcher<void>());
+        QObject::connect(m_hlrWatcher.get(), &QFutureWatcherBase::finished, m_hlrWatcher.get(),
+            [=] {
+                if (m_progress && !m_progress->wasCanceled())
+                    onHlrFinished(go);
+                else
+                    abortMakeGeometry();
+            });
 
-        //projectShape (the HLR process) runs in a separate thread since it can take a long time
-        //note that &m_hlrWatcher in the third parameter is not strictly required, but using the
-        //4 parameter signature instead of the 3 parameter signature prevents clazy warning:
-        //https://github.com/KDE/clazy/blob/1.11/docs/checks/README-connect-3arg-lambda.md
-        connectHlrWatcher = QObject::connect(&m_hlrWatcher, &QFutureWatcherBase::finished,
-                                             &m_hlrWatcher, [this] { this->onHlrFinished(); });
-        m_hlrFuture = QtConcurrent::run([=]{go->projectShape(shape, viewAxis);});
-        m_hlrWatcher.setFuture(m_hlrFuture);
+        std::string message(Label.getValue());
+        message += QT_TRANSLATE_NOOP("TechDraw", " finding hidden lines...");
+        std::shared_ptr<Base::SequencerLauncher> progress(new Base::SequencerLauncher(message.c_str()));
+        m_progress = progress;
+        std::string featureName = getFullName();
+
         waitingForHlr(true);
+        m_hlrWatcher->setFuture(QtConcurrent::run(
+            [=] {
+                try {
+                    progress->start(100);
+                    go->projectShape(shape, viewAxis);
+                    return;
+                } catch (Base::Exception &e) {
+                    e.ReportException();
+                    Base::Console().Error("DVP %s - HLR projection failed - %s **\n",
+                                        featureName.c_str(), e.what());
+                } catch (Standard_Failure &e) {
+                    Base::Console().Error("DVP %s - HLR projection failed - %s **\n",
+                                        featureName.c_str(), e.GetMessageString());
+                }
+                abortMakeGeometry();
+            }));
     }
-    return go;
 }
 
 //continue processing after hlr thread completes
-void DrawViewPart::onHlrFinished(void)
+void DrawViewPart::onHlrFinished(GeometryObjectPtr geometryObject)
 {
-    //    Base::Console().Message("DVP::onHlrFinished() - %s\n", getNameInDocument());
-
-    //now that the new GeometryObject is fully populated, we can replace the old one
-    if (m_tempGeometryObject) {
-        geometryObject = m_tempGeometryObject;//replace with new
-        m_tempGeometryObject = nullptr;       //superfluous?
-    }
-    if (!geometryObject) {
-        throw Base::RuntimeError("DrawViewPart has lost its geometry");
-    }
+    m_geometryObject = geometryObject;
 
     //the last hlr related task is to make a bbox of the results
     bbox = geometryObject->calcBoundingBox();
 
     waitingForHlr(false);
-    QObject::disconnect(connectHlrWatcher);
-    showProgressMessage(getNameInDocument(), "has finished finding hidden lines");
-
+    m_progress.reset();
     postHlrTasks();//application level tasks that depend on HLR/GO being complete
 
     //start face finding in a separate thread.  We don't find faces when using the polygon
     //HLR method.
     if (handleFaces() && !CoarseView.getValue()) {
-        try {
-            //note that &m_faceWatcher in the third parameter is not strictly required, but using the
-            //4 parameter signature instead of the 3 parameter signature prevents clazy warning:
-            //https://github.com/KDE/clazy/blob/1.11/docs/checks/README-connect-3arg-lambda.md
-            connectFaceWatcher =
-                QObject::connect(&m_faceWatcher, &QFutureWatcherBase::finished, &m_faceWatcher,
-                                 [this] { this->onFacesFinished(); });
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-            m_faceFuture = QtConcurrent::run(this, &DrawViewPart::extractFaces);
-#else
-            m_faceFuture = QtConcurrent::run(&DrawViewPart::extractFaces, this);
-#endif
-            m_faceWatcher.setFuture(m_faceFuture);
-            waitingForFaces(true);
-        }
-        catch (Standard_Failure& e) {
-            waitingForFaces(false);
-            Base::Console().Error("DVP::partExec - %s - extractFaces failed - %s **\n",
-                                  getNameInDocument(), e.GetMessageString());
-            throw Base::RuntimeError("DVP::onHlrFinished - error extracting faces");
-        }
+        std::string message(Label.getValue());
+        message += QT_TRANSLATE_NOOP("TechDraw", " extracting faces...");
+        std::shared_ptr<Base::SequencerLauncher> progress(
+                new Base::SequencerLauncher(message.c_str()));
+        m_progress = progress;
+
+        auto faces = std::shared_ptr<std::vector<FacePtr>>(new std::vector<FacePtr>());
+        m_faceWatcher.reset(new QFutureWatcher<void>());
+        QObject::connect(m_faceWatcher.get(), &QFutureWatcherBase::finished, m_faceWatcher.get(),
+            [=] {
+                if (m_progress && !m_progress->wasCanceled())
+                    onFacesFinished(faces);
+                else
+                    abortMakeGeometry();
+            });
+
+        ExtractFaceParams params;
+        params.featureName = getFullName();
+        params.progress = progress;
+        params.goEdges = geometryObject->getVisibleFaceEdges(
+                SmoothVisible.getValue(), SeamVisible.getValue());
+        params.faces = faces;
+
+        waitingForFaces(true);
+        m_faceWatcher->setFuture(QtConcurrent::run(
+            [=]{
+                try {
+                    extractFaces(params);
+                    return;
+                } catch (Base::Exception &e) {
+                    e.ReportException();
+                    Base::Console().Error("DVP::partExec - %s - extractFaces failed - %s **\n",
+                                        params.featureName.c_str(), e.what());
+                } catch (Standard_Failure& e) {
+                    Base::Console().Error("DVP::partExec - %s - extractFaces failed - %s **\n",
+                                        params.featureName.c_str(), e.GetMessageString());
+                }
+                params.progress->setCanceled(true);
+            }));
     }
 }
 
 //run any tasks that need to been done after geometry is available
-void DrawViewPart::postHlrTasks(void)
+void DrawViewPart::postHlrTasks()
 {
+    if (!m_geometryObject)
+        return;
+
     //    Base::Console().Message("DVP::postHlrTasks() - %s\n", getNameInDocument());
     //add geometry that doesn't come from HLR
     addCosmeticVertexesToGeom();
@@ -457,12 +470,16 @@ void DrawViewPart::postHlrTasks(void)
     //references will be invalid until the geometry exists
     std::vector<TechDraw::DrawViewBalloon*> bals = getBalloons();
     for (auto& b : bals) {
+        Base::ObjectStatusLocker<App::ObjectStatus, App::DocumentObject> guard(App::ObjectStatus::NoTouch, b);
+        b->enforceRecompute();
         b->recomputeFeature();
     }
     // Dimensions need to be recomputed now if face finding is not going to take place.
     if (!handleFaces() || CoarseView.getValue()) {
         std::vector<TechDraw::DrawViewDimension*> dims = getDimensions();
         for (auto& d : dims) {
+            Base::ObjectStatusLocker<App::ObjectStatus, App::DocumentObject> guard(App::ObjectStatus::NoTouch, d);
+            d->enforceRecompute();
             d->recomputeFeature();
         }
     }
@@ -481,7 +498,7 @@ void DrawViewPart::postHlrTasks(void)
 }
 
 // Run any tasks that need to be done after faces are available
-void DrawViewPart::postFaceExtractionTasks(void)
+void DrawViewPart::postFaceExtractionTasks()
 {
     // Some centerlines depend on faces so we could not add CL geometry before now
     addCenterLinesToGeom();
@@ -500,19 +517,12 @@ void DrawViewPart::postFaceExtractionTasks(void)
 
 
 //! make faces from the edge geometry
-void DrawViewPart::extractFaces()
+void DrawViewPart::extractFaces(const ExtractFaceParams &params)
 {
-    //    Base::Console().Message("DVP::extractFaces() - %s waitingForHlr: %d waitingForFaces: %d\n",
-    //                            getNameInDocument(), waitingForHlr(), waitingForFaces());
-    if (!geometryObject) {
-        //geometry is in flux, can not make faces right now
-        return;
-    }
+    const std::vector<TechDraw::BaseGeomPtr>& goEdges = params.goEdges;
 
-    showProgressMessage(getNameInDocument(), "is extracting faces");
-
-    const std::vector<TechDraw::BaseGeomPtr>& goEdges =
-        geometryObject->getVisibleFaceEdges(SmoothVisible.getValue(), SeamVisible.getValue());
+    params.progress->setTotalSteps(100);
+    params.progress->start();
 
     if (goEdges.empty()) {
         //        Base::Console().Message("DVP::extractFaces - %s - no face edges available!\n", getNameInDocument());    //debug
@@ -540,7 +550,7 @@ void DrawViewPart::extractFaces()
         catch (Base::Exception& e) {
             throw Base::RuntimeError(e.what());
         }
-        geometryObject->clearFaceGeom();
+        params.progress->setProgress(5);
 
         std::vector<TopoDS_Wire> closedWires;
         for (auto& e : closedEdges) {
@@ -554,11 +564,12 @@ void DrawViewPart::extractFaces()
             //sortedWires ruins EdgeWalker's sort by size, so we have to do it again.
             sortedWires = eWalker.sortWiresBySize(sortedWires);
         }
+        params.progress->setProgress(20);
 
         if (sortedWires.empty()) {
-            Base::Console().Warning(
+            Base::Console().Error(
                 "DVP::extractFaces - %s - Can't make faces from projected edges\n",
-                getNameInDocument());
+                params.featureName.c_str());
         }
         else {
             constexpr double minWireArea = 0.000001;//arbitrary very small face size
@@ -576,9 +587,7 @@ void DrawViewPart::extractFaces()
                 TechDraw::FacePtr f(std::make_shared<TechDraw::Face>());
                 const TopoDS_Wire& wire = (*itWire);
                 f->wires.push_back(new TechDraw::Wire(wire));
-                if (geometryObject) {
-                    geometryObject->addFaceGeom(f);
-                }
+                params.faces->push_back(f);
             }
         }
     }
@@ -599,12 +608,16 @@ void DrawViewPart::extractFaces()
             }
         }
 
+        int steps = params.progress->progress() + nonZero.size();
+        params.progress->setTotalSteps(steps + 40);
+
         //HLR algo does not provide all edge intersections for edge endpoints.
         //need to split long edges touched by Vertex of another edge
         std::vector<splitPoint> splits;
         std::vector<TopoDS_Edge>::iterator itOuter = nonZero.begin();
         int iOuter = 0;
         for (; itOuter != nonZero.end(); ++itOuter, iOuter++) {//*** itOuter != nonZero.end() - 1
+            params.progress->next(/*canAbort*/true);
             TopoDS_Vertex v1 = TopExp::FirstVertex((*itOuter));
             TopoDS_Vertex v2 = TopExp::LastVertex((*itOuter));
             Bnd_Box sOuter;
@@ -656,6 +669,8 @@ void DrawViewPart::extractFaces()
             }//inner loop
         }    //outer loop
 
+        params.progress->setProgress(params.progress->progress() + 10);
+
         std::vector<splitPoint> sorted = DrawProjectSplit::sortSplits(splits, true);
         auto last = std::unique(sorted.begin(), sorted.end(),
                                 DrawProjectSplit::splitEqual);//duplicates to back
@@ -666,18 +681,23 @@ void DrawViewPart::extractFaces()
             return;
         }
 
+        params.progress->setProgress(params.progress->progress() + 10);
+
         newEdges = DrawProjectSplit::removeDuplicateEdges(newEdges);
 
-        geometryObject->clearFaceGeom();
+        params.progress->setProgress(params.progress->progress() + 10);
 
         //find all the wires in the pile of faceEdges
         std::vector<TopoDS_Wire> sortedWires;
         EdgeWalker eWalker;
         sortedWires = eWalker.execute(newEdges);
+
+        params.progress->setProgress(params.progress->progress() + 10);
+
         if (sortedWires.empty()) {
             Base::Console().Warning(
                 "DVP::extractFaces - %s -Can't make faces from projected edges\n",
-                getNameInDocument());
+                params.featureName.c_str());
             return;
         }
         else {
@@ -688,24 +708,26 @@ void DrawViewPart::extractFaces()
                 const TopoDS_Wire& wire = (*itWire);
                 TechDraw::Wire* w = new TechDraw::Wire(wire);
                 f->wires.push_back(w);
-                if (geometryObject) {
-                    geometryObject->addFaceGeom(f);
-                }
+                params.faces->push_back(f);
             }
         }
     }
 }
 
 //continue processing after extractFaces thread completes
-void DrawViewPart::onFacesFinished(void)
+void DrawViewPart::onFacesFinished(std::shared_ptr<std::vector<FacePtr>> faces)
 {
     //    Base::Console().Message("DVP::onFacesFinished() - %s\n", getNameInDocument());
     waitingForFaces(false);
-    QObject::disconnect(connectFaceWatcher);
-    showProgressMessage(getNameInDocument(), "has finished extracting faces");
+    m_progress.reset();
+
+    if (m_geometryObject)
+        m_geometryObject->setFaces(std::move(*faces));
 
     // Now we can recompute Dimensions and do other tasks possibly depending on Face extraction
     postFaceExtractionTasks();
+
+    abortMakeGeometry();
 
     requestPaint();
 }
@@ -776,8 +798,8 @@ std::vector<TechDraw::DrawViewBalloon*> DrawViewPart::getBalloons() const
 
 const std::vector<TechDraw::VertexPtr> DrawViewPart::getVertexGeometry() const
 {
-    if (geometryObject) {
-        return geometryObject->getVertexGeometry();
+    if (m_geometryObject) {
+        return m_geometryObject->getVertexGeometry();
     }
     return std::vector<TechDraw::VertexPtr>();
 }
@@ -832,16 +854,16 @@ TechDraw::FacePtr DrawViewPart::getFace(std::string faceName) const
 const std::vector<TechDraw::FacePtr> DrawViewPart::getFaceGeometry() const
 {
     std::vector<TechDraw::FacePtr> result;
-    if (waitingForFaces() || !geometryObject) {
+    if (waitingForFaces() || !m_geometryObject) {
         return std::vector<TechDraw::FacePtr>();
     }
-    return geometryObject->getFaceGeometry();
+    return m_geometryObject->getFaceGeometry();
 }
 
 const BaseGeomPtrVector DrawViewPart::getEdgeGeometry() const
 {
-    if (geometryObject) {
-        return geometryObject->getEdgeGeometry();
+    if (m_geometryObject) {
+        return m_geometryObject->getEdgeGeometry();
     }
     return BaseGeomPtrVector();
 }
@@ -959,18 +981,18 @@ TopoDS_Shape DrawViewPart::getShape() const
     BRep_Builder builder;
     TopoDS_Compound result;
     builder.MakeCompound(result);
-    if (geometryObject) {
-        if (!geometryObject->getVisHard().IsNull()) {
-            builder.Add(result, geometryObject->getVisHard());
+    if (m_geometryObject) {
+        if (!m_geometryObject->getVisHard().IsNull()) {
+            builder.Add(result, m_geometryObject->getVisHard());
         }
-        if (!geometryObject->getVisOutline().IsNull()) {
-            builder.Add(result, geometryObject->getVisOutline());
+        if (!m_geometryObject->getVisOutline().IsNull()) {
+            builder.Add(result, m_geometryObject->getVisOutline());
         }
-        if (!geometryObject->getVisSeam().IsNull()) {
-            builder.Add(result, geometryObject->getVisSeam());
+        if (!m_geometryObject->getVisSeam().IsNull()) {
+            builder.Add(result, m_geometryObject->getVisSeam());
         }
-        if (!geometryObject->getVisSmooth().IsNull()) {
-            builder.Add(result, geometryObject->getVisSmooth());
+        if (!m_geometryObject->getVisSmooth().IsNull()) {
+            builder.Add(result, m_geometryObject->getVisSmooth());
         }
     }
     //check for empty compound
@@ -1080,7 +1102,7 @@ bool DrawViewPart::waitingForResult() const
 
 bool DrawViewPart::hasGeometry(void) const
 {
-    if (!geometryObject) {
+    if (!m_geometryObject) {
         return false;
     }
 
@@ -1223,7 +1245,9 @@ std::vector<DrawViewDetail*> DrawViewPart::getDetailRefs() const
 
 const BaseGeomPtrVector DrawViewPart::getVisibleFaceEdges() const
 {
-    return geometryObject->getVisibleFaceEdges(SmoothVisible.getValue(), SeamVisible.getValue());
+    if (m_geometryObject)
+        return m_geometryObject->getVisibleFaceEdges(SmoothVisible.getValue(), SeamVisible.getValue());
+    return BaseGeomPtrVector();
 }
 
 bool DrawViewPart::handleFaces()
@@ -1361,10 +1385,12 @@ void DrawViewPart::updateReferenceVert(std::string tag, Base::Vector3d loc2d)
 
 void DrawViewPart::addReferencesToGeom()
 {
+    if (!m_geometryObject)
+        return;
     //    Base::Console().Message("DVP::addReferencesToGeom() - %s\n", getNameInDocument());
-    std::vector<TechDraw::VertexPtr> gVerts = getVertexGeometry();
+    std::vector<TechDraw::VertexPtr> gVerts = m_geometryObject->getVertexGeometry();
     gVerts.insert(gVerts.end(), m_referenceVerts.begin(), m_referenceVerts.end());
-    getGeometryObject()->setVertexGeometry(gVerts);
+    m_geometryObject->setVertexGeometry(gVerts);
 }
 
 //add a vertex that is not part of the geometry, but is used by
@@ -1402,7 +1428,7 @@ void DrawViewPart::removeReferenceVertex(std::string tag)
 void DrawViewPart::removeAllReferencesFromGeom()
 {
     //    Base::Console().Message("DVP::removeAllReferencesFromGeom()\n");
-    if (!m_referenceVerts.empty()) {
+    if (m_geometryObject && !m_referenceVerts.empty()) {
         std::vector<TechDraw::VertexPtr> gVerts = getVertexGeometry();
         std::vector<TechDraw::VertexPtr> newVerts;
         for (auto& gv : gVerts) {
@@ -1410,15 +1436,67 @@ void DrawViewPart::removeAllReferencesFromGeom()
                 newVerts.push_back(gv);
             }
         }
-        getGeometryObject()->setVertexGeometry(newVerts);
+        m_geometryObject->setVertexGeometry(newVerts);
     }
+}
+
+TopoDS_Shape DrawViewPart::shapeShapeIntersect(const TopoDS_Shape& shape0,
+                                               const TopoDS_Shape& shape1,
+                                               Handle(Message_ProgressIndicator) pi)
+
+{
+    TopoDS_Shape result;
+    if (pi.IsNull()) {
+        BRepAlgoAPI_Common anOp(shape0, shape1);
+        anOp.SetFuzzyValue(EWTOLERANCE);
+        anOp.Build();
+        if (!anOp.IsDone())
+            return TopoDS_Shape();
+        result = anOp.Shape();//always a compound
+    }
+    else {
+#if OCC_VERSION_HEX < 0x070500
+        BRepAlgoAPI_Common anOp(shape0, shape1);
+        anOp.SetProgressIndicator(pi);
+        pi->NewScope(100, "Make intersection");
+        pi->Show();
+#else
+        BRepAlgoAPI_Common anOp(shape0, shape1, pi->Start());
+#endif
+        anOp.SetFuzzyValue(EWTOLERANCE);
+        anOp.Build();
+#if OCC_VERSION_HEX < 0x070500
+        pi->EndScope();
+#endif
+        if (!anOp.IsDone())
+            return TopoDS_Shape();
+
+        result = anOp.Shape();//always a compound
+    }
+    if (isTrulyEmpty(result)) {
+        return TopoDS_Shape();
+    }
+    return result;
+}
+
+//a compound with no content is not considered IsNull by OCC.  A more thorough check
+//is required.
+//https://dev.opencascade.org/content/compound-empty
+bool DrawViewPart::isTrulyEmpty(TopoDS_Shape inShape)
+{
+    if (!inShape.IsNull() && TopoDS_Iterator(inShape).More()) {
+        return false;
+    }
+    return true;
 }
 
 void DrawViewPart::resetReferenceVerts()
 {
     //    Base::Console().Message("DVP::resetReferenceVerts() %s\n", getNameInDocument());
-    removeAllReferencesFromGeom();
-    addReferencesToGeom();
+    if (m_geometryObject) {
+        removeAllReferencesFromGeom();
+        addReferencesToGeom();
+    }
 }
 
 //********
@@ -1434,10 +1512,12 @@ void DrawViewPart::clearCosmeticVertexes()
 //add the cosmetic verts to geometry vertex list
 void DrawViewPart::addCosmeticVertexesToGeom()
 {
+    if (!m_geometryObject)
+        return;
     //    Base::Console().Message("DVP::addCosmeticVertexesToGeom()\n");
     const std::vector<TechDraw::CosmeticVertex*> cVerts = CosmeticVertexes.getValues();
     for (auto& cv : cVerts) {
-        int iGV = geometryObject->addCosmeticVertex(cv->scaled(getScale()), cv->getTagAsString());
+        int iGV = m_geometryObject->addCosmeticVertex(cv->scaled(getScale()), cv->getTagAsString());
         cv->linkGeom = iGV;
     }
 }
@@ -1446,13 +1526,20 @@ int DrawViewPart::add1CVToGV(std::string tag)
 {
     //    Base::Console().Message("DVP::add1CVToGV(%s)\n", tag.c_str());
     TechDraw::CosmeticVertex* cv = getCosmeticVertex(tag);
-    if (!cv) {
+    if (!cv || !m_geometryObject) {
         Base::Console().Message("DVP::add1CVToGV - cv %s not found\n", tag.c_str());
         return 0;
     }
-    int iGV = geometryObject->addCosmeticVertex(cv->scaled(getScale()), cv->getTagAsString());
+    int iGV = m_geometryObject->addCosmeticVertex(cv->scaled(getScale()), cv->getTagAsString());
     cv->linkGeom = iGV;
     return iGV;
+}
+
+GeometryObjectPtr DrawViewPart::getGeometryObject() const
+{
+    if (!m_geometryObject)
+        throw Base::RuntimeError("No geometry");
+    return m_geometryObject;
 }
 
 //update Vertex geometry with current CV's
@@ -1467,8 +1554,10 @@ void DrawViewPart::refreshCVGeoms()
             newGVerts.push_back(gv);
         }
     }
-    getGeometryObject()->setVertexGeometry(newGVerts);
-    addCosmeticVertexesToGeom();
+    if (m_geometryObject) {
+        m_geometryObject->setVertexGeometry(newGVerts);
+        addCosmeticVertexesToGeom();
+    }
 }
 
 //what is the CV's position in the big geometry q
@@ -1515,6 +1604,8 @@ void DrawViewPart::clearCosmeticEdges()
 //add the cosmetic edges to geometry edge list
 void DrawViewPart::addCosmeticEdgesToGeom()
 {
+    if (!m_geometryObject)
+        return;
     //    Base::Console().Message("CEx::addCosmeticEdgesToGeom()\n");
     const std::vector<TechDraw::CosmeticEdge*> cEdges = CosmeticEdges.getValues();
     for (auto& ce : cEdges) {
@@ -1522,7 +1613,7 @@ void DrawViewPart::addCosmeticEdgesToGeom()
         if (!scaledGeom)
             continue;
         //        int iGE =
-        geometryObject->addCosmeticEdge(scaledGeom, ce->getTagAsString());
+        m_geometryObject->addCosmeticEdge(scaledGeom, ce->getTagAsString());
     }
 }
 
@@ -1535,7 +1626,7 @@ int DrawViewPart::add1CEToGE(std::string tag)
         return -1;
     }
     TechDraw::BaseGeomPtr scaledGeom = ce->scaledGeometry(getScale());
-    int iGE = geometryObject->addCosmeticEdge(scaledGeom, tag);
+    int iGE = getGeometryObject()->addCosmeticEdge(scaledGeom, tag);
 
     return iGE;
 }
@@ -1543,6 +1634,9 @@ int DrawViewPart::add1CEToGE(std::string tag)
 //update Edge geometry with current CE's
 void DrawViewPart::refreshCEGeoms()
 {
+    if (!m_geometryObject)
+        return;
+
     //    Base::Console().Message("DVP::refreshCEGeoms()\n");
     std::vector<TechDraw::BaseGeomPtr> gEdges = getEdgeGeometry();
     std::vector<TechDraw::BaseGeomPtr> oldGEdges;
@@ -1551,7 +1645,7 @@ void DrawViewPart::refreshCEGeoms()
             oldGEdges.push_back(ge);
         }
     }
-    getGeometryObject()->setEdgeGeometry(oldGEdges);
+    m_geometryObject->setEdgeGeometry(oldGEdges);
     addCosmeticEdgesToGeom();
 }
 
@@ -1572,7 +1666,7 @@ int DrawViewPart::add1CLToGE(std::string tag)
         return -1;
     }
     TechDraw::BaseGeomPtr scaledGeom = cl->scaledGeometry(this);
-    int iGE = geometryObject->addCenterLine(scaledGeom, tag);
+    int iGE = getGeometryObject()->addCenterLine(scaledGeom, tag);
 
     return iGE;
 }
@@ -1580,6 +1674,8 @@ int DrawViewPart::add1CLToGE(std::string tag)
 //update Edge geometry with current CL's
 void DrawViewPart::refreshCLGeoms()
 {
+    if (!m_geometryObject)
+        return;
     //    Base::Console().Message("DVP::refreshCLGeoms()\n");
     std::vector<TechDraw::BaseGeomPtr> gEdges = getEdgeGeometry();
     std::vector<TechDraw::BaseGeomPtr> newGEdges;
@@ -1588,13 +1684,15 @@ void DrawViewPart::refreshCLGeoms()
             newGEdges.push_back(ge);
         }
     }
-    getGeometryObject()->setEdgeGeometry(newGEdges);
+    m_geometryObject->setEdgeGeometry(newGEdges);
     addCenterLinesToGeom();
 }
 
 //add the center lines to geometry Edges list
 void DrawViewPart::addCenterLinesToGeom()
 {
+    if (!m_geometryObject)
+        return;
     //   Base::Console().Message("DVP::addCenterLinesToGeom()\n");
     const std::vector<TechDraw::CenterLine*> lines = CenterLines.getValues();
     for (auto& cl : lines) {
@@ -1604,7 +1702,7 @@ void DrawViewPart::addCenterLinesToGeom()
             continue;
         }
         //        int idx =
-        (void)geometryObject->addCenterLine(scaledGeom, cl->getTagAsString());
+        (void)m_geometryObject->addCenterLine(scaledGeom, cl->getTagAsString());
     }
 }
 
@@ -1624,7 +1722,7 @@ void DrawViewPart::clearGeomFormats()
 
 void DrawViewPart::dumpVerts(std::string text)
 {
-    if (!geometryObject) {
+    if (!m_geometryObject) {
         Base::Console().Message("no verts to dump yet\n");
         return;
     }

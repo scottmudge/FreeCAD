@@ -37,7 +37,8 @@ namespace Part {
 class PartExport ProgressIndicator : public Message_ProgressIndicator
 {
 public:
-    ProgressIndicator (int theMaxVal = 100);
+    ProgressIndicator (int theMaxVal = 100,
+                       const std::shared_ptr<Base::SequencerLauncher> &progress = std::shared_ptr<Base::SequencerLauncher>());
     virtual ~ProgressIndicator ();
 
 #if OCC_VERSION_HEX < 0x070500
@@ -48,7 +49,7 @@ public:
     virtual Standard_Boolean UserBreak() override;
 
 private:
-    std::unique_ptr<Base::SequencerLauncher> myProgress;
+    std::shared_ptr<Base::SequencerLauncher> myProgress;
     const void *prevText = nullptr;
 };
 

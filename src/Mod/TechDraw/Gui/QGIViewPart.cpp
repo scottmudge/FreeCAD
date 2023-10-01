@@ -782,8 +782,8 @@ void QGIViewPart::drawSectionLine(TechDraw::DrawViewSection* viewSection, bool b
     if (!viewSection)
         return;
 
-    if (!viewSection->hasGeometry())
-        return;
+    // if (!viewSection->hasGeometry())
+    //     return;
 
     auto vp = static_cast<ViewProviderViewPart*>(getViewProvider(getViewObject()));
     if (!vp) {
@@ -833,11 +833,12 @@ void QGIViewPart::drawSectionLine(TechDraw::DrawViewSection* viewSection, bool b
             //change points have Rez::guiX applied in sectionLine
             points.front().setLocation(location0);
             points.back().setLocation(location1);
-            sectionLine->setChangePoints(points, true);
+            sectionLine->setChangePoints(points);
         }
         else {
             sectionLine->clearChangePoints();
         }
+        sectionLine->setInteractive(true, true);
 
         //set the general parameters
         sectionLine->setPos(0.0, 0.0);
@@ -894,11 +895,12 @@ void QGIViewPart::drawComplexSectionLine(TechDraw::DrawViewSection* viewSection,
     sectionLine->setPath(wirePath);
     sectionLine->setEnds(vStart, vEnd);
     if (vp->SectionLineMarks.getValue()) {
-        sectionLine->setChangePoints(dcs->getChangePointsFromSectionLine(), false);
+        sectionLine->setChangePoints(dcs->getChangePointsFromSectionLine());
     }
     else {
         sectionLine->clearChangePoints();
     }
+    sectionLine->setInteractive(true, false);
     if (dcs->ProjectionStrategy.isValue("Offset")) {
         Base::Vector3d arrowDirOffset = viewSection->SectionNormal.getValue();
         arrowDirOffset =

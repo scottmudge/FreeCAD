@@ -41,7 +41,7 @@ class TechDrawExport DrawComplexSection: public DrawViewSection
 
 public:
     DrawComplexSection();
-    ~DrawComplexSection() = default;
+    ~DrawComplexSection() override;
 
     App::PropertyLink CuttingToolWireObject;
     App::PropertyEnumeration ProjectionStrategy;//Offset or Aligned
@@ -65,14 +65,28 @@ public:
 
     TopoDS_Shape getShapeForDetail() const override;
 
-public Q_SLOTS:
-    void onSectionCutFinished(void) override;
+    void onMakeAlignedPiecedFinished(std::shared_ptr<TopoDS_Shape> result);
+    void onSectionCutFinished(std::shared_ptr<TopoDS_Shape> result) override;
 
     bool boxesIntersect(TopoDS_Face& face, TopoDS_Shape& shape);
-    TopoDS_Shape shapeShapeIntersect(const TopoDS_Shape& shape0, const TopoDS_Shape& shape1);
     std::vector<TopoDS_Face> faceShapeIntersect(const TopoDS_Face& face, const TopoDS_Shape& shape);
     TopoDS_Shape extrudeWireToFace(TopoDS_Wire& wire, gp_Dir extrudeDir, double extrudeDist);
-    void makeAlignedPieces(const TopoDS_Shape& rawShape);
+
+    struct ComplexParams {
+        std::string featureName;
+        std::shared_ptr<Base::SequencerLauncher> progress;
+        gp_Ax2 sectionCS;
+        TopoDS_Shape rawShape;
+        TopoDS_Shape toolFaceShape;
+        TopoDS_Wire profileWire;
+        double shapeSize;
+        Base::Vector3d sectionNormal;
+        int projectionStrategy;
+        std::shared_ptr<TopoDS_Shape> output;
+    };
+    static void makeAlignedPieces(const ComplexParams &params);
+    void abortMakeAlignedPieces();
+
     TopoDS_Compound singleToolIntersections(const TopoDS_Shape& cutShape);
     TopoDS_Compound alignedToolIntersections(const TopoDS_Shape& cutShape);
 
@@ -85,7 +99,9 @@ public Q_SLOTS:
 
     bool validateProfilePosition(TopoDS_Wire profileWire, gp_Ax2 sectionCS,
                                  gp_Dir& gClosestBasis) const;
-    bool showSegment(gp_Dir segmentNormal) const;
+    static bool showSegment(int projectionStrategy,
+                            const Base::Vector3d &sectionNormal,
+                            gp_Dir segmentNormal);
     gp_Vec projectVector(const gp_Vec& vec) const;
 
     TopoDS_Wire makeProfileWire() const;
@@ -95,23 +111,22 @@ public Q_SLOTS:
     static bool isProfileObject(App::DocumentObject* obj);
     static bool isMultiSegmentProfile(App::DocumentObject* obj);
     static bool isLinearProfile(App::DocumentObject* obj);
-    static bool isTrulyEmpty(TopoDS_Shape inShape);
     static bool canBuild(gp_Ax2 sectionCS, App::DocumentObject* profileObject);
     static gp_Vec projectVector(const gp_Vec& vec, gp_Ax2 sectionCS);
 
 private:
-    gp_Dir getFaceNormal(TopoDS_Face& face);
+    static gp_Dir getFaceNormal(TopoDS_Face& face);
 
     TopoDS_Shape m_toolFaceShape;
     TopoDS_Shape m_alignResult;
     TopoDS_Shape m_preparedShape;//saved for detail views
 
-    QMetaObject::Connection connectAlignWatcher;
-    QFutureWatcher<void> m_alignWatcher;
-    QFuture<void> m_alignFuture;
-    bool m_waitingForAlign;
-
     static const char* ProjectionStrategyEnums[];
+
+private:
+    std::unique_ptr<QFutureWatcher<void>> m_alignWatcher;
+    std::shared_ptr<Base::SequencerLauncher> m_progress;
+    bool m_waitingForAlign = false;
 };
 
 using DrawComplexSectionPython = App::FeaturePythonT<DrawComplexSection>;

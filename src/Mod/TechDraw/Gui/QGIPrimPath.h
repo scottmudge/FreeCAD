@@ -85,7 +85,7 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
     QPainterPath opaqueArea() const override;
 
-    static QPainterPath shapeFromPath(const QPainterPath &path, const QPen &pen);
+    static QPainterPath shapeFromPath(const QPainterPath &path, const QPen &pen, bool filled=true);
 
     virtual void setPreselect(bool enable);
     virtual void setTools() const;

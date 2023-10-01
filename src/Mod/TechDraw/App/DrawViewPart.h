@@ -40,15 +40,26 @@
 #include "CosmeticExtension.h"
 #include "DrawView.h"
 
+class Message_ProgressIndicator;
 
 class gp_Pnt;
 class gp_Pln;
 class gp_Ax2;
 class TopoDS_Shape;
 
+namespace Base
+{
+class SequencerLauncher;
+}
+
 namespace App
 {
 class Part;
+}
+
+namespace Part
+{
+class ProgressIndicator;
 }
 
 namespace TechDraw
@@ -129,7 +140,7 @@ public:
     const std::vector<TechDraw::FacePtr> getFaceGeometry() const;
 
     bool hasGeometry() const;
-    TechDraw::GeometryObjectPtr getGeometryObject() const { return geometryObject; }
+    TechDraw::GeometryObjectPtr getGeometryObject() const;
 
     TechDraw::VertexPtr getVertex(std::string vertexName) const;
     TechDraw::BaseGeomPtr getEdge(std::string edgeName) const;
@@ -173,8 +184,13 @@ public:
     Base::Vector3d getLocalOrigin3d() const;
     Base::Vector3d getLocalOrigin2d() const;
 
-    bool handleFaces();
-    bool newFaceFinder();
+    static bool handleFaces();
+    static bool newFaceFinder();
+
+    static TopoDS_Shape shapeShapeIntersect(const TopoDS_Shape& shape0,
+                                            const TopoDS_Shape& shape1,
+                                            Handle(Message_ProgressIndicator) pi = nullptr);
+    static bool isTrulyEmpty(TopoDS_Shape inShape);
 
     bool isUnsetting() { return nowUnsetting; }
 
@@ -188,8 +204,8 @@ public:
     TopoDS_Shape getShape() const;
     double getSizeAlongVector(Base::Vector3d alignmentVector);
 
-    virtual void postHlrTasks(void);
-    virtual void postFaceExtractionTasks(void);
+    virtual void postHlrTasks();
+    virtual void postFaceExtractionTasks();
 
     bool isIso() const;
 
@@ -225,34 +241,36 @@ public:
     std::vector<App::DocumentObject*> getAllSources() const;
 
     bool waitingForFaces() const { return m_waitingForFaces; }
-    void waitingForFaces(bool s) { m_waitingForFaces = s; }
     bool waitingForHlr() const { return m_waitingForHlr; }
-    void waitingForHlr(bool s) { m_waitingForHlr = s; }
     virtual bool waitingForResult() const;
 
-    void progressValueChanged(int v);
-
-public Q_SLOTS:
-    void onHlrFinished(void);
-    void onFacesFinished(void);
-
 protected:
+    void onHlrFinished(GeometryObjectPtr result);
+    void onFacesFinished(std::shared_ptr<std::vector<FacePtr>> faces);
+    void abortMakeGeometry();
+    void waitingForFaces(bool s) { m_waitingForFaces = s; }
+    void waitingForHlr(bool s) { m_waitingForHlr = s; }
+
     bool checkXDirection() const;
 
-    TechDraw::GeometryObjectPtr geometryObject;
-    TechDraw::GeometryObjectPtr m_tempGeometryObject;//holds the new GO until hlr is completed
+    TechDraw::GeometryObjectPtr m_geometryObject;
     Base::BoundBox3d bbox;
 
     void onChanged(const App::Property* prop) override;
     void unsetupObject() override;
 
-    virtual TechDraw::GeometryObjectPtr buildGeometryObject(TopoDS_Shape& shape,
-                                                            const gp_Ax2& viewAxis);
-    virtual TechDraw::GeometryObjectPtr makeGeometryForShape(TopoDS_Shape& shape);//const??
+    void buildGeometryObject(TopoDS_Shape& shape, const gp_Ax2& viewAxis);
+    void makeGeometryForShape(TopoDS_Shape& shape);//const??
     void partExec(TopoDS_Shape& shape);
-    virtual void addShapes2d(void);
+    void addShapes2d();
 
-    void extractFaces();
+    struct ExtractFaceParams {
+        std::string featureName;
+        std::shared_ptr<Base::SequencerLauncher> progress;
+        std::vector<BaseGeomPtr> goEdges;
+        std::shared_ptr<std::vector<FacePtr>> faces;
+    };
+    static void extractFaces(const ExtractFaceParams &params);
 
     Base::Vector3d shapeCentroid;
     void getRunControl();
@@ -278,17 +296,13 @@ protected:
     std::vector<TechDraw::VertexPtr> m_referenceVerts;
 
 private:
-    bool nowUnsetting;
-    bool m_waitingForFaces;
-    bool m_waitingForHlr;
+    bool nowUnsetting = false;
+    bool m_waitingForFaces = false;
+    bool m_waitingForHlr = false;
 
-    QMetaObject::Connection connectHlrWatcher;
-    QFutureWatcher<void> m_hlrWatcher;
-    QFuture<void> m_hlrFuture;
-    QMetaObject::Connection connectFaceWatcher;
-    QFutureWatcher<void> m_faceWatcher;
-    QFuture<void> m_faceFuture;
-
+    std::unique_ptr<QFutureWatcher<void>> m_hlrWatcher;
+    std::unique_ptr<QFutureWatcher<void>> m_faceWatcher;
+    std::shared_ptr<Base::SequencerLauncher> m_progress;
 };
 
 using DrawViewPartPython = App::FeaturePythonT<DrawViewPart>;

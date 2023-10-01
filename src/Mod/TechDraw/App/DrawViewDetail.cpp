@@ -33,6 +33,7 @@
 #include <BRepTools.hxx>
 #include <BRep_Builder.hxx>
 #include <Bnd_Box.hxx>
+#include <Message_ProgressIndicator.hxx>
 #include <QtConcurrentRun>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
@@ -53,6 +54,8 @@
 #include <App/Document.h>
 #include <Base/Console.h>
 #include <Base/Parameter.h>
+#include <Base/Sequencer.h>
+#include <Mod/Part/App/ProgressIndicator.h>
 
 #include "DrawComplexSection.h"
 #include "DrawUtil.h"
@@ -70,7 +73,7 @@ using namespace TechDraw;
 
 PROPERTY_SOURCE(TechDraw::DrawViewDetail, TechDraw::DrawViewPart)
 
-DrawViewDetail::DrawViewDetail() : m_waitingForDetail(false), m_saveDvp(nullptr), m_saveDvs(nullptr)
+DrawViewDetail::DrawViewDetail() : m_saveDvp(nullptr), m_saveDvs(nullptr)
 {
     static const char* dgroup = "Detail";
 
@@ -93,11 +96,7 @@ DrawViewDetail::DrawViewDetail() : m_waitingForDetail(false), m_saveDvp(nullptr)
 
 DrawViewDetail::~DrawViewDetail()
 {
-    //don't delete this object while it still has dependent tasks running
-    if (m_detailFuture.isRunning()) {
-        Base::Console().Message("%s is waiting for detail cut to finish\n", Label.getValue());
-        m_detailFuture.waitForFinished();
-    }
+    abortMakeDetail();
 }
 
 short DrawViewDetail::mustExecute() const
@@ -166,74 +165,113 @@ App::DocumentObjectExecReturn* DrawViewDetail::execute()
     }
 
     detailExec(shape, dvp, dvs);
-    addShapes2d();
 
     dvp->requestPaint();//to refresh detail highlight in base view
     return DrawView::execute();
 }
 
+void DrawViewDetail::abortMakeDetail()
+{
+    if (m_progress) {
+        m_progress->setCanceled(true);
+        m_progress.reset();
+    }
+    m_detailWatcher.reset();
+    waitingForDetail(false);
+}
+
 //try to create a detail of the solids & shells in shape
 //if there are no solids/shells in shape, use the edges in shape
-void DrawViewDetail::detailExec(TopoDS_Shape& shape, DrawViewPart* dvp, DrawViewSection* dvs)
+void DrawViewDetail::detailExec(const TopoDS_Shape& shape, DrawViewPart* dvp, DrawViewSection* dvs)
 {
-    if (waitingForHlr() || waitingForDetail()) {
+    abortMakeDetail();
+
+    try {
+        m_detailWatcher.reset(new QFutureWatcher<void>());
+        std::shared_ptr<Output> output(new Output());
+
+        std::string message(Label.getValue());
+        message += QT_TRANSLATE_NOOP("TechDraw", " making details...");
+        std::shared_ptr<Base::SequencerLauncher> progress(new Base::SequencerLauncher(message.c_str()));
+        m_progress = progress;
+
+        m_detailWatcher.reset(new QFutureWatcher<void>());
+        QObject::connect(m_detailWatcher.get(), &QFutureWatcherBase::finished, m_detailWatcher.get(),
+            [=] {
+                if (m_progress && !m_progress->wasCanceled())
+                    onMakeDetailFinished(output);
+                else
+                    abortMakeDetail();
+            });
+
+        m_saveShape = BRepBuilderAPI_Copy(shape).Shape();
+        m_saveDvp = dvp;
+        m_saveDvs = dvs;
+        m_viewAxis = dvp->getProjectionCS();//save the CS for later
+
+        DetailParams params;
+        params.progress = progress;
+        params.output = output;
+        params.shape = m_saveShape;
+        params.viewAxis = m_viewAxis;
+        params.dirDetail = dvp->Direction.getValue();
+        gp_Pnt gpCenter = TechDraw::findCentroid(params.shape, params.dirDetail);
+        params.shapeCenter = Base::Vector3d(gpCenter.X(), gpCenter.Y(), gpCenter.Z());
+        m_saveCentroid = params.shapeCenter;//centroid of original shape
+        params.anchorPoint = AnchorPoint.getValue();
+        params.radius = getFudgeRadius();
+        params.rotation = Rotation.getValue();
+        params.scale = getScale();
+        params.featureName = getFullName();
+        params.moveShape = (dvs == nullptr);
+        waitingForDetail(true);
+        m_detailWatcher->setFuture(QtConcurrent::run(
+            [params] {
+                try {
+                    makeDetailShape(params);
+                    return;
+                } catch (Base::Exception &e) {
+                    e.ReportException();
+                    Base::Console().Error("DVP::%s - fail to make detail shape - %s **\n",
+                                        params.featureName.c_str(), e.what());
+                } catch (Standard_Failure &e) {
+                    Base::Console().Error("DVP::%s - to make detail shape - %s **\n",
+                                        params.featureName.c_str(), e.GetMessageString());
+                }
+                params.progress->setCanceled(true);
+            }));
+    }
+    catch (...) {
+        Base::Console().Error("DVS::detailExec - failed to make detail shape");
         return;
     }
-
-    //note that &m_detailWatcher in the third parameter is not strictly required, but using the
-    //4 parameter signature instead of the 3 parameter signature prevents clazy warning:
-    //https://github.com/KDE/clazy/blob/1.11/docs/checks/README-connect-3arg-lambda.md
-    connectDetailWatcher =
-        QObject::connect(&m_detailWatcher, &QFutureWatcherBase::finished, &m_detailWatcher,
-                         [this] { this->onMakeDetailFinished(); });
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-    m_detailFuture = QtConcurrent::run(this, &DrawViewDetail::makeDetailShape, shape, dvp, dvs);
-#else
-    m_detailFuture = QtConcurrent::run(&DrawViewDetail::makeDetailShape, this, shape, dvp, dvs);
-#endif
-    m_detailWatcher.setFuture(m_detailFuture);
-    waitingForDetail(true);
 }
 
 //this runs in a separate thread since it can sometimes take a long time
 //make a common of the input shape and a cylinder (or prism depending on
 //the matting style)
-void DrawViewDetail::makeDetailShape(const TopoDS_Shape& shape, DrawViewPart* dvp, DrawViewSection* dvs)
+void DrawViewDetail::makeDetailShape(const DetailParams &params)
 {
-    showProgressMessage(getNameInDocument(), "is making detail shape");
+    auto output = params.output;
+    double radius = params.radius;
+    const Base::Vector3d &dirDetail = params.dirDetail;
 
-    Base::Vector3d dirDetail = dvp->Direction.getValue();
-    double radius = getFudgeRadius();
+    int solidCount = DrawUtil::countSubShapes(params.shape, TopAbs_SOLID);
+    int shellCount = DrawUtil::countSubShapes(params.shape, TopAbs_SHELL);
 
-    int solidCount = DrawUtil::countSubShapes(shape, TopAbs_SOLID);
-    int shellCount = DrawUtil::countSubShapes(shape, TopAbs_SHELL);
+    TopoDS_Shape copyShape = params.shape;
 
-    //make a copy of the input shape so we don't inadvertently change it
-    BRepBuilderAPI_Copy BuilderCopy(shape);
-    TopoDS_Shape copyShape = BuilderCopy.Shape();
-    m_saveShape = copyShape;
-    m_saveDvp = dvp;
-    m_saveDvs = dvs;
-
-    gp_Pnt gpCenter = TechDraw::findCentroid(copyShape, dirDetail);
-    Base::Vector3d shapeCenter = Base::Vector3d(gpCenter.X(), gpCenter.Y(), gpCenter.Z());
-    m_saveCentroid = shapeCenter;//centroid of original shape
-
-    if (!dvs) {
+    if (params.moveShape) {
         //section cutShape should already be on origin
         copyShape = TechDraw::moveShape(copyShape,//centre shape on origin
-                                        -shapeCenter);
+                                        -params.shapeCenter);
     }
 
-    shapeCenter = Base::Vector3d(0.0, 0.0, 0.0);
-
-
-    m_viewAxis = dvp->getProjectionCS(shapeCenter);//save the CS for later
-    Base::Vector3d anchor = AnchorPoint.getValue();//this is a 2D point in base view local coords
+    Base::Vector3d anchor = params.anchorPoint;//this is a 2D point in base view local coords
     //    double baseRotationRad = dvp->Rotation.getValue() * M_PI / 180.0;
     //    anchor.RotateZ(baseRotationRad);
 
-    anchor = DrawUtil::toR3(m_viewAxis, anchor);//actual anchor coords in R3
+    anchor = DrawUtil::toR3(params.viewAxis, anchor);//actual anchor coords in R3
 
 
     Bnd_Box bbxSource;
@@ -258,13 +296,13 @@ void DrawViewDetail::makeDetailShape(const TopoDS_Shape& shape, DrawViewPart* dv
         extrusionFace = mkFace.Face();
         if (extrusionFace.IsNull()) {
             Base::Console().Warning("DVD::makeDetailShape - %s - failed to create tool base face\n",
-                                    getNameInDocument());
+                                    params.featureName.c_str());
             return;
         }
         tool = BRepPrimAPI_MakePrism(extrusionFace, extrudeDir, false, true).Shape();
         if (tool.IsNull()) {
             Base::Console().Warning("DVD::makeDetailShape - %s - failed to create tool (prism)\n",
-                                    getNameInDocument());
+                                    params.featureName.c_str());
             return;
         }
     }
@@ -275,82 +313,79 @@ void DrawViewDetail::makeDetailShape(const TopoDS_Shape& shape, DrawViewPart* dv
         tool = mkTool.Shape();
         if (tool.IsNull()) {
             Base::Console().Warning("DVD::detailExec - %s - failed to create tool (cylinder)\n",
-                                    getNameInDocument());
+                                    params.featureName.c_str());
             return;
         }
     }
 
-    //for each solid and shell in the input shape, make a common with the tool and
-    //add the result to a compound.  This avoids issues with some geometry errors in the
-    //input shape.
-    BRep_Builder builder;
-    TopoDS_Compound pieces;
-    builder.MakeCompound(pieces);
-    if (solidCount > 0) {
-        TopExp_Explorer expl(copyShape, TopAbs_SOLID);
-        for (; expl.More(); expl.Next()) {
-            const TopoDS_Solid& s = TopoDS::Solid(expl.Current());
-
-            BRepAlgoAPI_Common mkCommon(s, tool);
-            if (!mkCommon.IsDone()) {
-                continue;
-            }
-            if (mkCommon.Shape().IsNull()) {
-                continue;
-            }
-            //this might be overkill for piecewise algo
-            //Did we get at least 1 solid?
-            TopExp_Explorer xp;
-            xp.Init(mkCommon.Shape(), TopAbs_SOLID);
-            if (xp.More() != Standard_True) {
-                continue;
-            }
-            builder.Add(pieces, mkCommon.Shape());
-        }
-    }
-
-    if (shellCount > 0) {
-        TopExp_Explorer expl(copyShape, TopAbs_SHELL);
-        for (; expl.More(); expl.Next()) {
-            const TopoDS_Shell& s = TopoDS::Shell(expl.Current());
-
-            BRepAlgoAPI_Common mkCommon(s, tool);
-            if (!mkCommon.IsDone()) {
-                continue;
-            }
-            if (mkCommon.Shape().IsNull()) {
-                continue;
-            }
-            //this might be overkill for piecewise algo
-            //Did we get at least 1 shell?
-            TopExp_Explorer xp;
-            xp.Init(mkCommon.Shape(), TopAbs_SHELL);
-            if (xp.More() != Standard_True) {
-                continue;
-            }
-            builder.Add(pieces, mkCommon.Shape());
-        }
-    }
-
-    if (debugDetail()) {
-        BRepTools::Write(tool, "DVDTool.brep");     //debug
-        BRepTools::Write(copyShape, "DVDCopy.brep");//debug
-        BRepTools::Write(pieces, "DVDCommon.brep"); //debug
-    }
-
-    gp_Pnt inputCenter;
+    Handle(Message_ProgressIndicator) pi = new Part::ProgressIndicator(
+            params.progress->numberOfSteps(), params.progress);
     try {
+
+        //for each solid and shell in the input shape, make a common with the tool and
+        //add the result to a compound.  This avoids issues with some geometry errors in the
+        //input shape.
+        BRep_Builder builder;
+        TopoDS_Compound pieces;
+        builder.MakeCompound(pieces);
+        if (solidCount > 0) {
+            TopExp_Explorer expl(copyShape, TopAbs_SOLID);
+            for (; expl.More(); expl.Next()) {
+                const TopoDS_Solid& s = TopoDS::Solid(expl.Current());
+
+                TopoDS_Shape result = shapeShapeIntersect(s, tool, pi);
+                if (result.IsNull())
+                    continue;
+
+                //this might be overkill for piecewise algo
+                //Did we get at least 1 solid?
+                TopExp_Explorer xp;
+                xp.Init(result, TopAbs_SOLID);
+                if (xp.More() != Standard_True) {
+                    continue;
+                }
+                builder.Add(pieces, result);
+            }
+        }
+
+        if (shellCount > 0) {
+            TopExp_Explorer expl(copyShape, TopAbs_SHELL);
+            for (; expl.More(); expl.Next()) {
+                const TopoDS_Shell& s = TopoDS::Shell(expl.Current());
+
+                TopoDS_Shape result = shapeShapeIntersect(s, tool, pi);
+                if (result.IsNull())
+                    continue;
+
+                //this might be overkill for piecewise algo
+                //Did we get at least 1 shell?
+                TopExp_Explorer xp;
+                xp.Init(result, TopAbs_SHELL);
+                if (xp.More() != Standard_True) {
+                    continue;
+                }
+                builder.Add(pieces, result);
+            }
+        }
+
+        if (debugDetail()) {
+            BRepTools::Write(tool, "DVDTool.brep");     //debug
+            BRepTools::Write(copyShape, "DVDCopy.brep");//debug
+            BRepTools::Write(pieces, "DVDCommon.brep"); //debug
+        }
+
+        gp_Pnt inputCenter;
         //centroid of result
         inputCenter = TechDraw::findCentroid(pieces, dirDetail);
         Base::Vector3d centroid(inputCenter.X(), inputCenter.Y(), inputCenter.Z());
-        m_saveCentroid += centroid;//center of massaged shape
+        output->centroid = centroid;//center of massaged shape
 
         if ((solidCount > 0) || (shellCount > 0)) {
             //align shape with detail anchor
             TopoDS_Shape centeredShape = TechDraw::moveShape(pieces, anchor * -1.0);
-            m_scaledShape = TechDraw::scaleShape(centeredShape, getScale());
+            output->shape = TechDraw::scaleShape(centeredShape, params.scale);
             if (debugDetail()) {
-                BRepTools::Write(m_scaledShape, "DVDScaled.brep");//debug
+                BRepTools::Write(output->shape, "DVDScaled.brep");//debug
             }
         }
         else {
@@ -361,32 +396,31 @@ void DrawViewDetail::makeDetailShape(const TopoDS_Shape& shape, DrawViewPart* dv
                 BRepTools::Write(projectedEdges, "DVDProjectedEdges.brep");//debug
                 BRepTools::Write(centeredShape, "DVDCenteredShape.brep");  //debug
             }
-            m_scaledShape = TechDraw::scaleShape(centeredShape, getScale());
+            output->shape = TechDraw::scaleShape(centeredShape, params.scale);
         }
 
-        Base::Vector3d stdOrg(0.0, 0.0, 0.0);
-        m_viewAxis = dvp->getProjectionCS(stdOrg);
-
-        if (!DrawUtil::fpCompare(Rotation.getValue(), 0.0)) {
-            m_scaledShape = TechDraw::rotateShape(m_scaledShape, m_viewAxis, Rotation.getValue());
+        if (!DrawUtil::fpCompare(params.rotation, 0.0)) {
+            output->shape = TechDraw::rotateShape(output->shape, params.viewAxis, params.rotation);
         }
     }//end try block
-
-    catch (Standard_Failure& e1) {
+    catch (Base::Exception& e1) {
         Base::Console().Message("DVD::makeDetailShape - failed to create detail %s - %s **\n",
-                                getNameInDocument(), e1.GetMessageString());
+                                params.featureName.c_str(), e1.what());
         return;
     }
-
-    showProgressMessage(getNameInDocument(), "has finished making detail shape");
+    catch (Standard_Failure& e1) {
+        Base::Console().Message("DVD::makeDetailShape - failed to create detail %s - %s **\n",
+                                params.featureName.c_str(), e1.GetMessageString());
+        return;
+    }
 }
 
-void DrawViewDetail::postHlrTasks(void)
+void DrawViewDetail::postHlrTasks()
 {
     //    Base::Console().Message("DVD::postHlrTasks()\n");
     DrawViewPart::postHlrTasks();
 
-    geometryObject->pruneVertexGeom(Base::Vector3d(0.0, 0.0, 0.0),
+    m_geometryObject->pruneVertexGeom(Base::Vector3d(0.0, 0.0, 0.0),
                                     Radius.getValue()
                                         * getScale());//remove vertices beyond clipradius
 
@@ -401,13 +435,15 @@ void DrawViewDetail::postHlrTasks(void)
 }
 
 //continue processing after makeDetailShape thread is finished
-void DrawViewDetail::onMakeDetailFinished(void)
+void DrawViewDetail::onMakeDetailFinished(std::shared_ptr<Output> output)
 {
     waitingForDetail(false);
-    QObject::disconnect(connectDetailWatcher);
+    m_progress.reset();
+    m_scaledShape = output->shape;
+    m_saveCentroid += output->centroid;
 
     //ancestor's buildGeometryObject will run HLR and face finding in a separate thread
-    m_tempGeometryObject = buildGeometryObject(m_scaledShape, m_viewAxis);
+    buildGeometryObject(m_scaledShape, m_viewAxis);
 }
 
 bool DrawViewDetail::waitingForResult() const
@@ -417,6 +453,7 @@ bool DrawViewDetail::waitingForResult() const
     }
     return false;
 }
+
 TopoDS_Shape DrawViewDetail::projectEdgesOntoFace(TopoDS_Shape& edgeShape, TopoDS_Face& projFace,
                                                   gp_Dir& projDir)
 {
@@ -448,7 +485,7 @@ std::vector<DrawViewDetail*> DrawViewDetail::getDetailRefs() const
 
 double DrawViewDetail::getFudgeRadius() { return Radius.getValue() * m_fudge; }
 
-bool DrawViewDetail::debugDetail() const
+bool DrawViewDetail::debugDetail()
 {
     return Preferences::getPreferenceGroup("debug")->GetBool("debugDetail", false);
 }

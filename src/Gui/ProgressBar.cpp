@@ -136,12 +136,12 @@ void SequencerBar::resume()
     d->bar->enterControlEvents(d->guiThread); // grab again
 }
 
-void SequencerBar::startStep()
+void SequencerBar::startStep(bool blocking)
 {
     QThread *currentThread = QThread::currentThread();
     QThread *thr = d->bar->thread(); // this is the main thread
     if (thr != currentThread) {
-        d->guiThread = false;
+        d->guiThread = blocking;
         QMetaObject::invokeMethod(d->bar, "setRangeEx", Qt::QueuedConnection,
             QGenericReturnArgument(), Q_ARG(int, 0), Q_ARG(int, (int)nTotalSteps));
         d->progressTime.start();
@@ -276,6 +276,20 @@ void SequencerBar::setValue(int step)
                 qApp->processEvents();
             }
         }
+    }
+}
+
+void SequencerBar::setTotalSteps(size_t steps)
+{
+    SequencerBase::setTotalSteps(steps);
+    QThread *currentThread = QThread::currentThread();
+    QThread *thr = d->bar->thread(); // this is the main thread
+    if (thr != currentThread) {
+        QMetaObject::invokeMethod(d->bar, "setRangeEx", Qt::QueuedConnection,
+            QGenericReturnArgument(), Q_ARG(int, 0), Q_ARG(int, (int)nTotalSteps));
+    }
+    else {
+        d->bar->setRangeEx(0, (int)nTotalSteps);
     }
 }
 
@@ -516,7 +530,10 @@ void ProgressBar::resetObserveEventFilter()
 
 void ProgressBar::enterControlEvents(bool grab)
 {
-    qApp->installEventFilter(this);
+    // Change behavior to not block on background sequence, i.e. calling
+    // startStep() from a different thread.
+    if (grab)
+        qApp->installEventFilter(this);
 
     // Make sure that we get the key events, otherwise the Inventor viewer usurps the key events
     // This also disables accelerators.
@@ -530,7 +547,8 @@ void ProgressBar::enterControlEvents(bool grab)
 
 void ProgressBar::leaveControlEvents(bool release)
 {
-    qApp->removeEventFilter(this);
+    if (release)
+        qApp->removeEventFilter(this);
 
 #if defined(Q_OS_LINUX)
     Q_UNUSED(release)

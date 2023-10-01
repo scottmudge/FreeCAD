@@ -588,7 +588,7 @@ void TaskComplexSection::createComplexSection()
 
         Base::Vector3d localUnit = m_viewDirectionWidget->value();
         if (m_baseView) {
-            Gui::cmdAppObjectArgs(m_section, "BaseView = ", Gui::Command::getObjectCmd(m_baseView));
+            Gui::cmdAppObjectArgs(m_section, "BaseView = %s", Gui::Command::getObjectCmd(m_baseView));
             m_section->setCSFromBase(localUnit * -1.0);
             m_section->Source.setValues(m_baseView->Source.getValues());
             m_section->XSource.setValues(m_baseView->XSource.getValues());
@@ -635,8 +635,7 @@ void TaskComplexSection::updateComplexSection()
         std::string temp = Base::Tools::toStdString(qTemp);
         Gui::cmdAppObjectArgs(m_section, "SectionSymbol = '%s'", temp.c_str());
         std::string lblText = "Section " + temp + " - " + temp;
-        Gui::cmdAppObjectArgs(m_section, "Label = '%s'",
-                           m_sectionName.c_str(), lblText.c_str());
+        Gui::cmdAppObjectArgs(m_section, "Label = '%s'", lblText);
 
         Gui::cmdAppObjectArgs(m_section, "Scale = %0.6f", ui->sbScale->value());
         int scaleType = ui->cmbScaleType->currentIndex();

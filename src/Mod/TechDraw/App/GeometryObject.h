@@ -23,6 +23,7 @@
 #ifndef TECHDRAW_GEOMETRYOBJECT_H
 #define TECHDRAW_GEOMETRYOBJECT_H
 
+#include <App/DocumentObserver.h>
 #include <Mod/TechDraw/TechDrawGlobal.h>
 
 #include <memory>
@@ -123,6 +124,7 @@ public:
     void makeTDGeometry();
     void extractGeometry(edgeClass category, bool visible);
     void addFaceGeom(FacePtr f);
+    void setFaces(std::vector<FacePtr> &&faces);
     void clearFaceGeom();
     void setIsoCount(int i) { m_isoCount = i; }
     void setParentName(std::string n);//for debug messages
@@ -195,9 +197,10 @@ protected:
     std::vector<FacePtr> faceGeom;
 
     bool findVertex(Base::Vector3d v);
+    double getScale() const;
 
-    std::string m_parentName;
-    TechDraw::DrawView* m_parent;
+    App::DocumentObjectT m_parent;
+    mutable double m_scale = 1;
     int m_isoCount;
     bool m_isPersp;
     double m_focus;

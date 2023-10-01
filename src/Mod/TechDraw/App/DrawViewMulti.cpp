@@ -56,8 +56,6 @@ DrawViewMulti::DrawViewMulti()
     //Source is replaced by Sources in Multi
     Source.setStatus(App::Property::ReadOnly, true);
     Source.setStatus(App::Property::Hidden, true);
-
-    geometryObject = nullptr;
 }
 
 DrawViewMulti::~DrawViewMulti()
@@ -120,11 +118,7 @@ App::DocumentObjectExecReturn *DrawViewMulti::execute()
                                                           viewAxis,
                                                           Rotation.getValue());
         }
-        geometryObject = buildGeometryObject(mirroredShape, viewAxis);
-
-#if MOD_TECHDRAW_HANDLE_FACES
-        extractFaces();
-#endif //#if MOD_TECHDRAW_HANDLE_FACES
+        buildGeometryObject(mirroredShape, viewAxis);
     }
     catch (Standard_Failure& e1) {
         return new App::DocumentObjectExecReturn(e1.GetMessageString());

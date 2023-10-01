@@ -140,7 +140,7 @@ App::DocumentObjectExecReturn *DrawProjGroupItem::execute(void)
     return DrawViewPart::execute();
 }
 
-void DrawProjGroupItem::postHlrTasks(void)
+void DrawProjGroupItem::postHlrTasks()
 {
 //    Base::Console().Message("DPGI::postHlrTasks() - %s\n", getNameInDocument());
     DrawViewPart::postHlrTasks();

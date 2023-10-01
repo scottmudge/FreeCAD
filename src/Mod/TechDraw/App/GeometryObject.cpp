@@ -82,8 +82,8 @@ struct EdgePoints {
     TopoDS_Edge edge;
 };
 
-GeometryObject::GeometryObject(const string& parent, TechDraw::DrawView* parentObj)
-    : m_parentName(parent), m_parent(parentObj), m_isoCount(0), m_isPersp(false), m_focus(100.0),
+GeometryObject::GeometryObject(const string& /*parent*/, TechDraw::DrawView* parentObj)
+    : m_parent(parentObj), m_isoCount(0), m_isPersp(false), m_focus(100.0),
       m_usePolygonHLR(false), m_scrubCount(0)
 
 {}
@@ -258,7 +258,7 @@ void GeometryObject::makeTDGeometry()
     extractGeometry(TechDraw::ecOUTLINE,
                         true);
 
-    const DrawViewPart* dvp = static_cast<const DrawViewPart*>(m_parent);
+    const DrawViewPart* dvp = Base::freecad_dynamic_cast<const DrawViewPart>(m_parent.getObject());
     if (!dvp) {
         return;//some routines do not have a dvp (ex shape outline)
     }
@@ -638,6 +638,16 @@ void GeometryObject::addVertex(TechDraw::VertexPtr v) { vertexGeom.push_back(v);
 
 void GeometryObject::addEdge(TechDraw::BaseGeomPtr bg) { edgeGeom.push_back(bg); }
 
+double GeometryObject::getScale() const
+{
+    auto parent = Base::freecad_dynamic_cast<const DrawView>(m_parent.getObject());
+    if (parent) {
+        //    Base::Console().Message("GO::addCosmeticVertex(%X)\n", cv);
+        m_scale = parent->getScale();
+    }
+    return m_scale;
+}
+
 //********** Cosmetic Vertex ***************************************************
 
 //adds a new GeomVert surrogate for CV
@@ -645,9 +655,7 @@ void GeometryObject::addEdge(TechDraw::BaseGeomPtr bg) { edgeGeom.push_back(bg);
 // insertGeomForCV(cv)
 int GeometryObject::addCosmeticVertex(CosmeticVertex* cv)
 {
-    //    Base::Console().Message("GO::addCosmeticVertex(%X)\n", cv);
-    double scale = m_parent->getScale();
-    Base::Vector3d pos = cv->scaled(scale);
+    Base::Vector3d pos = cv->scaled(getScale());
     TechDraw::VertexPtr v(std::make_shared<TechDraw::Vertex>(pos.x, pos.y));
     v->setCosmetic(true);
 //    v->setCosmeticLink = -1;//obs??
@@ -692,7 +700,7 @@ int GeometryObject::addCosmeticVertex(Base::Vector3d pos, std::string tagString)
 int GeometryObject::addCosmeticEdge(CosmeticEdge* ce)
 {
     //    Base::Console().Message("GO::addCosmeticEdge(%X) 0\n", ce);
-    double scale = m_parent->getScale();
+    double scale = getScale();
     TechDraw::BaseGeomPtr e = ce->scaledGeometry(scale);
     e->setCosmetic(true);
     e->setCosmeticTag(ce->getTagAsString());
@@ -769,13 +777,14 @@ void GeometryObject::clearFaceGeom() { faceGeom.clear(); }
 //! add a Face to Face Geometry
 void GeometryObject::addFaceGeom(FacePtr f) { faceGeom.push_back(f); }
 
+void GeometryObject::setFaces(std::vector<FacePtr> &&faces)
+{
+    faceGeom = std::move(faces);
+}
+
 TechDraw::DrawViewDetail* GeometryObject::isParentDetail()
 {
-    if (!m_parent) {
-        return nullptr;
-    }
-    TechDraw::DrawViewDetail* detail = dynamic_cast<TechDraw::DrawViewDetail*>(m_parent);
-    return detail;
+    return Base::freecad_dynamic_cast<TechDraw::DrawViewDetail>(m_parent.getObject());
 }
 
 

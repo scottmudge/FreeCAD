@@ -48,6 +48,7 @@ QGIEdge::QGIEdge(int index) :
 {
     m_width = 1.0;
     setCosmetic(isCosmetic);
+    m_styleSelect = Qt::NoBrush;
     setFill(Qt::NoBrush);
 
     setStrokeWidth(getEdgeFuzz());

@@ -267,14 +267,18 @@ void QGIDecoration::addMovableItem(QGraphicsItem *item)
 
 void QGIDecoration::removeMovableItem(QGraphicsItem *item)
 {
-    if (m_moveableItems.erase(item))
+    if (m_moveableItems.erase(item)) {
+        item->setFlag(QGraphicsItem::ItemIsMovable, false);
         item->removeSceneEventFilter(this);
+    }
 }
 
 void QGIDecoration::clearMovableItems()
 {
-    for (auto &v : m_moveableItems)
+    for (auto &v : m_moveableItems) {
+        v.first->setFlag(QGraphicsItem::ItemIsMovable, false);
         v.first->removeSceneEventFilter(this);
+    }
     m_moveableItems.clear();
 }
 

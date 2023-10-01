@@ -70,42 +70,60 @@ public:
     void unsetupObject() override;
 
 
-    void detailExec(TopoDS_Shape& s,
+    void detailExec(const TopoDS_Shape& s,
                     DrawViewPart* baseView,
                     DrawViewSection* sectionAlias);
-    void makeDetailShape(const TopoDS_Shape& shape,
-                         DrawViewPart* dvp,
-                         DrawViewSection* dvs);
-    void postHlrTasks(void) override;
+    void postHlrTasks() override;
     void waitingForDetail(bool s) { m_waitingForDetail = s; }
     bool waitingForDetail(void) const { return m_waitingForDetail; }
     bool waitingForResult() const override;
 
     double getFudgeRadius(void);
-    TopoDS_Shape projectEdgesOntoFace(TopoDS_Shape& edgeShape,
-                                      TopoDS_Face& projFace,
-                                      gp_Dir& projDir);
+    static TopoDS_Shape projectEdgesOntoFace(TopoDS_Shape& edgeShape,
+                                             TopoDS_Face& projFace,
+                                             gp_Dir& projDir);
 
     std::vector<DrawViewDetail*> getDetailRefs() const override;
 
-public Q_SLOTS:
-    void onMakeDetailFinished(void);
-
 protected:
+    struct Output {
+        TopoDS_Shape shape;
+        Base::Vector3d centroid;
+    };
+    void onMakeDetailFinished(std::shared_ptr<Output> output);
+
+    struct DetailParams {
+        std::string featureName;
+        std::shared_ptr<Base::SequencerLauncher> progress;
+        std::shared_ptr<Output> output;
+        TopoDS_Shape shape;
+        gp_Ax2 viewAxis;
+        Base::Vector3d dirDetail;
+        Base::Vector3d shapeCenter;
+        Base::Vector3d anchorPoint;
+        double radius;
+        double rotation;
+        double scale;
+        bool moveShape;
+    };
+    static void makeDetailShape(const DetailParams &params);
+
+    void abortMakeDetail();
+
     void getParameters(void);
     double m_fudge;
-    bool debugDetail() const;
+    static bool debugDetail();
 
     TopoDS_Shape m_scaledShape;
     gp_Ax2 m_viewAxis;
 
-    QMetaObject::Connection connectDetailWatcher;
-    QFutureWatcher<void> m_detailWatcher;
-    QFuture<void> m_detailFuture;
-    bool m_waitingForDetail;
-
     DrawViewPart* m_saveDvp;
     DrawViewSection* m_saveDvs;
+
+private:
+    std::unique_ptr<QFutureWatcher<void>> m_detailWatcher;
+    std::shared_ptr<Base::SequencerLauncher> m_progress;
+    bool m_waitingForDetail = false;
 };
 
 using DrawViewDetailPython = App::FeaturePythonT<DrawViewDetail>;

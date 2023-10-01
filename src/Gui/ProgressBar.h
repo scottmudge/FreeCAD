@@ -117,11 +117,13 @@ protected:
     /** Puts text to the status bar */
     void setText (const char* pszTxt) override;
     /** Starts the progress bar */
-    void startStep() override;
+    void startStep(bool blocking) override;
     /** Increase the progress bar. */
     void nextStep(bool canAbort) override;
     /** Sets the progress indicator to a certain position. */
     void setProgress(size_t) override;
+    /** Sets the total steps of the progress indicator. */
+    void setTotalSteps(size_t) override;
     /** Resets the sequencer */
     void resetData() override;
     void showRemainingTime();

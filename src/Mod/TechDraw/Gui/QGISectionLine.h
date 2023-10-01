@@ -67,10 +67,10 @@ public:
     void setSectionColor(const QColor &c);
     void setPathMode(bool mode) { m_pathMode = mode; }
     bool pathMode() { return m_pathMode; }
-    void setChangePoints(const TechDraw::ChangePointVector &changePoints, bool moveable=false);
+    void setChangePoints(const TechDraw::ChangePointVector &changePoints);
     void clearChangePoints();
     virtual void draw();
-    void setInteractive(bool enable);
+    void setInteractive(bool enable, bool movable);
     QPainterPath shape() const override;
 
     void setSymbolOffsets(const QPointF &p1, const QPointF &p2);

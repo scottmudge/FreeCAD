@@ -244,10 +244,7 @@ void QGIPrimPath::setTools() const
 
 QPainterPath QGIPrimPath::opaqueArea() const
 {
-    QBrush brush;
-    brush.setStyle(m_fillStyleCurrent);
-    brush.setColor(m_fillColorCurrent);
-    if (brush.isOpaque())
+    if (m_brush.isOpaque())
         return isClipped() ? clipPath() : shape();
     return QGraphicsItem::opaqueArea();
 }
@@ -326,7 +323,7 @@ void QGIPrimPath::setPath(const QPainterPath &path)
 }
 
 // Copied from Qt's qgraphicsitem.cpp
-QPainterPath QGIPrimPath::shapeFromPath(const QPainterPath &path, const QPen &pen)
+QPainterPath QGIPrimPath::shapeFromPath(const QPainterPath &path, const QPen &pen, bool filled)
 {
     // We unfortunately need this hack as QPainterPathStroker will set a width of 1.0
     // if we pass a value of 0.0 to QPainterPathStroker::setWidth()
@@ -343,7 +340,8 @@ QPainterPath QGIPrimPath::shapeFromPath(const QPainterPath &path, const QPen &pe
     ps.setJoinStyle(pen.joinStyle());
     ps.setMiterLimit(pen.miterLimit());
     QPainterPath p = ps.createStroke(path);
-    p.addPath(path);
+    if (filled)
+        p.addPath(path);
     return p;
 }
 
@@ -352,7 +350,7 @@ QPainterPath QGIPrimPath::shape() const
     if (m_shapePath.isEmpty()) {
         QPen pen;
         pen.setWidthF(m_strokeWidth);
-        m_shapePath = shapeFromPath(m_path, pen);
+        m_shapePath = shapeFromPath(m_path, pen, m_styleSelect!=Qt::NoBrush);
     }
     return m_shapePath;
 }

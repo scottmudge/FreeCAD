@@ -54,11 +54,13 @@ protected:
     /** Puts text to the progress dialog */
     void setText (const char* pszTxt) override;
     /** Starts the progress dialog */
-    void startStep() override;
+    void startStep(bool blocking) override;
     /** Increase the step indicator of the progress dialog. */
     void nextStep(bool canAbort) override;
     /** Sets the progress indicator to a certain position. */
     void setProgress(size_t) override;
+    /** Sets the total steps of the progress indicator. */
+    void setTotalSteps(size_t) override;
     /** Resets the sequencer */
     void resetData() override;
     void showRemainingTime();

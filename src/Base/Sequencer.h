@@ -26,7 +26,6 @@
 
 #include "Exception.h"
 
-
 namespace Base
 {
 
@@ -216,7 +215,7 @@ protected:
      * This method can be reimplemented in sub-classes to give the user a feedback
      * when a new sequence starts. The default implementation does nothing.
      */
-    virtual void startStep();
+    virtual void startStep(bool blocking);
     /**
      * This method can be reimplemented in sub-classes to give the user a feedback
      * when the next is performed. The default implementation does nothing. If \a canAbort
@@ -234,6 +233,11 @@ protected:
      * the re-implemented method.
      */
     virtual void resetData();
+
+    /**
+     * Sets the total steps of indicator
+     */
+    virtual void setTotalSteps(size_t);
 
 protected:
     size_t nProgress; /**< Stores the current amount of progress.*/
@@ -266,7 +270,7 @@ public:
 
 protected:
     /** Starts the sequencer */
-    void startStep() override;
+    void startStep(bool blocking) override;
     /** Writes the current progress to the console window. */
     void nextStep(bool canAbort) override;
 
@@ -362,17 +366,35 @@ private:
 class BaseExport SequencerLauncher
 {
 public:
-    SequencerLauncher(const char* pszStr, size_t steps);
-    ~SequencerLauncher();
+    SequencerLauncher(const char* pszStr=nullptr, size_t steps=0);
+    virtual ~SequencerLauncher();
     size_t numberOfSteps() const;
+    size_t progress() const;
     void setText (const char* pszTxt);
+    const std::string &text() const {
+        return strText;
+    }
+    void setTotalSteps(size_t steps);
     bool next(bool canAbort = false);
     void setProgress(size_t);
     bool wasCanceled() const;
+    void setCanceled(bool cacnel=true);
+    bool isBlocking() const {
+        return bBlocking;
+    }
+    void setNoException(bool enable);
+    bool start(size_t steps=0, const char *pszTxt=nullptr);
+    bool stop();
 private:
     std::string strText;
     size_t nProgress = 0;
     size_t nTotalSteps = 0;
+    // Allow cancel by user code
+    bool bCanceled = false;
+    bool bBlocking = false;
+    bool bNoException = false;
+    std::vector<SequencerLauncher*> vChildren;
+    SequencerLauncher *pParent = nullptr;
 
 private:
     SequencerLauncher(const SequencerLauncher&);

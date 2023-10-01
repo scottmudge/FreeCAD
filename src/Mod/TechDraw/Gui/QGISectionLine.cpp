@@ -86,22 +86,23 @@ QGISectionLine::QGISectionLine() :
     setWidth(Rez::guiX(0.75));          //a default?
     setStyle(getSectionStyle());
     setColor(getSectionColor());
-
-    setInteractive(true);
 }
 
-void QGISectionLine::setInteractive(bool enable)
+void QGISectionLine::setInteractive(bool enable, bool movable)
 {
-    if (m_interactive == enable)
+    if (enable == m_interactive && movable == m_movablePoints)
         return;
 
+    if (!enable)
+        movable = false;
+    m_movablePoints = movable;
     m_interactive = enable;
     setHandlesChildEvents(false);
     setAcceptHoverEvents(false);
     setFlag(QGraphicsItem::ItemIsSelectable, enable);
-    setFlag(QGraphicsPathItem::ItemIsMovable, enable);
+    setFlag(QGraphicsPathItem::ItemIsMovable, movable);
     m_line->setFlag(QGraphicsItem::ItemIsSelectable, enable);
-    m_line->setFlag(QGraphicsItem::ItemIsMovable, enable);
+    m_line->setFlag(QGraphicsItem::ItemIsMovable, movable);
     m_line->setAcceptHoverEvents(enable);
     m_extend->setFlag(QGraphicsItem::ItemIsSelectable, false);
     m_extend->setFlag(QGraphicsItem::ItemIsMovable, false);
@@ -114,15 +115,21 @@ void QGISectionLine::setInteractive(bool enable)
     m_symbol2->setAcceptHoverEvents(enable);
 
     for (auto cPointItem : m_changePointMarks) {
-        cPointItem->setAcceptHoverEvents(m_interactive);
-        cPointItem->setFlag(QGraphicsItem::ItemIsSelectable, m_interactive);
-        cPointItem->setFlag(QGraphicsItem::ItemIsMovable, m_interactive);
+        cPointItem->setAcceptHoverEvents(enable);
+        cPointItem->setFlag(QGraphicsItem::ItemIsSelectable, enable);
+        if (movable)
+            addMovableItem(cPointItem);
+        else
+            removeMovableItem(cPointItem);
     }
+    
+    setupEventFilter();
 }
 
 void QGISectionLine::setupEventFilter()
 {
-    m_moveProxy = m_line;
+    if (m_movablePoints)
+        m_moveProxy = m_line;
     addMovableItem(m_symbol1);
     addMovableItem(m_symbol2);
     inherited::setupEventFilter();
@@ -407,7 +414,6 @@ void QGISectionLine::makeChangePointMarks()
             cPointItem->installSceneEventFilter(this);
             cPointItem->setAcceptHoverEvents(m_interactive);
             cPointItem->setFlag(QGraphicsItem::ItemIsSelectable, m_interactive);
-            cPointItem->setFlag(QGraphicsItem::ItemIsMovable, m_interactive);
         } else
             cPointItem = m_changePointMarks[i];
         ++i;
@@ -510,9 +516,8 @@ void QGISectionLine::setPath(const QPainterPath& path)
     m_line->setPath(path);
 }
 
-void QGISectionLine::setChangePoints(const TechDraw::ChangePointVector &changePointData, bool movable)
+void QGISectionLine::setChangePoints(const TechDraw::ChangePointVector &changePointData)
 {
-    m_movablePoints = movable;
     m_changePointData = changePointData;
     clearChangePointMarks();
 }

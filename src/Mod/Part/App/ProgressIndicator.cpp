@@ -52,9 +52,15 @@ using namespace Part;
   \endcode
  */
 
-ProgressIndicator::ProgressIndicator (int theMaxVal)
-  : myProgress(new Base::SequencerLauncher("", theMaxVal))
+ProgressIndicator::ProgressIndicator (int theMaxVal,
+                const std::shared_ptr<Base::SequencerLauncher> &progress)
+  : myProgress(progress)
 {
+    if (!progress)
+        myProgress.reset(new Base::SequencerLauncher("", theMaxVal));
+    // Must not throw, as OCC may run in its own thread, and an uncaught
+    // exception may terminate the whole application.
+    myProgress->setNoException(true);
 #if OCC_VERSION_HEX < 0x070500
     SetScale (0, theMaxVal, 1);
 #endif
@@ -72,9 +78,18 @@ Standard_Boolean ProgressIndicator::Show (const Standard_Boolean theForce)
         if (!aName.IsNull())
             myProgress->setText (aName->ToCString());
     }
+    auto totalSteps = myProgress->numberOfSteps();
+    if (totalSteps == 0) {
+        totalSteps = 100;
+        myProgress->setTotalSteps(totalSteps);
+        myProgress->start();
+#if OCC_VERSION_HEX < 0x070500
+        SetScale (0, 100, 1);
+#endif
+    }
 
     Standard_Real aPc = GetPosition(); //always within [0,1]
-    int aVal = (int)(aPc * myProgress->numberOfSteps());
+    int aVal = (int)(aPc * totalSteps);
     myProgress->setProgress (aVal);
 
     return Standard_True;
@@ -89,15 +104,32 @@ void ProgressIndicator::Show (const Message_ProgressScope& theScope, const Stand
         prevText = aName;
         myProgress->setText (aName);
     }
+    auto totalSteps = myProgress->numberOfSteps();
+    if (totalSteps == 0) {
+        totalSteps = 100;
+        myProgress->setTotalSteps(totalSteps);
+        myProgress->start();
+#if OCC_VERSION_HEX < 0x070500
+        SetScale (0, 100, 1);
+#endif
+    }
 
     Standard_Real aPc = GetPosition(); //always within [0,1]
-    int aVal = (int)(aPc * myProgress->numberOfSteps());
+    int aVal = (int)(aPc * totalSteps);
     myProgress->setProgress (aVal);
 }
 #endif
 
 Standard_Boolean ProgressIndicator::UserBreak()
 {
-    Base::SequencerBase::Instance().checkAbort();
-    return Base::SequencerBase::Instance().wasCanceled();
+    // Must not throw, as OCC may run in its own thread, and an uncaught
+    // exception may terminate the whole application.
+    try {
+        Base::SequencerBase::Instance().checkAbort();
+    } catch (Base::Exception &) {
+        return Standard_True;
+    } catch (...) {
+        return Standard_True;
+    }
+    return myProgress->wasCanceled();
 }

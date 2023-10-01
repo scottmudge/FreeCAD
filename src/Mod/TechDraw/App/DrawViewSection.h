@@ -119,9 +119,8 @@ public:
 
     void sectionExec(TopoDS_Shape& s);
     virtual void makeSectionCut(const TopoDS_Shape& baseShape);
-    void postHlrTasks(void) override;
+    void postHlrTasks() override;
     virtual void postSectionCutTasks();
-    void waitingForCut(bool s) { m_waitingForCut = s; }
     bool waitingForCut(void) const { return m_waitingForCut; }
     bool waitingForResult() const override;
 
@@ -172,21 +171,31 @@ public:
 
     TopoDS_Shape makeFaceFromWires(std::vector<TopoDS_Wire> &inWires);
 
-public Q_SLOTS:
-    virtual void onSectionCutFinished(void);
+    virtual void onSectionCutFinished(std::shared_ptr<TopoDS_Shape> result);
 
 protected:
     TopoDS_Compound m_sectionTopoDSFaces;//needed for hatching
     std::vector<LineSet> m_lineSets;
     std::vector<TechDraw::FacePtr> m_tdSectionFaces;
 
+    struct SectionParams {
+        std::string featureName;
+        std::shared_ptr<Base::SequencerLauncher> progress;
+        std::shared_ptr<TopoDS_Shape> output;
+        TopoDS_Shape baseShape;
+        TopoDS_Shape cuttingTool;
+        bool trimAfterCut;
+    };
+    static void doSectionCut(const SectionParams &params);
 
     virtual gp_Pln getSectionPlane() const;
     virtual TopoDS_Compound findSectionPlaneIntersections(const TopoDS_Shape& shape);
     void getParameters();
-    bool debugSection() const;
-    int prefCutSurface() const;
-    bool trimAfterCut() const;
+    static bool debugSection();
+    static int prefCutSurface();
+
+    void waitingForCut(bool s) { m_waitingForCut = s; }
+    void abortSectionCut();
 
     TopoDS_Shape m_cutShape;
 
@@ -198,13 +207,12 @@ protected:
     TopoDS_Shape m_cutPieces;//the shape after cutting, but before centering & scaling
     gp_Ax2 m_projectionCS;
     TopoDS_Shape m_preparedShape;//the shape after cutting, centering, scaling etc
-
-    QMetaObject::Connection connectCutWatcher;
-    QFutureWatcher<void> m_cutWatcher;
-    QFuture<void> m_cutFuture;
-    bool m_waitingForCut;
-    TopoDS_Shape m_cuttingTool;
     double m_shapeSize;
+
+private:
+    std::unique_ptr<QFutureWatcher<void>> m_cutWatcher;
+    std::shared_ptr<Base::SequencerLauncher> m_progress;
+    bool m_waitingForCut = false;
 };
 
 using DrawViewSectionPython = App::FeaturePythonT<DrawViewSection>;

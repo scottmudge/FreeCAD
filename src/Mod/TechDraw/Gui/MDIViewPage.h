@@ -55,6 +55,7 @@ class QGVPage;
 class QGSPage;
 class QGIView;
 class QGIHighlight;
+class QGISectionLine;
 
 class TechDrawGuiExport MDIViewPage : public Gui::MDIView, public Gui::SelectionObserver
 {
@@ -70,7 +71,6 @@ public:
 
     /// Observer message from the Tree Selection mechanism
     void onSelectionChanged(const Gui::SelectionChanges& msg) override;
-    void preSelectionChanged(const QPoint &pos);
 
     /// QGraphicsScene selection routines
     void selectQGIView(App::DocumentObject *obj, bool isSelected);
@@ -78,6 +78,7 @@ public:
     void blockSceneSelection(bool isBlocked);
 
     QGIHighlight *findHighlight(const App::DocumentObject *obj);
+    QGISectionLine *findSection(const App::DocumentObject *obj);
 
     bool onMsg(const char* pMsg, const char** ppReturn) override;
     bool onHasMsg(const char* pMsg) const override;
@@ -159,7 +160,7 @@ private:
     int isSelectionBlocked;
     QPointer<QGSPage> m_scene;
     QPointer<QGIView> m_preselection;
-    App::DocumentObjectT m_preselect_detail;
+    App::DocumentObjectT m_preselectOther;
 
     QString m_currentPath;
     ViewProviderPage* m_vpPage;

@@ -81,7 +81,7 @@ void SequencerDialog::resume()
 {
 }
 
-void SequencerDialog::startStep()
+void SequencerDialog::startStep(bool /*blocking*/)
 {
     QThread *currentThread = QThread::currentThread();
     QThread *thr = d->dlg->thread(); // this is the main thread
@@ -195,6 +195,20 @@ void SequencerDialog::setValue(int step)
                 showRemainingTime();
             qApp->processEvents();
         }
+    }
+}
+
+void SequencerDialog::setTotalSteps(size_t steps)
+{
+    SequencerBase::setTotalSteps(steps);
+    QThread *currentThread = QThread::currentThread();
+    QThread *thr = d->dlg->thread(); // this is the main thread
+    if (thr != currentThread) {
+        QMetaObject::invokeMethod(d->dlg, "setRangeEx", Qt::QueuedConnection,
+            QGenericReturnArgument(), Q_ARG(int, 0), Q_ARG(int, (int)nTotalSteps));
+    }
+    else {
+        d->dlg->setRangeEx(0, (int)nTotalSteps);
     }
 }
 

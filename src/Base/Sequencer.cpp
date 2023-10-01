@@ -25,6 +25,7 @@
 
 #ifndef _PreComp_
 # include <QMutexLocker>
+# include <QThread>
 #endif
 
 #if QT_VERSION >= QT_VERSION_CHECK(5,14,0)
@@ -40,6 +41,7 @@ using namespace Base;
 namespace Base {
     struct SequencerP {
         // members
+        static QThread *_thread;
         static std::vector<SequencerBase*> _instances; /**< A vector of all created instances */
         static std::vector<SequencerLauncher*> _launchers;
         static SequencerLauncher* _topLauncher; /**< The outermost launcher */
@@ -49,6 +51,8 @@ namespace Base {
          */
         static void appendInstance (SequencerBase* s)
         {
+            if (!_thread)
+                _thread = QThread::currentThread();
             _instances.push_back(s);
         }
         static void removeInstance (SequencerBase* s)
@@ -61,6 +65,29 @@ namespace Base {
         {
             return *_instances.back();
         }
+        static void findNextLauncher(SequencerLauncher *exclude=nullptr)
+        {
+            auto laucherSave = _topLauncher;
+            _topLauncher = nullptr;
+            for (int pass = 0; pass < 2; ++pass) {
+                for (size_t i=0; i<_launchers.size(); ++i) {
+                    auto launcher = _launchers[_launchers.size()-1-i];
+                    if (launcher == exclude)
+                        continue;
+                    // First pass, only pick blocking sequencer
+                    if (pass==0 && !launcher->isBlocking())
+                        continue;
+                    if (launcher->start()) {
+                        _topLauncher = launcher;
+                        return;
+                    }
+                }
+            }
+            if (std::find(_launchers.begin(), _launchers.end(), laucherSave) != _launchers.end())
+                _topLauncher = laucherSave;
+            else if (!_launchers.empty())
+                _topLauncher = _launchers.back();
+        }
     };
 
     /**
@@ -71,6 +98,7 @@ namespace Base {
     std::vector<SequencerLauncher*> SequencerP::_launchers;
     SequencerLauncher* SequencerP::_topLauncher = nullptr;
     QRecursiveMutex SequencerP::mutex;
+    QThread *SequencerP::_thread = nullptr;
 }
 
 SequencerBase& SequencerBase::Instance ()
@@ -106,8 +134,15 @@ bool SequencerBase::start(const char* pszStr, size_t steps)
     setText(pszStr);
 
     // reimplemented in sub-classes
-    if (!this->_bLocked)
-        startStep();
+    if (!this->_bLocked) {
+        bool blocking = true;
+        {
+            QMutexLocker locker(&SequencerP::mutex);
+            if (SequencerP::_topLauncher)
+                blocking = SequencerP::_topLauncher->isBlocking();
+        }
+        startStep(blocking);
+    }
 
     return true;
 }
@@ -117,7 +152,12 @@ size_t SequencerBase::numberOfSteps() const
     return this->nTotalSteps;
 }
 
-void SequencerBase::startStep()
+void SequencerBase::setTotalSteps(size_t steps)
+{
+    this->nTotalSteps = steps;
+}
+
+void SequencerBase::startStep(bool)
 {
 }
 
@@ -225,7 +265,7 @@ void ConsoleSequencer::setText (const char* pszTxt)
     printf("%s...\n", pszTxt);
 }
 
-void ConsoleSequencer::startStep()
+void ConsoleSequencer::startStep(bool)
 {
 }
 
@@ -251,8 +291,8 @@ SequencerLauncher::SequencerLauncher(const char* pszStr, size_t steps)
     QMutexLocker locker(&SequencerP::mutex);
     // Have we already an instance of SequencerLauncher created?
     SequencerP::_launchers.push_back(this);
-    SequencerBase::Instance().start(pszStr, steps);
-    SequencerP::_topLauncher = this;
+    if (steps != 0)
+        SequencerP::findNextLauncher();
 }
 
 SequencerLauncher::~SequencerLauncher()
@@ -263,15 +303,41 @@ SequencerLauncher::~SequencerLauncher()
     auto it = std::find(launchers.begin(), launchers.end(), this);
     if (it != launchers.end())
         launchers.erase(it);
-    if (launchers.empty()) {
+    if (topLauncher == this) {
         SequencerBase::Instance().stop();
         topLauncher = nullptr;
-    } else if (topLauncher == this) {
-        topLauncher = launchers.back();
-        SequencerBase::Instance().start(topLauncher->strText.c_str(),
-                topLauncher->nTotalSteps);
-        SequencerBase::Instance().setProgress(topLauncher->nProgress);
+        SequencerP::findNextLauncher();
     }
+}
+
+bool SequencerLauncher::start(size_t steps, const char* pszTxt)
+{
+    QMutexLocker locker(&SequencerP::mutex);
+    if (pszTxt)
+        strText = pszTxt;
+    if (steps)
+        nTotalSteps = steps;
+    if (nTotalSteps == 0)
+        return false;
+    if (SequencerP::_topLauncher == nullptr)
+        SequencerP::_topLauncher = this;
+    if (SequencerP::_topLauncher == this) {
+        if (progress() == 0)
+            bBlocking = (QThread::currentThread() == SequencerP::_thread);
+        return SequencerBase::Instance().start(strText.c_str(), steps);
+    }
+    return false;
+}
+
+bool SequencerLauncher::stop()
+{
+    QMutexLocker locker(&SequencerP::mutex);
+    if (SequencerP::_topLauncher == this) {
+        SequencerBase::Instance().stop();
+        SequencerP::findNextLauncher(this);
+        return true;
+    }
+    return false;
 }
 
 void SequencerLauncher::setText (const char* pszTxt)
@@ -287,8 +353,22 @@ bool SequencerLauncher::next(bool canAbort)
     QMutexLocker locker(&SequencerP::mutex);
     this->nProgress++;
     if (SequencerP::_topLauncher != this) {
-        if (canAbort)
+        if (canAbort) {
+            if (bNoException) {
+                if (bCanceled)
+                    return false;
+                try {
+                    SequencerBase::Instance().checkAbort();
+                } catch (Base::Exception &) {
+                    return false;
+                } catch (...) {
+                    return false;
+                }
+            }
+            if (bCanceled)
+                throw Base::AbortException();
             SequencerBase::Instance().checkAbort();
+        }
         return true; // ignore
     }
     return SequencerBase::Instance().next(canAbort);
@@ -297,9 +377,22 @@ bool SequencerLauncher::next(bool canAbort)
 void SequencerLauncher::setProgress(size_t pos)
 {
     QMutexLocker locker(&SequencerP::mutex);
+    if (bCanceled) {
+        if (bNoException)
+            return;
+        throw Base::AbortException();
+    }
     this->nProgress = pos;
     if (SequencerP::_topLauncher == this)
         SequencerBase::Instance().setProgress(pos);
+}
+
+void SequencerLauncher::setTotalSteps(size_t steps)
+{
+    QMutexLocker locker(&SequencerP::mutex);
+    this->nTotalSteps = steps;
+    if (SequencerP::_topLauncher == this)
+        SequencerBase::Instance().setTotalSteps(steps);
 }
 
 size_t SequencerLauncher::numberOfSteps() const
@@ -307,7 +400,25 @@ size_t SequencerLauncher::numberOfSteps() const
     return nTotalSteps;
 }
 
+size_t SequencerLauncher::progress() const
+{
+    return this->nProgress;
+}
+
 bool SequencerLauncher::wasCanceled() const
 {
-    return SequencerBase::Instance().wasCanceled();
+    QMutexLocker locker(&SequencerP::mutex);
+    return bCanceled || SequencerBase::Instance().wasCanceled();
+}
+
+void SequencerLauncher::setCanceled(bool cancel)
+{
+    QMutexLocker locker(&SequencerP::mutex);
+    bCanceled = cancel;
+}
+
+void SequencerLauncher::setNoException(bool enable)
+{
+    QMutexLocker locker(&SequencerP::mutex);
+    bNoException = enable;
 }

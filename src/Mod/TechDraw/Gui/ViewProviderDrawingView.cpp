@@ -80,7 +80,6 @@ void ViewProviderDrawingView::attach(App::DocumentObject *pcFeat)
     ViewProviderDocumentObject::attach(pcFeat);
 
     auto bnd = boost::bind(&ViewProviderDrawingView::onGuiRepaint, this, bp::_1);
-    auto bndProgressMessage = boost::bind(&ViewProviderDrawingView::onProgressMessage, this, bp::_1, bp::_2, bp::_3);
     auto feature = getViewObject();
     if (feature) {
         const char* temp = feature->getNameInDocument();
@@ -90,7 +89,6 @@ void ViewProviderDrawingView::attach(App::DocumentObject *pcFeat)
             m_myName = temp;
         }
         connectGuiRepaint = feature->signalGuiPaint.connect(bnd);
-        connectProgressMessage = feature->signalProgressMessage.connect(bndProgressMessage);
         //TODO: would be good to start the QGIV creation process here, but no guarantee we actually have
         //      MDIVP or QGVP yet.
         // but parent page might.  we may not be part of the document yet though!
@@ -310,32 +308,6 @@ void ViewProviderDrawingView::singleParentPaint(const TechDraw::DrawView* dv)
                 vpPage->getQGSPage()->addView(dv);
             }
         }
-    }
-}
-
-//handle status updates from App/DrawView
-void ViewProviderDrawingView::onProgressMessage(const TechDraw::DrawView* dv,
-                                              const std::string featureName,
-                                              const std::string text)
-{
-//    Q_UNUSED(featureName)
-    Q_UNUSED(dv)
-//    Q_UNUSED(text)
-    showProgressMessage(featureName, text);
-}
-
-void ViewProviderDrawingView::showProgressMessage(const std::string featureName, const std::string text) const
-{
-    QString msg = QString::fromUtf8("%1 %2")
-            .arg(Base::Tools::fromStdString(featureName),
-                 Base::Tools::fromStdString(text));
-    if (Gui::getMainWindow()) {
-        //neither of these work! Base::Console().Message() output preempts these messages??
-//        Gui::getMainWindow()->showMessage(msg, 3000);
-//        Gui::getMainWindow()->showStatus(Gui::MainWindow::Msg, msg);
-        //Temporary implementation. This works, but the messages are queued up and
-        //not displayed in the report window in real time??
-        Base::Console().Message("%s\n", qPrintable(msg));
     }
 }
 

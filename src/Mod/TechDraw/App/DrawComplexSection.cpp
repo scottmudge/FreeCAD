@@ -117,6 +117,7 @@
 #include <Base/Parameter.h>
 
 #include <Mod/Part/App/PartFeature.h>
+#include <Mod/Part/App/ProgressIndicator.h>
 
 #include "DrawComplexSection.h"
 #include "DrawUtil.h"
@@ -145,6 +146,11 @@ DrawComplexSection::DrawComplexSection()
     ProjectionStrategy.setEnums(ProjectionStrategyEnums);
     ADD_PROPERTY_TYPE(ProjectionStrategy, ((long)0), fgroup, App::Prop_None,
                       "Make a single cut, or use the profile in pieces");
+}
+
+DrawComplexSection::~DrawComplexSection()
+{
+    abortMakeAlignedPieces();
 }
 
 TopoDS_Shape DrawComplexSection::getShapeToCut()
@@ -284,58 +290,112 @@ TopoDS_Shape DrawComplexSection::prepareShape(const TopoDS_Shape& cutShape, doub
 
 void DrawComplexSection::makeSectionCut(const TopoDS_Shape& baseShape)
 {
+    abortMakeAlignedPieces();
+
     //    Base::Console().Message("DCS::makeSectionCut() - %s - baseShape.IsNull: %d\n",
     //                            getNameInDocument(), baseShape.IsNull());
+
     if (ProjectionStrategy.getValue() == 0) {
-        //Offset. Use regular section behaviour
-        return DrawViewSection::makeSectionCut(baseShape);
+        DrawViewSection::makeSectionCut(baseShape);
+        return;
     }
 
     try {
-        connectAlignWatcher =
-            QObject::connect(&m_alignWatcher, &QFutureWatcherBase::finished, &m_alignWatcher,
-                             [this] { this->onSectionCutFinished(); });
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-        m_alignFuture = QtConcurrent::run(this, &DrawComplexSection::makeAlignedPieces, baseShape);
-#else
-        m_alignFuture = QtConcurrent::run(&DrawComplexSection::makeAlignedPieces, this, baseShape);
-#endif
-        m_alignWatcher.setFuture(m_alignFuture);
+        ComplexParams params;
+        params.sectionCS = getSectionCS();
+        if (!canBuild(params.sectionCS, CuttingToolWireObject.getValue())) {
+            throw Base::RuntimeError("Profile is parallel to Section Normal");
+        }
+
+        //get a vector that describes the profile's orientation
+        params.profileWire = makeProfileWire();
+        if (params.profileWire.IsNull()) {
+            throw Base::RuntimeError("Can not make wire from cutting tool (2)");
+        }
+
+        m_alignWatcher.reset(new QFutureWatcher<void>());
+        std::shared_ptr<TopoDS_Shape> output(new TopoDS_Shape());
+        params.output = output;
+
+        std::string message(Label.getValue());
+        message += QT_TRANSLATE_NOOP("TechDraw", " making aligned pieces...");
+        std::shared_ptr<Base::SequencerLauncher> progress(new Base::SequencerLauncher(message.c_str()));
+        m_progress = progress;
+        params.progress = progress;
+
+        m_alignWatcher.reset(new QFutureWatcher<void>());
+        QObject::connect(m_alignWatcher.get(), &QFutureWatcherBase::finished, m_alignWatcher.get(),
+            [=] {
+                if (m_progress && !m_progress->wasCanceled())
+                    onMakeAlignedPiecedFinished(output);
+                else
+                    abortMakeAlignedPieces();
+            });
+
+        params.featureName = getFullName();
+        params.rawShape = BRepBuilderAPI_Copy(baseShape).Shape();
+        params.toolFaceShape = BRepBuilderAPI_Copy(m_toolFaceShape).Shape();
+        params.projectionStrategy = ProjectionStrategy.getValue();
+        params.sectionNormal = SectionNormal.getValue();
+        params.shapeSize = m_shapeSize;
+
         waitingForAlign(true);
+        m_alignWatcher->setFuture(QtConcurrent::run(
+            [params] {
+                try {
+                    makeAlignedPieces(params);
+                    return;
+                } catch (Base::Exception &e) {
+                    e.ReportException();
+                    Base::Console().Error("DVP::%s - complex section failed - %s **\n",
+                                        params.featureName.c_str(), e.what());
+                } catch (Standard_Failure &e) {
+                    Base::Console().Error("DVP::%s - complex section failed - %s **\n",
+                                        params.featureName.c_str(), e.GetMessageString());
+                }
+                params.progress->setCanceled(true);
+            }));
     }
     catch (...) {
         Base::Console().Message("DCS::makeSectionCut - failed to make alignedPieces");
         return;
     }
-
-    return DrawViewSection::makeSectionCut(baseShape);
 }
 
-
-void DrawComplexSection::onSectionCutFinished()
+void DrawComplexSection::abortMakeAlignedPieces()
 {
-    //    Base::Console().Message("DCS::onSectionCutFinished() - %s - cut: %d align: %d\n",
-    //                            getNameInDocument(), m_cutFuture.isRunning(), m_alignFuture.isRunning());
-    if (m_cutFuture.isRunning() ||  //waitingForCut()
-        m_alignFuture.isRunning()) {//waitingForAlign()
-        //can not continue yet.  return until the other thread ends
-        return;
+    if (m_progress) {
+        m_progress->setCanceled(true);
+        m_progress.reset();
     }
+    m_alignWatcher.reset();
+    waitingForAlign(false);
+}
 
-    DrawViewSection::onSectionCutFinished();
+void DrawComplexSection::onSectionCutFinished(std::shared_ptr<TopoDS_Shape> cutPieces)
+{
+    m_cutPieces = *cutPieces;
+    if (waitingForAlign())
+        return;
+    DrawViewSection::onSectionCutFinished(cutPieces);
+}
 
-    QObject::disconnect(connectAlignWatcher);
+void DrawComplexSection::onMakeAlignedPiecedFinished(std::shared_ptr<TopoDS_Shape> result)
+{
+    waitingForAlign(false);
+    m_progress.reset();
+    m_alignResult  = *result;
+    if (waitingForCut())
+        return;
+    *result = m_cutPieces;
+    DrawViewSection::onSectionCutFinished(result);
 }
 
 //for Aligned strategy, cut the rawShape by each segment of the tool
 //TODO: this process should replace the "makeSectionCut" from DVS
-void DrawComplexSection::makeAlignedPieces(const TopoDS_Shape& rawShape)
+void DrawComplexSection::makeAlignedPieces(const ComplexParams &params)
 {
-    //    Base::Console().Message("DCS::makeAlignedPieces() - rawShape.isNull: %d\n", rawShape.IsNull());
-
-    if (!canBuild(getSectionCS(), CuttingToolWireObject.getValue())) {
-        throw Base::RuntimeError("Profile is parallel to Section Normal");
-    }
+    const gp_Ax2 &sectionCS = params.sectionCS;
 
     std::vector<TopoDS_Shape> pieces;
     std::vector<double> pieceXSizeAll;//size in sectionCS.XDirection (width)
@@ -346,23 +406,18 @@ void DrawComplexSection::makeAlignedPieces(const TopoDS_Shape& rawShape)
     //with the section view vertical centerline and (in-out, forward-backward) with
     //the effective section plane for cut surface identification.
     gp_Ax3 alignedCS(gp_Pnt(0.0, 0.0, 0.0),
-                     getSectionCS().YDirection(), //section up and down >> alignedCS.z
-                     getSectionCS().XDirection());//section left to right >> alignedCS.x
+                     sectionCS.YDirection(), //section up and down >> alignedCS.z
+                     sectionCS.XDirection());//section left to right >> alignedCS.x
     gp_Ax3 stdCS;                                 //OXYZ
-    gp_Vec gProjectionUnit = gp_Vec(getSectionCS().Direction());
+    gp_Vec gProjectionUnit = gp_Vec(sectionCS.Direction());
 
-    //get a vector that describes the profile's orientation
-    TopoDS_Wire profileWire = makeProfileWire();
-    if (profileWire.IsNull()) {
-        throw Base::RuntimeError("Can not make wire from cutting tool (2)");
-    }
-    gp_Vec gProfileVec = makeProfileVector(profileWire);
-    gp_Vec rotateAxis = (getSectionCS().Direction()).Crossed(gProfileVec);
+    gp_Vec gProfileVec = makeProfileVector(params.profileWire);
+    gp_Vec rotateAxis = (sectionCS.Direction()).Crossed(gProfileVec);
 
     //now we want to know what the profileVector looks like on the page (only X,Y coords)
     //so we know if we are going to stack views vertically or horizontally and if the segments
     //will occur (left to right or right to left) or (top to bottom or bottom to top)
-    gProfileVec = projectVector(gProfileVec).Normalized();
+    gProfileVec = projectVector(gProfileVec, sectionCS).Normalized();
 
     bool isProfileVertical = true;
     if (fabs(gProfileVec.Dot(gp::OY().Direction().XYZ())) != 1.0) {
@@ -382,13 +437,16 @@ void DrawComplexSection::makeAlignedPieces(const TopoDS_Shape& rawShape)
         verticalReverser = -1.0;
     }
 
+    Handle(Message_ProgressIndicator) pi = new Part::ProgressIndicator(
+            params.progress->numberOfSteps(), params.progress);
+
     //make a tool for each segment of the toolFaceShape and intersect it with the
     //raw shape
-    TopExp_Explorer expFaces(m_toolFaceShape, TopAbs_FACE);
+    TopExp_Explorer expFaces(params.toolFaceShape, TopAbs_FACE);
     for (int iPiece = 0; expFaces.More(); expFaces.Next(), iPiece++) {
         TopoDS_Face face = TopoDS::Face(expFaces.Current());
         gp_Vec segmentNormal = gp_Vec(getFaceNormal(face));
-        if (!showSegment(gp_Dir(segmentNormal))) {
+        if (!showSegment(params.projectionStrategy, params.sectionNormal, gp_Dir(segmentNormal))) {
             //skip this segment of the profile
             continue;
         }
@@ -398,10 +456,10 @@ void DrawComplexSection::makeAlignedPieces(const TopoDS_Shape& rawShape)
             segmentNormal.Reverse();
         }
 
-        gp_Vec extrudeDir = segmentNormal * m_shapeSize;
+        gp_Vec extrudeDir = segmentNormal * params.shapeSize;
         BRepPrimAPI_MakePrism mkPrism(face, extrudeDir);
         TopoDS_Shape segmentTool = mkPrism.Shape();
-        TopoDS_Shape intersect = shapeShapeIntersect(segmentTool, rawShape);
+        TopoDS_Shape intersect = shapeShapeIntersect(segmentTool, params.rawShape, pi);
         if (intersect.IsNull()) {
             continue;
         }
@@ -414,7 +472,7 @@ void DrawComplexSection::makeAlignedPieces(const TopoDS_Shape& rawShape)
 
         //rotate the intersection so interesting face is aligned with paper plane
         double faceAngle =
-            gp_Vec(getSectionCS().Direction().Reversed()).AngleWithRef(segmentNormal, rotateAxis);
+            gp_Vec(sectionCS.Direction().Reversed()).AngleWithRef(segmentNormal, rotateAxis);
         gp_Ax1 faceAxis(gp_Pnt(0.0, 0.0, 0.0), rotateAxis);
         gp_Ax3 pieceCS;//XYZ tipped so face is aligned with sectionCS
         pieceCS.Rotate(faceAxis, faceAngle);
@@ -469,14 +527,14 @@ void DrawComplexSection::makeAlignedPieces(const TopoDS_Shape& rawShape)
     }
 
     if (pieces.empty()) {
-        m_alignResult = TopoDS_Compound();
+        *params.output = TopoDS_Compound();
         return;
     }
 
     int pieceCount = pieces.size();
     if (pieceCount < 2) {
         //no need to space out the pieces
-        m_alignResult = TopoDS::Compound(pieces.front());
+        *params.output = TopoDS::Compound(pieces.front());
         return;
     }
 
@@ -527,7 +585,7 @@ void DrawComplexSection::makeAlignedPieces(const TopoDS_Shape& rawShape)
         BRepTools::Write(alignedCompound, "DCSmap50AlignedCompound.brep");//debug
     }
 
-    m_alignResult = alignedCompound;
+    *params.output = alignedCompound;
 }
 
 //! tries to find the intersection faces of the cut shape and the cutting tool.
@@ -670,20 +728,18 @@ TopoDS_Wire DrawComplexSection::makeProfileWire(App::DocumentObject* toolObj)
         return TopoDS_Wire();
     }
 
-    TopoDS_Shape toolShape = Part::Feature::getShape(toolObj);
-    if (toolShape.IsNull()) {
+    Part::TopoShape toolShape = Part::Feature::getShape(toolObj);
+    if (toolShape.isNull()) {
         return TopoDS_Wire();
     }
 
     TopoDS_Wire profileWire;
-    if (toolShape.ShapeType() == TopAbs_WIRE) {
-        profileWire = makeNoseToTailWire(TopoDS::Wire(toolShape));
-    }
-    else {//we have already checked that the shape is a wire or an edge in isProfileObject
-        TopoDS_Edge edge = TopoDS::Edge(toolShape);
-        profileWire = BRepBuilderAPI_MakeWire(edge).Wire();
-    }
-    return profileWire;
+    if (!toolShape.hasSubShape(TopAbs_WIRE))
+        toolShape = toolShape.makEWires();
+    profileWire = TopoDS::Wire(toolShape.getSubShape(TopAbs_WIRE, 1));
+    if (profileWire.IsNull())
+        return TopoDS_Wire();
+    return makeNoseToTailWire(profileWire);
 }
 
 gp_Vec DrawComplexSection::makeProfileVector(TopoDS_Wire profileWire)
@@ -1004,14 +1060,15 @@ bool DrawComplexSection::validateProfilePosition(TopoDS_Wire profileWire, gp_Ax2
     return true;
 }
 
-bool DrawComplexSection::showSegment(gp_Dir segmentNormal) const
+bool DrawComplexSection::showSegment(int projectionStrategy,
+                                     const Base::Vector3d &vSectionNormal,
+                                     gp_Dir segmentNormal)
 {
-    if (ProjectionStrategy.getValue() < 2) {
+    if (projectionStrategy < 2) {
         //Offset or Aligned are always true
         return true;
     }
 
-    Base::Vector3d vSectionNormal = SectionNormal.getValue();
     gp_Dir gSectionNormal(vSectionNormal.x, vSectionNormal.y, vSectionNormal.z);
     if (DU::fpCompare(fabs(gSectionNormal.Dot(segmentNormal)), 0.0)) {
         //segment normal is perpendicular to section normal, so segment is parallel to section normal,
@@ -1092,24 +1149,6 @@ bool DrawComplexSection::boxesIntersect(TopoDS_Face& face, TopoDS_Shape& shape)
     return true;
 }
 
-TopoDS_Shape DrawComplexSection::shapeShapeIntersect(const TopoDS_Shape& shape0,
-                                                     const TopoDS_Shape& shape1)
-{
-    BRepAlgoAPI_Common anOp;
-    anOp.SetFuzzyValue(EWTOLERANCE);
-    TopTools_ListOfShape anArg1, anArg2;
-    anArg1.Append(shape0);
-    anArg2.Append(shape1);
-    anOp.SetArguments(anArg1);
-    anOp.SetTools(anArg2);
-    anOp.Build();
-    TopoDS_Shape result = anOp.Shape();//always a compound
-    if (isTrulyEmpty(result)) {
-        return TopoDS_Shape();
-    }
-    return result;
-}
-
 //find all the intersecting regions of face and shape
 std::vector<TopoDS_Face> DrawComplexSection::faceShapeIntersect(const TopoDS_Face& face,
                                                                 const TopoDS_Shape& shape)
@@ -1160,11 +1199,11 @@ TopoDS_Wire DrawComplexSection::makeNoseToTailWire(TopoDS_Wire inWire)
 bool DrawComplexSection::isProfileObject(App::DocumentObject* obj)
 {
     //if the object's shape is a wire or an edge, then it can be a profile object
-    TopoDS_Shape shape = Part::Feature::getShape(obj);
-    if (shape.IsNull()) {
+    Part::TopoShape shape = Part::Feature::getShape(obj);
+    if (shape.isNull()) {
         return false;
     }
-    if (shape.ShapeType() == TopAbs_WIRE || shape.ShapeType() == TopAbs_EDGE) {
+    if (shape.hasSubShape(TopAbs_WIRE) || shape.hasSubShape(TopAbs_EDGE)) {
         return true;
     }
     //don't know what this is, but it isn't suitable as a profile
@@ -1232,17 +1271,6 @@ bool DrawComplexSection::isLinearProfile(App::DocumentObject* obj)
 
     //this shouldn't happen
     return false;
-}
-
-//a compound with no content is not considered IsNull by OCC.  A more thorough check
-//is required.
-//https://dev.opencascade.org/content/compound-empty
-bool DrawComplexSection::isTrulyEmpty(TopoDS_Shape inShape)
-{
-    if (!inShape.IsNull() && TopoDS_Iterator(inShape).More()) {
-        return false;
-    }
-    return true;
 }
 
 // Python Drawing feature ---------------------------------------------------------

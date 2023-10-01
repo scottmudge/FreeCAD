@@ -82,6 +82,7 @@
 #include <Base/Parameter.h>
 
 #include <Mod/Part/App/PartFeature.h>
+#include <Mod/Part/App/ProgressIndicator.h>
 
 #include "DrawGeomHatch.h"
 #include "DrawHatch.h"
@@ -128,7 +129,7 @@ const char* DrawViewSection::CutSurfaceEnums[] = {"Hide", "Color", "SvgHatch", "
 
 PROPERTY_SOURCE(TechDraw::DrawViewSection, TechDraw::DrawViewPart)
 
-DrawViewSection::DrawViewSection() : m_waitingForCut(false), m_shapeSize(0.0)
+DrawViewSection::DrawViewSection() : m_shapeSize(0.0)
 {
     static const char* sgroup = "Section";
     static const char* fgroup = "Cut Surface Format";
@@ -192,11 +193,7 @@ DrawViewSection::DrawViewSection() : m_waitingForCut(false), m_shapeSize(0.0)
 
 DrawViewSection::~DrawViewSection()
 {
-    //don't destroy this object while it has dependent threads running
-    if (m_cutFuture.isRunning()) {
-        Base::Console().Message("%s is waiting for tasks to complete\n", Label.getValue());
-        m_cutFuture.waitForFinished();
-    }
+    abortSectionCut();
 }
 
 short DrawViewSection::mustExecute() const
@@ -308,10 +305,6 @@ App::DocumentObjectExecReturn* DrawViewSection::execute()
         return new App::DocumentObjectExecReturn("BaseView object not found");
     }
 
-    if (waitingForCut() || waitingForHlr()) {
-        return DrawView::execute();
-    }
-
     TopoDS_Shape baseShape = getShapeToCut();
 
     if (baseShape.IsNull()) {
@@ -343,7 +336,6 @@ App::DocumentObjectExecReturn* DrawViewSection::execute()
     }
 
     sectionExec(baseShape);
-    addShapes2d();
 
     return DrawView::execute();
 }
@@ -359,34 +351,71 @@ bool DrawViewSection::isBaseValid() const
 
 void DrawViewSection::sectionExec(TopoDS_Shape& baseShape)
 {
-    //    Base::Console().Message("DVS::sectionExec() - %s baseShape.IsNull: %d\n",
-    //                            getNameInDocument(), baseShape.IsNull());
-
-    if (waitingForHlr() || waitingForCut()) {
-        return;
-    }
-
     if (baseShape.IsNull()) {
         //should be caught before this
         return;
     }
 
-    m_cuttingTool = makeCuttingTool(m_shapeSize);
+    makeSectionCut(baseShape);
+}
+
+void DrawViewSection::abortSectionCut()
+{
+    if (m_progress) {
+        m_progress->setCanceled(true);
+        m_progress.reset();
+    }
+    m_cutWatcher.reset();
+    waitingForCut(false);
+}
+
+void DrawViewSection::makeSectionCut(const TopoDS_Shape &baseShape)
+{
+    abortSectionCut();
 
     try {
-        //note that &m_cutWatcher in the third parameter is not strictly required, but using the
-        //4 parameter signature instead of the 3 parameter signature prevents clazy warning:
-        //https://github.com/KDE/clazy/blob/1.11/docs/checks/README-connect-3arg-lambda.md
-        connectCutWatcher =
-            QObject::connect(&m_cutWatcher, &QFutureWatcherBase::finished, &m_cutWatcher,
-                             [this] { this->onSectionCutFinished(); });
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-        m_cutFuture = QtConcurrent::run(this, &DrawViewSection::makeSectionCut, baseShape);
-#else
-        m_cutFuture = QtConcurrent::run(&DrawViewSection::makeSectionCut, this, baseShape);
-#endif
-        m_cutWatcher.setFuture(m_cutFuture);
+        m_cutWatcher.reset(new QFutureWatcher<void>());
+        std::shared_ptr<TopoDS_Shape> cutPieces(new TopoDS_Shape());
+
+        std::string message(Label.getValue());
+        message += QT_TRANSLATE_NOOP("TechDraw", " making section cut...");
+        std::shared_ptr<Base::SequencerLauncher> progress(new Base::SequencerLauncher(message.c_str()));
+        m_progress = progress;
+
+        m_cutWatcher.reset(new QFutureWatcher<void>());
+        QObject::connect(m_cutWatcher.get(), &QFutureWatcherBase::finished, m_cutWatcher.get(),
+            [=] {
+                if (m_progress && !m_progress->wasCanceled())
+                    onSectionCutFinished(cutPieces);
+                else
+                    abortSectionCut();
+            });
+
+        SectionParams params;
+        params.progress = progress;
+        params.featureName = getFullName();
+        params.output = cutPieces;
+        params.baseShape = BRepBuilderAPI_Copy(baseShape).Shape();
+        m_saveShape = params.baseShape;//save shape for 2nd pass
+        params.cuttingTool = makeCuttingTool(m_shapeSize);
+        params.trimAfterCut = TrimAfterCut.getValue();
+
         waitingForCut(true);
+        m_cutWatcher->setFuture(QtConcurrent::run(
+            [params] {
+                try {
+                    doSectionCut(params);
+                    return;
+                } catch (Base::Exception &e) {
+                    e.ReportException();
+                    Base::Console().Error("DVP::%s - section cut failed - %s **\n",
+                                        params.featureName.c_str(), e.what());
+                } catch (Standard_Failure &e) {
+                    Base::Console().Error("DVP::%s - section cut failed - %s **\n",
+                                        params.featureName.c_str(), e.GetMessageString());
+                }
+                params.progress->setCanceled(true);
+            }));
     }
     catch (...) {
         Base::Console().Error("DVS::sectionExec - failed to make section cut");
@@ -394,68 +423,84 @@ void DrawViewSection::sectionExec(TopoDS_Shape& baseShape)
     }
 }
 
-void DrawViewSection::makeSectionCut(const TopoDS_Shape& baseShape)
+void DrawViewSection::doSectionCut(const SectionParams &params)
 {
-    //    Base::Console().Message("DVS::makeSectionCut() - %s - baseShape.IsNull: %d\n",
-    //                            getNameInDocument(), baseShape.IsNull());
-
-    showProgressMessage(getNameInDocument(), "is making section cut");
-
-    // We need to copy the shape to not modify the BRepstructure
-    BRepBuilderAPI_Copy BuilderCopy(baseShape);
-    TopoDS_Shape myShape = BuilderCopy.Shape();
-    m_saveShape = myShape;//save shape for 2nd pass
-
     if (debugSection()) {
-        BRepTools::Write(myShape, "DVSCopy.brep");//debug
+        BRepTools::Write(params.baseShape, "DVSCopy.brep");//debug
     }
 
     if (debugSection()) {
-        BRepTools::Write(m_cuttingTool, "DVSTool.brep");//debug
+        BRepTools::Write(params.cuttingTool, "DVSTool.brep");//debug
     }
 
-    //perform the cut. We cut each solid in myShape individually to avoid issues where
+    auto progress = params.progress;
+    Handle(Message_ProgressIndicator) pi = new Part::ProgressIndicator(
+            progress->numberOfSteps(), progress);
+
+    //perform the cut. We cut each solid in baseShape individually to avoid issues where
     //a compound BaseShape does not cut correctly.
     BRep_Builder builder;
     TopoDS_Compound cutPieces;
     builder.MakeCompound(cutPieces);
-    TopExp_Explorer expl(myShape, TopAbs_SOLID);
+    TopExp_Explorer expl(params.baseShape, TopAbs_SOLID);
     for (; expl.More(); expl.Next()) {
         const TopoDS_Solid& s = TopoDS::Solid(expl.Current());
-        BRepAlgoAPI_Cut mkCut(s, m_cuttingTool);
+#if OCC_VERSION_HEX < 0x070500
+        BRepAlgoAPI_Cut mkCut(s, params.cuttingTool);
+        mkCut->SetProgressIndicator(pi);
+        pi->NewScope(100, progress->text().c_str());
+        pi->Show();
+#else
+        BRepAlgoAPI_Cut mkCut(s, params.cuttingTool, pi->Start());
+#endif
         if (!mkCut.IsDone()) {
-            Base::Console().Warning("DVS: Section cut has failed in %s\n", getNameInDocument());
-            continue;
+            Base::Console().Warning("DVS: Section cut of some solid has failed in %s\n", params.featureName.c_str());
         }
-        builder.Add(cutPieces, mkCut.Shape());
+        else {
+            builder.Add(cutPieces, mkCut.Shape());
+        }
+#if OCC_VERSION_HEX < 0x070500
+        pi->EndScope();
+#endif
     }
 
     // cutPieces contains result of cutting each subshape in baseShape with tool
-    m_cutPieces = cutPieces;
+    *params.output = cutPieces;
     if (debugSection()) {
         BRepTools::Write(cutPieces, "DVSCutPieces1.brep");//debug
     }
 
     //second cut if requested.  Sometimes the first cut includes extra uncut pieces.
-    if (trimAfterCut()) {
-        BRepAlgoAPI_Cut mkCut2(cutPieces, m_cuttingTool);
+    if (params.trimAfterCut) {
+        progress->setText((progress->text() + QT_TRANSLATE_NOOP("TechDraw", " (second pass)")).c_str());
+
+#if OCC_VERSION_HEX < 0x070500
+        BRepAlgoAPI_Cut mkCut2(cutPieces, params.cuttingTool);
+        mkCut->SetProgressIndicator(pi);
+        pi->NewScope(100, progress->text().c_str());
+        pi->Show();
+#else
+        BRepAlgoAPI_Cut mkCut2(cutPieces, params.cuttingTool, pi->Start());
+#endif
         if (mkCut2.IsDone()) {
-            m_cutPieces = mkCut2.Shape();
+            *params.output = mkCut2.Shape();
             if (debugSection()) {
-                BRepTools::Write(m_cutPieces, "DVSCutPieces2.brep");//debug
+                BRepTools::Write(*params.output, "DVSCutPieces2.brep");//debug
             }
         }
+
+#if OCC_VERSION_HEX < 0x070500
+        pi->EndScope();
+#endif
     }
 
     // check for error in cut
     Bnd_Box testBox;
-    BRepBndLib::AddOptimal(m_cutPieces, testBox);
+    BRepBndLib::AddOptimal(*params.output, testBox);
     testBox.SetGap(0.0);
 
-    waitingForCut(false);
     if (testBox.IsVoid()) {//prism & input don't intersect.  rawShape is garbage, don't bother.
-        Base::Console().Warning("DVS::makeSectionCut - prism & input don't intersect - %s\n",
-                                Label.getValue());
+        Base::Console().Warning("DVS::makeSectionCut - prism & input don't intersect - %s\n", params.featureName.c_str());
         return;
     }
 }
@@ -516,12 +561,11 @@ TopoDS_Shape DrawViewSection::makeCuttingTool(double shapeSize)
     return BRepPrimAPI_MakePrism(aProjFace, extrudeDir, false, true).Shape();
 }
 
-void DrawViewSection::onSectionCutFinished()
+void DrawViewSection::onSectionCutFinished(std::shared_ptr<TopoDS_Shape> cutPieces)
 {
-    //    Base::Console().Message("DVS::onSectionCutFinished() - %s\n", getNameInDocument());
-    QObject::disconnect(connectCutWatcher);
-
-    showProgressMessage(getNameInDocument(), "has finished making section cut");
+    waitingForCut(false);
+    m_progress.reset();
+    m_cutPieces = *cutPieces;
 
     m_preparedShape = prepareShape(getShapeToPrepare(), m_shapeSize);
     if (debugSection()) {
@@ -531,11 +575,11 @@ void DrawViewSection::onSectionCutFinished()
     postSectionCutTasks();
 
     //display geometry for cut shape is in geometryObject as in DVP
-    m_tempGeometryObject = buildGeometryObject(m_preparedShape, getProjectionCS());
+    buildGeometryObject(m_preparedShape, getProjectionCS());
 }
 
 //activities that depend on updated geometry object
-void DrawViewSection::postHlrTasks(void)
+void DrawViewSection::postHlrTasks()
 {
     //    Base::Console().Message("DVS::postHlrTasks() - %s\n", getNameInDocument());
 
@@ -1207,12 +1251,12 @@ void DrawViewSection::getParameters()
     FuseBeforeCut.setValue(fuseFirst);
 }
 
-bool DrawViewSection::debugSection(void) const
+bool DrawViewSection::debugSection(void)
 {
     return Preferences::getPreferenceGroup("debug")->GetBool("debugSection", false);
 }
 
-int DrawViewSection::prefCutSurface(void) const
+int DrawViewSection::prefCutSurface(void)
 {
     //    Base::Console().Message("DVS::prefCutSurface()\n");
 
@@ -1224,7 +1268,6 @@ bool DrawViewSection::showSectionEdges(void)
     return Preferences::getPreferenceGroup("General")->GetBool("ShowSectionEdges", true);
 }
 
-bool DrawViewSection::trimAfterCut() const { return TrimAfterCut.getValue(); }
 // Python Drawing feature ---------------------------------------------------------
 
 namespace App

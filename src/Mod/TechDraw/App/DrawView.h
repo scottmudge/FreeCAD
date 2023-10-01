@@ -95,9 +95,7 @@ public:
     virtual bool keepUpdated(void);
 
     boost::signals2::signal<void (const DrawView*)> signalGuiPaint;
-    boost::signals2::signal<void (const DrawView*, std::string, std::string)> signalProgressMessage;
     void requestPaint(void);
-    void showProgressMessage(std::string featureName, std::string text);
 
     virtual double getScale(void) const;
     void checkScale(void);
