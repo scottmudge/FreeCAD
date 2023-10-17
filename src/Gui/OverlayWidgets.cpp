@@ -4465,6 +4465,12 @@ void OverlayManager::Private::interceptEvent(QWidget *widget, QEvent *ev)
     case QEvent::ContextMenu: {
         auto ce = static_cast<QContextMenuEvent*>(ev);
         lastIntercept = getChildAt(widget, ce->globalPos());
+        for (auto parent = lastIntercept->parentWidget(); parent; parent = parent->parentWidget()) {
+            if (qobject_cast<QGraphicsView*>(parent)) {
+                lastIntercept = parent;
+            }
+        }
+
         QContextMenuEvent contextMenuEvent(ce->reason(), 
                                            lastIntercept->mapFromGlobal(ce->globalPos()),
                                            ce->globalPos());

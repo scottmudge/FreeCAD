@@ -298,3 +298,12 @@ void QGIDecoration::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
     inherited::hoverLeaveEvent(event);
 }
 
+QPainterPath QGIDecoration::shape() const
+{
+    QPainterPath path;
+    for (auto child : childItems()) {
+        if (child->isVisible())
+            path.addPath(child->shape());
+    }
+    return path;
+}

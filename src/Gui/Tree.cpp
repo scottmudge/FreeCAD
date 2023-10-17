@@ -2523,11 +2523,23 @@ void TreeWidget::mouseMoveEvent(QMouseEvent *event) {
 
 void TreeWidget::onToolTipTimer()
 {
+    QPixmap pixmap;
     QByteArray tag;
+    DocumentItem *docItem = nullptr;
     auto item = pimpl->itemHitTest(
-            viewport()->mapFromGlobal(QCursor::pos()), &tag);
+            viewport()->mapFromGlobal(QCursor::pos()), &tag, &docItem);
     if (!item) {
         pimpl->tooltipItem = nullptr;
+        if (docItem) {
+            QPoint pos = this->visualItemRect(docItem).topLeft();
+            pos.setY(pos.y()+10);
+            QString tooltip = QString::fromUtf8(
+                    docItem->document()->getDocument()->FileName.getValue());
+            if (!tooltip.isEmpty()) {
+                ToolTip::showText(this->viewport()->mapToGlobal(pos), tooltip, pixmap, this);
+                return;
+            }
+        }
         ToolTip::hideText();
         return;
     }
@@ -2647,7 +2659,6 @@ void TreeWidget::onToolTipTimer()
     // immediate trigger another itemEntered() event.
     pos.setY(pos.y()+10);
 
-    QPixmap pixmap;
     if (TreeParams::getTreeToolTipIcon()) {
         int iconSize = 64;
         if (ViewParams::getToolTipIconSize())

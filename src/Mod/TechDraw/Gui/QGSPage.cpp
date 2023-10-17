@@ -616,7 +616,7 @@ void QGSPage::addLeaderToParent(QGILeaderLine* lead, QGIView* parent)
 {
     //    Base::Console().Message("QGSP::addLeaderToParent()\n");
     parent->addToGroup(lead);
-    lead->setZValue(ZVALUE::DIMENSION);
+    lead->setZValue(ZVALUE::DIMENSION+1);
 }
 
 QGIView* QGSPage::addRichAnno(TechDraw::DrawRichAnno* richFeat)

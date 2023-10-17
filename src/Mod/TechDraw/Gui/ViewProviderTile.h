@@ -40,6 +40,8 @@ public:
     /// destructor
     ~ViewProviderTile() override;
 
+    Gui::MDIView* getMDIView() const override;
+
     bool useNewSelectionModel() const override {return false;}
     bool canDelete(App::DocumentObject *obj) const override;
 

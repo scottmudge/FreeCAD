@@ -75,11 +75,14 @@ public:
     virtual void setColor(QColor c);
 
     virtual void setTightBounding(bool tight);
+    void setTightPicking(bool tight);
 
     void makeMark(double x, double y);
     void makeMark(Base::Vector3d v);
 
     bool hasHover() const {return m_hasHover;}
+
+    QPainterPath shape() const override;
 
 protected:
     virtual void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;
@@ -90,6 +93,7 @@ protected:
 
     bool isHighlighted;
     bool tightBounding;  // Option to use tighter boundingRect(), works only for plaintext QGCustomText
+    bool tightPicking = false;
     QColor m_colCurrent;
     QColor m_colNormal;
     bool m_hasHover = false;

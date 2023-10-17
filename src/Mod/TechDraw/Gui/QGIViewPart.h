@@ -23,6 +23,7 @@
 #ifndef DRAWINGGUI_QGRAPHICSITEMVIEWPART_H
 #define DRAWINGGUI_QGRAPHICSITEMVIEWPART_H
 
+#include <unordered_map>
 #include <Mod/TechDraw/TechDrawGlobal.h>
 
 #include <Mod/TechDraw/App/Geometry.h>
@@ -80,6 +81,8 @@ public:
     void draw() override;
     void rotateView() override;
 
+    const std::vector<QGIFace*> &getHatchedFaces(const App::DocumentObject *obj);
+
     static QPainterPath geomToPainterPath(TechDraw::BaseGeomPtr baseGeom, double rotation = 0.0);
     /// Helper for pathArc()
     /*!
@@ -106,8 +109,8 @@ protected:
 
     QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
 
-    TechDraw::DrawHatch* faceIsHatched(int i, std::vector<TechDraw::DrawHatch*> hatchObjs) const;
-    TechDraw::DrawGeomHatch* faceIsGeomHatched(int i, std::vector<TechDraw::DrawGeomHatch*> geomObjs) const;
+    TechDraw::DrawHatch* faceIsHatched(int i, const std::vector<TechDraw::DrawHatch*> &hatchObjs) const;
+    TechDraw::DrawGeomHatch* faceIsGeomHatched(int i, const std::vector<TechDraw::DrawGeomHatch*> &geomObjs) const;
     void dumpPath(const char* text, QPainterPath path);
     void removePrimitives();
     void removeDecorations();
@@ -121,6 +124,7 @@ protected:
 
 private:
     QList<QGraphicsItem*> deleteItems;
+    std::unordered_map<const App::DocumentObject*, std::vector<QGIFace*>> m_hatchedFaces;
 };
 
 } // namespace

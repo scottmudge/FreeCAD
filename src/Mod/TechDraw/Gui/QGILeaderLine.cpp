@@ -61,8 +61,8 @@ QGILeaderLine::QGILeaderLine()
       m_blockDraw(false)
 
 {
-    setHandlesChildEvents(false);
-    setAcceptHoverEvents(true);
+    setFiltersChildEvents(true);
+    setAcceptHoverEvents(false);
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemIsMovable, false);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, false);
@@ -73,8 +73,9 @@ QGILeaderLine::QGILeaderLine()
     m_line = new QGIPrimPath();
     addToGroup(m_line);
     m_line->setFlag(QGraphicsItem::ItemIsSelectable, false);
-    m_line->setAcceptHoverEvents(false);
+    m_line->setAcceptHoverEvents(true);
     m_line->setPos(0.0, 0.0);
+    m_line->setZValue(ZVALUE::DIMENSION+1);
 
     m_editPath = new QGEPath(this);
     addToGroup(m_editPath);
@@ -82,17 +83,23 @@ QGILeaderLine::QGILeaderLine()
     m_editPath->setFlag(QGraphicsItem::ItemIsSelectable, false);
     m_editPath->setFlag(QGraphicsItem::ItemIsMovable, false);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, false);
-    m_editPath->setZValue(ZVALUE::DIMENSION);
+    m_editPath->setZValue(ZVALUE::DIMENSION+2);
     m_editPath->hide();
 
     m_arrow1 = new QGIArrow();
+    m_arrow1->setFlag(QGraphicsItem::ItemIsSelectable, false);
+    m_arrow1->setAcceptHoverEvents(true);
     addToGroup(m_arrow1);
     m_arrow1->setPos(0.0, 0.0);
     m_arrow1->hide();
+    m_arrow1->setZValue(ZVALUE::DIMENSION+1);
     m_arrow2 = new QGIArrow();
+    m_arrow2->setFlag(QGraphicsItem::ItemIsSelectable, false);
+    m_arrow2->setAcceptHoverEvents(true);
     addToGroup(m_arrow2);
     m_arrow2->setPos(0.0, 0.0);
     m_arrow2->hide();
+    m_arrow2->setZValue(ZVALUE::DIMENSION+1);
 
     setZValue(ZVALUE::DIMENSION);
 
@@ -123,6 +130,9 @@ QVariant QGILeaderLine::itemChange(GraphicsItemChange change, const QVariant& va
     if (change == ItemSelectedHasChanged && scene()) {
         if (isSelected()) {
             setPrettySel();
+        }
+        else if (m_hasHover) {
+            setPrettyPre();
         }
         else {
             setPrettyNormal();
@@ -155,7 +165,7 @@ void QGILeaderLine::setPreselect(bool enable)
     if (enable) {
         setPrettyPre();
     }
-    else if (!isSelected()) {
+    else if (isSelected()) {
         setPrettySel();
     }
     else {
@@ -321,6 +331,18 @@ void QGILeaderLine::updateView(bool update)
         return;
     }
     draw();
+}
+
+QPainterPath QGILeaderLine::shape() const
+{
+    QPainterPath path;
+    if (m_line && m_line->isVisible())
+        path.addPath(m_line->shape());
+    if (m_arrow1 && m_arrow1->isVisible())
+        path.addPath(m_arrow1->shape());
+    if (m_arrow2 && m_arrow2->isVisible())
+        path.addPath(m_arrow2->shape());
+    return path;
 }
 
 void QGILeaderLine::draw()
@@ -595,6 +617,26 @@ void QGILeaderLine::paint(QPainter* painter, const QStyleOptionGraphicsItem* opt
     //    painter->drawRect(boundingRect());          //good for debugging
 
     QGIView::paint(painter, &myOption, widget);
+}
+
+bool QGILeaderLine::sceneEventFilter(QGraphicsItem *watched, QEvent *event)
+{
+    if (watched == m_line
+            || watched == m_arrow1
+            || watched == m_arrow2)
+    {
+        switch (event->type()) {
+        case QEvent::GraphicsSceneHoverEnter:
+            hoverEnterEvent(static_cast<QGraphicsSceneHoverEvent*>(event));
+            return true;
+        case QEvent::GraphicsSceneHoverLeave:
+            hoverLeaveEvent(static_cast<QGraphicsSceneHoverEvent*>(event));
+            return true;
+        default:
+            break;
+        }
+    }
+    return false;
 }
 
 #include <Mod/TechDraw/Gui/moc_QGILeaderLine.cpp>

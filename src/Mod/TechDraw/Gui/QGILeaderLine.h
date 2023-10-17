@@ -70,8 +70,10 @@ public:
     }
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                QWidget* widget = nullptr) override;
+    QPainterPath shape() const override;
     QRectF boundingRect() const override;
 
+    bool sceneEventFilter(QGraphicsItem *watched, QEvent *event) override;
     void drawBorder() override;
     void updateView(bool update = false) override;
 

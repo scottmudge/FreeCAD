@@ -62,7 +62,10 @@
 #include <Mod/TechDraw/App/DrawPagePy.h>
 #include <Mod/TechDraw/App/DrawTemplate.h>
 #include <Mod/TechDraw/App/DrawViewDetail.h>
+#include <Mod/TechDraw/App/DrawHatch.h>
+#include <Mod/TechDraw/App/DrawGeomHatch.h>
 #include <Mod/TechDraw/App/DrawViewSection.h>
+#include <Mod/TechDraw/App/DrawTile.h>
 #include <Mod/TechDraw/App/Preferences.h>
 
 #include "MDIViewPage.h"
@@ -75,6 +78,8 @@
 #include "QGIViewBalloon.h"
 #include "QGIViewDimension.h"
 #include "QGISectionLine.h"
+#include "QGITile.h"
+#include "QGIViewPart.h"
 #include "QGMText.h"
 #include "QGSPage.h"
 #include "QGVPage.h"
@@ -790,32 +795,7 @@ void MDIViewPage::clearSceneSelection()
     //    Base::Console().Message("MDIVP::clearSceneSelection()\n");
     blockSceneSelection(true);
     m_qgSceneSelected.clear();
-
-    std::vector<QGIView*> views = m_scene->getViews();
-
-    // Iterate through all views and unselect all
-    for (std::vector<QGIView*>::iterator it = views.begin(); it != views.end(); ++it) {
-        QGIView* item = *it;
-        bool state = item->isSelected();
-
-        //handle oddballs
-        QGIViewDimension* dim = qgraphicsitem_cast<QGIViewDimension*>(*it);
-        if (dim) {
-            state = dim->getDatumLabel()->isSelected();
-        }
-        else {
-            QGIViewBalloon* bal = qgraphicsitem_cast<QGIViewBalloon*>(*it);
-            if (bal) {
-                state = bal->getBalloonLabel()->isSelected();
-            }
-        }
-
-        if (state) {
-            item->setGroupSelection(false);
-            item->updateView();
-        }
-    }
-
+    m_scene->clearSelection();
     blockSceneSelection(false);
 }
 
@@ -852,9 +832,11 @@ QGISectionLine *MDIViewPage::findSection(const App::DocumentObject *obj)
 }
 
 //!Update QGIView's selection state based on Selection made outside Drawing Interface
-void MDIViewPage::selectQGIView(App::DocumentObject* obj, const bool isSelected)
+bool MDIViewPage::selectQGIView(App::DocumentObject* obj, const bool isSelected)
 {
-    QGIView* view = m_scene->findQViewForDocObj(obj);
+
+    if (!Base::freecad_dynamic_cast<DrawView>(obj))
+        return false;
 
     blockSceneSelection(true);
     if (auto highlight = findHighlight(obj)) {
@@ -865,11 +847,42 @@ void MDIViewPage::selectQGIView(App::DocumentObject* obj, const bool isSelected)
         section->setSelected(isSelected);
         section->update();
     }
+
+    QGIView* view = m_scene->findQViewForDocObj(obj);
     if (view) {
         view->setGroupSelection(isSelected);
-        view->updateView();
+        // view->updateView();
+        view->update();
     }
     blockSceneSelection(false);
+    return true;
+}
+
+bool MDIViewPage::selectTile(App::DocumentObject *obj, bool isSelected)
+{
+    if (!Base::freecad_dynamic_cast<DrawTile>(obj))
+        return false;
+    for (auto item : m_scene->items()) {
+        if (auto tileItem = qgraphicsitem_cast<QGITile*>(item)){
+            if (tileItem->getFeature() == obj) {
+                tileItem->setSelected(isSelected);
+                break;
+            }
+        }
+    }
+    return true;
+}
+
+QGIViewPart *MDIViewPage::findViewOfHatch(const App::DocumentObject *obj)
+{
+    DrawViewPart *view = nullptr;
+    if (auto hatch = Base::freecad_dynamic_cast<DrawHatch>(obj))
+        view = hatch->getSourceView();
+    else if (auto hatch = Base::freecad_dynamic_cast<DrawGeomHatch>(obj))
+        view = hatch->getSourceView();
+    else
+        return nullptr;
+    return dynamic_cast<QGIViewPart*>(m_scene->findQViewForDocObj(view));
 }
 
 //! invoked by selection change made in Tree via father MDIView
@@ -886,41 +899,68 @@ void MDIViewPage::onSelectionChanged(const Gui::SelectionChanges& msg)
         std::vector<Gui::SelectionSingleton::SelObj> selObjs =
             Gui::Selection().getSelection(msg.pDocName);
         for (auto& so : selObjs) {
-            if (so.pObject->isDerivedFrom(TechDraw::DrawView::getClassTypeId())) {
-                selectQGIView(so.pObject, true);
-            }
+            if (selectQGIView(so.pObject, true))
+                continue;
+            else if (selectTile(so.pObject, true))
+                continue;
         }
         blockSceneSelection(false);
     }
-    else if (msg.Type == Gui::SelectionChanges::AddSelection) {
-        blockSceneSelection(true);
-        std::vector<Gui::SelectionSingleton::SelObj> selObjs =
-            Gui::Selection().getSelection(msg.pDocName);
-        for (auto& so : selObjs) {
-            if (so.pObject->isDerivedFrom(TechDraw::DrawView::getClassTypeId())) {
-                selectQGIView(so.pObject, true);
+    else if (msg.Type == Gui::SelectionChanges::AddSelection
+            || msg.Type == Gui::SelectionChanges::RmvSelection) {
+        auto selObj = msg.Object.getObject();
+        bool selected = msg.Type == Gui::SelectionChanges::AddSelection;
+        if (auto view = findViewOfHatch(selObj)) {
+            blockSceneSelection(true);
+            for (auto face : view->getHatchedFaces(selObj)) {
+                face->setSelected(selected);
             }
+            blockSceneSelection(false);
         }
-        blockSceneSelection(false);
+        else if (selectQGIView(selObj, selected))
+            return;
+        else if (selectTile(selObj, selected))
+            return;
     }
     else if (msg.Type == Gui::SelectionChanges::SetPreselect
             || msg.Type == Gui::SelectionChanges::RmvPreselect) {
-        if (auto drawView = Base::freecad_dynamic_cast<TechDraw::DrawView>(msg.Object.getObject())) {
+        auto selObj = msg.Object.getObject();
+        auto resetHighlight = [this]{
+            if (m_preselection) {
+                m_preselection->setPreselect(false);
+                m_preselection = nullptr;
+                if (auto obj = m_preselectOther.getObject()) {
+                    if (auto highlight = findHighlight(obj)) {
+                        highlight->setPreselect(false);
+                    }
+                    else if (auto section = findSection(obj)) {
+                        section->setPreselect(false);
+                    }
+                }
+                m_preselectOther = App::DocumentObjectT();
+            }
+        };
+        bool highlighted = msg.Type == Gui::SelectionChanges::SetPreselect;
+        if (auto view = findViewOfHatch(selObj)) {
+            for (auto face : view->getHatchedFaces(selObj)) {
+                face->setPreselect(highlighted);
+            }
+        }
+        else if (Base::freecad_dynamic_cast<TechDraw::DrawTile>(selObj)) {
+            for (auto item : m_scene->items()) {
+                if (auto tileItem = qgraphicsitem_cast<QGITile*>(item)){
+                    if (tileItem->getFeature() == selObj) {
+                        tileItem->setPreselect(highlighted);
+                        break;
+                    }
+                }
+            }
+        }
+        else if (auto drawView = Base::freecad_dynamic_cast<TechDraw::DrawView>(selObj)) {
             if (QGIView* view = m_scene->findQViewForDocObj(drawView)) {
                 if (msg.Type == Gui::SelectionChanges::RmvPreselect || m_preselection != view) {
-                    if (m_preselection) {
-                        m_preselection->setPreselect(false);
-                        if (auto obj = m_preselectOther.getObject()) {
-                            m_preselectOther = App::DocumentObjectT();
-                            if (auto highlight = findHighlight(obj)) {
-                                highlight->setPreselect(false);
-                            }
-                            else if (auto section = findSection(obj)) {
-                                section->setPreselect(false);
-                            }
-                        }
-                    }
-                    if (msg.Type == Gui::SelectionChanges::SetPreselect) {
+                    resetHighlight();
+                    if (highlighted) {
                         m_preselection = view;
                         view->setPreselect(true);
                         if (auto highlight = findHighlight(drawView)) {
@@ -936,10 +976,7 @@ void MDIViewPage::onSelectionChanged(const Gui::SelectionChanges& msg)
                 }
             }
         }
-        if (m_preselection) {
-            m_preselection->setPreselect(false);
-            m_preselection = nullptr;
-        }
+        resetHighlight();
     }
 }
 
@@ -1041,25 +1078,39 @@ void MDIViewPage::setTreeToSceneSelect()
     };
 
     for (QList<QGraphicsItem*>::iterator it = sceneSel.begin(); it != sceneSel.end(); ++it) {
-        QGIView* itemView = qgraphicsitem_cast<QGIView*>(*it);
-        if (!itemView) {
-            if (auto highlight = findHighlightObject(*it)) {
-                Gui::Selection().addSelection(
-                        highlight->getFeatureT().getDocumentName().c_str(),
-                        highlight->getFeatureT().getObjectName().c_str());
+        if (auto itemView = dynamic_cast<QGIView*>(*it)) {
+            TechDraw::DrawView* viewObj = itemView->getViewObject();
+            if (viewObj && !viewObj->isRemoving()) {
+                std::string doc_name = viewObj->getDocument()->getName();
+                std::string obj_name = viewObj->getNameInDocument();
+
+                Gui::Selection().addSelection(doc_name.c_str(), obj_name.c_str());
+                showStatusMsg(doc_name.c_str(), obj_name.c_str(), "");
             }
-            else if (auto section = findSectionLine(*it)) {
-                Gui::Selection().addSelection(
-                        section->getFeatureT().getDocumentName().c_str(),
-                        section->getFeatureT().getObjectName().c_str());
-            }
-            else if (QGIEdge* edge = qgraphicsitem_cast<QGIEdge*>(*it)) {
+        }
+        else if (auto highlight = findHighlightObject(*it)) {
+            Gui::Selection().addSelection(
+                    highlight->getFeatureT().getDocumentName().c_str(),
+                    highlight->getFeatureT().getObjectName().c_str());
+        }
+        else if (auto section = findSectionLine(*it)) {
+            Gui::Selection().addSelection(
+                    section->getFeatureT().getDocumentName().c_str(),
+                    section->getFeatureT().getObjectName().c_str());
+        }
+        else if (auto deco = dynamic_cast<QGIDecoration*>(*it)) {
+            Gui::Selection().addSelection(
+                    deco->getFeatureT().getDocumentName().c_str(),
+                    deco->getFeatureT().getObjectName().c_str());
+        }
+        else {
+            if (QGIEdge* edge = qgraphicsitem_cast<QGIEdge*>(*it)) {
                 QGraphicsItem* parent = edge->parentItem();
                 if (!parent) {
                     continue;
                 }
 
-                QGIView* viewItem = qgraphicsitem_cast<QGIView*>(parent);
+                QGIView* viewItem = dynamic_cast<QGIView*>(parent);
                 if (!viewItem) {
                     continue;
                 }
@@ -1082,7 +1133,7 @@ void MDIViewPage::setTreeToSceneSelect()
                     continue;
                 }
 
-                QGIView* viewItem = qgraphicsitem_cast<QGIView*>(parent);
+                QGIView* viewItem = dynamic_cast<QGIView*>(parent);
                 if (!viewItem) {
                     continue;
                 }
@@ -1105,7 +1156,7 @@ void MDIViewPage::setTreeToSceneSelect()
                     continue;
                 }
 
-                QGIView* viewItem = qgraphicsitem_cast<QGIView*>(parent);
+                QGIView* viewItem = dynamic_cast<QGIView*>(parent);
                 if (!viewItem) {
                     continue;
                 }
@@ -1128,7 +1179,7 @@ void MDIViewPage::setTreeToSceneSelect()
                     continue;
                 }
 
-                QGIView* dimItem = qgraphicsitem_cast<QGIView*>(dimParent);
+                QGIView* dimItem = dynamic_cast<QGIView*>(dimParent);
 
                 if (!dimItem) {
                     continue;
@@ -1154,7 +1205,7 @@ void MDIViewPage::setTreeToSceneSelect()
                     continue;
                 }
 
-                QGIView* parent = qgraphicsitem_cast<QGIView*>(textParent);
+                QGIView* parent = dynamic_cast<QGIView*>(textParent);
 
                 if (!parent) {
                     continue;
@@ -1172,17 +1223,6 @@ void MDIViewPage::setTreeToSceneSelect()
                 //bool accepted =
                 static_cast<void>(Gui::Selection().addSelection(
                     parentFeat->getDocument()->getName(), parentFeat->getNameInDocument()));
-            }
-        }
-        else {
-
-            TechDraw::DrawView* viewObj = itemView->getViewObject();
-            if (viewObj && !viewObj->isRemoving()) {
-                std::string doc_name = viewObj->getDocument()->getName();
-                std::string obj_name = viewObj->getNameInDocument();
-
-                Gui::Selection().addSelection(doc_name.c_str(), obj_name.c_str());
-                showStatusMsg(doc_name.c_str(), obj_name.c_str(), "");
             }
         }
     }
@@ -1222,28 +1262,15 @@ bool MDIViewPage::compareSelections(std::vector<Gui::SelectionObject> treeSel,
     treeCount = treeNames.size();
 
     for (auto sn : sceneSel) {
-        QGIView* itemView = qgraphicsitem_cast<QGIView*>(sn);
-        if (!itemView) {
-            QGIDatumLabel* dl = qgraphicsitem_cast<QGIDatumLabel*>(sn);
-            QGIPrimPath* pp = qgraphicsitem_cast<QGIPrimPath*>(sn);//count Vertex/Edge/Face
-            if (pp) {
-                ppCount++;
+        if (auto itemView = dynamic_cast<QGIView*>(sn)) {
+            sceneNames.push_back(itemView->getViewNameAsString());
+        } else if (auto dl = qgraphicsitem_cast<QGIDatumLabel*>(sn)) {
+            //get dim associated with this label
+            if (auto vd = qgraphicsitem_cast<QGIViewDimension*>(dl->parentItem())) {
+                sceneNames.push_back(vd->getViewNameAsString());
             }
-            else if (dl) {
-                //get dim associated with this label
-                QGraphicsItem* qgi = dl->parentItem();
-                if (qgi) {
-                    QGIViewDimension* vd = qgraphicsitem_cast<QGIViewDimension*>(qgi);
-                    if (vd) {
-                        std::string s = vd->getViewNameAsString();
-                        sceneNames.push_back(s);
-                    }
-                }
-            }
-        }
-        else {
-            std::string s = itemView->getViewNameAsString();
-            sceneNames.push_back(s);
+        } else if (dynamic_cast<QGIPrimPath*>(sn)) {//count Vertex/Edge/Face
+            ppCount++;
         }
     }
     std::sort(sceneNames.begin(), sceneNames.end());

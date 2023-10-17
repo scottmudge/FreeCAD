@@ -434,6 +434,7 @@ void QGIViewPart::drawViewPart()
                             newFace->setHatchColor(geomVp->ColorPattern.getValue());
                             newFace->setLineWeight(geomVp->WeightPattern.getValue());
                         }
+                        m_hatchedFaces[fGeom].push_back(newFace);
                     }
                 }
             }
@@ -462,6 +463,7 @@ void QGIViewPart::drawViewPart()
                             newFace->setHatchRotation(hatchVp->HatchRotation.getValue());
                             newFace->setHatchOffset(hatchVp->HatchOffset.getValue());
                         }
+                        m_hatchedFaces[fHatch].push_back(newFace);
                     }
                 }
                 else {//bitmap hatch
@@ -471,6 +473,7 @@ void QGIViewPart::drawViewPart()
                     if (hatchVp) {
                         newFace->setHatchRotation(hatchVp->HatchRotation.getValue());
                     }
+                    m_hatchedFaces[fHatch].push_back(newFace);
                 }
             }
             bool drawEdges = prefFaceEdges();
@@ -624,6 +627,16 @@ void QGIViewPart::drawViewPart()
     }
 }
 
+const std::vector<QGIFace*> &
+QGIViewPart::getHatchedFaces(const App::DocumentObject *obj)
+{
+    auto it = m_hatchedFaces.find(obj);
+    if (it != m_hatchedFaces.end())
+        return it->second;
+    static std::vector<QGIFace*> nullResult;
+    return nullResult;
+}
+
 bool QGIViewPart::formatGeomFromCosmetic(std::string cTag, QGIEdge* item)
 {
     //    Base::Console().Message("QGIVP::formatGeomFromCosmetic(%s)\n", cTag.c_str());
@@ -714,6 +727,7 @@ QGIFace* QGIViewPart::drawFace(TechDraw::FacePtr f, int idx)
 //note this triggers scene selectionChanged signal if vertex/edge/face is selected
 void QGIViewPart::removePrimitives()
 {
+    m_hatchedFaces.clear();
     QList<QGraphicsItem*> children = childItems();
     MDIViewPage* mdi = getMDIViewPage();
     if (mdi) {
@@ -1184,7 +1198,7 @@ void QGIViewPart::toggleCosmeticLines(bool state)
 
 //get hatchObj for face i if it exists
 TechDraw::DrawHatch* QGIViewPart::faceIsHatched(int i,
-                                                std::vector<TechDraw::DrawHatch*> hatchObjs) const
+                                                const std::vector<TechDraw::DrawHatch*> &hatchObjs) const
 {
     TechDraw::DrawHatch* result = nullptr;
     bool found = false;
@@ -1206,7 +1220,7 @@ TechDraw::DrawHatch* QGIViewPart::faceIsHatched(int i,
 }
 
 TechDraw::DrawGeomHatch*
-QGIViewPart::faceIsGeomHatched(int i, std::vector<TechDraw::DrawGeomHatch*> geomObjs) const
+QGIViewPart::faceIsGeomHatched(int i, const std::vector<TechDraw::DrawGeomHatch*> &geomObjs) const
 {
     TechDraw::DrawGeomHatch* result = nullptr;
     bool found = false;

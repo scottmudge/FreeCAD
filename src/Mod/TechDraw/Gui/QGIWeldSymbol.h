@@ -124,6 +124,7 @@ protected:
     QFont m_font;
 
     bool m_blockDraw;    //prevent redraws while updating.
+    bool m_hasHover = false;
 
     std::string m_weldFeatName;
     virtual QRectF customBoundingRect() const;

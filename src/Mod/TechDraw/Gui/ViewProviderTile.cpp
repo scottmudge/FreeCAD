@@ -23,6 +23,7 @@
 #include "PreCompiled.h"
 
 #include <App/DocumentObject.h>
+#include <Gui/Application.h>
 #include "ViewProviderTile.h"
 
 using namespace TechDrawGui;
@@ -59,4 +60,15 @@ bool ViewProviderTile::canDelete(App::DocumentObject *obj) const
 TechDraw::DrawTile* ViewProviderTile::getFeature() const
 {
     return dynamic_cast<TechDraw::DrawTile*>(pcObject);
+}
+
+Gui::MDIView *ViewProviderTile::getMDIView() const
+{
+    auto obj = getFeature();
+    if(!obj)
+        return nullptr;
+    auto vp = Gui::Application::Instance->getViewProvider(obj->getParent());
+    if(!vp)
+        return nullptr;
+    return vp->getMDIView();
 }

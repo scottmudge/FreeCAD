@@ -69,6 +69,10 @@ void _class_::init(void) { \
     (void)new Gui::PropertyEditor::PropertyItemProducer<_class_>(#_class_); \
 }
 
+namespace App {
+class PropertyXLink;
+}
+
 namespace Gui {
 class PrefWidget;
 
@@ -148,6 +152,10 @@ public:
     const QByteArray &getEntryName() const;
     void setEntryName(const QByteArray &name);
 
+    virtual QWidget* createChildEditor(const PropertyItem *child, QWidget* parent, const QObject* receiver, const char* method) const;
+    virtual void setChildEditorData(const PropertyItem *child, QWidget *editor, const QVariant& data) const;
+    virtual QVariant childEditorData(const PropertyItem *child, QWidget *editor) const;
+
     QWidget* createExpressionEditor(QWidget* parent, const QObject* receiver, const char* method) const;
     void setExpressionEditorData(QWidget *editor, const QVariant& data) const;
     QVariant expressionEditorData(QWidget *editor) const;
@@ -191,6 +199,7 @@ public:
     void setPropertyName(const App::Property &prop);
     void setPropertyValue(const QString&);
     virtual QVariant data(int column, int role) const;
+    virtual QVariant childData(const PropertyItem *child, int column, int role) const;
     bool setData (const QVariant& value);
     Qt::ItemFlags flags(int column) const;
     virtual int row() const;
@@ -1191,6 +1200,8 @@ private:
 class GuiExport PropertyLinkItem: public PropertyItem
 {
     Q_OBJECT
+    Q_PROPERTY(QString File READ getFile WRITE setFile DESIGNABLE true USER true) // clazy:exclude=qproperty-without-notify
+    Q_PROPERTY(QByteArray PathResolveMode READ getPathResolveMode WRITE setPathResolveMode DESIGNABLE true USER true) // clazy:exclude=qproperty-without-notify
     PROPERTYITEM_HEADER
 
     QWidget* createEditor(QWidget* parent, const QObject* receiver, const char* method) const override;
@@ -1198,14 +1209,31 @@ class GuiExport PropertyLinkItem: public PropertyItem
     QVariant editorData(QWidget *editor) const override;
     void disableEditor(QWidget *editor) override;
 
+    QString getFile() const;
+    void setFile(const QString &);
+    QByteArray getPathResolveMode() const;
+    void setPathResolveMode(const QByteArray &);
+
 protected:
     QVariant toString(const QVariant&) const override;
     QVariant value(const App::Property*) const override;
     void setValue(const QVariant&) override;
     QVariant data(int column, int role) const override;
 
+    QVariant childData(const PropertyItem *child, int column, int role) const override;
+    QWidget* createChildEditor(const PropertyItem *child, QWidget* parent, const QObject* receiver, const char* method) const  override;
+    void setChildEditorData(const PropertyItem *child, QWidget *editor, const QVariant& data) const  override;
+    QVariant childEditorData(const PropertyItem *child, QWidget *editor) const  override;
+    void initialize() override;
+
+    App::PropertyXLink *getXLink() const;
+
 protected:
     PropertyLinkItem();
+
+protected:
+    PropertyItem *m_file = nullptr;
+    PropertyItem *m_resolveMode = nullptr;
 };
 
 /**

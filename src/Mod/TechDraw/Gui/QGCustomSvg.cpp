@@ -27,6 +27,7 @@
 # include <QStyleOptionGraphicsItem>
 #endif
 
+#include "PreferencesGui.h"
 #include "QGCustomSvg.h"
 
 
@@ -83,8 +84,38 @@ void QGCustomSvg::paint ( QPainter * painter, const QStyleOptionGraphicsItem * o
     QStyleOptionGraphicsItem myOption(*option);
     myOption.state &= ~QStyle::State_Selected;
 
-//    painter->setPen(Qt::yellow);
-//    painter->drawRect(boundingRect());          //good for debugging
-
+    if (m_pen.style() != Qt::NoPen) {
+        painter->setPen(m_pen);
+        painter->drawRect(boundingRect());
+    }
     QGraphicsSvgItem::paint (painter, &myOption, widget);
+}
+
+void QGCustomSvg::setPreselect(bool enable)
+{
+    m_hasHover = enable;
+    if (enable)
+        setPrettyPre();
+    else if (isSelected())
+        setPrettySel();
+    else
+        setPrettyNormal();
+    update();
+}
+
+void QGCustomSvg::setPrettyPre()
+{
+    m_pen.setColor(PreferencesGui::preselectQColor());
+    m_pen.setStyle(Qt::DashLine);
+}
+
+void QGCustomSvg::setPrettySel()
+{
+    m_pen.setStyle(Qt::DashLine);
+    m_pen.setColor(PreferencesGui::selectQColor());
+}
+
+void QGCustomSvg::setPrettyNormal()
+{
+    m_pen.setStyle(Qt::NoPen);
 }

@@ -45,14 +45,15 @@ class QGIWeldSymbol;
 
 class TechDrawGuiExport QGITile : public QGIDecoration
 {
+    using inherited = QGIDecoration;
 public:
     explicit QGITile(TechDraw::DrawTileWeld*);
-    ~QGITile(void);
+    ~QGITile(void) override;
 
     enum {Type = QGraphicsItem::UserType + 325};
-    int type(void) const { return Type;}
+    int type(void) const override { return Type;}
 
-    virtual QRectF boundingRect() const;
+    QRectF boundingRect() const override;
 
     void setTileTextLeft(std::string s);
     void setTileTextRight(std::string s);
@@ -65,13 +66,14 @@ public:
     void setTailRight(bool b) { m_tailRight = b; }
     void setAltWeld(bool b) { m_altWeld = b; }
     bool isTailRight(void);
-    virtual void draw(void);
+    void draw(void) override;
+
+    void setPrettyNormal() override;
+    void setPrettyPre() override;
+    void setPrettySel() override;
 
 protected:
     QColor getTileColor(void) const;
-    void setPrettyNormal();
-    void setPrettyPre();
-    void setPrettySel();
 
     double getSymbolWidth(void) const;
     double getSymbolHeight(void) const;

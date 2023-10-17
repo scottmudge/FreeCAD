@@ -81,7 +81,7 @@ QGIView::QGIView()
 {
     setCacheMode(QGraphicsItem::NoCache);
     setHandlesChildEvents(false);
-    setAcceptHoverEvents(true);
+    setAcceptHoverEvents(false);
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemIsMovable, true);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, true);
@@ -228,18 +228,23 @@ void QGIView::mouseReleaseEvent(QGraphicsSceneMouseEvent * event)
 //    Base::Console().Message("QGIV::mouseReleaseEvent() - %s\n", getViewName());
 //    if(scene() && this == scene()->mouseGrabberItem()) {
     if (m_dragState == DRAGGING && !m_locked) {
-        auto obj = getViewObject();
-        std::string name = QT_TRANSLATE_NOOP("Command", "Move ");
-        name += obj->Label.getValue();
-        App::AutoTransaction guard(name.c_str());
+        QPointF pos;
         if (!isInnerView()) {
-            double tempX = x(),
-                   tempY = getY();
-            obj->setPosition(Rez::appX(tempX), Rez::appX(tempY));
+            pos = QPointF(Rez::appX(x()), Rez::appX(getY()));
         } else {
-            obj->setPosition(Rez::appX(x()), Rez::appX(getYInClip(y())));
+            pos = QPointF(Rez::appX(x()), Rez::appX(getYInClip(y())));
         }
-        Gui::Command::updateActive();
+
+        App::DocumentObjectT objT(getViewObject());
+        QTimer::singleShot(0, [objT, pos]() {
+            if (auto view = Base::freecad_dynamic_cast<DrawView>(objT.getObject())) {
+                std::string name = QT_TRANSLATE_NOOP("Command", "Move ");
+                name += view->Label.getValue();
+                App::AutoTransaction guard(name.c_str());
+                view->setPosition(pos.x(), pos.y());
+                Gui::Command::updateActive();
+            }
+        });
     }
     m_dragState = NODRAG;
 

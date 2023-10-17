@@ -54,6 +54,7 @@ class ViewProviderPage;
 class QGVPage;
 class QGSPage;
 class QGIView;
+class QGIViewPart;
 class QGIHighlight;
 class QGISectionLine;
 
@@ -73,12 +74,14 @@ public:
     void onSelectionChanged(const Gui::SelectionChanges& msg) override;
 
     /// QGraphicsScene selection routines
-    void selectQGIView(App::DocumentObject *obj, bool isSelected);
+    bool selectQGIView(App::DocumentObject *obj, bool isSelected);
+    bool selectTile(App::DocumentObject *obj, bool isSelected);
     void clearSceneSelection();
     void blockSceneSelection(bool isBlocked);
 
     QGIHighlight *findHighlight(const App::DocumentObject *obj);
     QGISectionLine *findSection(const App::DocumentObject *obj);
+    QGIViewPart *findViewOfHatch(const App::DocumentObject *obj);
 
     bool onMsg(const char* pMsg, const char** ppReturn) override;
     bool onHasMsg(const char* pMsg) const override;

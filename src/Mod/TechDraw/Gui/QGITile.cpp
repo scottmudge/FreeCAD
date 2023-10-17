@@ -54,18 +54,27 @@ QGITile::QGITile(TechDraw::DrawTileWeld* dtw) :
     m_altWeld(false),
     m_tileFeat(dtw)
 {
+    setFeature(dtw);
+
     m_qgSvg = new QGCustomSvg();
+    m_qgSvg->setAcceptHoverEvents(true);
     addToGroup(m_qgSvg);
 
 //    m_effect = new QGraphicsColorizeEffect();
 
     m_qgTextL = new QGCustomText();
+    m_qgTextL->setAcceptHoverEvents(true);
+    m_qgTextL->setTightPicking(true);
     addToGroup(m_qgTextL);
 
     m_qgTextR = new QGCustomText();
+    m_qgTextR->setAcceptHoverEvents(true);
+    m_qgTextR->setTightPicking(true);
     addToGroup(m_qgTextR);
 
     m_qgTextC = new QGCustomText();
+    m_qgTextC->setAcceptHoverEvents(true);
+    m_qgTextC->setTightPicking(true);
     addToGroup(m_qgTextC);
 
     m_wide = getSymbolWidth();
@@ -77,7 +86,7 @@ QGITile::QGITile(TechDraw::DrawTileWeld* dtw) :
     m_fontName = prefTextFont();
     m_font = QFont(m_fontName);
 
-    setFiltersChildEvents(true);    //qt5
+    setHandlesChildEvents(true);    //qt5
     setAcceptHoverEvents(true);
     setFlag(QGraphicsItem::ItemIsSelectable, false);
     setFlag(QGraphicsItem::ItemIsMovable, false);
@@ -133,6 +142,7 @@ void QGITile::draw()
         double y = m_origin.y() - (m_row * m_high) - (m_high * 0.5);    //inverted y!!
         setPos(x, y);
     }
+    inherited::draw();
 }
 
 void QGITile::makeSymbol()
@@ -283,8 +293,8 @@ void QGITile::setPrettyNormal() {
     m_qgTextL->setColor(m_colNormal);
     m_qgTextR->setColor(m_colNormal);
     m_qgTextC->setColor(m_colNormal);
-
-    draw();
+    m_qgSvg->setPrettyNormal();
+    inherited::setPrettyNormal();
 }
 
 void QGITile::setPrettyPre() {
@@ -294,8 +304,8 @@ void QGITile::setPrettyPre() {
     m_qgTextL->setColor(m_colCurrent);
     m_qgTextR->setColor(m_colCurrent);
     m_qgTextC->setColor(m_colCurrent);
-
-    draw();
+    m_qgSvg->setPrettyPre();
+    inherited::setPrettyPre();
 }
 
 void QGITile::setPrettySel() {
@@ -305,8 +315,8 @@ void QGITile::setPrettySel() {
     m_qgTextL->setColor(m_colCurrent);
     m_qgTextR->setColor(m_colCurrent);
     m_qgTextC->setColor(m_colCurrent);
-
-    draw();
+    m_qgSvg->setPrettySel();
+    inherited::setPrettySel();
 }
 
 bool QGITile::isTailRight()

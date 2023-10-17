@@ -57,8 +57,15 @@ public:
     virtual bool load(QByteArray *svgString);
     virtual bool load(QString filename);
 
+    void setPrettyNormal();
+    void setPrettyPre();
+    void setPrettySel();
+    void setPreselect(bool enable);
+
 protected:
     QSvgRenderer *m_svgRender;
+    bool m_hasHover = false;
+    QPen m_pen;
 };
 
 } // namespace TechDrawGui

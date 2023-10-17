@@ -60,8 +60,11 @@ QGIWeldSymbol::QGIWeldSymbol(QGILeaderLine* myParent) :
     m_qgLead(myParent),
     m_blockDraw(false)
 {
-    setFiltersChildEvents(true);    //qt5
-    setFlag(QGraphicsItem::ItemIsMovable, false);
+    // setFiltersChildEvents(true);    //qt5
+    setHandlesChildEvents(true);    //qt5
+
+    setFlag(QGraphicsItem::ItemIsMovable, true);
+    setAcceptHoverEvents(true);
 
     setCacheMode(QGraphicsItem::NoCache);
 
@@ -95,7 +98,7 @@ QGIWeldSymbol::QGIWeldSymbol(QGILeaderLine* myParent) :
     m_fieldFlag->setFlag(QGraphicsItem::ItemSendsScenePositionChanges, false);
     m_fieldFlag->setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
     m_fieldFlag->setFlag(QGraphicsItem::ItemStacksBehindParent, true);
-    m_fieldFlag->setFill(prefNormalColor(), Qt::SolidPattern);
+    // m_fieldFlag->setFill(prefNormalColor(), Qt::SolidPattern);
 
     setNormalColor(prefNormalColor());
     setCurrentColor(getNormalColor());
@@ -110,6 +113,8 @@ QVariant QGIWeldSymbol::itemChange(GraphicsItemChange change, const QVariant &va
     if (change == ItemSelectedHasChanged && scene()) {
         if(isSelected()) {
             setPrettySel();
+        } else if (m_hasHover) {
+            setPrettyPre();
         } else {
             setPrettyNormal();
         }
@@ -192,7 +197,7 @@ void QGIWeldSymbol::drawTile(TechDraw::DrawTileWeld* tileFeat)
     QPointF org = getTileOrigin();
     tile->setTilePosition(org, row, col);
     tile->setFont(fontName, fontSize);
-    tile->setColor(getCurrentColor());
+    tile->setColor(getNormalColor());
     tile->setTileTextLeft(tileTextL);
     tile->setTileTextRight(tileTextR);
     tile->setTileTextCenter(tileTextC);
@@ -201,6 +206,7 @@ void QGIWeldSymbol::drawTile(TechDraw::DrawTileWeld* tileFeat)
     tile->setTileScale(featScale);
     tile->setTailRight(m_weldFeat->isTailRightSide());
     tile->setAltWeld(m_weldFeat->AlternatingWeld.getValue());
+    tile->setFlag(QGraphicsItem::ItemIsSelectable, true);
 
     tile->draw();
 }
@@ -219,7 +225,7 @@ void QGIWeldSymbol::drawAllAround()
         return;
     }
 
-    m_allAround->setNormalColor(getCurrentColor());
+    m_allAround->setNormalColor(getNormalColor());
 
     m_allAround->setFill(Qt::NoBrush);
 //    m_allAround->setRadius(calculateFontPixelSize(getDimFontSize()));
@@ -258,7 +264,7 @@ void QGIWeldSymbol::drawTailText()
     m_tailText->setFont(m_font);
     m_tailText->setPlainText(
                 QString::fromUtf8(tText.c_str()));
-    m_tailText->setColor(getCurrentColor());
+    m_tailText->setColor(getNormalColor());
     m_tailText->setZValue(ZVALUE::DIMENSION);
 
     double textWidth = m_tailText->boundingRect().width();
@@ -364,15 +370,19 @@ std::vector<QGITile*> QGIWeldSymbol::getQGITiles() const
 
 void QGIWeldSymbol::setPreselect(bool enable)
 {
+    m_hasHover = enable;
     if (enable) {
         setCurrentColor(getSelectColor());
-        setPrettySel();
+        setPrettyPre();
     } else if (isSelected()) {
         setCurrentColor(getSelectColor());
         setPrettySel();
     } else {
         setCurrentColor(getNormalColor());
         setPrettyNormal();
+    }
+    for (auto t : getQGITiles()) {
+        t->setPreselect(enable);
     }
     QGIView::setPreselect(enable);
 }
@@ -387,15 +397,12 @@ void QGIWeldSymbol::setPrettyNormal()
 {
     std::vector<QGITile*> tiles = getQGITiles();
     for (auto t: tiles) {
-        t->setColor(getNormalColor());
-        t->draw();
+        t->setPrettyNormal();
+        t->update();
     }
     setCurrentColor(getNormalColor());
-    m_fieldFlag->setNormalColor(getNormalColor());
     m_fieldFlag->setPrettyNormal();
-    m_allAround->setNormalColor(getNormalColor());
     m_allAround->setPrettyNormal();
-    m_tailText->setColor(getNormalColor());
     m_tailText->setPrettyNormal();
 }
 
@@ -403,16 +410,13 @@ void QGIWeldSymbol::setPrettyPre()
 {
     std::vector<QGITile*> tiles = getQGITiles();
     for (auto t: tiles) {
-        t->setColor(getPreColor());
-        t->draw();
+        t->setPrettyPre();
+        t->update();
     }
 
     setCurrentColor(getPreColor());
-    m_fieldFlag->setNormalColor(getPreColor());
     m_fieldFlag->setPrettyPre();
-    m_allAround->setNormalColor(getPreColor());
     m_allAround->setPrettyPre();
-    m_tailText->setColor(getPreColor());
     m_tailText->setPrettyPre();
 }
 
@@ -420,16 +424,13 @@ void QGIWeldSymbol::setPrettySel()
 {
     std::vector<QGITile*> tiles = getQGITiles();
     for (auto t: tiles) {
-        t->setColor(getSelectColor());
-        t->draw();
+        t->setPrettySel();
+        t->update();
     }
 
     setCurrentColor(getSelectColor());
-    m_fieldFlag->setNormalColor(getSelectColor());
     m_fieldFlag->setPrettySel();
-    m_allAround->setNormalColor(getSelectColor());
     m_allAround->setPrettySel();
-    m_tailText->setColor(getSelectColor());
     m_tailText->setPrettySel();
 }
 
@@ -510,7 +511,12 @@ QRectF QGIWeldSymbol::customBoundingRect() const
 
 QPainterPath QGIWeldSymbol::shape() const
 {
-    return QGraphicsItemGroup::shape();
+    QPainterPath path;
+    for (auto child : childItems()) {
+        if (child->isVisible())
+            path.addPath(child->shape());
+    }
+    return path;
 }
 
 void QGIWeldSymbol::paint ( QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget) {

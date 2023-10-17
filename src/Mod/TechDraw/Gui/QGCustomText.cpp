@@ -175,6 +175,11 @@ void QGCustomText::setTightBounding(bool tight)
     tightBounding = tight;
 }
 
+void QGCustomText::setTightPicking(bool tight)
+{
+    tightPicking = tight;
+}
+
 void QGCustomText::paint ( QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget) {
     QStyleOptionGraphicsItem myOption(*option);
     myOption.state &= ~QStyle::State_Selected;
@@ -209,6 +214,16 @@ QRectF QGCustomText::tightBoundingRect() const
     result.adjust(x_adj, 1.75*y_adj, -x_adj, -y_adj);
 
     return result;
+}
+
+QPainterPath QGCustomText::shape() const
+{
+    QPainterPath path;
+    if (tightPicking || tightBounding)
+        path.addRect(tightBoundingRect());
+    else
+        path.addRect(relaxedBoundingRect());
+    return path;
 }
 
 // Calculate the amount of difference between tight and relaxed bounding boxes
