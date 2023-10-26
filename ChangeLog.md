@@ -1,5 +1,38 @@
 Tip release (branch [LinkMerge](https://github.com/realthunder/FreeCAD/tree/LinkMerge)) is merged with upstream aa3b2f39 2023.05.22
 
+# Tip 2023.10.24
+
+Fix git installation in AppImage (affects AddonManager) (#895)
+Fix mouse wheel pass through on Windows
+Part: fix handling of compound shape in loft (#478)
+
+# Tip 2023.10.18
+
+Add 3D view property 'ThumbnailView' to mark which view is preferred for capturing document thumbnail
+Fix undesired behavior when deleting some child object (#877)
+Fix crash on right click of view property editor (#829)
+Fix pre-selection handling in `Pick geometry` command
+Fix thumbnail restore and saving with logo
+Support various linked file path resolve mode in App::Link
+Part|PartDesign: disable `ValidateShape` by default to avoid slow down on complex shape
+PartDesign: fix sketch based profile manual edit
+PartDesign: do not auto set UseAllEdges when creating fillet/chamfer
+PartDesign: fix UseAllEdges handling in fillet editing task (#883)
+Renderer: fix handling of shadow style
+Renderer: fix multiple sub-element preselection highlight
+Renderer: fix back face picking for objects shown on top
+TechDraw: fix restore of dimension when opening document (#812, #845, #868)
+TechDraw: fix cosmetic edge deletion (#885)
+TechDraw: fix lost of view section when moved outside of the shape bound
+TechDraw: refactor background computation
+TechDraw: improve selection highlight of various objects
+TechDraw: add move by mouse for simple section, detail view, and weld symbol
+
+-- 20231024tip --
+
+Second try to fix Python 3.11 not using user site package issue (#864)
+Path: fix legacy Controller object backward compatibility issue
+
 # Tip 2023.08.11
 
 Second try to fix Python 3.11 not using user site package issue (#864)
@@ -11,8 +44,6 @@ Support user defined document thumbnail through document property ThumbnailFile 
 Fix navigation cube corner setting (#855)
 Enable user site package for Python 3.11 (#864)
 Sketcher: fix editing through App::Link
-
--- 20230811tip --
 
 # Tip 2023.08.06
 
