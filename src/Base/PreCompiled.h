@@ -132,6 +132,7 @@
 #include <QReadWriteLock>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QThread>
 #include <QTime>
 #include <QUuid>
 
