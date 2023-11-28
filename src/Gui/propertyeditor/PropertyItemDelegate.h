@@ -57,6 +57,7 @@ private:
     mutable PropertyEditorWidget *userEditor = nullptr;
     mutable bool pressed;
     bool changed;
+    mutable bool editingInited = false;
 };
 
 } // namespace PropertyEditor

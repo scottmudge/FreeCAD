@@ -124,6 +124,7 @@ public:
     static ParameterGrp::handle getHandle();
 """
     )
+
     if signal:
         cog.out(
             f"""
@@ -209,9 +210,15 @@ namespace {{
 class {class_name}P: public ParameterGrp::ObserverType {{
 public:
     ParameterGrp::handle handle;
-    std::unordered_map<const char *,void(*)({class_name}P*),App::CStringHasher,App::CStringHasher> funcs;
-"""
-    )
+    std::unordered_map<const char *,void(*)({class_name}P*),App::CStringHasher,App::CStringHasher> funcs;""")
+
+    sub_params = {}
+    for p in module.Params:
+        if p.subpath:
+            p.subpath_idx = sub_params.setdefault(p.subpath, len(sub_params))
+    if sub_params:
+        cog.out(f"""
+    std::vector<ParameterGrp::handle> subHandles;""")
 
     if signal:
         cog.out(
@@ -248,11 +255,23 @@ public:
         handle->Attach(this);
 """
     )
+    if sub_params:
+        cog.out(f"""
+        subHandles.resize({len(sub_params)});""")
+        for subpath, i in sub_params.items():
+            if subpath.startswith('User parameter:'):
+                cog.out(f"""
+        subHandles[{i}] = App::GetApplication().GetParameterGroupByPath("{subpath}");
+        subHandles[{i}]->Attach(this);""")
+            else:
+                cog.out(f"""
+        subHandles[{i}] = handle->GetGroup("{subpath}");
+        subHandles[{i}]->Attach(this);""")
 
     for param in params:
         cog.out(
             f"""
-        {param.name} = {param.getter('handle')};
+        {param.name} = {param.getter('this')};
         funcs["{param.name}"] = &{class_name}P::update{param.name};"""
         )
 
@@ -287,7 +306,7 @@ public:
                 f"""
     {trace_comment()}
     static void update{param.name}({class_name}P *self) {{
-        self->{param.name} = {param.getter('self->handle')};
+        self->{param.name} = {param.getter('self')};
     }}"""
             )
         else:
@@ -295,7 +314,7 @@ public:
                 f"""
     {trace_comment()}
     static void update{param.name}({class_name}P *self) {{
-        auto v = {param.getter('self->handle')};
+        auto v = {param.getter('self')};
         if (self->{param.name} != v) {{
             self->{param.name} = v;
             {class_name}::on{param.name}Changed();
@@ -383,7 +402,7 @@ void {class_name}::set{param.name}(const {param.C_Type} &v) {{
             f"""
 {trace_comment()}
 void {class_name}::remove{param.name}() {{
-    instance()->handle->Remove{param.Type}("{param.name}");
+    {param.handle('instance()')}->Remove{param.Type}("{param.name}");
 }}
 """
         )
@@ -679,13 +698,21 @@ _ParamPrefix = "User parameter:BaseApp/Preferences/"
 class Param:
     WidgetPrefix = ""
 
-    def __init__(self, name, default, doc="", title="", on_change=False, proxy=None, **kwd):
+    def __init__(self, name, default, doc="", title="",
+                 on_change=False, proxy=None, subpath='', param_name=''):
         self.name = name
+        self.param_name = param_name if param_name else name
         self.title = title if title else name
         self._default = default
         self._doc = doc
         self.on_change = on_change
         self.proxy = proxy
+        self.subpath = subpath
+
+    def handle(self, prefix):
+        if self.subpath:
+            return f'''{prefix}->subHandles[{self.subpath_idx}]'''
+        return prefix + '->handle'
 
     def _declare_label(self):
         cog.out(
@@ -848,10 +875,10 @@ class Param:
         return 1
 
     def getter(self, handle):
-        return f'{handle}->Get{self.Type}("{self.name}", {self.default})'
+        return f'{self.handle(handle)}->Get{self.Type}("{self.param_name}", {self.default})'
 
-    def setter(self):
-        return f'instance()->handle->Set{self.Type}("{self.name}",v)'
+    def setter(self, handle='instance()'):
+        return f'{self.handle(handle)}->Set{self.Type}("{self.param_name}",v)'
 
 
 class ParamBool(Param):
@@ -913,11 +940,11 @@ class ParamQString(Param):
 
     def getter(self, handle):
         return (
-            f'QString::fromUtf8({handle}->Get{self.Type}("{self.name}", "{self._default}").c_str())'
+            f'QString::fromUtf8({self.handle(handle)}->Get{self.Type}("{self.param_name}", "{self._default}").c_str())'
         )
 
-    def setter(self):
-        return f'instance()->handle->Set{self.Type}("{self.name}",v.toUtf8().constData())'
+    def setter(self, handle='instance()'):
+        return f'{self.handle(handle)}->Set{self.Type}("{self.param_name}",v.toUtf8().constData())'
 
 
 class ParamInt(Param):

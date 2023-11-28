@@ -84,6 +84,7 @@
 #include <Mod/Mesh/App/Core/Triangulation.h>
 #include <Mod/Mesh/App/Core/Trim.h>
 #include <Mod/Mesh/App/Core/Visitor.h>
+#include <Mod/Mesh/App/MeshParams.h>
 #include <Mod/Mesh/Gui/ViewProviderMeshPy.h>
 #include <zipios++/gzipoutputstream.h>
 
@@ -285,42 +286,41 @@ ViewProviderMesh::ViewProviderMesh() : pcOpenEdge(nullptr)
     LineColor.touch();
 
     // read the correct shape color from the preferences
-    Base::Reference<ParameterGrp> hGrp = Gui::WindowParameter::getDefaultParameter()->GetGroup("Mod/Mesh");
-    ShapeTypeHint.setValue(hGrp->GetInt("DefaultShapeType", 0));
+    ShapeTypeHint.setValue(Mesh::MeshParams::getDefaultShapeType());
     if (ShapeTypeHint.getValue() == 1)
         pShapeHints->shapeType = SoShapeHintsElement::SOLID;
 
     // Mesh color
     App::Color color = ShapeColor.getValue();
     unsigned long current = color.getPackedValue();
-    unsigned long setting = hGrp->GetUnsigned("MeshColor", current);
-    if (current != setting) {
+    unsigned long setting = Mesh::MeshParams::getMeshColor();
+    if (setting && current != setting) {
         color.setPackedValue((uint32_t)setting);
         ShapeColor.setValue(color);
     }
-    Transparency.setValue(hGrp->GetInt("MeshTransparency", 0));
+    Transparency.setValue(Mesh::MeshParams::getMeshTransparency());
 
     // Line color
     color = LineColor.getValue();
     current = color.getPackedValue();
-    setting = hGrp->GetUnsigned("LineColor", current);
-    if (current != setting) {
+    setting = Mesh::MeshParams::getLineColor();
+    if (setting && current != setting) {
         color.setPackedValue((uint32_t)setting);
         LineColor.setValue(color);
     }
-    LineTransparency.setValue(hGrp->GetInt("LineTransparency", 0));
+    LineTransparency.setValue(Mesh::MeshParams::getLineTransparency());
 
-    bool twoside = hGrp->GetBool("TwoSideRendering", false);
+    bool twoside = Mesh::MeshParams::getTwoSideRendering();
     if (twoside) Lighting.setValue(1);
     else Lighting.setValue((long)0);
 
-    bool normal_per_vertex = hGrp->GetBool("VertexPerNormals", false);
+    bool normal_per_vertex = Mesh::MeshParams::getVertexPerNormals();
     if (normal_per_vertex) {
-        double angle = hGrp->GetFloat("CreaseAngle", 0.0);
+        double angle = Mesh::MeshParams::getCreaseAngle();
         CreaseAngle.setValue(angle);
     }
 
-    if (hGrp->GetBool("ShowBoundingBox", false)) {
+    if (Mesh::MeshParams::getShowBoundingBox()) {
         SelectionStyle.setValue(1);
     }
 

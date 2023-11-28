@@ -214,7 +214,7 @@ void TaskProjGroup::rotateButtonClicked()
 
         setUiPrimary();
 
-        multiView->recomputeFeature(true);
+        Gui::Command::updateActive();
     }
 }
 
@@ -234,7 +234,7 @@ void TaskProjGroup::projectionTypeChanged(QString qText)
 
     // Update checkboxes so checked state matches the drawing
     setupViewCheckboxes();
-    multiView->recomputeFeature();
+    Gui::Command::updateActive();
 }
 
 void TaskProjGroup::scaleTypeChanged(int index)
@@ -278,7 +278,7 @@ void TaskProjGroup::AutoDistributeClicked(bool clicked)
         return;
     }
     multiView->AutoDistribute.setValue(clicked);
-    multiView->recomputeFeature();
+    Gui::Command::updateActive();
 }
 
 void TaskProjGroup::spacingChanged()
@@ -288,7 +288,7 @@ void TaskProjGroup::spacingChanged()
     }
     multiView->spacingX.setValue(ui->sbXSpacing->value().getValue());
     multiView->spacingY.setValue(ui->sbYSpacing->value().getValue());
-    multiView->recomputeFeature();
+    Gui::Command::updateActive();
 }
 
 std::pair<int, int> TaskProjGroup::nearestFraction(const double val, const long int maxDenom) const
@@ -404,7 +404,7 @@ void TaskProjGroup::scaleManuallyChanged(int unused)
 
     double scale = (double) a / (double) b;
     Gui::cmdAppObjectArgs(multiView, "Scale = %f", scale);
-    multiView->recomputeFeature();
+    Gui::Command::updateActive();
 }
 
 void TaskProjGroup::changeEvent(QEvent *event)
@@ -504,8 +504,7 @@ void TaskProjGroup::saveButtons(QPushButton* btnOK,
 bool TaskProjGroup::apply()
 {
 //    Base::Console().Message("TPG::apply()\n");
-    multiView->recomputeChildren();
-    multiView->recomputeFeature();
+    Gui::Command::updateActive();
 
     return true;
 }
@@ -517,9 +516,7 @@ bool TaskProjGroup::accept()
     if (!doc)
         return false;
 
-    multiView->recomputeChildren();
-    multiView->recomputeFeature();
-
+    Gui::Command::updateActive();
     Gui::Command::doCommand(Gui::Command::Gui, "Gui.ActiveDocument.resetEdit()");
 
     return true;

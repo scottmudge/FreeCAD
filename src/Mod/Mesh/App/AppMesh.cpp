@@ -42,6 +42,7 @@
 #include "MeshFeaturePy.h"
 #include "MeshPointPy.h"
 #include "MeshPy.h"
+#include "MeshParams.h"
 
 
 namespace Mesh {
@@ -57,11 +58,8 @@ PyMOD_INIT_FUNC(Mesh)
     // NOTE: To finish the initialization of our own type objects we must
     // call PyType_Ready, otherwise we run into a segmentation fault, later on.
     // This function is responsible for adding inherited slots from a type's base class.
-    ParameterGrp::handle handle = App::GetApplication().GetParameterGroupByPath
-        ("User parameter:BaseApp/Preferences/Mod/Mesh");
-    ParameterGrp::handle asy = handle->GetGroup("Asymptote");
-    MeshCore::MeshOutput::SetAsymptoteSize(asy->GetASCII("Width", "500"),
-                                           asy->GetASCII("Height"));
+    MeshCore::MeshOutput::SetAsymptoteSize(Mesh::MeshParams::getAsymptoteWidth(),
+                                           Mesh::MeshParams::getAsymptoteHeight());
 
     // add mesh elements
     Base::Interpreter().addType(&Mesh::MeshPointPy  ::Type,meshModule,"MeshPoint");

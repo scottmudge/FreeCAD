@@ -31,6 +31,7 @@
         <file>icons/Mesh_Segmentation.svg</file>
         <file>icons/Mesh_Smoothing.svg</file>
         <file>icons/Mesh_SplitComponents.svg</file>
+        <file>icons/Mesh_SubElementSelection.svg</file>
         <file>icons/Mesh_Tree.svg</file>
         <file>icons/Mesh_Tree_Curvature_Plot.svg</file>
         <file>icons/Mesh_TrimByPlane.svg</file>

@@ -429,6 +429,21 @@ void NavigationStyle::lookAtPoint(const SbVec3f& pos)
 
 void NavigationStyle::setCameraOrientation(const SbRotation& rot, SbBool moveToCenter)
 {
+    SbVec3f center;
+    if (moveToCenter) {
+        SoGetBoundingBoxAction action(viewer->getSoRenderManager()->getViewportRegion());
+        action.apply(viewer->getSceneGraph());
+        SbBox3f box = action.getBoundingBox();
+        if (!isValidBBox(box))
+            moveToCenter = false;
+        else
+            center = box.getCenter();
+    }
+    setCameraOrientation(rot, moveToCenter?&center:nullptr);
+}
+
+void NavigationStyle::setCameraOrientation(const SbRotation& rot, const SbVec3f *center)
+{
     SoCamera* cam = viewer->getSoRenderManager()->getCamera();
     if (!cam)
         return;
@@ -438,20 +453,10 @@ void NavigationStyle::setCameraOrientation(const SbRotation& rot, SbBool moveToC
     cam->orientation.getValue().multVec(SbVec3f(0, 0, -1), direction);
     PRIVATE(this)->focal1 = cam->position.getValue() +
                             cam->focalDistance.getValue() * direction;
-    PRIVATE(this)->focal2 = PRIVATE(this)->focal1;
-    if (moveToCenter) {
-        SoGetBoundingBoxAction action(viewer->getSoRenderManager()->getViewportRegion());
-        action.apply(viewer->getSceneGraph());
-        SbBox3f box = action.getBoundingBox();
-        if (isValidBBox(box)) {
-            rot.multVec(SbVec3f(0, 0, -1), direction);
-            //float s = (this->focal1 - box.getCenter()).dot(direction);
-            //this->focal2 = box.getCenter() + s * direction;
-            // setting the center of the overall bounding box as the future focal point
-            // seems to be a satisfactory solution
-            PRIVATE(this)->focal2 = box.getCenter();
-        }
-    }
+    if (!center)
+        PRIVATE(this)->focal2 = PRIVATE(this)->focal1;
+    else
+        PRIVATE(this)->focal2 = *center;
 
     // avoid to interfere with spinning (fixes #3101462)
     if (this->isAnimating())

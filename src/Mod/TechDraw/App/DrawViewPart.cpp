@@ -1455,11 +1455,16 @@ TopoDS_Shape DrawViewPart::shapeShapeIntersect(const TopoDS_Shape& shape0,
         result = anOp.Shape();//always a compound
     }
     else {
-#if OCC_VERSION_HEX < 0x070500
+#if OCC_VERSION_HEX < 0x070600
         BRepAlgoAPI_Common anOp(shape0, shape1);
-        anOp.SetProgressIndicator(pi);
+#   if OCC_VERSION_HEX < 0x070500
+        anOp.SetProgressIndicator(*pi);
         pi->NewScope(100, "Make intersection");
         pi->Show();
+#   else
+        Message_ProgressScope scope(pi->Start(), "Make intersection", 100);
+        anOp.SetProgressIndicator(scope);
+#   endif
 #else
         BRepAlgoAPI_Common anOp(shape0, shape1, pi->Start());
 #endif

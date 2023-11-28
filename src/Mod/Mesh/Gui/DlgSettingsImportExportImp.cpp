@@ -47,34 +47,22 @@ DlgSettingsImportExport::~DlgSettingsImportExport()
 
 void DlgSettingsImportExport::saveSettings()
 {
-    ParameterGrp::handle handle = App::GetApplication().GetParameterGroupByPath
-        ("User parameter:BaseApp/Preferences/Mod/Mesh");
-    double value = ui->maxDeviationExport->value().getValue();
-    handle->SetFloat("MaxDeviationExport", value);
+    ui->maxDeviationExport->onSave();
 
     ui->exportAmfCompressed->onSave();
 
-    ParameterGrp::handle asy = handle->GetGroup("Asymptote");
-    asy->SetASCII("Width", ui->asymptoteWidth->text().toUtf8());
-    asy->SetASCII("Height", ui->asymptoteHeight->text().toUtf8());
-
-    MeshCore::MeshOutput::SetAsymptoteSize(ui->asymptoteWidth->text().toStdString(),
-                                           ui->asymptoteHeight->text().toStdString());
+    ui->asymptoteWidth->onSave();
+    ui->asymptoteHeight->onSave();
 }
 
 void DlgSettingsImportExport::loadSettings()
 {
-    ParameterGrp::handle handle = App::GetApplication().GetParameterGroupByPath
-        ("User parameter:BaseApp/Preferences/Mod/Mesh");
-    double value = ui->maxDeviationExport->value().getValue();
-    value = handle->GetFloat("MaxDeviationExport", value);
-    ui->maxDeviationExport->setValue(value);
+    ui->maxDeviationExport->onRestore();
 
     ui->exportAmfCompressed->onRestore();
 
-    ParameterGrp::handle asy = handle->GetGroup("Asymptote");
-    ui->asymptoteWidth->setText(QString::fromStdString(asy->GetASCII("Width")));
-    ui->asymptoteHeight->setText(QString::fromStdString(asy->GetASCII("Height")));
+    ui->asymptoteWidth->onRestore();
+    ui->asymptoteHeight->onRestore();
 }
 
 /**

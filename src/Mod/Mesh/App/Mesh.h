@@ -25,6 +25,7 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -115,6 +116,7 @@ public:
     unsigned long countSubElements(const char* Type) const override;
     /// get the subelement by type and number
     Data::Segment* getSubElement(const char* Type, unsigned long) const override;
+    MeshObject* getSubElementAsMesh(const char *SubElement) const;
     /** Get faces from segment */
     void getFacesFromSubElement(
         const Data::Segment*,
@@ -161,13 +163,13 @@ public:
     //@}
 
     void setKernel(const MeshCore::MeshKernel& m);
-    MeshCore::MeshKernel& getKernel()
-    { return _kernel; }
-    const MeshCore::MeshKernel& getKernel() const
-    { return _kernel; }
+    MeshCore::MeshKernel& getKernel();
+    const MeshCore::MeshKernel& getKernel() const;
 
     Base::BoundBox3d getBoundBox() const override;
     bool getCenterOfGravity(Base::Vector3d& center) const override;
+
+    bool getRotation(Base::Rotation &) const override;
 
     /** @name I/O */
     //@{
@@ -428,7 +430,7 @@ private:
 
 private:
     Base::Matrix4D _Mtrx;
-    MeshCore::MeshKernel _kernel;
+    std::shared_ptr<MeshCore::MeshKernel> _kernel;
     std::vector<Segment> _segments;
     static const float Epsilon;
 };

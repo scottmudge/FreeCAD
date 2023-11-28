@@ -524,11 +524,13 @@ SoFCVertexArrayIndexer::sort_triangles(void)
   // pretty well. Example: bunny.iv (~70000 triangles) went from 238
   // fps with no sorting to 380 fps with sorting.
   if (this->partarray.size() <= 1) {
+#if 0
     if (this->indexarraylength > 10 * 3)
       qsort((void*) this->indexarray.getWritableArrayPtr(),
             this->indexarraylength / 3,
             sizeof(int32_t) * 3,
             compare_triangle);
+#endif
   }
   else {
     GLint *indices = this->indexarray.getWritableArrayPtr();

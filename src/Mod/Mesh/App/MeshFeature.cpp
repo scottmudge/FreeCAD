@@ -26,6 +26,7 @@
 
 #include "MeshFeature.h"
 #include "MeshFeaturePy.h"
+#include "MeshPy.h"
 
 
 using namespace Mesh;
@@ -86,6 +87,34 @@ void Feature::onChanged(const App::Property* prop)
     // As this object and the property are touched such objects can check this and return a value 1
     // (or -1) in their mustExecute() to be recomputed the next time the document recomputes itself.
     DocumentObject::onChanged(prop);
+}
+
+App::DocumentObject *Feature::getSubObject(const char *subname,
+                                           PyObject **pyObj, 
+                                           Base::Matrix4D *pmat,
+                                           bool transform,
+                                           int depth) const
+{
+    while(subname && *subname=='.') ++subname; // skip leading .
+
+    // having '.' inside subname means it is referencing some children object,
+    // instead of any sub-element from ourself
+    if(subname && !Data::ComplexGeoData::isMappedElement(subname) && strchr(subname,'.'))
+        return App::DocumentObject::getSubObject(subname,pyObj,pmat,transform,depth);
+
+    Base::Matrix4D _mat;
+    auto &mat = pmat?*pmat:_mat;
+    if(transform)
+        mat *= Placement.getValue().toMatrix();
+
+    if(pyObj) {
+        if (auto mesh = Mesh.getValue().getSubElementAsMesh(subname)) {
+            mesh->setTransform(mat);
+            Base::PyGILStateLocker lock;
+            *pyObj = new Mesh::MeshPy(mesh);
+        }
+    }
+    return const_cast<Feature*>(this);
 }
 
 // ---------------------------------------------------------

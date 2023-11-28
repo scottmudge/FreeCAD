@@ -207,6 +207,7 @@ Gui::MenuItem* Workbench::setupMenuBar() const
           << "Mesh_Export"
           << "Mesh_FromPartShape"
           << "Mesh_RemeshGmsh"
+          << "Mesh_SubElementSelection"
           << "Separator"
           << analyze
           << "Mesh_VertexCurvature"
@@ -249,7 +250,8 @@ Gui::ToolBarItem* Workbench::setupToolBars() const
     *mesh << "Mesh_Import"
           << "Mesh_Export"
           << "Mesh_FromPartShape"
-          << "Mesh_BuildRegularSolid";
+          << "Mesh_BuildRegularSolid"
+          << "Mesh_SubElementSelection";
 
     Gui::ToolBarItem* modifying = new Gui::ToolBarItem(root);
     modifying->setCommand("Mesh modify");

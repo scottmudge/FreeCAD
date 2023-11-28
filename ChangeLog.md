@@ -1,5 +1,16 @@
 Tip release (branch [LinkMerge](https://github.com/realthunder/FreeCAD/tree/LinkMerge)) is merged with upstream aa3b2f39 2023.05.22
 
+# Tip 2023.11.02
+
+Introducing new commands `View front face (V, N)` and `View back face (V, B)` (See b6bd57a2 for more details)
+TechDraw: fix projection group recompute problem (#901)
+
+# Tip 2023.10.28
+
+Fix view property editing problem (#896)
+
+-- 20231102tip --
+
 # Tip 2023.10.24
 
 Fix git installation in AppImage (affects AddonManager) (#895)
@@ -27,8 +38,6 @@ TechDraw: fix lost of view section when moved outside of the shape bound
 TechDraw: refactor background computation
 TechDraw: improve selection highlight of various objects
 TechDraw: add move by mouse for simple section, detail view, and weld symbol
-
--- 20231024tip --
 
 Second try to fix Python 3.11 not using user site package issue (#864)
 Path: fix legacy Controller object backward compatibility issue

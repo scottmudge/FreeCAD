@@ -183,6 +183,8 @@ public:
      * Change the image size of the asymptote output.
      */
     static void SetAsymptoteSize(const std::string&, const std::string&);
+    static void SetAsymptoteWidth(const std::string&);
+    static void SetAsymptoteHeight(const std::string&);
     /// Determine the mesh format by file extension
     static MeshIO::Format GetFormat(const char* FileName);
     /// Saves the file, decided by extension if not explicitly given

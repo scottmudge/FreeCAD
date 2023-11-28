@@ -59,6 +59,7 @@
 
 #include <Mod/Mesh/App/FeatureMeshCurvature.h>
 #include <Mod/Mesh/App/MeshFeature.h>
+#include <Mod/Mesh/App/MeshParams.h>
 #include <Mod/Mesh/App/Core/Smoothing.h>
 
 #include "DlgDecimating.h"
@@ -1686,6 +1687,32 @@ bool CmdMeshScale::isActive()
     return getSelection().countObjectsOfType(Mesh::Feature::getClassTypeId()) > 0;
 }
 
+class CmdMeshSubElementSelection: public Gui::CheckableCommand
+{
+public:
+    CmdMeshSubElementSelection();
+    virtual const char* className() const
+    { return "CmdMeshSubElementSelection()"; }
+protected:
+    virtual void setOption(bool checked) {
+        Mesh::MeshParams::setSubElementSelection(checked);
+    }
+    virtual bool getOption() const {
+        return Mesh::MeshParams::getSubElementSelection();
+    }
+};
+
+CmdMeshSubElementSelection::CmdMeshSubElementSelection()
+    : Gui::CheckableCommand("Mesh_SubElementSelection")
+{
+    sAppModule    = "Mesh";
+    sGroup        = QT_TR_NOOP("Mesh");
+    sMenuText     = QT_TR_NOOP("Sub-element select");
+    sToolTipText  = QT_TR_NOOP("Toggle sub-element selection");
+    sWhatsThis    = "Mesh_SubElementSelection";
+    sStatusTip    = sToolTipText;
+    sPixmap       = "Mesh_SubElementSelection";
+}
 
 void CreateMeshCommands()
 {
@@ -1726,4 +1753,5 @@ void CreateMeshCommands()
     rcCmdMgr.addCommand(new CmdMeshMerge());
     rcCmdMgr.addCommand(new CmdMeshSplitComponents());
     rcCmdMgr.addCommand(new CmdMeshScale());
+    rcCmdMgr.addCommand(new CmdMeshSubElementSelection());
 }

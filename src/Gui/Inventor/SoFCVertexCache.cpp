@@ -226,6 +226,7 @@ public:
     bool ispointindexed = false;
 
     SoFCVertexArrayIndexer::IndexArray prevtriangleindices;
+    COWVector<int> prevsortedindexmap;
     SoFCVertexArrayIndexer::IndexArray prevlineindices;
     SoFCVertexArrayIndexer::IndexArray prevpointindices;
   };
@@ -248,8 +249,10 @@ public:
   {
     if (prev) {
       this->tmp = new TempStorage;
-      if (PRIVATE(prev)->triangleindexer)
+      if (PRIVATE(prev)->triangleindexer) {
+        this->tmp->prevsortedindexmap = PRIVATE(prev)->sortedindexmap;
         this->tmp->prevtriangleindices = PRIVATE(prev)->triangleindexer->getIndexArray();
+      }
       if (PRIVATE(prev)->lineindexer)
         this->tmp->prevlineindices = PRIVATE(prev)->lineindexer->getIndexArray();
       if (PRIVATE(prev)->pointindexer)
@@ -287,6 +290,7 @@ public:
     assert(PRIVATE(prevcache)->triangleindexer);
 
     auto indexer = PRIVATE(prevcache)->triangleindexer;
+    this->sortedindexmap = PRIVATE(prevcache)->sortedindexmap;
     this->triangleindexer = new SoFCVertexArrayIndexer(*indexer, faces, master->getNumVertices());
 
     if (!indexer->getNumParts() || this->triangleindexer->getNumParts() == indexer->getNumParts())
@@ -457,24 +461,28 @@ public:
   uint32_t firstcolor;
 
   int lastenabled = -1;
+  int prevsorted = 0;
   SbPlane prevsortplane;
 
   struct SortEntry {
     float depth;
+    int order;
     int index;
     int index2;
     int index3;
-    SortEntry(int i)
+
+    explicit SortEntry(int i)
       :index(i)
     {}
     SortEntry(int i, int j, int k)
       :index(i), index2(j), index3(k)
     {}
   };
-  SbFCVector<SortEntry> deptharray;
 
   SbFCVector<intptr_t> sortedpartarray;
   SbFCVector<int32_t> sortedpartcounts;
+
+  COWVector<int> sortedindexmap;
 
   COWVector<int> transppartindices;
   COWVector<intptr_t> opaquepartarray;
@@ -1059,10 +1067,13 @@ SoFCVertexCacheP::render(SoState *state,
     count = unit;
     if ((part+1) * unit > indexer->getNumIndices())
       return;
+    if (part < static_cast<int>(this->sortedindexmap.size()))
+      part = this->sortedindexmap[part];
     offset = part * unit * (indexer->useShorts() ? 2 : 4);
   }
-  else if (part >= indexer->getNumParts())
+  else if (part >= indexer->getNumParts()) {
     return;
+  }
   else {
     const int * parts = indexer->getPartOffsets();
     if (part == 0) {
@@ -1504,6 +1515,7 @@ SoFCVertexCache::addTriangle(const SoPrimitiveVertex * v0,
   if (!PRIVATE(this)->triangleindexer) {
     PRIVATE(this)->triangleindexer =
       new SoFCVertexArrayIndexer(PRIVATE(this)->tmp->prevtriangleindices);
+    PRIVATE(this)->sortedindexmap = PRIVATE(this)->tmp->prevsortedindexmap;
   }
   PRIVATE(this)->triangleindexer->addTriangle(triangleindices[0],
                                               triangleindices[1],
@@ -1873,6 +1885,7 @@ SoFCVertexCache::getPointIndices(void) const
 SbBool
 SoFCVertexCacheP::depthSortTriangles(SoState * state, bool fullsort, const SbPlane *plane)
 {
+  return FALSE;
   if (!this->vertexarray) return FALSE;
   int numv = this->vertexarray.getLength();
   int numtri = PUBLIC(this)->getNumTriangleIndices() / 3;
@@ -1906,23 +1919,25 @@ SoFCVertexCacheP::depthSortTriangles(SoState * state, bool fullsort, const SbPla
 
   const SbVec3f * vptr = this->vertexarray.getArrayPtr();
 
+  static SbFCVector<SortEntry> deptharray;
+
   // If having parts, sort the parts (i.e. group of triangles) instead of
   // individual triangles
   if (numparts) {
-    if (numparts == (int)this->deptharray.size()
+    if (this->prevsorted == numparts
         && sortplane.getNormal() == this->prevsortplane.getNormal())
       return TRUE;
 
-    this->deptharray.clear();
-    this->deptharray.reserve(numparts);
+    deptharray.clear();
+    deptharray.reserve(numparts);
     if (fullsort) {
       if (this->triangleindexer->getPartialIndices().size()) {
         for (int i : this->triangleindexer->getPartialIndices())
-          this->deptharray.emplace_back(i);
+          deptharray.emplace_back(i);
       }
       else {
         for (int i=0; i<numparts; ++i)
-          this->deptharray.emplace_back(i);
+          deptharray.emplace_back(i);
       }
     }
     else if (this->triangleindexer->getPartialIndices().size()) {
@@ -1933,22 +1948,23 @@ SoFCVertexCacheP::depthSortTriangles(SoState * state, bool fullsort, const SbPla
           if (i < *it)
             continue;
           if (i == *it)
-            this->deptharray.emplace_back(i);
+            deptharray.emplace_back(i);
           if (++it == itEnd)
             break;
         }
       }
     } else {
       for (int i : this->transppartindices)
-        this->deptharray.emplace_back(i);
+        deptharray.emplace_back(i);
     }
 
     this->prevsortplane = sortplane;
+    this->prevsorted = (int)deptharray.size();
     const int *parts = this->triangleindexer->getPartOffsets();
 #ifdef FC_RENDER_SORT_NEAREST
     const GLint *indices = this->triangleindexer->getIndices();
     const SbVec3f *vertices = this->vertexarray.getArrayPtr();
-    for(auto & entry : this->deptharray) {
+    for(auto & entry : deptharray) {
       int prev = entry.index == 0 ? 0 : parts[entry.index-1];
       int n = parts[entry.index]-prev;
       entry.depth = -FLT_MAX;
@@ -1960,20 +1976,20 @@ SoFCVertexCacheP::depthSortTriangles(SoState * state, bool fullsort, const SbPla
       }
     }
 #else
-    for(auto & entry : this->deptharray)
+    for(auto & entry : deptharray)
       entry.depth = sortplane.getDistance(this->partcenters[entry.index]);
 #endif
 
-    std::sort(this->deptharray.begin(), this->deptharray.end(),
+    std::sort(deptharray.begin(), deptharray.end(),
         [] (const SortEntry &a, const SortEntry &b) {
           return a.depth < b.depth;
         });
 
-    this->sortedpartarray.resize(this->deptharray.size());
-    this->sortedpartcounts.resize(this->deptharray.size());
+    this->sortedpartarray.resize(deptharray.size());
+    this->sortedpartcounts.resize(deptharray.size());
     int i=0;
     int typesize = this->triangleindexer->useShorts() ? 2 : 4;
-    for (auto & entry : this->deptharray) {
+    for (auto & entry : deptharray) {
       int start = entry.index == 0 ? 0 : parts[entry.index-1];
       int end = parts[entry.index];
       this->sortedpartarray[i] = start * typesize;
@@ -1983,33 +1999,45 @@ SoFCVertexCacheP::depthSortTriangles(SoState * state, bool fullsort, const SbPla
   }
 
   // normal sorting without parts
-  if (numtri == (int)deptharray.size()
+  if (numtri == this->prevsorted
       && sortplane.getNormal() == this->prevsortplane.getNormal())
     return FALSE;
 
-  GLint * iptr = this->triangleindexer->getWriteableIndices();
+  this->prevsortplane = sortplane;
+  this->prevsorted = numtri;
 
-  this->deptharray.clear();
-  this->deptharray.reserve(numtri);
+  if (this->sortedindexmap.size() != numtri) {
+    this->sortedindexmap.clear();
+    this->sortedindexmap.reserve(numtri);
+    for (int i=0; i<numtri; ++i)
+      this->sortedindexmap.push_back(i);
+  }
+  int * sortedmap = this->sortedindexmap.at(0);
+  GLint * iptr = this->triangleindexer->getWriteableIndices();
+  deptharray.clear();
+  deptharray.reserve(numtri);
   for (int i=0; i<numtri; ++i) {
-    this->deptharray.emplace_back(iptr[i*3], iptr[i*3+1], iptr[i*3+2]);
+    deptharray.emplace_back(iptr[i*3], iptr[i*3+1], iptr[i*3+2]);
     double acc = 0.0;
     acc += sortplane.getDistance(vptr[iptr[i*3]]);
     acc += sortplane.getDistance(vptr[iptr[i*3+1]]);
     acc += sortplane.getDistance(vptr[iptr[i*3+2]]);
-    this->deptharray.back().depth = (float) (acc / 3.0);
+    deptharray.back().depth = (float) (acc / 3.0);
   }
+  for (int i=0; i<numtri; ++i)
+    deptharray[sortedmap[i]].order = i;
 
-  std::sort(this->deptharray.begin(), this->deptharray.end(),
+  std::sort(deptharray.begin(), deptharray.end(),
       [] (const SortEntry &a, const SortEntry &b) {
         return a.depth < b.depth;
       });
 
-  int i = 0;
-  for(auto & entry : this->deptharray) {
+  int i = 0, j = 0;
+  for(const auto & entry : deptharray) {
     iptr[i++] = entry.index;
     iptr[i++] = entry.index2;
     iptr[i++] = entry.index3;
+    sortedmap[entry.order] = j++;
   }
   return FALSE;
 }

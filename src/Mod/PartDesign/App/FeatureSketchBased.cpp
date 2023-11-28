@@ -116,9 +116,8 @@ void ProfileBased::setupObject()
 
 TopLoc_Location ProfileBased::positionByPrevious(void)
 {
-#if 1
-    return TopLoc_Location();
-#else
+    if (_ProfileBasedVersion.getValue() > 0)
+        return TopLoc_Location();
     Part::Feature* feat = getBaseObject(/* silent = */ true);
     if (feat) {
         this->Placement.setValue(feat->Placement.getValue());
@@ -134,13 +133,12 @@ TopLoc_Location ProfileBased::positionByPrevious(void)
             this->Placement.setValue(sketch->Placement.getValue());
         }
     }
-    return getLoation().Inverted();
-#endif
+    return getLocation().Inverted();
 }
 
 bool ProfileBased::shouldApplyPlacement()
 {
-    return false;
+    return _ProfileBasedVersion.getValue() <= 0;
 }
 
 void ProfileBased::transformPlacement(const Base::Placement& transform)

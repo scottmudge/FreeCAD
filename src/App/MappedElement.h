@@ -33,6 +33,9 @@
 #include "ComplexGeoData.h"
 #include "StringHasher.h"
 
+#undef min
+#undef max
+
 // Workaround for Windows issue with std::min
 #ifndef __min
 #define __min(a,b) (((a) < (b)) ? (a) : (b))

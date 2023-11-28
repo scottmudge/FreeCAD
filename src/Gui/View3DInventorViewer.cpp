@@ -4294,6 +4294,104 @@ void View3DInventorViewer::viewObjects(const std::vector<App::SubObjectT> &objs,
     }
 }
 
+void View3DInventorViewer::viewSelectionNormal(bool backFacing)
+{
+    SoCamera* cam = getSoRenderManager()->getCamera();
+    if(!cam)
+        return;
+
+    std::vector<App::SubObjectT> sels;
+    std::vector<Base::Vector3d> pickedPoints;
+    auto preselT = Selection().getPreselection().Object;
+    if (!preselT.getObjectName().empty()) {
+        sels.push_back(preselT);
+        const auto &presel = Selection().getPreselection();
+        pickedPoints.emplace_back(presel.x, presel.y, presel.z);
+    }
+    else {
+        for (auto sel : Selection().getSelection("", ResolveMode::NoResolve)) {
+            sels.emplace_back(sel.pObject,sel.SubName);
+            pickedPoints.emplace_back(sel.x, sel.y, sel.z);
+        }
+    }
+
+    Base::Vector3d normal;
+    Base::Vector3d xnormal;
+    Base::Vector3d base;
+    int count = 0;
+    int i=-1;
+    for (const auto &sel : sels) {
+        ++i;
+        if (auto obj = sel.getObject()) {
+            Base::PyGILStateLocker lock;
+            PyObject *pyobj = nullptr;
+            Base::Matrix4D mat;
+            obj->getSubObject(sel.getSubName().c_str(), &pyobj, &mat);
+            if (!pyobj)
+                continue;
+            Py::Object pyObj = Py::asObject(pyobj);
+            if (!PyObject_TypeCheck(pyobj, &Data::ComplexGeoDataPy::Type))
+                continue;
+            Base::Rotation rot;
+            if (!static_cast<Data::ComplexGeoDataPy*>(pyobj)->getComplexGeoDataPtr()->getRotation(rot))
+                rot = mat;
+            normal += rot.multVec(Base::Vector3d(0,0,1));
+            xnormal += rot.multVec(Base::Vector3d(1,0,0));
+            if (pickedPoints[i] == Base::Vector3d())
+                base += Base::Placement(mat).getPosition();
+            else
+                base += pickedPoints[i];
+            if (++count == ViewParams::getMaxViewSelections())
+                break;
+        }
+    }
+    if (count == 0)
+        return;
+    normal /= count;
+    normal.Normalize();
+    xnormal /= count;
+    xnormal.Normalize();
+    base /= count;
+
+#if 1
+    Base::Vector3d xdir(xnormal);
+#else
+    Base::Vector3d xdir(1,0,0);
+    Base::Vector3d origin(0,0,0);
+    xdir.ProjectToPlane(base, normal);
+    origin.ProjectToPlane(base, normal);
+    xdir -= origin;
+    if (xdir.Sqr() < 1e-14)
+        xdir = Base::Vector3d(1,0,0);
+    else
+        xdir.Normalize();
+#endif
+
+    Base::Vector3d zdir(0,0,1);
+    bool faceBack = zdir.Dot(normal) < 0.f;
+    if (backFacing != faceBack) {
+        normal = -normal;
+        xdir = -xdir;
+    }
+    Base::Rotation rot(zdir, normal);
+    rot *= Base::Rotation(Base::Vector3d(1,0,0), rot.multVec(xdir));
+
+    // Make sure the camera relative position of the base/picked point is unchanged
+
+    const SbVec3f &camBase = cam->position.getValue();
+    const SbRotation &camRot = cam->orientation.getValue();
+    SbRotation newCamRot(rot[0], rot[1], rot[2], rot[3]);
+
+    SbVec3f oldBase(base.x, base.y, base.z);
+    SbVec3f newBase;
+    (camRot.inverse()*newCamRot).multVec(oldBase-camBase, newBase);
+    newBase += camBase;
+
+    SbVec3f center = camBase - newBase + oldBase;
+    navigation->setCameraOrientation(newCamRot, &center);
+    navigation->setRotationCenter(oldBase);
+}
+
 void View3DInventorViewer::setRotationCenterSelection()
 {
     if (!guiDocument)

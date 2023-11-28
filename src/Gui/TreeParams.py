@@ -35,7 +35,7 @@ NameSpace = 'Gui'
 ClassName = 'TreeParams'
 ParamPath = 'User parameter:BaseApp/Preferences/TreeView'
 ClassDoc = 'Convenient class to obtain tree view related parameters'
-SourceFile = 'Tree.cpp'
+
 
 Params = [
     ParamBool('SyncSelection', True, on_change=True),

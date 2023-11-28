@@ -49,6 +49,7 @@ class SoFCIndexedFaceSet;
 class MeshGuiExport ViewProviderMeshFaceSet : public ViewProviderMesh
 {
     PROPERTY_HEADER_WITH_OVERRIDE(MeshGui::ViewProviderMeshFaceSet);
+    using inherited = ViewProviderMesh;
 
 public:
     ViewProviderMeshFaceSet();
@@ -56,6 +57,9 @@ public:
 
     void attach(App::DocumentObject *pcFeat) override;
     void updateData(const App::Property*) override;
+
+    bool getElementPicked(const SoPickedPoint *, std::string &subname) const override;
+    bool getDetailPath(const char *subname, SoFullPath *pPath, bool append, SoDetail *&det) const override;
 
 protected:
     void showOpenEdges(bool) override;

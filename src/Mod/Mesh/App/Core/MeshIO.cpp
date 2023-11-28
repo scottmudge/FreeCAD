@@ -62,6 +62,7 @@
 #include "Degeneration.h"
 #include "Iterator.h"
 #include "MeshKernel.h"
+#include "MeshParams.h"
 
 
 using namespace MeshCore;
@@ -1642,6 +1643,26 @@ void MeshOutput::SetAsymptoteSize(const std::string& w, const std::string& h)
 {
     asyWidth = w;
     asyHeight = h;
+}
+
+void MeshOutput::SetAsymptoteWidth(const std::string& w)
+{
+    asyWidth = w;
+}
+
+void MeshOutput::SetAsymptoteHeight(const std::string& h)
+{
+    asyHeight = h;
+}
+
+void Mesh::MeshParams::onAsymptoteWidthChanged()
+{
+    MeshOutput::SetAsymptoteWidth(Mesh::MeshParams::getAsymptoteWidth());
+}
+
+void Mesh::MeshParams::onAsymptoteHeightChanged()
+{
+    MeshOutput::SetAsymptoteHeight(Mesh::MeshParams::getAsymptoteHeight());
 }
 
 void MeshOutput::Transform(const Base::Matrix4D& mat)

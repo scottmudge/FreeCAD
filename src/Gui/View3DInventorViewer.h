@@ -466,6 +466,12 @@ public:
      */
     void viewObjects(const std::vector<App::SubObjectT> &objs, bool extend = false);
 
+    /** Reposition the current camera to see in the normal direction of the selected geometry elements
+     *
+     * @param backFacing: whether to see the back facing side
+     */
+    void viewSelectionNormal(bool backFacing);
+
     void setRotationCenterSelection();
 
     void setGradientBackground(Background);

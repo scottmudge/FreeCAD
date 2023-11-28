@@ -100,7 +100,7 @@ void DrawPage::onChanged(const App::Property* prop)
             Base::Console().Message("Rebuilding Views for: %s/%s\n", getNameInDocument(),
                                     Label.getValue());
             updateAllViews();
-            purgeTouched();
+            // purgeTouched();
         }
     }
     else if (prop == &Template) {

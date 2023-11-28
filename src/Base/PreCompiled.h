@@ -134,6 +134,7 @@
 #include <QMutexLocker>
 #include <QThread>
 #include <QTime>
+#include <QThread>
 #include <QUuid>
 
 

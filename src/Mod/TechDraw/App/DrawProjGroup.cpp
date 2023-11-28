@@ -157,8 +157,10 @@ void DrawProjGroup::onChanged(const App::Property* prop)
 
     if (prop == &Rotation) {
         if (!DrawUtil::fpCompare(Rotation.getValue(), 0.0)) {
+            bool touched = isTouched();
             Rotation.setValue(0.0);
-            purgeTouched();
+            if (!touched)
+                purgeTouched();
         }
         return;
     }
@@ -1062,8 +1064,8 @@ void DrawProjGroup::updateChildrenScale()
         }
 
         view->Scale.setValue(getScale());
-        view->Scale.purgeTouched();
-        view->purgeTouched();
+        // view->Scale.purgeTouched();
+        // view->purgeTouched();
     }
 }
 
@@ -1258,9 +1260,9 @@ void DrawProjGroup::updateSecondaryDirs()
         std::string type = v->Type.getValueAsString();
         data = saveVals[type];
         v->Direction.setValue(data.first);
-        v->Direction.purgeTouched();
+        // v->Direction.purgeTouched();
         v->XDirection.setValue(data.second);
-        v->XDirection.purgeTouched();
+        // v->XDirection.purgeTouched();
     }
     recomputeChildren();
 }

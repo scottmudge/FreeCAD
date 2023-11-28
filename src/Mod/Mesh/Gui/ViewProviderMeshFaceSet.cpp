@@ -30,7 +30,13 @@
 # include <Inventor/nodes/SoIndexedLineSet.h>
 # include <Inventor/nodes/SoMaterial.h>
 # include <Inventor/nodes/SoSeparator.h>
+# include <Inventor/nodes/SoSwitch.h>
+# include <Inventor/SoPickedPoint.h>
+# include <Inventor/details/SoFaceDetail.h>
+# include <Inventor/SoFullPath.h>
 #endif
+
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <App/Document.h>
 #include <Gui/Selection.h>
@@ -38,6 +44,7 @@
 #include <Mod/Mesh/App/MeshFeature.h>
 #include <Mod/Mesh/App/Core/Iterator.h>
 #include <Mod/Mesh/App/Core/MeshKernel.h>
+#include <Mod/Mesh/App/MeshParams.h>
 
 #include "ViewProviderMeshFaceSet.h"
 #include "SoFCIndexedFaceSet.h"
@@ -85,8 +92,7 @@ void ViewProviderMeshFaceSet::attach(App::DocumentObject *pcFeat)
     pcShapeGroup->addChild(pcMeshFaces);
 
     // read the threshold from the preferences
-    Base::Reference<ParameterGrp> hGrp = Gui::WindowParameter::getDefaultParameter()->GetGroup("Mod/Mesh");
-    int size = hGrp->GetInt("RenderTriangleLimit", -1);
+    int size = Mesh::MeshParams::getRenderTriangleLimit();
     if (size > 0) {
         pcMeshShape->renderTriangleLimit = (unsigned int)(pow(10.0f,size));
         static_cast<SoFCIndexedFaceSet*>(pcMeshFaces)->renderTriangleLimit = (unsigned int)(pow(10.0f,size));
@@ -191,4 +197,58 @@ SoNode* ViewProviderMeshFaceSet::getCoordNode() const
     if (directRendering)
         return this->pcMeshNode;
     return this->pcMeshCoord;
+}
+
+bool ViewProviderMeshFaceSet::getElementPicked(const SoPickedPoint *pp, std::string &subname) const
+{
+    const SoDetail *detail = pp->getDetail();
+    if (!detail || !Mesh::MeshParams::getSubElementSelection())
+        return inherited::getElementPicked(pp,subname);
+
+    std::ostringstream ss;
+    auto node = pp->getPath()->getTail();
+    if (node == pcMeshFaces && detail->isOfType(SoFaceDetail::getClassTypeId())) {
+        const SoFaceDetail* face_detail = static_cast<const SoFaceDetail*>(detail);
+        int face = face_detail->getPartIndex() + 1;
+        ss << "Facet" << face;
+    } else
+        return inherited::getElementPicked(pp,subname);
+
+    subname = ss.str();
+    return true;
+}
+
+bool ViewProviderMeshFaceSet::getDetailPath(const char *subname,
+                                            SoFullPath *pPath,
+                                            bool append,
+                                            SoDetail *&det) const
+{
+    static const std::vector<const char *> elementNames = {"Facet"};
+
+    if (!subname)
+        subname = "";
+    auto subelement = Data::ComplexGeoData::findElementName(subname);
+    Data::IndexedName indexedName(subname, elementNames, /*allowOthers*/false);
+    if (!subelement || subelement != subname || indexedName.getIndex() <= 0)
+        return inherited::getDetailPath(subname, pPath, append, det);
+
+    if(pcRoot->findChild(pcModeSwitch) < 0) {
+        // this is possible in case of editing, where the switch node of the
+        // linked view object is temporarily removed from its root. We must
+        // still return true here, to prevent the selection action leaking to
+        // parent and sibling nodes.
+        if(append)
+            pPath->append(pcRoot);
+        return true;
+    }
+
+    if (append) {
+        pPath->append(pcRoot);
+        pPath->append(pcModeSwitch);
+    }
+
+    auto fdet = new SoFaceDetail;
+    det = fdet;
+    fdet->setPartIndex(indexedName.getIndex() - 1);
+    return true;
 }

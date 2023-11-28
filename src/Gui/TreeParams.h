@@ -47,7 +47,7 @@ namespace Gui {
  *
  * Once modified, you can regenerate the header and the source file,
  * @code
- *     python3 -m cogapp -r Gui/TreeParams.h Tree.cpp
+ *     python3 -m cogapp -r Gui/TreeParams.h Gui/TreeParams.cpp
  * @endcode
  *
  * You can add a new parameter by adding lines in Gui/TreeParams.py. Available
@@ -58,7 +58,7 @@ namespace Gui {
  * @endcode
  *
  * If there is special handling on parameter change, pass in on_change=True.
- * And you need to provide a function implementation in Tree.cpp with
+ * And you need to provide a function implementation in Gui/TreeParams.cpp with
  * the following signature.
  * @code
  *     void TreeParams:on<parameter_name>Changed()

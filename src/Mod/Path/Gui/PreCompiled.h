@@ -53,6 +53,8 @@
 #include <TopExp_Explorer.hxx>
 
 // Qt Toolkit
+#include <QAction>
+#include <QApplication>
 #include <QDialog>
 #include <QDir>
 #include <QFileInfo>

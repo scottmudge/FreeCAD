@@ -31,10 +31,11 @@
 # include <gp_Lin.hxx>
 # include <Geom_Surface.hxx>
 # include <GProp_GProps.hxx>
-# include <ShapeAnalysis_Surface.hxx>
 # include <TopoDS.hxx>
 # include <TopoDS_Shape.hxx>
 #endif
+
+#include <ShapeAnalysis_Surface.hxx>
 
 #include <Base/Console.h>
 #include <Base/Exception.h>

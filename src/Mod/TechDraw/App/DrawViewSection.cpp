@@ -445,11 +445,16 @@ void DrawViewSection::doSectionCut(const SectionParams &params)
     TopExp_Explorer expl(params.baseShape, TopAbs_SOLID);
     for (; expl.More(); expl.Next()) {
         const TopoDS_Solid& s = TopoDS::Solid(expl.Current());
-#if OCC_VERSION_HEX < 0x070500
+#if OCC_VERSION_HEX < 0x070600
         BRepAlgoAPI_Cut mkCut(s, params.cuttingTool);
-        mkCut->SetProgressIndicator(pi);
+#   if OCC_VERSION_HEX < 0x070500
+        mkCut.SetProgressIndicator(pi);
         pi->NewScope(100, progress->text().c_str());
         pi->Show();
+#   else
+        Message_ProgressScope scope(pi->Start(), progress->text().c_str(), 100);
+        mkCut.SetProgressIndicator(scope);
+#   endif
 #else
         BRepAlgoAPI_Cut mkCut(s, params.cuttingTool, pi->Start());
 #endif
@@ -474,11 +479,16 @@ void DrawViewSection::doSectionCut(const SectionParams &params)
     if (params.trimAfterCut) {
         progress->setText((progress->text() + QT_TRANSLATE_NOOP("TechDraw", " (second pass)")).c_str());
 
-#if OCC_VERSION_HEX < 0x070500
+#if OCC_VERSION_HEX < 0x070600
         BRepAlgoAPI_Cut mkCut2(cutPieces, params.cuttingTool);
-        mkCut->SetProgressIndicator(pi);
+#   if OCC_VERSION_HEX < 0x070500
+        mkCut2.SetProgressIndicator(pi);
         pi->NewScope(100, progress->text().c_str());
         pi->Show();
+#   else
+        Message_ProgressScope scope(pi->Start(), progress->text().c_str(), 100);
+        mkCut2.SetProgressIndicator(scope);
+#   endif
 #else
         BRepAlgoAPI_Cut mkCut2(cutPieces, params.cuttingTool, pi->Start());
 #endif

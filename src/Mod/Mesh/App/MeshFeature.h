@@ -84,6 +84,9 @@ public:
 
     /// handles the MeshPy object
     PyObject* getPyObject() override;
+
+    DocumentObject *getSubObject(const char *subname, PyObject **pyObj, 
+            Base::Matrix4D *mat, bool transform, int depth) const override;
 };
 
 using FeatureCustom = App::FeatureCustomT<Feature>;

@@ -146,6 +146,10 @@ public:
     return this->len;
   }
 
+  int size() const {
+    return this->len;
+  }
+
   explicit operator bool() const {
     return this->len>0;
   }

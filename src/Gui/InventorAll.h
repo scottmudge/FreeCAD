@@ -56,6 +56,7 @@
 #include <Inventor/SoRenderManager.h>
 
 #include <Inventor/actions/SoAction.h>
+#include <Inventor/actions/SoAudioRenderAction.h>
 #include <Inventor/actions/SoBoxHighlightRenderAction.h>
 #include <Inventor/actions/SoCallbackAction.h>
 #include <Inventor/actions/SoGetBoundingBoxAction.h>
@@ -94,10 +95,12 @@
 #include <Inventor/draggers/SoTransformerDragger.h>
 
 #include <Inventor/elements/SoCacheElement.h>
+#include <Inventor/elements/SoClipPlaneElement.h>
 #include <Inventor/elements/SoComplexityElement.h>
 #include <Inventor/elements/SoComplexityTypeElement.h>
 #include <Inventor/elements/SoCoordinateElement.h>
 #include <Inventor/elements/SoCreaseAngleElement.h>
+#include <Inventor/elements/SoCullElement.h>
 #include <Inventor/elements/SoDrawStyleElement.h>
 #include <Inventor/elements/SoFocalDistanceElement.h>
 #include <Inventor/elements/SoFontNameElement.h>
@@ -108,6 +111,7 @@
 #include <Inventor/elements/SoLazyElement.h>
 #include <Inventor/elements/SoLightModelElement.h>
 #include <Inventor/elements/SoLineWidthElement.h>
+#include <Inventor/elements/SoLinePatternElement.h>
 #include <Inventor/elements/SoMaterialBindingElement.h>
 #include <Inventor/elements/SoModelMatrixElement.h>
 #include <Inventor/elements/SoNormalBindingElement.h>
@@ -130,6 +134,7 @@
 #include <Inventor/elements/SoCullElement.h>
 #include <Inventor/elements/SoLinePatternElement.h>
 #include <Inventor/elements/SoGLVBOElement.h>
+#include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
 
 #include <Inventor/engines/SoCalculator.h>
 #include <Inventor/engines/SoComposeVec3f.h>

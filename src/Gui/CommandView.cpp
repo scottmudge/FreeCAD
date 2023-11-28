@@ -1725,6 +1725,61 @@ bool StdCmdViewSelectionExtend::isActive()
   return getGuiApplication()->sendHasMsgToActiveView("ViewSelectionExtend");
 }
 
+//===========================================================================
+// Std_ViewSelectionFront
+//===========================================================================
+
+DEF_STD_CMD_A(StdCmdViewSelectionFront)
+
+StdCmdViewSelectionFront::StdCmdViewSelectionFront()
+  : Command("Std_ViewSelectionFront")
+{
+    sGroup        = "Standard-View";
+    sMenuText     = QT_TR_NOOP("View front face");
+    sToolTipText  = QT_TR_NOOP("Rotate the camera view to look in the front facing\n"
+                               "normal direction of the (pre)selected element");
+    sWhatsThis    = "Std_ViewSelectionFront";
+    sStatusTip    = sMenuText;
+    sAccel        = "V, N";
+    eType         = Alter3DView | NoDefaultAction;
+}
+
+void StdCmdViewSelectionFront::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+    doCommand(Command::Gui,"Gui.SendMsgToActiveView('ViewSelectionFront')");
+}
+
+bool StdCmdViewSelectionFront::isActive()
+{
+    return getGuiApplication()->sendHasMsgToActiveView("ViewSelectionFront");
+}
+
+DEF_STD_CMD_A(StdCmdViewSelectionBack)
+
+StdCmdViewSelectionBack::StdCmdViewSelectionBack()
+  : Command("Std_ViewSelectionBack")
+{
+    sGroup        = "Standard-View";
+    sMenuText     = QT_TR_NOOP("View back face");
+    sToolTipText  = QT_TR_NOOP("Rotate the camera view to look in the back facing\n"
+                               "normal direction of the (pre)selected element");
+    sWhatsThis    = "Std_ViewSelectionBack";
+    sStatusTip    = sMenuText;
+    sAccel        = "V, B";
+    eType         = Alter3DView | NoDefaultAction;
+}
+
+void StdCmdViewSelectionBack::activated(int iMsg)
+{
+    Q_UNUSED(iMsg);
+    doCommand(Command::Gui,"Gui.SendMsgToActiveView('ViewSelectionBack')");
+}
+
+bool StdCmdViewSelectionBack::isActive()
+{
+    return getGuiApplication()->sendHasMsgToActiveView("ViewSelectionBack");
+}
 
 //===========================================================================
 // Std_RotationCenterSelection
@@ -1776,6 +1831,8 @@ public:
         addCommand(new StdCmdViewFitSelection());
         addCommand(new StdCmdViewSelectionExtend());
         addCommand(new StdCmdRotationCenterSelection());
+        addCommand(new StdCmdViewSelectionFront());
+        addCommand(new StdCmdViewSelectionBack());
         addCommand();
         addCommand(new StdCmdViewIsometric());
         addCommand(new StdCmdViewDimetric());

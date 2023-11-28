@@ -177,6 +177,8 @@ QWidget * PropertyItemDelegate::createEditor (QWidget * parent, const QStyleOpti
     if(parentEditor)
         parentEditor->closeEditor();
 
+    editingInited = false;
+
     if (childItem->isSeparator())
         return nullptr;
 
@@ -242,8 +244,9 @@ void PropertyItemDelegate::valueChanged()
 
 void PropertyItemDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
 {
-    if (!index.isValid())
+    if (!index.isValid() || editingInited)
         return;
+    editingInited = true;
     QVariant data = index.data(Qt::EditRole);
     auto childItem = static_cast<PropertyItem*>(index.internalPointer());
     editor->blockSignals(true);

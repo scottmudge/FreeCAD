@@ -41,10 +41,11 @@
 # include <QTextStream>
 # include <QTimer>
 # include <QWindow>
+#endif
+
 # if QT_VERSION >= 0x050600 && defined(Q_OS_WIN32)
 #  include <QtPlatformHeaders/QWindowsWindowFunctions>
 # endif
-#endif
 
 #include <QLoggingCategory>
 

@@ -39,6 +39,7 @@
 #include <Mod/Mesh/App/MeshFeature.h>
 #include <Mod/Mesh/App/Core/Evaluation.h>
 #include <Mod/Mesh/App/Core/Degeneration.h>
+#include <Mod/Mesh/App/MeshParams.h>
 
 #include "DlgEvaluateMeshImp.h"
 #include "ui_DlgEvaluateMesh.h"
@@ -131,11 +132,9 @@ DlgEvaluateMeshImp::DlgEvaluateMeshImp(QWidget* parent, Qt::WindowFlags fl)
     d->ui.line_8->setFrameShape(QFrame::HLine);
     d->ui.line_8->setFrameShadow(QFrame::Sunken);
 
-    ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath
-            ("User parameter:BaseApp/Preferences/Mod/Mesh/Evaluation");
-    d->checkNonManfoldPoints = hGrp->GetBool("CheckNonManifoldPoints", false);
-    d->enableFoldsCheck = hGrp->GetBool("EnableFoldsCheck", false);
-    d->strictlyDegenerated = hGrp->GetBool("StrictlyDegenerated", true);
+    d->checkNonManfoldPoints = Mesh::MeshParams::getCheckNonManifoldPoints();
+    d->enableFoldsCheck = Mesh::MeshParams::getEnableFoldsCheck();
+    d->strictlyDegenerated = Mesh::MeshParams::getStrictlyDegenerated();
     if (d->strictlyDegenerated)
         d->epsilonDegenerated = 0.0f;
     else
@@ -163,11 +162,9 @@ DlgEvaluateMeshImp::~DlgEvaluateMeshImp()
     }
 
     try {
-        ParameterGrp::handle hGrp = App::GetApplication().GetParameterGroupByPath
-                ("User parameter:BaseApp/Preferences/Mod/Mesh/Evaluation");
-        hGrp->SetBool("CheckNonManifoldPoints", d->checkNonManfoldPoints);
-        hGrp->SetBool("EnableFoldsCheck", d->enableFoldsCheck);
-        hGrp->SetBool("StrictlyDegenerated", d->strictlyDegenerated);
+        Mesh::MeshParams::setCheckNonManifoldPoints(d->checkNonManfoldPoints);
+        Mesh::MeshParams::setEnableFoldsCheck(d->enableFoldsCheck);
+        Mesh::MeshParams::setStrictlyDegenerated(d->strictlyDegenerated);
     }
     catch (...) {
     }

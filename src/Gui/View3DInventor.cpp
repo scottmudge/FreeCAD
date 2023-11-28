@@ -399,6 +399,14 @@ bool View3DInventor::onMsg(const char* pMsg, const char** ppReturn)
         syncBoundViews(pMsg);
         return true;
     }
+    else if (strcmp("ViewSelectionFront", pMsg) == 0) {
+        _viewer->viewSelectionNormal(false);
+        return true;
+    }
+    else if (strcmp("ViewSelectionBack", pMsg) == 0) {
+        _viewer->viewSelectionNormal(true);
+        return true;
+    }
     else if (strcmp("RotationCenterSelection",pMsg) == 0) {
         _viewer->setRotationCenterSelection();
         return true;
@@ -570,6 +578,12 @@ bool View3DInventor::onHasMsg(const char* pMsg) const
         return true;
     }
     else if (strcmp("ViewSelectionExtend", pMsg) == 0) {
+        return true;
+    }
+    else if(strcmp("ViewSelectionFront",pMsg) == 0) {
+        return true;
+    }
+    else if(strcmp("ViewSelectionBack",pMsg) == 0) {
         return true;
     }
     else if (strcmp("RotationCenterSelection", pMsg) == 0) {
