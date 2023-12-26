@@ -25,7 +25,7 @@
 
 #include <functional>
 
-#include <QTime>
+#include <QElapsedTimer>
 #include <QDialog>
 #include <QPointer>
 #include <QPushButton>
@@ -162,7 +162,7 @@ private:
     QBrush selBrush;
     QFont selFont;
 
-    QTime enterTime;
+    QElapsedTimer enterTime;
 
     App::SubObjectT selContext;
     std::vector<App::DocumentObjectT> initObjs;

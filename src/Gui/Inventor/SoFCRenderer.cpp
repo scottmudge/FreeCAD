@@ -2290,6 +2290,7 @@ SoFCRenderer::render(SoGLRenderAction * action)
                       && PRIVATE(this)->linesontop.size();
   int pass = RenderPassNormal;
 
+#if 0
   if (hassel || hasontop || PRIVATE(this)->hlwholeontop) {
     // If there is lines/points on top perform a depth write only rendering
     // pass for all the triangles on top, so that we can distinguish line style
@@ -2326,6 +2327,7 @@ SoFCRenderer::render(SoGLRenderAction * action)
 
     pass = RenderPassLinePattern;
   }
+#endif
 
   // Even if we are calling renderOpaque() below (because of lines and points
   // render), we shall still respect the transparency setting, e.g. we'll use

@@ -813,7 +813,8 @@ void TaskSketcherElements::slotElementsChanged(void)
 
     ui->elementsWidget->blockSignals(false);
 
-    ui->elementsWidget->setCurrentIndex(ui->elementsWidget->rootIndex().child(currentRow, 0));
+    ui->elementsWidget->setCurrentIndex(
+            ui->elementsWidget->model()->index(currentRow, 0, ui->elementsWidget->rootIndex()));
 }
 
 

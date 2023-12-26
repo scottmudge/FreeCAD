@@ -347,9 +347,9 @@ public:
     void wheelEvent(QWheelEvent *ev)
     {
         if (ev->modifiers() == Qt::ControlModifier)
-            animate(ev->delta()<0 ? -1 : 1);
+            animate(ev->angleDelta().y()<0 ? -1 : 1);
         else
-            animate(ev->delta()<0 ? -8 : 8);
+            animate(ev->angleDelta().y()<0 ? -8 : 8);
     }
 
     void animate(qreal step)

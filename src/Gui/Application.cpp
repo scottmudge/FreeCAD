@@ -59,6 +59,7 @@
 #include <Base/Parameter.h>
 #include <Base/Stream.h>
 #include <Base/Tools.h>
+#include <Base/QtTools.h>
 
 #include <Language/Translator.h>
 #include "Renderer/Renderer.h"
@@ -1835,21 +1836,13 @@ QStringList Application::workbenches() const
     QStringList hidden, extra;
     if (ht != config.end()) {
         QString items = QString::fromUtf8(ht->second.c_str());
-#if QT_VERSION >= QT_VERSION_CHECK(5,15,0)
         hidden = items.split(QLatin1Char(';'), Qt::SkipEmptyParts);
-#else
-        hidden = items.split(QLatin1Char(';'), QString::SkipEmptyParts);
-#endif
         if (hidden.isEmpty())
             hidden.push_back(QStringLiteral(""));
     }
     if (et != config.end()) {
         QString items = QString::fromUtf8(et->second.c_str());
-#if QT_VERSION >= QT_VERSION_CHECK(5,15,0)
         extra = items.split(QLatin1Char(';'), Qt::SkipEmptyParts);
-#else
-        extra = items.split(QLatin1Char(';'), QString::SkipEmptyParts);
-#endif
         if (extra.isEmpty())
             extra.push_back(QStringLiteral(""));
     }

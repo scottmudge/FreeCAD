@@ -1217,7 +1217,7 @@ void CmdTechDrawSymbol::activated(int iMsg)
 
     // Reading an image
     QString filename = Gui::FileDialog::getOpenFileName(Gui::getMainWindow(),
-        QObject::tr("Choose an SVG file to open"), QString::null,
+        QObject::tr("Choose an SVG file to open"), QString(),
         QStringLiteral("%1 (*.svg *.svgz);;%2 (*.*)").
         arg(QObject::tr("Scalable Vector Graphic"),
             QObject::tr("All Files")));

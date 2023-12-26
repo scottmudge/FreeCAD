@@ -25,6 +25,7 @@
 # include <QTextStream>
 # include <QFile>
 # include <QMessageBox>
+# include <QTime>
 #endif
 
 #include <QCompleter>

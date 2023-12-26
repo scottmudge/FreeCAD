@@ -36,8 +36,14 @@ public:
     explicit QGICMark(int index);
     ~QGICMark() {}
 
-    enum {Type = QGraphicsItem::UserType + 171};
-    int type() const override { return Type;}
+    // Overriding type() is necessary unless we want to quick cast the itme
+    // using qgraphics_cast. In this case, we must not override it because we
+    // actually want to qgraphics_cast QGIMark into QGIVertex, in
+    // MDIViewPage::setTreeToSceneSelect()
+    //
+    // enum {Type = QGraphicsItem::UserType + 171};
+    // int type() const override { return Type;}
+
     virtual void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = nullptr ) override;
 
     virtual QRectF boundingRect() const override;

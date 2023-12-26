@@ -8757,8 +8757,6 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                                 sketchPlane.Position().Direction(), Precision::Confusion())) {
                         // We can't use gp_Pln::Distance() because we need to
                         // know which side the plane is regarding the sketch
-                        // plane, i.e. we need the returned distance to be
-                        // signed.
                         // double d = pln.Distance(sketchPlane);
                         const gp_Pnt& aP = sketchPlane.Location();
                         const gp_Pnt& aLoc = pln.Location ();
@@ -8772,9 +8770,30 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                         projShape.transformShape(Part::TopoShape::convert(trsf), /*copy*/false);
                     } else {
                         BRepOffsetAPI_NormalProjection mkProj(aProjFace);
+
                         mkProj.Add(edge);
                         mkProj.Build();
                         projShape.setShape(mkProj.Projection());
+
+#if OCC_VERSION_HEX >= 0x070700
+                        if (projShape.isNull() || !projShape.hasSubShape(TopAbs_EDGE)) {
+                            // Work around OCC 7.7 bug by forcing internal
+                            // continuity to C2 (changed to C1 in OCC 7.7, see
+                            // BRepAlgo_NormalProjection::SetDefaultParams()).
+                            // The bug(?) was introduced in
+                            // https://git.dev.opencascade.org/gitweb/?p=occt.git;a=commit;h=4ec4e4e8a8d39a632aed54d0a1fea36c1320a0ce
+                            auto Continuity = GeomAbs_C2;
+                            double Tol3d = 1.e-4;
+                            double Tol2d = Pow(Tol3d, 2./3);
+                            double MaxDegree = 14;
+                            double MaxSeg    = 16;
+                            BRepOffsetAPI_NormalProjection retryProj(aProjFace);
+                            retryProj.SetParams(Tol3d, Tol2d, Continuity, MaxDegree, MaxSeg);
+                            retryProj.Add(edge);
+                            retryProj.Build();
+                            projShape.setShape(retryProj.Projection());
+                        }
+#endif
                         if (projShape.isNull() || !projShape.hasSubShape(TopAbs_EDGE)) {
                             FC_ERR("Invalid geometry in sketch " << getFullName() << ": " << key);
                             return;

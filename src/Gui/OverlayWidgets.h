@@ -244,7 +244,7 @@ public:
         State_HintHidden,
         State_Hidden,
     };
-    void setState(State);
+    void setState(State, bool user_triggered=false);
     State getState() const {return _state;}
 
     void onSplitterResize(int index);

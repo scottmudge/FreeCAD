@@ -43,6 +43,7 @@
 #include <Base/Exception.h>
 #include <Base/Parameter.h>
 #include <Base/Tools.h>
+#include <Base/QtTools.h>
 
 #include "DlgParameterImp.h"
 #include "ui_DlgParameter.h"
@@ -524,11 +525,7 @@ void DlgParameterImp::onChangeParameterSet(int itemPos)
     ParameterGrp::handle hGrp = App::GetApplication().GetUserParameter().GetGroup(
             "BaseApp/Preferences/ParameterEditor/LastGroup");
     QString path = QString::fromUtf8(hGrp->GetASCII(paramName).c_str());
-#if QT_VERSION >= QT_VERSION_CHECK(5,15,0)
     QStringList paths = path.split(QStringLiteral("."), Qt::SkipEmptyParts);
-#else
-    QStringList paths = path.split(QStringLiteral("."), QString::SkipEmptyParts);
-#endif
 
     QTreeWidgetItem* parent = nullptr;
     for (int index=0; index < paramGroup->topLevelItemCount() && !paths.empty(); index++) {

@@ -259,8 +259,15 @@ public:
             auto parentSize = static_cast<QResizeEvent*>(e)->size();
             if (auto label = qobject_cast<QLabel*>(o)) {
                 QSize imageSize;
-                if (auto pixmap = label->pixmap())
+#if QT_VERSION < QT_VERSION_CHECK(5,15,0)
+                auto pixmap = label->pixmap();
+                if (pixmap && !pixmap->isNull())
                     imageSize = pixmap->size();
+#else
+                auto pixmap = label->pixmap(Qt::ReturnByValue);
+                if (!pixmap.isNull())
+                    imageSize = pixmap.size();
+#endif
                 else if (auto movie = label->movie())
                     imageSize = movie->frameRect().size();
                 if (!label->hasScaledContents()

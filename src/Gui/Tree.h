@@ -28,7 +28,6 @@
 #include <memory>
 #include <QElapsedTimer>
 #include <QStyledItemDelegate>
-#include <QTime>
 #include <QTreeWidget>
 
 #include <App/Application.h>
@@ -286,7 +285,7 @@ private:
     QTimer* selectTimer;
     QTimer* preselectTimer;
     QTimer* toolTipTimer;
-    QTime preselectTime;
+    QElapsedTimer preselectTime;
     std::unordered_map<const Gui::Document*,DocumentItem*> DocumentMap;
     std::unordered_map<App::DocumentObject*,std::set<DocumentObjectDataPtr> > ObjectTable;
 

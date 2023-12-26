@@ -36,6 +36,7 @@
 #endif
 
 #include <Base/Interpreter.h>
+#include <Base/QtTools.h>
 #include <App/Color.h>
 
 #include "PythonConsole.h"
@@ -875,7 +876,7 @@ void PythonConsole::runSource(const QString& line)
     QStringList statements;
     QStringList lines;
     bool pending = d->interpreter->hasPending();
-    for (const auto &line : line.split(QLatin1Char('\n'), QString::SkipEmptyParts)) {
+    for (const auto &line : line.split(QLatin1Char('\n'), Qt::SkipEmptyParts)) {
         if (!line[0].isSpace() && (lines.size() || pending)) {
             pending = false;
             lines.append(QString());

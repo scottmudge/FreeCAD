@@ -347,10 +347,22 @@ struct ShapeSources {
 class TopoShape::Cache: public std::enable_shared_from_this<TopoShape::Cache>
 {
 public:
+    // Reference counted element map for the owner TopoShape. The ElementMap of
+    // a TopoShape is normally accessed through the inherited member function
+    // ComplexGeoData::elementMap(). The extra shared pointer here is so that
+    // other TopoShape instances with the same Cache can resuse the map once
+    // generated.
     ElementMapPtr cachedElementMap;
+
+    // Location of the original cached TopoDS_Shape.
     TopLoc_Location subLocation;
     
+    // The cached TopoDS_Shape stripped off any location (i.e. a null TopoDS_Shape::myLocation).
     TopoDS_Shape shape;
+
+    // Location (and the inverted location) of the last ancester shape used to
+    // find this TopoShape. These two members are used to avoid repetitive
+    // inverting the location of the same ancestor
     TopLoc_Location loc;
     TopLoc_Location locInv;
 
@@ -360,11 +372,24 @@ public:
         bool inited = false;
         TopTools_IndexedDataMapOfShapeListOfShape shapes;
     };
+
+    // Class for caching the ancestor and children shapes mapping of a single type
     class Info {
     private:
-        Cache *owner = 0;
+        Cache *owner = nullptr;
+
+        // OCCT map from the owner TopoShape to a list of children (i.e. lower
+        // hierarchical) TopoDS_Shape
         TopTools_IndexedMapOfShape shapes;
+
+        // One to one corresponding TopoShape to each child TopoDS_Shape
         std::vector<TopoShape> topoShapes;
+
+        // Caches the OCCT ancester shape maps which are used to find
+        // intermediate ancestors of any given sub shape. For example,
+        // Cache::infos[TopAbs_FACE].ancestors[TopAbs_EDGE] stores an OCCT
+        // TopTools_IndexedDataMapOfShapeListOfShape that can return all faces
+        // containing a given edge.
         std::array<AncestorInfo, TopAbs_SHAPE+1> ancestors;
 
         TopoShape _getTopoShape(const TopoShape &parent, int index) {
@@ -464,7 +489,11 @@ public:
         friend Cache;
     };
 
+    // Ancestor and children shape caches of all shape types. Note that
+    // infos[TopAbs_SHAPE] is also valid and stores the direct children of a
+    // compound shape
     std::array<Info,TopAbs_SHAPE+1> infos;
+
     std::map<ShapeRelationKey,QVector<Data::MappedElement> > relations;
 
     Cache(const TopoDS_Shape &s)
@@ -520,7 +549,7 @@ public:
     }
 
     TopoDS_Shape findAncestor(const TopoDS_Shape &parent, const TopoDS_Shape &subshape,
-            TopAbs_ShapeEnum type, std::vector<TopoDS_Shape> *ancestors=0)
+            TopAbs_ShapeEnum type, std::vector<TopoDS_Shape> *ancestors=nullptr)
     {
         TopoDS_Shape ret;
         if(shape.IsNull() || subshape.IsNull() || type==TopAbs_SHAPE)

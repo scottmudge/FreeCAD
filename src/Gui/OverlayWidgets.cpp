@@ -545,7 +545,9 @@ void OverlayTabWidget::startHide()
             || _state > State_Normal
             || (_animator->state() == QAbstractAnimation::Running
                 && _animator->startValue().toReal() == 0.0))
+    {
         return;
+    }
     int duration = OverlayParams::getDockOverlayAnimationDuration();
     if (!duration)
         hide();
@@ -809,8 +811,13 @@ void OverlayTabWidget::restore(ParameterGrp::handle handle)
         setAutoMode(EditShow);
     else if (handle->GetBool("TaskShow", false))
         setAutoMode(TaskShow);
-    else
+    else {
         setAutoMode(NoAutoMode);
+        if (handle->GetBool("Closed", false)) {
+            setState(State_Hidden);
+        } else if (!isVisible() && !checkAutoHide())
+            setState(State_Showing);
+    }
 
     setTransparent(handle->GetBool("Transparent", false));
 
@@ -961,7 +968,7 @@ void OverlayTabWidget::onAction(QAction *action)
     OverlayManager::instance()->refresh(this);
 }
 
-void OverlayTabWidget::setState(State state)
+void OverlayTabWidget::setState(State state, bool user_triggered)
 {
     if (_state == state)
         return;
@@ -977,6 +984,10 @@ void OverlayTabWidget::setState(State state)
         }
         // fall through
     case State_Showing:
+        if (user_triggered && !_saving) {
+            Base::StateLocker lock(_saving);
+            hGrp->SetBool("Closed", false);
+        }
         _state = state;
         hide();
         if (dockArea == Qt::RightDockWidgetArea)
@@ -1019,6 +1030,10 @@ void OverlayTabWidget::setState(State state)
         _graphicsEffectTab->setEnabled(true);
         break;
     case State_Hidden:
+        if (user_triggered && !_saving) {
+            Base::StateLocker lock(_saving);
+            hGrp->SetBool("Closed", true);
+        }
         startHide();
         _state = state;
         break;
@@ -3258,27 +3273,27 @@ public:
             return;
         case OverlayManager::ToggleLeft:
             if (_LeftOverlay->isVisible())
-                _LeftOverlay->setState(OverlayTabWidget::State_Hidden);
+                _LeftOverlay->setState(OverlayTabWidget::State_Hidden, /*user_triggered*/true);
             else
-                _LeftOverlay->setState(OverlayTabWidget::State_Showing);
+                _LeftOverlay->setState(OverlayTabWidget::State_Showing, /*user_triggered*/true);
             break;
         case OverlayManager::ToggleRight:
             if (_RightOverlay->isVisible())
-                _RightOverlay->setState(OverlayTabWidget::State_Hidden);
+                _RightOverlay->setState(OverlayTabWidget::State_Hidden, /*user_triggered*/true);
             else
-                _RightOverlay->setState(OverlayTabWidget::State_Showing);
+                _RightOverlay->setState(OverlayTabWidget::State_Showing, /*user_triggered*/true);
             break;
         case OverlayManager::ToggleTop:
             if (_TopOverlay->isVisible())
-                _TopOverlay->setState(OverlayTabWidget::State_Hidden);
+                _TopOverlay->setState(OverlayTabWidget::State_Hidden, /*user_triggered*/true);
             else
-                _TopOverlay->setState(OverlayTabWidget::State_Showing);
+                _TopOverlay->setState(OverlayTabWidget::State_Showing, /*user_triggered*/true);
             break;
         case OverlayManager::ToggleBottom:
             if (_BottomOverlay->isVisible())
-                _BottomOverlay->setState(OverlayTabWidget::State_Hidden);
+                _BottomOverlay->setState(OverlayTabWidget::State_Hidden, /*user_triggered*/true);
             else
-                _BottomOverlay->setState(OverlayTabWidget::State_Showing);
+                _BottomOverlay->setState(OverlayTabWidget::State_Showing, /*user_triggered*/true);
             break;
         default:
             break;
@@ -4436,7 +4451,12 @@ void OverlayManager::Private::interceptEvent(QWidget *widget, QEvent *ev)
     }
     case QEvent::Wheel: {
         auto we = static_cast<QWheelEvent*>(ev);
-        lastIntercept = getChildAt(widget, we->globalPos());
+#if QT_VERSION < QT_VERSION_CHECK(5,15,0)
+        auto pos = we->globalPos();
+#else
+        auto pos = we->globalPosition().toPoint();
+#endif
+        lastIntercept = getChildAt(widget, pos);
         if (qobject_cast<View3DInventorViewer*>(lastIntercept->parentWidget())) {
             for (auto parent = lastIntercept->parentWidget(); parent; parent = parent->parentWidget()) {
                 if (qobject_cast<QGraphicsView*>(parent)) {
@@ -4445,8 +4465,8 @@ void OverlayManager::Private::interceptEvent(QWidget *widget, QEvent *ev)
             }
         }
 #if QT_VERSION >= QT_VERSION_CHECK(5,12,0)
-        QWheelEvent wheelEvent(lastIntercept->mapFromGlobal(we->globalPos()),
-                               we->globalPos(),
+        QWheelEvent wheelEvent(lastIntercept->mapFromGlobal(pos),
+                               pos,
                                we->pixelDelta(),
                                we->angleDelta(),
                                we->buttons(),
@@ -4455,8 +4475,8 @@ void OverlayManager::Private::interceptEvent(QWidget *widget, QEvent *ev)
                                we->inverted(),
                                we->source());
 #else
-        QWheelEvent wheelEvent(lastIntercept->mapFromGlobal(we->globalPos()),
-                               we->globalPos(),
+        QWheelEvent wheelEvent(lastIntercept->mapFromGlobal(pos),
+                               pos,
                                we->pixelDelta(),
                                we->angleDelta(),
                                0,

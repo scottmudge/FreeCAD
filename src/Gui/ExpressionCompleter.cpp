@@ -2375,14 +2375,14 @@ bool ExpressionCompleter::eventFilter(QObject *o, QEvent *e) {
                 return false;
             }
             FC_TRACE("Tab");
-            QKeyEvent kevent(ke->type(),Qt::Key_Down,0);
+            QKeyEvent kevent(ke->type(),Qt::Key_Down,Qt::NoModifier);
             if(!QCompleter::eventFilter(popup(), &kevent))
                 static_cast<QObject *>(popup())->event(&kevent);
             return true;
         }
         case Qt::Key_Backtab: {
             FC_TRACE("Backtab");
-            QKeyEvent kevent(ke->type(),Qt::Key_Up,0);
+            QKeyEvent kevent(ke->type(),Qt::Key_Up,Qt::NoModifier);
             if(!QCompleter::eventFilter(popup(), &kevent))
                 static_cast<QObject *>(popup())->event(&kevent);
             return true;

@@ -115,7 +115,7 @@ void ComboView::setShowModel(bool showModel)
         if(!prop)
             prop = new PropertyView(this);
 
-        modelIndex = tabs->insertTab(0, splitter,trUtf8("Model"));
+        modelIndex = tabs->insertTab(0, splitter,tr("Model"));
         modelIndex = 0;
         taskIndex = 1;
 

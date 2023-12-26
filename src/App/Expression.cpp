@@ -1835,7 +1835,7 @@ void UnitExpression::_toString(std::ostream &ss, bool,int) const
 
 ExpressionPtr UnitExpression::_copy() const
 {
-    return ExpressionPtr(new UnitExpression(owner, quantity, unitStr));
+    return EXPR_NEW(UnitExpression, owner, quantity, unitStr);
 }
 
 Py::Object UnitExpression::_getPyValue(int *) const {
