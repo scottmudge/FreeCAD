@@ -3,7 +3,8 @@
     "__config": "cpp",
     "iosfwd": "cpp",
     "vector": "cpp",
-    "tuple": "cpp"
+    "tuple": "cpp",
+    "algorithm": "cpp"
   },
   "editor.formatOnType": true,
   "cmake.preferredGenerators": ["Ninja", "NMake Makefiles"],
@@ -13,5 +14,6 @@
     "BUILD_FEM_NETGEN:BOOL": "ON",
     "FREECAD_USE_PYBIND11:BOOL": "ON",
     "FREECAD_USE_EXTERNAL_SMESH:BOOL": "ON"
-  }
+  },
+  "cmake.configureOnOpen": false
 }

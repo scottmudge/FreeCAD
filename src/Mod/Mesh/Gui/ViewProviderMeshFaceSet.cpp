@@ -38,6 +38,7 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
+#include <App/IndexedName.h>
 #include <App/Document.h>
 #include <Gui/Selection.h>
 #include <Gui/Window.h>
