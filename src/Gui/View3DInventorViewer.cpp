@@ -339,17 +339,23 @@ public:
 
 template<class PropT, class ValueT, class CallbackT>
 static ValueT _shadowParam(View3DInventor *view, const char *_name, const char *_docu, const ValueT &def, CallbackT cb) {
+    if (!view)
+        return def;
     return view->getProperty<PropT, ValueT>(_name, _docu, "Shadow", def, cb);
 }
 
 template<class PropT, class ValueT>
 static ValueT _shadowParam(View3DInventor *view, const char *_name, const char *_docu, const ValueT &def) {
+    if (!view)
+        return def;
     auto cb = [](PropT &){};
     return view->getProperty<PropT, ValueT>(_name, _docu, "Shadow", def, cb);
 }
 
 template<class PropT, class ValueT>
 static void _shadowSetParam(View3DInventor *view, const char *_name, const ValueT &def) {
+    if (!view)
+        return;
     view->getProperty<PropT, ValueT>(_name, nullptr, "Shadow", def, 
         [&def](PropT &prop) {
             Base::ObjectStatusLocker<App::Property::Status,App::Property> guard(App::Property::User3, &prop);
@@ -359,11 +365,15 @@ static void _shadowSetParam(View3DInventor *view, const char *_name, const Value
 
 template<class PropT, class ValueT, class CallbackT>
 static ValueT _hiddenLineParam(View3DInventor *view, const char *_name, const char *_docu, const ValueT &def, CallbackT cb) {
+    if (!view)
+        return def;
     return view->getProperty<PropT, ValueT>(_name, _docu, "HiddenLine", def, cb);
 }
 
 template<class PropT, class ValueT>
 static ValueT _hiddenLineParam(View3DInventor *view, const char *_name, const char *_docu, const ValueT &def) {
+    if (!view)
+        return def;
     auto cb = [](PropT &){};
     return view->getProperty<PropT, ValueT>(_name, _docu, "HiddenLine", def, cb);
 }
@@ -859,7 +869,7 @@ void View3DInventorViewer::setDocument(Gui::Document* pcDocument)
     selectionRoot->setDocument(pcDocument);
     inventorSelection->setDocument(pcDocument);
 
-    if(pcDocument) {
+    if(pcDocument && _pimpl->view) {
         const auto &sels = Selection().getSelection(pcDocument->getDocument()->getName(), ResolveMode::NoResolve);
         for(auto &sel : sels) {
             SelectionChanges Chng(SelectionChanges::ShowSelection,
@@ -886,7 +896,7 @@ void View3DInventorViewer::setDocument(Gui::Document* pcDocument)
 
 void View3DInventorViewer::onViewPropertyChanged(const App::Property &prop)
 {
-    if(!prop.getName() || prop.testStatus(App::Property::User3))
+    if(!prop.getName() || prop.testStatus(App::Property::User3) || !_pimpl->view)
         return;
 
     if (&prop == &_pimpl->view->ShowNaviCube) {
@@ -1339,6 +1349,9 @@ void View3DInventorViewer::setOverrideMode(const std::string& mode)
     overrideMode = mode;
     applyOverrideMode();
 
+    if (!_pimpl->view)
+        return;
+
     if (!_pimpl->view->DrawStyle.testStatus(App::Property::User3)) {
         Base::ObjectStatusLocker<App::Property::Status, App::Property> guard(
                 App::Property::User3, &_pimpl->view->DrawStyle);
@@ -1384,6 +1397,9 @@ View3DInventorViewer::getHiddenLineConfig() const
 
 void View3DInventorViewer::Private::initHiddenLineConfig(bool activate)
 {
+    if (!view)
+        return;
+
     auto bgColor = _hiddenLineParam<App::PropertyColor>(
             view, "Background",
             ViewParams::docHiddenLineBackground(),
@@ -1519,6 +1535,9 @@ void View3DInventorViewer::Private::deactivateShadow()
 
 void View3DInventorViewer::Private::activateShadow()
 {
+    if (!view)
+        return;
+
     owner->shading = true;
 
     App::Document *doc = owner->guiDocument?owner->guiDocument->getDocument():nullptr;
@@ -2032,7 +2051,8 @@ void View3DInventorViewer::setRenderCache(int mode)
 void View3DInventorViewer::setEnabledNaviCube(bool on)
 {
     naviCubeEnabled = on;
-    _pimpl->view->ShowNaviCube.setValue(on);
+    if (_pimpl->view)
+        _pimpl->view->ShowNaviCube.setValue(on);
 }
 
 bool View3DInventorViewer::isEnabledNaviCube() const
@@ -3873,7 +3893,7 @@ void View3DInventorViewer::Private::updateShadowGround(const SbBox3f &box)
 {
     App::Document *doc = owner->guiDocument?owner->guiDocument->getDocument():nullptr;
 
-    if (!pcShadowGroup || !doc)
+    if (!pcShadowGroup || !doc || !view)
         return;
 
     SbVec3f size = box.getSize();
@@ -5196,7 +5216,7 @@ void View3DInventorViewer::toggleShadowLightManip(int toggle)
 bool View3DInventorViewer::Private::toggleDragger(int toggle)
 {
     App::Document *doc = owner->guiDocument?owner->guiDocument->getDocument():nullptr;
-    if (!pcShadowGroup || !doc)
+    if (!pcShadowGroup || !doc || !view)
         return false;
 
     bool dirlight = pcShadowGroup->findChild(pcShadowDirectionalLight) >= 0;
