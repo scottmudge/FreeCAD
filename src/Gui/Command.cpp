@@ -1609,6 +1609,7 @@ void PythonCommand::languageChange()
 
 const char* PythonCommand::getHelpUrl() const
 {
+    Base::PyGILStateLocker lock;
     PyObject* pcTemp;
     pcTemp = Interpreter().runMethodObject(_pcPyCommand, "CmdHelpURL");
     if (! pcTemp )
@@ -1687,6 +1688,7 @@ bool PythonCommand::isCheckable() const
 
 bool PythonCommand::isChecked() const
 {
+    Base::PyGILStateLocker lock;
     PyObject* item = PyDict_GetItemString(_pcPyResourceDict,"Checkable");
     if (!item) {
         throw Base::ValueError("PythonCommand::isChecked(): Method GetResources() of the Python "

@@ -415,7 +415,7 @@ void ShortcutManager::onTimer()
 {
     timer.stop();
 
-    QAction *found = nullptr;
+    QPointer<QAction> found;
     int priority = -INT_MAX;
     int seq_length = 0;
     for (const auto &info : pendingActions) {
@@ -431,8 +431,7 @@ void ShortcutManager::onTimer()
             }
         }
     }
-    if (found)
-        found->activate(QAction::Trigger);
+
     pendingActions.clear();
 
     if (lastFocus && lastFocus == QApplication::focusWidget()) {
@@ -452,13 +451,20 @@ void ShortcutManager::onTimer()
             QKeySequence k(shortcut + QLatin1Char(s));
             auto it = index.lower_bound(ActionKey(k));
             if (it->key.shortcut != k) {
-                QKeyEvent *kev = new QKeyEvent(QEvent::KeyPress, s, Qt::ControlModifier, 0, 0, 0);
-                QApplication::postEvent(lastFocus, kev);
-                kev = new QKeyEvent(QEvent::KeyRelease, s, Qt::ControlModifier, 0, 0, 0);
-                QApplication::postEvent(lastFocus, kev);
+                QKeyEvent keyPress(QEvent::KeyPress, s, Qt::ControlModifier, 0, 0, 0);
+                QApplication::sendEvent(lastFocus, &keyPress);
+                QKeyEvent keyRelease(QEvent::KeyRelease, s, Qt::ControlModifier, 0, 0, 0);
+                QApplication::sendEvent(lastFocus, &keyRelease);
                 break;
             }
         }
+    }
+
+    if (found) {
+        // Must first clear stray key in last focus (see above), and then
+        // trigger action just in case the action creating a modal dialog
+        // blocking the execution
+        found->activate(QAction::Trigger);
     }
 }
 
