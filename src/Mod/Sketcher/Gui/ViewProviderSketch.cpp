@@ -3991,7 +3991,7 @@ void ViewProviderSketch::drawConstraintIcons()
 
         // Double-check that we can safely access the Inventor nodes
         if (constrId >= edit->constrGroup->getNumChildren()) {
-            Base::Console().Warning("Can't update constraint icons because view is not in sync with sketch\n");
+            //Base::Console().Warning("Can't update constraint icons because view is not in sync with sketch\n");
             break;
         }
 
