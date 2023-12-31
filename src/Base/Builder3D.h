@@ -28,6 +28,7 @@
 
 #include <sstream>
 #include <vector>
+#include <stdint.h>
 #include <Base/Tools3D.h>
 #ifndef FC_GLOBAL_H
 #include <FCGlobal.h>

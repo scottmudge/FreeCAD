@@ -629,6 +629,29 @@ public:
 
     void setupSelectingGroupAction(QMenu &menu, App::Document *doc, std::string &&subname);
 
+    void onDeleteItem(DocumentObjectItem *item)
+    {
+        if (reorderingItem == item) {
+            setReorderingItem(nullptr);
+        }
+        if (tooltipItem == item) {
+            tooltipItem = nullptr;
+            ToolTip::hideText();
+        }
+        if (firstSyncItem == item) {
+            firstSyncItem = nullptr;
+        }
+        if (nextEditingItem == item) {
+            nextEditingItem = nullptr;
+        }
+        if (master->editingItem == item) {
+            master->editingItem = nullptr;
+        }
+        if (master->hiddenItem == item) {
+            master->hiddenItem = nullptr;
+        }
+    }
+
     TreeWidget *master;
 
     bool disableSyncView = false;
@@ -6055,9 +6078,8 @@ void DocumentItem::populateItem(DocumentObjectItem *item, bool refresh, bool del
             }
         }
 
-        bool lock = getTree()->blockSelection(true);
+        QSignalBlocker blocker(getTree());
         delete ci;
-        getTree()->blockSelection(lock);
     }
     if(updated)
         getTree()->_updateStatus();
@@ -7154,6 +7176,10 @@ DocumentObjectItem::DocumentObjectItem(DocumentItem *ownerDocItem, DocumentObjec
 
 DocumentObjectItem::~DocumentObjectItem()
 {
+    if (auto tree = getTree()) {
+        tree->pimpl->onDeleteItem(this);
+    }
+
     if(TreeWidget::contextItem == this)
         TreeWidget::contextItem = nullptr;
 

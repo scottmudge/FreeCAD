@@ -78,15 +78,15 @@ public:
     long value() const {return _id;}
     const QVector<StringIDRef> &relatedIDs() const {return _sids;}
 
-    bool isBinary() const {return _flags.test(Binary);}
-    bool isHashed() const {return _flags.test(Hashed);}
-    bool isPostfixed() const {return _flags.test(Postfixed);}
-    bool isPostfixEncoded() const {return _flags.test(PostfixEncoded);}
-    bool isIndexed() const {return _flags.test(Indexed);}
-    bool isPrefixID() const {return _flags.test(PrefixID);}
-    bool isPrefixIDIndex() const {return _flags.test(PrefixIDIndex);}
-    bool isMarked() const {return _flags.test(Marked);}
-    bool isPersistent() const {return _flags.test(Persistent);}
+    inline bool isBinary() const {return _flags.test(Binary);}
+    inline bool isHashed() const {return _flags.test(Hashed);}
+    inline bool isPostfixed() const {return _flags.test(Postfixed);}
+    inline bool isPostfixEncoded() const {return _flags.test(PostfixEncoded);}
+    inline bool isIndexed() const {return _flags.test(Indexed);}
+    inline bool isPrefixID() const {return _flags.test(PrefixID);}
+    inline bool isPrefixIDIndex() const {return _flags.test(PrefixIDIndex);}
+    inline bool isMarked() const {return _flags.test(Marked);}
+    inline bool isPersistent() const {return _flags.test(Persistent);}
 
     bool isFromSameHasher(const StringHasherRef & hasher) const
     {
@@ -146,7 +146,7 @@ public:
 
     void mark() const;
 
-    void setPersistent(bool enable)
+    inline void setPersistent(bool enable)
     {
         _flags.set(Persistent, enable);
     }
@@ -343,13 +343,13 @@ public:
         return QVector<StringIDRef>();
     }
 
-    bool isBinary() const {
+    inline bool isBinary() const {
         if (_sid)
             return _sid->isBinary();
         return false;
     }
 
-    bool isHashed() const {
+    inline bool isHashed() const {
         if (_sid)
             return _sid->isHashed();
         return false;
@@ -373,7 +373,7 @@ public:
             _sid->mark();
     }
 
-    bool isMarked() const {
+    inline bool isMarked() const {
         return _sid && _sid->isMarked();
     }
 

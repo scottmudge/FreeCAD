@@ -42,6 +42,7 @@ QGCustomSvg::QGCustomSvg()
     setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
 
     m_svgRender = new QSvgRenderer();
+    setPrettyNormal();
 }
 
 QGCustomSvg::~QGCustomSvg()

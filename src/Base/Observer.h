@@ -216,6 +216,7 @@ protected:
   std::set<Observer <_MessageType> *> _ObserverSet;
 };
 
+
 // Workaround for MSVC
 #if defined (FreeCADBase_EXPORTS) && defined(_MSC_VER)
 #  define Base_EXPORT
@@ -223,8 +224,11 @@ protected:
 #  define Base_EXPORT  BaseExport
 #endif
 
+
+#if !defined(__MINGW32__)
 extern template class Base_EXPORT Observer<const char*>;
 extern template class Base_EXPORT Subject<const char*>;
+#endif
 
 
 } //namespace Base
