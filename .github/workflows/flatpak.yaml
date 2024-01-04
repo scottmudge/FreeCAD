@@ -9,6 +9,6 @@ on:
 
 jobs:
   build:
-    uses: ScottMudge/org.freecadweb.FreeCAD.Link/.github/workflows/worker.yaml@master
+    uses: scottmudge/org.freecadweb.FreeCAD.Link/.github/workflows/worker.yaml@master
     with:
       ref: ${{ github.ref_name }}

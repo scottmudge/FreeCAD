@@ -9,7 +9,7 @@ on:
 
 jobs:
   publish:
-    uses: ScottMudge/FreeCADMakeImage/.github/workflows/snap.yaml@master
+    uses: scottmudge/FreeCADMakeImage/.github/workflows/snap.yaml@master
     with:
       ref: ${{ github.ref_name }}
     secrets:
