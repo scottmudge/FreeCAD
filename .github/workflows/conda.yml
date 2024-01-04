@@ -9,7 +9,7 @@ on:
 
 jobs:
   make:
-    uses: realthunder/FreeCADMakeImage/.github/workflows/bundle.yaml@master
+    uses: ScottMudge/FreeCADMakeImage/.github/workflows/bundle.yaml@master
     with:
       ref: ${{ github.ref_name }}
     secrets:
