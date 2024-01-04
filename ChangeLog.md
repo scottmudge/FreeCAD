@@ -1,4 +1,25 @@
-Tip release (branch [LinkMerge](https://github.com/realthunder/FreeCAD/tree/LinkMerge)) is merged with upstream aa3b2f39 2023.05.22
+Stable release (branch [LinkStable](https://github.com/realthunder/FreeCAD/tree/LinkStable)) is merged with upstream aa3b2f39 2023.05.22
+
+# Stable 2024.01.04
+
+Fix notification background with stylesheet (#923)
+Sketcher: fix crash on editing (#922)
+
+-- 20240104stable --
+
+# Stable|Tip 2023.12.31
+
+Add mesh facet selection mode `Mesh_SubElementSelection`. Can be used together with new commands `View front face (V, N)` and `View back face (V, B)`.
+Remember user closed overlay panel ([#11680](FreeCAD/FreeCAD#11680)
+Fix crash on manual alignment (#906)
+Fix lost key when resolving multi-key-sequence shortcut (#909)
+Fix crash on `Tools -> Customization...`
+Fix crash on tree view selection ([#899](https://github.com/realthunder/FreeCAD/issues/899#issuecomment-1776927054))
+PartDesign: fix backward compatibility with upstream sketch based feature (#905)
+Sketcher: fix projection error in OCC 7.7
+Sketcher: fix crash on adding tagent (#917)
+TechDraw: fix circle center vertex selection (#907)
+TechDraw: fix undesired border when drawing SVG pattern (#909)
 
 # Tip 2023.11.02
 
@@ -8,8 +29,6 @@ TechDraw: fix projection group recompute problem (#901)
 # Tip 2023.10.28
 
 Fix view property editing problem (#896)
-
--- 20231102tip --
 
 # Tip 2023.10.24
 
