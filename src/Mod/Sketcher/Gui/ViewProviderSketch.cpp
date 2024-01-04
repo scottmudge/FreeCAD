@@ -333,6 +333,7 @@ struct EditData {
     std::set<int> PreselectConstraintSet;
     bool blockedPreselection;
     bool FullyConstrained;
+    bool needUpdate{false};
 
     // container to track our own selected parts
     std::map<int,int> SelPointMap;
@@ -407,7 +408,6 @@ struct EditData {
     SoDrawStyle * InformationDrawStyle;
 
     QTimer timer;
-    QTimer timerSectionView;
 };
 
 
@@ -3201,6 +3201,11 @@ void ViewProviderSketch::doBoxSelection(const SbVec2s &startPos, const SbVec2s &
 void ViewProviderSketch::updateColor(void)
 {
     assert(edit);
+    if (edit->needUpdate) {
+        edit->timer.start(100);
+        return;
+    }
+
     //Base::Console().Log("Draw preseletion\n");
 
     // update the virtual space
@@ -3937,6 +3942,11 @@ int ViewProviderSketch::constrColorPriority(int constraintId)
 // public function that triggers drawing of most constraint icons
 void ViewProviderSketch::drawConstraintIcons()
 {
+    if (edit->needUpdate) {
+        edit->timer.start(100);
+        return;
+    }
+
     const std::vector<Sketcher::Constraint *> &constraints = getSketchObject()->Constraints.getValues();
     int constrId = 0;
 
@@ -4001,8 +4011,8 @@ void ViewProviderSketch::drawConstraintIcons()
         if (numChildren <= CONSTRAINT_SEPARATOR_INDEX_FIRST_CONSTRAINTID) {
 #ifdef FC_DEBUG
             FC_ERR("Invalid constraint node " << constrId);
-            break;
 #endif
+            break;
         }
 
         SbVec3f absPos;
@@ -4699,6 +4709,8 @@ void ViewProviderSketch::draw(bool temp /*=false*/, bool rebuildinformationlayer
     // viewer in setEditViewer().
     if (!edit->viewer)
         return;
+
+    edit->needUpdate = false;
 
     // Render Geometry ===================================================
     std::vector<Base::Vector3d> Coords;
@@ -7155,6 +7167,15 @@ void ViewProviderSketch::updateData(const App::Property *prop)
     inherited::updateData(prop);
 
     auto sketch = getSketchObject();
+
+    if (edit) {
+        if (prop == &sketch->Geometry
+                || prop == &sketch->ExternalGeo
+                || prop == &sketch->ExternalGeometry
+                || prop == &sketch->Constraints) {
+            edit->needUpdate = true;
+        }
+    }
 
     if (prop == &sketch->FullyConstrained || prop == &sketch->Geometry) {
         const char *pixmap;
