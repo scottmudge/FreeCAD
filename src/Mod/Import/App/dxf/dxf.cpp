@@ -4,6 +4,7 @@
 // modified 2018 wandererfan
 
 #include "PreCompiled.h"
+#include <boost/algorithm/string/predicate.hpp>
 
 //required by windows for M_PI definition
 #define _USE_MATH_DEFINES
@@ -3342,8 +3343,8 @@ bool CDxfRead::ResolveEncoding()
     else {
         // Codepage names may be of the form "ansi_1252" which we map to "cp1252" but we don't map "ansi_x3xxxx" (which happens to mean "ascii")
         std::string* p = new std::string(*m_CodePage);
-        if (strncmp(p->c_str(), "ansi_", 5) == 0
-            && strncmp(p->c_str(), "ansi_x3", 7) != 0)
+        if (boost::istarts_with(*p, "ansi_")
+            && !boost::istarts_with(*p, "ansi_x3"))
             p->replace(0, 5, "cp");
         m_encoding = p;
         // At this point we want to recognize synonyms for "utf_8" and use the custom decoder function.
@@ -3355,7 +3356,7 @@ bool CDxfRead::ResolveEncoding()
         Base::PyGILStateLocker lock;
         PyObject* pyDecoder = PyCodec_Decoder(m_encoding->c_str());
         if (pyDecoder == NULL)
-            return false; // A key error exception will have been placed.
+            Base::PyException::ThrowException();
         PyObject* pyUTF8Decoder = PyCodec_Decoder("utf_8");
         assert(pyUTF8Decoder != NULL);
         if (pyDecoder == pyUTF8Decoder)

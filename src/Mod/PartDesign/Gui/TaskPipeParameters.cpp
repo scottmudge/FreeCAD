@@ -97,6 +97,9 @@ TaskPipeParameters::TaskPipeParameters(ViewProviderPipe *PipeView, bool /*newObj
         ui->checkBoxRotateProfile->setToolTip(QString::fromUtf8(doc));
 
     this->initUI(proxy);
+    if (vp && vp->getObject()) {
+        hookPropertyBool(vp->getObject(), "Linearize", ui->checkBoxLinearize, "Linearize");
+    }
     this->groupLayout()->addWidget(proxy);
 
     refresh();
