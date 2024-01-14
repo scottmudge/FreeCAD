@@ -45,6 +45,8 @@ public:
     }
     double* x;
     double* y;
+    int PushOwnParams(VEC_pD& pvec);
+    void ReconstructOnNewPvec(VEC_pD& pvec, int& cnt);
 };
 
 using VEC_P = std::vector<Point>;

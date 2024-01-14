@@ -848,6 +848,14 @@ int System::addConstraintC2LDistance(Circle& c, Line& l, double* dist, int tagId
     return addConstraint(constr);
 }
 
+int System::addConstraintP2CDistance(Point& p, Circle& c, double* distance, int tagId, bool driving)
+{
+    Constraint* constr = new ConstraintP2CDistance(p, c, distance);
+    constr->setTag(tagId);
+    constr->setDriving(driving);
+    return addConstraint(constr);
+}
+
 // derived constraints
 
 int System::addConstraintP2PCoincident(Point& p1, Point& p2, int tagId, bool driving)

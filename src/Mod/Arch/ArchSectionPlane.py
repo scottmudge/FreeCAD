@@ -900,11 +900,11 @@ class _SectionPlane:
 
         return obj.Shape.Faces[0].normalAt(0,0)
 
-    def __getstate__(self):
+    def dumps(self):
 
         return None
 
-    def __setstate__(self,state):
+    def loads(self,state):
 
         return None
 
@@ -1150,11 +1150,11 @@ class _ViewProviderSectionPlane:
                 self.txtfont.size = vobj.FontSize.Value
         return
 
-    def __getstate__(self):
+    def dumps(self):
 
         return None
 
-    def __setstate__(self,state):
+    def loads(self,state):
 
         return None
 

@@ -1,11 +1,22 @@
 Stable release (branch [LinkStable](https://github.com/realthunder/FreeCAD/tree/LinkStable)) is merged with upstream aa3b2f39 2023.05.22
 
+# Stable 2024.01.13
+
+Fix PythonObject saving in Python 3.11 (#927)
+Fix compatibility with Mac 3Dconnexion driver  (#923)
+Change default image plane selection style
+Import: fix code page handling in DXF import 
+Part: fix BSpline surface trimming
+PartDesign: improve handling of split profile in Loft
+PartDesign: expose `Linearize` option to editing task panel
+Sketcher: fix circle to circle distance constraint (#928)
+
+-- 20240113stable --
+
 # Stable 2024.01.04
 
 Fix notification background with stylesheet (#923)
 Sketcher: fix crash on editing (#922)
-
--- 20240104stable --
 
 # Stable|Tip 2023.12.31
 

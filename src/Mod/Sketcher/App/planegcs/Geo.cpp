@@ -32,6 +32,26 @@
 namespace GCS
 {
 
+//----------------Point
+int Point::PushOwnParams(VEC_pD& pvec)
+{
+    int cnt = 0;
+    pvec.push_back(x);
+    cnt++;
+    pvec.push_back(y);
+    cnt++;
+    return cnt;
+}
+
+void Point::ReconstructOnNewPvec(VEC_pD& pvec, int& cnt)
+{
+    x = pvec[cnt];
+    cnt++;
+    y = pvec[cnt];
+    cnt++;
+}
+
+//----------------DeriVector2
 DeriVector2::DeriVector2(const Point& p, const double* derivparam)
 {
     x = *p.x;

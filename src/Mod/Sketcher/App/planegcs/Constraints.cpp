@@ -2965,8 +2965,100 @@ double ConstraintC2LDistance::error()
 
 double ConstraintC2LDistance::grad(double* param)
 {
-    if (findParamInPvec(param) == -1)
+    if (findParamInPvec(param) == -1) {
         return 0.0;
+    }
+
+    double deriv;
+    errorgrad(nullptr, &deriv, param);
+
+    return deriv * scale;
+}
+
+// --------------------------------------------------------
+// ConstraintP2CDistance
+ConstraintP2CDistance::ConstraintP2CDistance(Point& p, Circle& c, double* d)
+{
+    this->d = d;
+    pvec.push_back(d);
+
+    this->circle = c;
+    this->circle.PushOwnParams(pvec);
+
+    this->pt = p;
+    this->pt.PushOwnParams(pvec);
+
+    origpvec = pvec;
+    pvecChangedFlag = true;
+    rescale();
+}
+
+ConstraintType ConstraintP2CDistance::getTypeId()
+{
+    return P2CDistance;
+}
+
+void ConstraintP2CDistance::rescale(double coef)
+{
+    scale = coef;
+}
+
+void ConstraintP2CDistance::ReconstructGeomPointers()
+{
+    int i = 0;
+    i++;  // skip the first parameter as there is the inline function distance for it
+    circle.ReconstructOnNewPvec(pvec, i);
+    pt.ReconstructOnNewPvec(pvec, i);
+    pvecChangedFlag = false;
+}
+
+void ConstraintP2CDistance::errorgrad(double* err, double* grad, double* param)
+{
+    if (pvecChangedFlag) {
+        ReconstructGeomPointers();
+    }
+
+    DeriVector2 ct(circle.center, param);
+    DeriVector2 p(pt, param);
+    DeriVector2 v_length = ct.subtr(p);
+
+    double dlength;
+    double length = v_length.length(dlength);
+
+    if (err) {
+        *err = *circle.rad + *distance() - length;
+        if (length < *circle.rad) {
+            *err = *circle.rad - *distance() - length;
+        }
+    }
+    else if (grad) {
+        if (param == distance()) {
+            *grad = 1.0;
+            if (length < *circle.rad) {
+                *grad = -1.0;
+            }
+        }
+        else if (param == circle.rad) {
+            *grad = 1.0;
+        }
+        else {
+            *grad = -dlength;
+        }
+    }
+}
+
+double ConstraintP2CDistance::error()
+{
+    double err;
+    errorgrad(&err, nullptr, nullptr);
+    return scale * err;
+}
+
+double ConstraintP2CDistance::grad(double* param)
+{
+    if (findParamInPvec(param) == -1) {
+        return 0.0;
+    }
 
     double deriv;
     errorgrad(nullptr, &deriv, param);

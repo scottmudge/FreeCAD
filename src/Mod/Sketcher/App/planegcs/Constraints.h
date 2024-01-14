@@ -77,7 +77,8 @@ enum ConstraintType
     SlopeAtBSplineKnot = 28,
     PointOnBSpline = 29,
     C2CDistance = 30,
-    C2LDistance = 31
+    C2LDistance = 31,
+    P2CDistance = 32
 };
 
 enum InternalAlignmentType
@@ -1226,6 +1227,31 @@ public:
     double grad(double*) override;
 };
 
-}// namespace GCS
+// P2CDistance
+class ConstraintP2CDistance: public Constraint
+{
+private:
+    Circle circle;
+    Point pt;
+    double* d;
+    inline double* distance()
+    {
+        return pvec[0];
+    }
+    void ReconstructGeomPointers();  // writes pointers in pvec to the parameters of c
+    void
+    errorgrad(double* err,
+              double* grad,
+              double* param);  // error and gradient combined. Values are returned through pointers.
+public:
+    ConstraintP2CDistance(Point& p, Circle& c, double* d);
+    ConstraintType getTypeId() override;
+    void rescale(double coef = 1.) override;
+    double error() override;
+    double grad(double*) override;
+};
 
-#endif// PLANEGCS_CONSTRAINTS_H
+
+}  // namespace GCS
+
+#endif  // PLANEGCS_CONSTRAINTS_H
