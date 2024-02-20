@@ -76,6 +76,7 @@ Params = [
     ParamInt("ParallelRunThreshold", 100),
     ParamBool("AutoValidateShape", False),
     ParamBool("FixShape", False),
+    ParamUInt("LoftMaxDegree", 5),
     _MinimumDeviation,
     _MeshDeviation,
     _MeshAngularDeflection,

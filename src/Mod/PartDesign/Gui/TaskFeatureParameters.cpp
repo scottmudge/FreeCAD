@@ -324,6 +324,9 @@ TaskDlgFeatureParameters::~TaskDlgFeatureParameters()
 }
 
 bool TaskDlgFeatureParameters::accept() {
+    if (!vp)
+        return true;
+
     App::DocumentObject* feature = vp->getObject();
 
     try {

@@ -89,6 +89,7 @@ protected:
     void objectDeleted(const App::DocumentObject&);
     boost::signals2::scoped_connection expressionchanged;
     boost::signals2::scoped_connection objectdeleted;
+    boost::signals2::scoped_connection docClosed;
     bool m_autoApply;
 };
 

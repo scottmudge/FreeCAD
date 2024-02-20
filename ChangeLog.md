@@ -1,5 +1,16 @@
 Stable release (branch [LinkStable](https://github.com/realthunder/FreeCAD/tree/LinkStable)) is merged with upstream aa3b2f39 2023.05.22
 
+# Stable 2024.01.23
+
+Fix crash on closing document (#936)
+Fix Python object saving back compatibility (#933)
+Fix axis origin rendering (#929)
+Fix Spreadsheet foreground color in ProDark (#940)
+PartDesign: expose MaxDegree setting in Loft
+PartDesign: fix `Parallel transform` option in Pattern feature editing panel
+
+-- 20240123stable --
+
 # Stable 2024.01.13
 
 Fix PythonObject saving in Python 3.11 (#927)
@@ -10,8 +21,6 @@ Part: fix BSpline surface trimming
 PartDesign: improve handling of split profile in Loft
 PartDesign: expose `Linearize` option to editing task panel
 Sketcher: fix circle to circle distance constraint (#928)
-
--- 20240113stable --
 
 # Stable 2024.01.04
 

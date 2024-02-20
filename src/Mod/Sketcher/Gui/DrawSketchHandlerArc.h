@@ -390,7 +390,8 @@ public:
                 }
             }
             catch(Base::ValueError &e) {
-                e.ReportException();
+                // Exception caused by colinear points, which is normal when moving mouse
+                // e.ReportException();
             }
         }
         applyCursor();

@@ -2375,3 +2375,10 @@ bool ComplexGeoData::hasChildElementMap() const
     flushElementMap();
     return _ElementMap && _ElementMap->hasChildElementMap();
 }
+
+
+ElementMapPtr ComplexGeoData::resetElementMap(ElementMapPtr elementMap)
+{
+    _ElementMap.swap(elementMap);
+    return elementMap;
+}
