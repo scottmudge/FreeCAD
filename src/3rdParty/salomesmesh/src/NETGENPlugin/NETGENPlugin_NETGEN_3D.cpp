@@ -27,7 +27,12 @@
 // Author    : Nadir BOUHAMOU (CEA)
 // Project   : SALOME
 //=============================================================================
-//
+
+// Needs to be included first to prevent rpcndr.h collisions with 'byte'
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
+
 #include "NETGENPlugin_NETGEN_3D.hxx"
 
 #include "NETGENPlugin_Hypothesis.hxx"

@@ -26,8 +26,14 @@
 // OpenCASCADE
 
 // Standard*
+#include <Standard_Version.hxx>
 #include <Standard_AbortiveTransaction.hxx>
+#if OCC_VERSION_HEX < 0x070800
 #include <Standard_Address.hxx>
+#include <Standard_ExtString.hxx> 
+#include <Standard_math.hxx> 
+#include <Standard_TooManyUsers.hxx> 
+#endif
 #include <Standard_Boolean.hxx>
 #include <Standard_Byte.hxx>
 #include <Standard_Character.hxx>
@@ -41,7 +47,6 @@
 #include <Standard_DomainError.hxx>
 #include <Standard_ErrorHandler.hxx>
 #include <Standard_ExtCharacter.hxx>
-#include <Standard_ExtString.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_GUID.hxx>
 #include <Standard_ImmutableObject.hxx>
@@ -50,7 +55,6 @@
 #include <Standard_LicenseError.hxx>
 #include <Standard_LicenseNotFound.hxx>
 #include <Standard_Macro.hxx>
-#include <Standard_math.hxx>
 #include <Standard_MultiplyDefined.hxx>
 #include <Standard_NegativeValue.hxx>
 #include <Standard_NoMoreObject.hxx>
@@ -71,14 +75,12 @@
 #include <Standard_ShortReal.hxx>
 #include <Standard_SStream.hxx>
 #include <Standard_Stream.hxx>
-#include <Standard_TooManyUsers.hxx>
 #include <Standard_Transient.hxx>
 #include <Standard_Type.hxx>
 #include <Standard_TypeDef.hxx>
 #include <Standard_TypeMismatch.hxx>
 #include <Standard_Underflow.hxx>
 #include <Standard_UUID.hxx>
-#include <Standard_Version.hxx>
 
 // now in alphabetical order
 #if OCC_VERSION_HEX < 0x070600
@@ -391,7 +393,9 @@
 // Quan*
 #include <Quantity_Color.hxx>
 #include <Quantity_NameOfColor.hxx>
+#if OCC_VERSION_HEX < 0x070800
 #include <Quantity_PhysicalQuantity.hxx>
+#endif
 #include <Quantity_TypeOfColor.hxx>
 
 // Shape*

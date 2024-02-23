@@ -165,7 +165,7 @@ macro(SetupShibokenAndPyside)
             RESULT_VARIABLE FAILURE
             OUTPUT_VARIABLE PySide_VERSION
         )
-        message(STATUS "PySide ${PySide_VERSION} Python module found at ${PRINT_OUTPUT}.\n")
+        message(STATUS "PySide ${PySide_VERSION} Python module found at ${PRINT_OUTPUT}.")
     endif()
 
 endmacro(SetupShibokenAndPyside)

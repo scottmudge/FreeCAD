@@ -26,9 +26,8 @@
 # include <Inventor/nodes/SoCamera.h>
 # include <Inventor/nodes/SoEventCallback.h>
 
-# include <SMESH_Mesh.hxx>
-# include <SMESHDS_Mesh.hxx>
-# include <Standard_math.hxx>
+#include <SMESHDS_Mesh.hxx>
+#include <SMESH_Mesh.hxx>
 #endif
 
 #include <Base/Console.h>

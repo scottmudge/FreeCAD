@@ -49,6 +49,7 @@ include_directories(
     ${QtWidgets_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIR}
     ${3DCONNEXION_INCLUDE_DIR}
+    ${OCC_INCLUDE_DIR}
 )
 
 if(MSVC)
@@ -103,6 +104,7 @@ list(APPEND FreeCADGui_LIBS
     ${QtSvgWidgets_LIBRARIES}
     ${QtNetwork_LIBRARIES}
     ${QtUiTools_LIBRARIES}
+    ${OCC_LIBRARIES}
 )
 
 if(${Qt5WinExtras_FOUND})

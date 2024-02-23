@@ -27,6 +27,7 @@
 #include <qglobal.h>
 #include <QAbstractEventDispatcher>
 #include <QAbstractItemModel>
+#include <QCryptographicHash>
 #include <QBuffer>
 #include <QDebug>
 #include <QDirIterator>

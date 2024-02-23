@@ -64,7 +64,10 @@
 // OCC
 #include <BRepAdaptor_Surface.hxx>
 #include <Precision.hxx>
+#include <standard_Version.hxx>
+#if OCC_VERSION_HEX < 0x070800
 #include <Standard_math.hxx>
+#endif
 #include <TopoDS.hxx>
 #include <TopoDS_Shape.hxx>
 

@@ -367,17 +367,50 @@ struct Link
   {
     return (( Contains( other.n1 ) || Contains( other.n2 )) && ( this != &other ));
   }
+
+  size_t operator()(const Link& aLink) const
+  {
+    return static_cast<size_t>(aLink.n1 + aLink.n2);
+  }
+  bool operator()(const Link& aLink1, const Link& aLink2) const
+  {
+    return (( aLink1.n1 == aLink2.n1 && aLink1.n2 == aLink2.n2 ) ||
+            ( aLink1.n1 == aLink2.n2 && aLink1.n2 == aLink2.n1 ));
+  }
+
+  template<class T>
+  friend struct std::hash;
 };
+
+namespace std
+{
+  template <>
+  struct hash<Link>
+  {
+    size_t operator()(const Link& aLink) const
+    {
+      return std::hash<int>{}(aLink.n1 + aLink.n2);
+    }
+  };
+}
 
 int HashCode(const Link& aLink, int aLimit)
 {
+#if OCC_VERSION_HEX >= 0x070800
+  return std::hash<Link>{}(aLink) % aLimit + 1;
+#else
   return HashCode(aLink.n1 + aLink.n2, aLimit);
+#endif
 }
 
 Standard_Boolean IsEqual(const Link& aLink1, const Link& aLink2)
 {
   return ((aLink1.n1 == aLink2.n1 && aLink1.n2 == aLink2.n2) ||
           (aLink1.n1 == aLink2.n2 && aLink1.n2 == aLink2.n1));
+}
+
+bool operator ==(const Link& aLink1, const Link& aLink2){
+    return IsEqual(aLink1, aLink2);
 }
 
 namespace
@@ -1205,8 +1238,8 @@ bool NETGENPlugin_Mesher::FixFaceMesh(const netgen::OCCGeometry& occgeom,
     return false;
   const TopoDS_Face& face = TopoDS::Face( occgeom.fmap( faceID ));
 
-  // find free links on the FACE
-  NCollection_Map<Link> linkMap;
+  // find free links on the FACE 
+  NCollection_Map<Link, NCollection_DefaultHasher<Link>> linkMap;
   for ( int iF = 1; iF <= ngMesh.GetNSE(); ++iF )
   {
     const netgen::Element2d& elem = ngMesh.SurfaceElement(iF);

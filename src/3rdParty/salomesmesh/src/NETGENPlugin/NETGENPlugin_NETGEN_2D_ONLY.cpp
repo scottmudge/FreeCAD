@@ -21,6 +21,12 @@
 // Author    : Edward AGAPOV (OCC)
 // Project   : SALOME
 //
+
+// Needs to be included first to prevent rpcndr.h collisions with 'byte'
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
+
 #include "NETGENPlugin_NETGEN_2D_ONLY.hxx"
 
 #include "NETGENPlugin_Mesher.hxx"
