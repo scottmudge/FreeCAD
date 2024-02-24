@@ -104,7 +104,7 @@ namespace netgen {
     if (perfstepsend == netgen::MESHCONST_OPTSURFACE) {
       mparams.perfstepsend = netgen::MESHCONST_MESHSURFACE;
     }
-    auto result = geo.GenerateMesh(mesh, mparams);
+    auto result = geo.GenerateMesh(mesh, mparams, (void*)&geo);
     mparams.perfstepsend = perfstepsend;
     return result;
   }

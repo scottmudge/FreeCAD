@@ -712,6 +712,7 @@ void NETGENPlugin_Mesher::PrepareOCCgeometry(netgen::OCCGeometry&     occgeo,
   occgeo.face_maxh_modified = 0;
   occgeo.face_maxh.SetSize(occgeo.fmap.Extent());
   occgeo.face_maxh = netgen::mparam.maxh;
+  occgeo.BuildFMap();
 }
 
 //================================================================================
@@ -2883,6 +2884,7 @@ bool NETGENPlugin_Mesher::Compute()
       try
       {
         OCC_CATCH_SIGNALS;
+
 #if NETGEN_VERSION >= NETGEN_VERSION_STRING(6,2,0)
         err = netgen::OCCGenerateMesh(occgeo, _ngMesh, mparams);
 #elif NETGEN_VERSION >= NETGEN_VERSION_STRING(5,0,0)
