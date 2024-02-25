@@ -387,7 +387,7 @@ bool PropertyLinkBase::_updateElementReference(DocumentObject *feature,
                 const auto &oldName = shadow.first.size()?shadow.first:shadow.second;
                 const auto &newName = elementName.first.size()?elementName.first:elementName.second;
                 if (oldName != newName) {
-                    FC_WARN(propertyName(this) 
+                    FC_LOG(propertyName(this) 
                             << " auto change element reference " << ret->getFullName() << " "
                             << oldName << " -> " << newName);
                 }

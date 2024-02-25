@@ -168,7 +168,7 @@ Property* DynamicProperty::_addDynamicProperty(PropertyContainer &pc, const char
             name = type;
         _name = getUniquePropertyName(pc,name);
         if(_name != name) {
-            FC_WARN(pc.getFullName() << " rename dynamic property from '"
+            FC_LOG(pc.getFullName() << " rename dynamic property from '"
                     << name << "' to '" << _name << "'");
         }
         name = _name.c_str();
