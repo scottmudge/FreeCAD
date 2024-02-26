@@ -55,6 +55,8 @@ public:
     bool RefineModel;
     bool AuxGroupUniqueLabel;
     bool AutoAuxGrouping;
+    bool AutoRoundOps;
+    long OpsRoundingMethod;
     bool AutoHideOrigins;
     bool SplitEllipsoid;
     long ParallelRunThreshold;
@@ -101,6 +103,10 @@ public:
         funcs["AuxGroupUniqueLabel"] = &PartParamsP::updateAuxGroupUniqueLabel;
         AutoAuxGrouping = this->handle->GetBool("AutoAuxGrouping", true);
         funcs["AutoAuxGrouping"] = &PartParamsP::updateAutoAuxGrouping;
+        AutoRoundOps = this->handle->GetBool("AutoRoundOps", true);
+        funcs["AutoRoundOps"] = &PartParamsP::updateAutoRoundOps;
+        OpsRoundingMethod = this->handle->GetInt("OpsRoundingMethod", 0);
+        funcs["OpsRoundingMethod"] = &PartParamsP::updateOpsRoundingMethod;
         AutoHideOrigins = this->handle->GetBool("AutoHideOrigins", true);
         funcs["AutoHideOrigins"] = &PartParamsP::updateAutoHideOrigins;
         SplitEllipsoid = this->handle->GetBool("SplitEllipsoid", true);
@@ -198,6 +204,14 @@ public:
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
     static void updateAutoAuxGrouping(PartParamsP *self) {
         self->AutoAuxGrouping = self->handle->GetBool("AutoAuxGrouping", true);
+    }
+    // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
+    static void updateAutoRoundOps(PartParamsP *self) {
+        self->AutoRoundOps = self->handle->GetBool("AutoRoundOps", true);
+    }
+    // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
+    static void updateOpsRoundingMethod(PartParamsP *self) {
+        self->OpsRoundingMethod = self->handle->GetInt("OpsRoundingMethod", 0);
     }
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
     static void updateAutoHideOrigins(PartParamsP *self) {
@@ -657,6 +671,60 @@ void PartParams::setAutoAuxGrouping(const bool &v) {
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:403)
 void PartParams::removeAutoAuxGrouping() {
     instance()->handle->RemoveBool("AutoAuxGrouping");
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:369)
+const char *PartParams::docAutoRoundOps() {
+    return "";
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:377)
+const bool & PartParams::getAutoRoundOps() {
+    return instance()->AutoRoundOps;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:385)
+const bool & PartParams::defaultAutoRoundOps() {
+    const static bool def = true;
+    return def;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:394)
+void PartParams::setAutoRoundOps(const bool &v) {
+    instance()->handle->SetBool("AutoRoundOps",v);
+    instance()->AutoRoundOps = v;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:403)
+void PartParams::removeAutoRoundOps() {
+    instance()->handle->RemoveBool("AutoRoundOps");
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:369)
+const char *PartParams::docOpsRoundingMethod() {
+    return "";
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:377)
+const long & PartParams::getOpsRoundingMethod() {
+    return instance()->OpsRoundingMethod;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:385)
+const long & PartParams::defaultOpsRoundingMethod() {
+    const static long def = 0;
+    return def;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:394)
+void PartParams::setOpsRoundingMethod(const long &v) {
+    instance()->handle->SetInt("OpsRoundingMethod",v);
+    instance()->OpsRoundingMethod = v;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:403)
+void PartParams::removeOpsRoundingMethod() {
+    instance()->handle->RemoveInt("OpsRoundingMethod");
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:369)

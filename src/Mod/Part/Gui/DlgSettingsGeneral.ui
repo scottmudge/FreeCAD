@@ -20,42 +20,16 @@
       <string>Model settings</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="5" column="0">
-       <widget class="Gui::PrefCheckBox" name="checkSingleSolid">
+      <item row="0" column="0" colspan="2">
+       <widget class="Gui::PrefCheckBox" name="checkBooleanCheck">
         <property name="text">
-         <string>Enforce single solid in Body</string>
+         <string>Automatically check model after boolean operation</string>
         </property>
         <property name="prefEntry" stdset="0">
-         <cstring>SingleSolid</cstring>
+         <cstring>CheckModel</cstring>
         </property>
         <property name="prefPath" stdset="0">
-         <cstring>Mod/Part</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="1">
-       <widget class="Gui::PrefCheckBox" name="checkAutoGroupSolids">
-        <property name="text">
-         <string>Auto group solids in Body</string>
-        </property>
-        <property name="prefPath" stdset="0">
-         <cstring>Mod/Part</cstring>
-        </property>
-        <property name="prefEntry" stdset="0">
-         <cstring>AutoGroupSolids</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0" colspan="2">
-       <widget class="Gui::PrefCheckBox" name="checkSketchBaseRefine">
-        <property name="text">
-         <string>Automatically refine model shape of features in PartDesign workbench</string>
-        </property>
-        <property name="prefEntry" stdset="0">
-         <cstring>RefineModel</cstring>
-        </property>
-        <property name="prefPath" stdset="0">
-         <cstring>Mod/PartDesign</cstring>
+         <cstring>Mod/Part/Boolean</cstring>
         </property>
        </widget>
       </item>
@@ -72,55 +46,18 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0" colspan="2">
-       <widget class="Gui::PrefCheckBox" name="checkBooleanCheck">
+      <item row="2" column="0" colspan="2">
+       <widget class="Gui::PrefCheckBox" name="checkSketchBaseRefine">
         <property name="text">
-         <string>Automatically check model after boolean operation</string>
+         <string>Automatically refine model shape of features in PartDesign workbench</string>
         </property>
         <property name="prefEntry" stdset="0">
-         <cstring>CheckModel</cstring>
+         <cstring>RefineModel</cstring>
         </property>
         <property name="prefPath" stdset="0">
-         <cstring>Mod/Part/Boolean</cstring>
+         <cstring>Mod/PartDesign</cstring>
         </property>
        </widget>
-      </item>
-      <item row="7" column="0" colspan="2">
-       <layout class="QHBoxLayout" name="horizontalLayout">
-        <item>
-         <widget class="Gui::PrefCheckBox" name="checkBoxAuxGroup">
-          <property name="toolTip">
-           <string>Disable this option to not enforce unique label in auxiliary groups.
-So instead of having 'Datums001' etc., all datum group can be
-labeled as 'Datums'.
-
-Note that this option does not apply to user created auxiliary
-groups, neither does the option affects any user defined label of
-existing auxiliary groups.</string>
-          </property>
-          <property name="text">
-           <string>Use unique label for auxiliary groups in Body</string>
-          </property>
-          <property name="prefEntry" stdset="0">
-           <cstring>AuxGroupUniqueLabel</cstring>
-          </property>
-          <property name="prefPath" stdset="0">
-           <cstring>Mod/Part</cstring>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btnAuxGroup">
-          <property name="toolTip">
-           <string>Apply the 'fixed name' option to existing auxiliary groups.
-it only applies to auto created group with their original labels.</string>
-          </property>
-          <property name="text">
-           <string>Apply to existing groups</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
       </item>
       <item row="3" column="0">
        <widget class="Gui::PrefCheckBox" name="checkLinearize">
@@ -159,7 +96,33 @@ in Part workbench, and equivalent features in PartDesign.</string>
         </property>
        </widget>
       </item>
-      <item row="6" column="0">
+      <item row="4" column="0">
+       <widget class="Gui::PrefCheckBox" name="checkSingleSolid">
+        <property name="text">
+         <string>Enforce single solid in Body</string>
+        </property>
+        <property name="prefEntry" stdset="0">
+         <cstring>SingleSolid</cstring>
+        </property>
+        <property name="prefPath" stdset="0">
+         <cstring>Mod/Part</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="Gui::PrefCheckBox" name="checkAutoGroupSolids">
+        <property name="text">
+         <string>Auto group solids in Body</string>
+        </property>
+        <property name="prefPath" stdset="0">
+         <cstring>Mod/Part</cstring>
+        </property>
+        <property name="prefEntry" stdset="0">
+         <cstring>AutoGroupSolids</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
        <widget class="Gui::PrefCheckBox" name="checkBoxValidateShape">
         <property name="toolTip">
          <string>Validate on changing shape. If the shape is invalid, a warning icon
@@ -183,7 +146,7 @@ object, you can manually change its 'ValidShape' property.</string>
         </property>
        </widget>
       </item>
-      <item row="6" column="1">
+      <item row="5" column="1">
        <widget class="Gui::PrefCheckBox" name="checkBoxFixShape">
         <property name="toolTip">
          <string>Try to fix invalid shape on changing. Note, this option only applies to
@@ -203,32 +166,125 @@ newly created object.</string>
         </property>
        </widget>
       </item>
-      <item row="8" column="0"> 
-       <widget class="Gui::PrefCheckBox" name="checkAutoAuxiliaryGrouping"> 
-        <property name="text"> 
-         <string>Automatic auxiliary grouping for new Bodies</string> 
-        </property> 
-        <property name="prefPath" stdset="0"> 
-         <cstring>Mod/Part</cstring> 
-        </property> 
-        <property name="prefEntry" stdset="0"> 
-         <cstring>AutoAuxGrouping</cstring> 
-        </property> 
-       </widget> 
-      </item> 
-	  <item row="9" column="0"> 
-       <widget class="Gui::PrefCheckBox" name="checkAutoHideOrigins"> 
-        <property name="text"> 
-         <string>Automatically hide Origins in Tree view</string> 
-        </property> 
-        <property name="prefPath" stdset="0"> 
-         <cstring>Mod/Part</cstring> 
-        </property> 
-        <property name="prefEntry" stdset="0"> 
-         <cstring>AutoHideOrigins</cstring> 
-        </property> 
-       </widget> 
-      </item> 
+      <item row="6" column="0" colspan="2">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="Gui::PrefCheckBox" name="checkBoxAuxGroup">
+          <property name="toolTip">
+           <string>Disable this option to not enforce unique label in auxiliary groups.
+So instead of having 'Datums001' etc., all datum group can be
+labeled as 'Datums'.
+
+Note that this option does not apply to user created auxiliary
+groups, neither does the option affects any user defined label of
+existing auxiliary groups.</string>
+          </property>
+          <property name="text">
+           <string>Use unique label for auxiliary groups in Body</string>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>AuxGroupUniqueLabel</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>Mod/Part</cstring>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnAuxGroup">
+          <property name="toolTip">
+           <string>Apply the 'fixed name' option to existing auxiliary groups.
+it only applies to auto created group with their original labels.</string>
+          </property>
+          <property name="text">
+           <string>Apply to existing groups</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="7" column="0">
+       <widget class="Gui::PrefCheckBox" name="checkAutoAuxiliaryGrouping">
+        <property name="text">
+         <string>Automatic auxiliary grouping for new Bodies</string>
+        </property>
+        <property name="prefPath" stdset="0">
+         <cstring>Mod/Part</cstring>
+        </property>
+        <property name="prefEntry" stdset="0">
+         <cstring>AutoAuxGrouping</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="Gui::PrefCheckBox" name="checkAutoHideOrigins">
+        <property name="text">
+         <string>Automatically hide Origins in Tree view</string>
+        </property>
+        <property name="prefPath" stdset="0">
+         <cstring>Mod/Part</cstring>
+        </property>
+        <property name="prefEntry" stdset="0">
+         <cstring>AutoHideOrigins</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0">
+       <widget class="Gui::PrefCheckBox" name="checkAutoRoundOperations">
+        <property name="toolTip">
+         <string>Automatically round operations which have failed. For example, a chamfer which is set to exactly the length of an edge may fail due to being slightly over the edge length, so rounding down to just below the edge length will lead to a successful chamfer.</string>
+        </property>
+        <property name="text">
+         <string>Automatically Round Failed Operations</string>
+        </property>
+        <property name="prefPath" stdset="0">
+         <cstring>Mod/Part</cstring>
+        </property>
+        <property name="prefEntry" stdset="0">
+         <cstring>AutoRoundOps</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>Rounding Method</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="Gui::PrefComboBox" name="comboBoxRoundingMethod">
+          <property name="toolTip">
+           <string>Rounding method used for automatic rounding of failed operations.\n'Round down first' will first attempt to round down, before attempting to round up.\n'Round up first' will attempt to round up, before attempting to round down.</string>
+          </property>
+          <property name="currentText">
+           <string>Round Down First</string>
+          </property>
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>Mod/Part</cstring>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>OpsRoundingMethod</cstring>
+          </property>
+          <item>
+           <property name="text">
+            <string>Round Down First</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Round Up First</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </item>
      </layout>
     </widget>
    </item>
