@@ -961,7 +961,8 @@ bool GeomCurve::closestParameter(const Base::Vector3d& point, double &u) const
         if (!c.IsNull()) {
             gp_Pnt pnt(point.x,point.y,point.z);
             GeomAPI_ProjectPointOnCurve ppc(pnt, c);
-            u = ppc.LowerDistanceParameter();
+            if (ppc.NbPoints() > 0) u = ppc.LowerDistanceParameter();
+            else return false;
             return true;
         }
     }
@@ -998,7 +999,8 @@ bool GeomCurve::closestParameterToBasisCurve(const Base::Vector3d& point, double
             if (!bc.IsNull()) {
                 gp_Pnt pnt(point.x,point.y,point.z);
                 GeomAPI_ProjectPointOnCurve ppc(pnt, bc);
-                u = ppc.LowerDistanceParameter();
+                if (ppc.NbPoints() > 0) u = ppc.LowerDistanceParameter();
+                else return false;
                 return true;
             }
         }
