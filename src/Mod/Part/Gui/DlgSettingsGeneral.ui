@@ -232,7 +232,7 @@ it only applies to auto created group with their original labels.</string>
       <item row="8" column="0">
        <widget class="Gui::PrefCheckBox" name="checkEnforceOpsPrecision">
         <property name="toolTip">
-         <string>Automatically round operations which have failed. For example, a chamfer which is set to exactly the length of an edge may fail due to being slightly over the edge length, so rounding down to just below the edge length will lead to a successful chamfer.</string>
+         <string>Enforce numeric precision for internal part designer operations. Decimals beyond this will be rounded to the nearest allowed level of precision.</string>
         </property>
         <property name="text">
          <string>Enforce Numeric Precision</string>
