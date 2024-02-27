@@ -34,6 +34,7 @@
 
 #include <Base/Exception.h>
 #include <Base/Reader.h>
+#include <App/Application.h>
 #include <App/Document.h>
 #include <Mod/Part/App/TopoShape.h>
 
@@ -54,7 +55,7 @@ inline bool getEnforcePrecision() {
  
 inline long getOperationalPrecisionLevel() { 
     const auto partParamsGroup = App::GetApplication().GetUserParameter().GetGroup("BaseApp/Preferences/Mod/Part"); 
-    return partParamsGroup ? partParamsGroup->GetInt("OpsPrecisionLevel", 12) : 12; 
+    return partParamsGroup ? partParamsGroup->GetInt("OpsPrecisionLevel", 9) : 9; 
 } 
 
 inline double getMinimumPrecisionIncrement() {

@@ -105,7 +105,7 @@ public:
         funcs["AutoAuxGrouping"] = &PartParamsP::updateAutoAuxGrouping;
         EnforcePrecision = this->handle->GetBool("EnforcePrecision", true);
         funcs["EnforcePrecision"] = &PartParamsP::updateEnforcePrecision;
-        OpsPrecisionLevel = this->handle->GetInt("OpsPrecisionLevel", 12);
+        OpsPrecisionLevel = this->handle->GetInt("OpsPrecisionLevel", 9);
         funcs["OpsPrecisionLevel"] = &PartParamsP::updateOpsPrecisionLevel;
         AutoHideOrigins = this->handle->GetBool("AutoHideOrigins", true);
         funcs["AutoHideOrigins"] = &PartParamsP::updateAutoHideOrigins;
@@ -211,7 +211,7 @@ public:
     }
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
     static void updateOpsPrecisionLevel(PartParamsP *self) {
-        self->OpsPrecisionLevel = self->handle->GetInt("OpsPrecisionLevel", 12);
+        self->OpsPrecisionLevel = self->handle->GetInt("OpsPrecisionLevel", 9);
     }
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
     static void updateAutoHideOrigins(PartParamsP *self) {
@@ -712,7 +712,7 @@ const long & PartParams::getOpsPrecisionLevel() {
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:385)
 const long & PartParams::defaultOpsPrecisionLevel() {
-    const static long def = 12;
+    const static long def = 9;
     return def;
 }
 

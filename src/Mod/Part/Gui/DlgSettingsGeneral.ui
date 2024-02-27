@@ -232,7 +232,9 @@ it only applies to auto created group with their original labels.</string>
       <item row="8" column="0">
        <widget class="Gui::PrefCheckBox" name="checkEnforceOpsPrecision">
         <property name="toolTip">
-         <string>Enforce numeric precision for internal part designer operations. Decimals beyond this will be rounded to the nearest allowed level of precision.</string>
+         <string>Enforces a certain level of numeric precision for fillets and chamfers if they initially fail.
+Often these failures occur due to floating point precision errors causing a value to be 
+marginally too large.</string>
         </property>
         <property name="text">
          <string>Enforce Numeric Precision</string>
@@ -264,6 +266,11 @@ it only applies to auto created group with their original labels.</string>
             <height>0</height>
            </size>
           </property>
+          <property name="toolTip">
+           <string>Number of decimal places (preicison) to use when attempting to correct
+floating point errors causing fillets and chamfers to fail. 9 points of precision
+generally works well.</string>
+          </property>
           <property name="text">
            <string>Precision Level (Decimal Places)</string>
           </property>
@@ -272,7 +279,9 @@ it only applies to auto created group with their original labels.</string>
         <item>
          <widget class="Gui::PrefSpinBox" name="spinBoxPrecisionLevel">
           <property name="toolTip">
-           <string>Number of decimal places (preicison) to use internall for part designer operations.</string>
+           <string>Number of decimal places (preicison) to use when attempting to correct
+floating point errors causing fillets and chamfers to fail. 9 points of precision
+generally works well.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -287,7 +296,7 @@ it only applies to auto created group with their original labels.</string>
            <number>34</number>
           </property>
           <property name="value">
-           <number>12</number>
+           <number>9</number>
           </property>
           <property name="prefEntry" stdset="0">
            <cstring>OpsPrecisionLevel</cstring>

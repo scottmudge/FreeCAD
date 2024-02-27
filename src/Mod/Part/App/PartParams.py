@@ -72,7 +72,7 @@ Params = [
     ParamBool("AuxGroupUniqueLabel", False),
     ParamBool("AutoAuxGrouping", True),
     ParamBool("EnforcePrecision", True),
-    ParamInt("OpsPrecisionLevel", 12),
+    ParamInt("OpsPrecisionLevel", 9),
     ParamBool("AutoHideOrigins", True),
     ParamBool("SplitEllipsoid", True),
     ParamInt("ParallelRunThreshold", 100),
