@@ -230,18 +230,21 @@ it only applies to auto created group with their original labels.</string>
        </widget>
       </item>
       <item row="8" column="0">
-       <widget class="Gui::PrefCheckBox" name="checkAutoRoundOperations">
+       <widget class="Gui::PrefCheckBox" name="checkEnforceOpsPrecision">
         <property name="toolTip">
          <string>Automatically round operations which have failed. For example, a chamfer which is set to exactly the length of an edge may fail due to being slightly over the edge length, so rounding down to just below the edge length will lead to a successful chamfer.</string>
         </property>
         <property name="text">
-         <string>Automatically Round Failed Operations</string>
+         <string>Enforce Numeric Precision</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
         <property name="prefPath" stdset="0">
          <cstring>Mod/Part</cstring>
         </property>
         <property name="prefEntry" stdset="0">
-         <cstring>AutoRoundOps</cstring>
+         <cstring>EnforcePrecision</cstring>
         </property>
        </widget>
       </item>
@@ -249,38 +252,49 @@ it only applies to auto created group with their original labels.</string>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
          <widget class="QLabel" name="label_3">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="baseSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
           <property name="text">
-           <string>Rounding Method</string>
+           <string>Precision Level (Decimal Places)</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="Gui::PrefComboBox" name="comboBoxRoundingMethod">
+         <widget class="Gui::PrefSpinBox" name="spinBoxPrecisionLevel">
           <property name="toolTip">
-           <string>Rounding method used for automatic rounding of failed operations.\n'Round down first' will first attempt to round down, before attempting to round up.\n'Round up first' will attempt to round up, before attempting to round down.</string>
+           <string>Number of decimal places (preicison) to use internall for part designer operations.</string>
           </property>
-          <property name="currentText">
-           <string>Round Down First</string>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
-          <property name="currentIndex">
-           <number>0</number>
+          <property name="suffix">
+           <string/>
+          </property>
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>34</number>
+          </property>
+          <property name="value">
+           <number>12</number>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>OpsPrecisionLevel</cstring>
           </property>
           <property name="prefPath" stdset="0">
            <cstring>Mod/Part</cstring>
           </property>
-          <property name="prefEntry" stdset="0">
-           <cstring>OpsRoundingMethod</cstring>
-          </property>
-          <item>
-           <property name="text">
-            <string>Round Down First</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>Round Up First</string>
-           </property>
-          </item>
          </widget>
         </item>
        </layout>
@@ -427,6 +441,11 @@ the object into PartDesign body using a wrap feature.</string>
   <customwidget>
    <class>Gui::PrefComboBox</class>
    <extends>QComboBox</extends>
+   <header>Gui/PrefWidgets.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::PrefSpinBox</class>
+   <extends>QSpinBox</extends>
    <header>Gui/PrefWidgets.h</header>
   </customwidget>
  </customwidgets>

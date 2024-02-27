@@ -135,6 +135,8 @@ void DlgSettingsGeneral::saveSettings()
     ui->checkBoxFixShape->onSave();
     ui->checkAutoAuxiliaryGrouping->onSave();
     ui->checkAutoHideOrigins->onSave();
+    ui->checkEnforceOpsPrecision->onSave();
+    ui->spinBoxPrecisionLevel->onSave();
 }
 
 void DlgSettingsGeneral::loadSettings()
@@ -154,6 +156,8 @@ void DlgSettingsGeneral::loadSettings()
     ui->checkBoxFixShape->onRestore();
     ui->checkAutoAuxiliaryGrouping->onRestore();
     ui->checkAutoHideOrigins->onRestore();
+    ui->checkEnforceOpsPrecision->onRestore();
+    ui->spinBoxPrecisionLevel->onRestore();
 }
 
 /**

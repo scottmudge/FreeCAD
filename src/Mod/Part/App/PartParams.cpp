@@ -55,8 +55,8 @@ public:
     bool RefineModel;
     bool AuxGroupUniqueLabel;
     bool AutoAuxGrouping;
-    bool AutoRoundOps;
-    long OpsRoundingMethod;
+    bool EnforcePrecision;
+    long OpsPrecisionLevel;
     bool AutoHideOrigins;
     bool SplitEllipsoid;
     long ParallelRunThreshold;
@@ -103,10 +103,10 @@ public:
         funcs["AuxGroupUniqueLabel"] = &PartParamsP::updateAuxGroupUniqueLabel;
         AutoAuxGrouping = this->handle->GetBool("AutoAuxGrouping", true);
         funcs["AutoAuxGrouping"] = &PartParamsP::updateAutoAuxGrouping;
-        AutoRoundOps = this->handle->GetBool("AutoRoundOps", true);
-        funcs["AutoRoundOps"] = &PartParamsP::updateAutoRoundOps;
-        OpsRoundingMethod = this->handle->GetInt("OpsRoundingMethod", 0);
-        funcs["OpsRoundingMethod"] = &PartParamsP::updateOpsRoundingMethod;
+        EnforcePrecision = this->handle->GetBool("EnforcePrecision", true);
+        funcs["EnforcePrecision"] = &PartParamsP::updateEnforcePrecision;
+        OpsPrecisionLevel = this->handle->GetInt("OpsPrecisionLevel", 12);
+        funcs["OpsPrecisionLevel"] = &PartParamsP::updateOpsPrecisionLevel;
         AutoHideOrigins = this->handle->GetBool("AutoHideOrigins", true);
         funcs["AutoHideOrigins"] = &PartParamsP::updateAutoHideOrigins;
         SplitEllipsoid = this->handle->GetBool("SplitEllipsoid", true);
@@ -206,12 +206,12 @@ public:
         self->AutoAuxGrouping = self->handle->GetBool("AutoAuxGrouping", true);
     }
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
-    static void updateAutoRoundOps(PartParamsP *self) {
-        self->AutoRoundOps = self->handle->GetBool("AutoRoundOps", true);
+    static void updateEnforcePrecision(PartParamsP *self) {
+        self->EnforcePrecision = self->handle->GetBool("EnforcePrecision", true);
     }
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
-    static void updateOpsRoundingMethod(PartParamsP *self) {
-        self->OpsRoundingMethod = self->handle->GetInt("OpsRoundingMethod", 0);
+    static void updateOpsPrecisionLevel(PartParamsP *self) {
+        self->OpsPrecisionLevel = self->handle->GetInt("OpsPrecisionLevel", 12);
     }
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
     static void updateAutoHideOrigins(PartParamsP *self) {
@@ -674,57 +674,57 @@ void PartParams::removeAutoAuxGrouping() {
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:369)
-const char *PartParams::docAutoRoundOps() {
+const char *PartParams::docEnforcePrecision() {
     return "";
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:377)
-const bool & PartParams::getAutoRoundOps() {
-    return instance()->AutoRoundOps;
+const bool & PartParams::getEnforcePrecision() {
+    return instance()->EnforcePrecision;
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:385)
-const bool & PartParams::defaultAutoRoundOps() {
+const bool & PartParams::defaultEnforcePrecision() {
     const static bool def = true;
     return def;
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:394)
-void PartParams::setAutoRoundOps(const bool &v) {
-    instance()->handle->SetBool("AutoRoundOps",v);
-    instance()->AutoRoundOps = v;
+void PartParams::setEnforcePrecision(const bool &v) {
+    instance()->handle->SetBool("EnforcePrecision",v);
+    instance()->EnforcePrecision = v;
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:403)
-void PartParams::removeAutoRoundOps() {
-    instance()->handle->RemoveBool("AutoRoundOps");
+void PartParams::removeEnforcePrecision() {
+    instance()->handle->RemoveBool("EnforcePrecision");
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:369)
-const char *PartParams::docOpsRoundingMethod() {
+const char *PartParams::docOpsPrecisionLevel() {
     return "";
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:377)
-const long & PartParams::getOpsRoundingMethod() {
-    return instance()->OpsRoundingMethod;
+const long & PartParams::getOpsPrecisionLevel() {
+    return instance()->OpsPrecisionLevel;
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:385)
-const long & PartParams::defaultOpsRoundingMethod() {
-    const static long def = 0;
+const long & PartParams::defaultOpsPrecisionLevel() {
+    const static long def = 12;
     return def;
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:394)
-void PartParams::setOpsRoundingMethod(const long &v) {
-    instance()->handle->SetInt("OpsRoundingMethod",v);
-    instance()->OpsRoundingMethod = v;
+void PartParams::setOpsPrecisionLevel(const long &v) {
+    instance()->handle->SetInt("OpsPrecisionLevel",v);
+    instance()->OpsPrecisionLevel = v;
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:403)
-void PartParams::removeOpsRoundingMethod() {
-    instance()->handle->RemoveInt("OpsRoundingMethod");
+void PartParams::removeOpsPrecisionLevel() {
+    instance()->handle->RemoveInt("OpsPrecisionLevel");
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:369)

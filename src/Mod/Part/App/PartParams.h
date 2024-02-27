@@ -222,22 +222,22 @@ public:
 
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:139)
     //@{
-    /// Accessor for parameter AutoRoundOps
-    static const bool & getAutoRoundOps();
-    static const bool & defaultAutoRoundOps();
-    static void removeAutoRoundOps();
-    static void setAutoRoundOps(const bool &v);
-    static const char *docAutoRoundOps();
+    /// Accessor for parameter EnforcePrecision
+    static const bool & getEnforcePrecision();
+    static const bool & defaultEnforcePrecision();
+    static void removeEnforcePrecision();
+    static void setEnforcePrecision(const bool &v);
+    static const char *docEnforcePrecision();
     //@}
 
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:139)
     //@{
-    /// Accessor for parameter OpsRoundingMethod
-    static const long & getOpsRoundingMethod();
-    static const long & defaultOpsRoundingMethod();
-    static void removeOpsRoundingMethod();
-    static void setOpsRoundingMethod(const long &v);
-    static const char *docOpsRoundingMethod();
+    /// Accessor for parameter OpsPrecisionLevel
+    static const long & getOpsPrecisionLevel();
+    static const long & defaultOpsPrecisionLevel();
+    static void removeOpsPrecisionLevel();
+    static void setOpsPrecisionLevel(const long &v);
+    static const char *docOpsPrecisionLevel();
     //@}
 
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:139)
