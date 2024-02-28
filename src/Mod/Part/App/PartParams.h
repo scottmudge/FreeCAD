@@ -222,6 +222,26 @@ public:
 
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:139)
     //@{
+    /// Accessor for parameter EnforcePrecision
+    static const bool & getEnforcePrecision();
+    static const bool & defaultEnforcePrecision();
+    static void removeEnforcePrecision();
+    static void setEnforcePrecision(const bool &v);
+    static const char *docEnforcePrecision();
+    //@}
+
+    // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:139)
+    //@{
+    /// Accessor for parameter OpsPrecisionLevel
+    static const long & getOpsPrecisionLevel();
+    static const long & defaultOpsPrecisionLevel();
+    static void removeOpsPrecisionLevel();
+    static void setOpsPrecisionLevel(const long &v);
+    static const char *docOpsPrecisionLevel();
+    //@}
+
+    // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:139)
+    //@{
     /// Accessor for parameter AutoHideOrigins
     static const bool & getAutoHideOrigins();
     static const bool & defaultAutoHideOrigins();

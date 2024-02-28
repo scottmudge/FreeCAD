@@ -40,6 +40,7 @@
 #include <Base/Stream.h>
 #include <Base/Tools.h>
 #include <Base/Writer.h>
+#include <Gui/ProgressBar.h>
 
 #include "AutoSaver.h"
 #include "Document.h"
@@ -132,96 +133,130 @@ void AutoSaver::saveDocument(const std::string& name, AutoSaveProperty& saver)
 {
     Gui::WaitCursor wc;
     App::Document* doc = App::GetApplication().getDocument(name.c_str());
+    QProgressBar* bar = Gui::SequencerBar::instance()->getProgressBar();
+    if (bar) {
+        bar->setRange(0, 100);
+        bar->setValue(0);
+        bar->show();
+        Gui::getMainWindow()->showMessage(tr("Auto-saving document..."));
+    }
 
-    if (doc && !doc->testStatus(App::Document::PartialDoc)
-            && !doc->testStatus(App::Document::TempDoc))
-    {
-        // Set the document's current transient directory
-        std::string dirName = doc->TransientDir.getValue();
-        dirName += "/fc_recovery_files";
-        saver.dirName = dirName;
-
-        // Write recovery meta file
-        QFile file(QStringLiteral("%1/fc_recovery_file.xml")
-            .arg(QString::fromUtf8(doc->TransientDir.getValue())));
-        if (file.open(QFile::WriteOnly)) {
-            QTextStream str(&file);
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-            str.setCodec("UTF-8");
-#endif
-            str << "<?xml version='1.0' encoding='utf-8'?>\n"
-                << "<AutoRecovery SchemaVersion=\"1\">\n";
-            str << "  <Status>Created</Status>\n";
-            str << "  <Label>" << QString::fromUtf8(doc->Label.getValue()) << "</Label>\n"; // store the document's current label
-            str << "  <FileName>" << QString::fromUtf8(doc->FileName.getValue()) << "</FileName>\n"; // store the document's current filename
-            str << "</AutoRecovery>\n";
-            file.close();
-        }
-
-        // make sure to tmp. disable saving thumbnails because this causes trouble if the
-        // associated 3d view is not active
-        Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetParameterGroupByPath
-            ("User parameter:BaseApp/Preferences/Document");
-        bool save = hGrp->GetBool("SaveThumbnail",false);
-        if (save)
-            hGrp->SetBool("SaveThumbnail",false);
-
-        getMainWindow()->showMessage(tr("Please wait until the AutoRecovery file has been saved..."), 5000);
-        //qApp->processEvents();
-
-        // open extra scope to close ZipWriter properly
-        Base::StopWatch watch;
-        watch.start();
+    try {
+        if (doc && !doc->testStatus(App::Document::PartialDoc)
+                && !doc->testStatus(App::Document::TempDoc))
         {
-            if (!this->compressed) {
-                RecoveryWriter writer(saver);
+            // Set the document's current transient directory
+            std::string dirName = doc->TransientDir.getValue();
+            dirName += "/fc_recovery_files";
+            saver.dirName = dirName;
 
-                // We will be using thread pool if not compressed.
-                // So, always force binary format because ASCII
-                // is not reentrant. See PropertyPartShape::SaveDocFile
-                writer.setMode("BinaryBrep");
-
-                writer.putNextEntry("Document.xml");
-
-                doc->Save(writer);
-
-                // Special handling for Gui document.
-                doc->signalSaveDocument(writer);
-
-                // write additional files
-                writer.writeFiles();
+            // Write recovery meta file
+            QFile file(QStringLiteral("%1/fc_recovery_file.xml")
+                .arg(QString::fromUtf8(doc->TransientDir.getValue())));
+            if (file.open(QFile::WriteOnly)) {
+                QTextStream str(&file);
+        #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+                str.setCodec("UTF-8");
+        #endif
+                str << "<?xml version='1.0' encoding='utf-8'?>\n"
+                    << "<AutoRecovery SchemaVersion=\"1\">\n";
+                str << "  <Status>Created</Status>\n";
+                str << "  <Label>" << QString::fromUtf8(doc->Label.getValue()) << "</Label>\n"; // store the document's current label
+                str << "  <FileName>" << QString::fromUtf8(doc->FileName.getValue()) << "</FileName>\n"; // store the document's current filename
+                str << "</AutoRecovery>\n";
+                file.close();
             }
-            // only create the file if something has changed
-            else if (!saver.touched.empty()) {
-                std::string fn = doc->TransientDir.getValue();
-                fn += "/fc_recovery_file.fcstd";
-                Base::FileInfo tmp(fn);
-                Base::ofstream file(tmp, std::ios::out | std::ios::binary);
-                if (file.is_open())
-                {
-                    Base::ZipWriter writer(file);
-                    if (hGrp->GetBool("SaveBinaryBrep", true))
-                        writer.setMode("BinaryBrep");
 
-                    writer.setComment("AutoRecovery file");
-                    writer.setLevel(1); // apparently the fastest compression
+            if (bar) bar->setValue(10);
+
+            // make sure to tmp. disable saving thumbnails because this causes trouble if the
+            // associated 3d view is not active
+            Base::Reference<ParameterGrp> hGrp = App::GetApplication().GetParameterGroupByPath
+                ("User parameter:BaseApp/Preferences/Document");
+            bool save = hGrp->GetBool("SaveThumbnail",false);
+            if (save)
+                hGrp->SetBool("SaveThumbnail",false);
+
+            // getMainWindow()->showMessage(tr("Please wait until the AutoRecovery file has been saved..."), 5000);
+            if (bar) bar->setValue(20);
+            //qApp->processEvents();
+
+            // open extra scope to close ZipWriter properly
+            Base::StopWatch watch;
+            watch.start();
+            {
+                if (!this->compressed) {
+                    RecoveryWriter writer(saver);
+
+                    // We will be using thread pool if not compressed.
+                    // So, always force binary format because ASCII
+                    // is not reentrant. See PropertyPartShape::SaveDocFile
+                    writer.setMode("BinaryBrep");
+
                     writer.putNextEntry("Document.xml");
 
                     doc->Save(writer);
+
+                    if (bar) bar->setValue(60);
 
                     // Special handling for Gui document.
                     doc->signalSaveDocument(writer);
 
                     // write additional files
                     writer.writeFiles();
+                    if (bar) bar->setValue(90);
+                }
+                // only create the file if something has changed
+                else if (!saver.touched.empty()) {
+                    std::string fn = doc->TransientDir.getValue();
+                    fn += "/fc_recovery_file.fcstd";
+                    Base::FileInfo tmp(fn);
+                    Base::ofstream file(tmp, std::ios::out | std::ios::binary);
+                    if (file.is_open())
+                    {
+                        Base::ZipWriter writer(file);
+                        if (hGrp->GetBool("SaveBinaryBrep", true))
+                            writer.setMode("BinaryBrep");
+
+                        writer.setComment("AutoRecovery file");
+                        writer.setLevel(1); // apparently the fastest compression
+                        writer.putNextEntry("Document.xml");
+
+                        doc->Save(writer);
+
+                        if (bar) bar->setValue(60);
+
+                        // Special handling for Gui document.
+                        doc->signalSaveDocument(writer);
+
+                        // write additional files
+                        writer.writeFiles();
+
+                        if (bar) bar->setValue(90);
+                    }
                 }
             }
-        }
 
-        std::string str = watch.toString(watch.elapsed());
-        Base::Console().Log("Save AutoRecovery file: %s\n", str.c_str());
-        if (save)
-            hGrp->SetBool("SaveThumbnail",save);
+            std::string str = watch.toString(watch.elapsed());
+            Base::Console().Log("Save AutoRecovery file: %s\n", str.c_str());
+            if (save)
+                hGrp->SetBool("SaveThumbnail",save);
+
+            if (bar) bar->setValue(100);
+        }
+    } catch (const std::exception& exc) {
+        if (bar) {
+            bar->setValue(0);
+            bar->hide();
+            Gui::getMainWindow()->showMessage(QString());
+        }
+        throw exc;
+    }
+
+    if (bar) {
+        bar->setValue(0);
+        bar->hide();
+        Gui::getMainWindow()->showMessage(QString());
     }
 }
 

@@ -55,6 +55,8 @@ public:
     bool RefineModel;
     bool AuxGroupUniqueLabel;
     bool AutoAuxGrouping;
+    bool EnforcePrecision;
+    long OpsPrecisionLevel;
     bool AutoHideOrigins;
     bool SplitEllipsoid;
     long ParallelRunThreshold;
@@ -101,6 +103,10 @@ public:
         funcs["AuxGroupUniqueLabel"] = &PartParamsP::updateAuxGroupUniqueLabel;
         AutoAuxGrouping = this->handle->GetBool("AutoAuxGrouping", true);
         funcs["AutoAuxGrouping"] = &PartParamsP::updateAutoAuxGrouping;
+        EnforcePrecision = this->handle->GetBool("EnforcePrecision", true);
+        funcs["EnforcePrecision"] = &PartParamsP::updateEnforcePrecision;
+        OpsPrecisionLevel = this->handle->GetInt("OpsPrecisionLevel", 9);
+        funcs["OpsPrecisionLevel"] = &PartParamsP::updateOpsPrecisionLevel;
         AutoHideOrigins = this->handle->GetBool("AutoHideOrigins", true);
         funcs["AutoHideOrigins"] = &PartParamsP::updateAutoHideOrigins;
         SplitEllipsoid = this->handle->GetBool("SplitEllipsoid", true);
@@ -198,6 +204,14 @@ public:
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
     static void updateAutoAuxGrouping(PartParamsP *self) {
         self->AutoAuxGrouping = self->handle->GetBool("AutoAuxGrouping", true);
+    }
+    // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
+    static void updateEnforcePrecision(PartParamsP *self) {
+        self->EnforcePrecision = self->handle->GetBool("EnforcePrecision", true);
+    }
+    // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
+    static void updateOpsPrecisionLevel(PartParamsP *self) {
+        self->OpsPrecisionLevel = self->handle->GetInt("OpsPrecisionLevel", 9);
     }
     // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:307)
     static void updateAutoHideOrigins(PartParamsP *self) {
@@ -657,6 +671,60 @@ void PartParams::setAutoAuxGrouping(const bool &v) {
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:403)
 void PartParams::removeAutoAuxGrouping() {
     instance()->handle->RemoveBool("AutoAuxGrouping");
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:369)
+const char *PartParams::docEnforcePrecision() {
+    return "";
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:377)
+const bool & PartParams::getEnforcePrecision() {
+    return instance()->EnforcePrecision;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:385)
+const bool & PartParams::defaultEnforcePrecision() {
+    const static bool def = true;
+    return def;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:394)
+void PartParams::setEnforcePrecision(const bool &v) {
+    instance()->handle->SetBool("EnforcePrecision",v);
+    instance()->EnforcePrecision = v;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:403)
+void PartParams::removeEnforcePrecision() {
+    instance()->handle->RemoveBool("EnforcePrecision");
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:369)
+const char *PartParams::docOpsPrecisionLevel() {
+    return "";
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:377)
+const long & PartParams::getOpsPrecisionLevel() {
+    return instance()->OpsPrecisionLevel;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:385)
+const long & PartParams::defaultOpsPrecisionLevel() {
+    const static long def = 9;
+    return def;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:394)
+void PartParams::setOpsPrecisionLevel(const long &v) {
+    instance()->handle->SetInt("OpsPrecisionLevel",v);
+    instance()->OpsPrecisionLevel = v;
+}
+
+// Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:403)
+void PartParams::removeOpsPrecisionLevel() {
+    instance()->handle->RemoveInt("OpsPrecisionLevel");
 }
 
 // Auto generated code (C:\Development\3D\FreeCAD\repo\src\Tools\params_utils.py:369)

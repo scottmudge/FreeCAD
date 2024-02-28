@@ -34,6 +34,7 @@
 
 #include <Base/Exception.h>
 #include <Base/Reader.h>
+#include <App/Application.h>
 #include <App/Document.h>
 #include <Mod/Part/App/TopoShape.h>
 
@@ -46,6 +47,20 @@ using namespace PartDesign;
 PROPERTY_SOURCE(PartDesign::Fillet, PartDesign::DressUp)
 
 const App::PropertyQuantityConstraint::Constraints floatRadius = {0.0,FLT_MAX,0.1};
+
+inline bool getEnforcePrecision() { 
+    const auto partParamsGroup = App::GetApplication().GetUserParameter().GetGroup("BaseApp/Preferences/Mod/Part"); 
+    return partParamsGroup ? partParamsGroup->GetBool("EnforcePrecision", true) : true; 
+} 
+ 
+inline long getOperationalPrecisionLevel() { 
+    const auto partParamsGroup = App::GetApplication().GetUserParameter().GetGroup("BaseApp/Preferences/Mod/Part"); 
+    return partParamsGroup ? partParamsGroup->GetInt("OpsPrecisionLevel", 9) : 9; 
+} 
+
+inline double getMinimumPrecisionIncrement() {
+    return 1.0f / std::pow(10.0, getOperationalPrecisionLevel());
+}
 
 Fillet::Fillet()
 {
@@ -93,55 +108,61 @@ App::DocumentObjectExecReturn *Fillet::execute()
 
     this->positionByBaseFeature();
 
-    try {
-        TopoShape shape(0,getDocument()->getStringHasher());
+    auto tryFillet = [&](const double dec = 0.0){
+        try {
+            TopoShape shape(0,getDocument()->getStringHasher());
 
-        std::vector<TopoShape::FilletSegments> segmentList;
-        std::string sub;
-        for (const auto &e : edges) {
-            int index = baseShape.findShape(e.getShape());
-            segmentList.emplace_back();
-            auto &conf = segmentList.back();
-            if (index == 0)
-                continue;
-            sub = "Edge";
-            sub += std::to_string(index);
-            const auto &segments = Segments.getValue(sub);
-            for (const auto &segment : segments)
-                conf.emplace_back(segment.param, segment.radius, segment.length);
-        }
-
-        shape.makEFillet(baseShape,edges,segmentList,Radius.getValue());
-        if (shape.isNull())
-            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Resulting shape is null"));
-
-        TopTools_ListOfShape aLarg;
-        aLarg.Append(baseShape.getShape());
-        bool failed = false;
-        if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False)) {
-            ShapeFix_ShapeTolerance aSFT;
-            aSFT.LimitTolerance(shape.getShape(), Precision::Confusion(), Precision::Confusion(), TopAbs_SHAPE);
-            // For backward compatibility
-            if (FixShape.getValue() == 0) {
-                shape.fix();
-                if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False))
-                    failed = true;
+            std::vector<TopoShape::FilletSegments> segmentList;
+            std::string sub;
+            for (const auto &e : edges) {
+                int index = baseShape.findShape(e.getShape());
+                segmentList.emplace_back();
+                auto &conf = segmentList.back();
+                if (index == 0)
+                    continue;
+                sub = "Edge";
+                sub += std::to_string(index);
+                const auto &segments = Segments.getValue(sub);
+                for (const auto &segment : segments)
+                    conf.emplace_back(segment.param, segment.radius - dec, segment.length);
             }
-        }
 
-        if (!failed) {
-            shape = refineShapeIfActive(shape);
-            shape = getSolid(shape);
-        }
-        this->Shape.setValue(shape);
+            shape.makEFillet(baseShape,edges,segmentList,Radius.getValue() - dec);
+            if (shape.isNull())
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Resulting shape is null"));
 
-        if (failed)
-            return new App::DocumentObjectExecReturn("Resulting shape is invalid");
-        return App::DocumentObject::StdReturn;
-    }
-    catch (Standard_Failure& e) {
-        return new App::DocumentObjectExecReturn(e.GetMessageString());
-    }
+            TopTools_ListOfShape aLarg;
+            aLarg.Append(baseShape.getShape());
+            bool failed = false;
+            if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False)) {
+                ShapeFix_ShapeTolerance aSFT;
+                aSFT.LimitTolerance(shape.getShape(), Precision::Confusion(), Precision::Confusion(), TopAbs_SHAPE);
+                // For backward compatibility
+                if (FixShape.getValue() == 0) {
+                    shape.fix();
+                    if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False))
+                        failed = true;
+                }
+            }
+
+            if (!failed) {
+                shape = refineShapeIfActive(shape);
+                shape = getSolid(shape);
+            }
+            this->Shape.setValue(shape);
+
+            if (failed)
+                return new App::DocumentObjectExecReturn("Resulting shape is invalid");
+            return App::DocumentObject::StdReturn;
+        }
+        catch (Standard_Failure& e) {
+            return new App::DocumentObjectExecReturn(e.GetMessageString());
+        }  
+    };
+
+    if (!getEnforcePrecision()) return tryFillet();
+    if (tryFillet() != App::DocumentObject::StdReturn) return tryFillet(getMinimumPrecisionIncrement());
+    return App::DocumentObject::StdReturn;   
 }
 
 void Fillet::handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, App::Property * prop)

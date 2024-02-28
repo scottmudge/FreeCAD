@@ -37,6 +37,7 @@
 
 #include <Base/Exception.h>
 #include <Base/Reader.h>
+#include <App/Application.h>
 #include <App/Document.h>
 #include <Base/Tools.h>
 #include <Mod/Part/App/TopoShape.h>
@@ -54,6 +55,21 @@ const App::PropertyQuantityConstraint::Constraints Chamfer::floatSize = {0.0, FL
 const App::PropertyAngle::Constraints Chamfer::floatAngle = {0.0, 180.0, 1.0};
 
 static App::DocumentObjectExecReturn *validateParameters(int chamferType, double size, double size2, double angle);
+
+inline bool getEnforcePrecision() { 
+    const auto partParamsGroup = App::GetApplication().GetUserParameter().GetGroup("BaseApp/Preferences/Mod/Part"); 
+    return partParamsGroup ? partParamsGroup->GetBool("EnforcePrecision", true) : true; 
+} 
+ 
+inline long getOperationalPrecisionLevel() { 
+    const auto partParamsGroup = App::GetApplication().GetUserParameter().GetGroup("BaseApp/Preferences/Mod/Part"); 
+    return partParamsGroup ? partParamsGroup->GetInt("OpsPrecisionLevel", 9) : 9; 
+} 
+
+inline double getMinimumPrecisionIncrement() {
+    return 1.0f / std::pow(10.0, getOperationalPrecisionLevel());
+}
+ 
 
 Chamfer::Chamfer()
 {
@@ -135,54 +151,61 @@ App::DocumentObjectExecReturn *Chamfer::execute()
         return res;
     }
 
-    Part::TopoShape::ChamferInfo defaultChamfer;
-    defaultChamfer.size = size;
-    defaultChamfer.size2 = chamferType == 1 ? size2 : size;
-    defaultChamfer.angle = chamferType == 2 ? angle : 0.0;
-    defaultChamfer.flip = flipDirection;
+    auto tryChamfer = [&](const double dec = 0.0) {
+        Part::TopoShape::ChamferInfo defaultChamfer;
+        defaultChamfer.size = (size - dec);
+        defaultChamfer.size2 = (chamferType == 1 ? size2 : size) - dec;
+        defaultChamfer.angle = chamferType == 2 ? angle : 0.0;
+        defaultChamfer.flip = flipDirection;
 
-    std::string name;
-    std::vector<Part::TopoShape::ChamferInfo> chamferInfo;
-    for (const auto &edge : edges) {
-        int idx = baseShape.findShape(edge.getShape());
-        name = "Edge";
-        name += std::to_string(idx);
-        chamferInfo.push_back(defaultChamfer);
-        ChamferInfo.getValue(name.c_str(),chamferInfo.back());
-    }
+        std::string name;
+        std::vector<Part::TopoShape::ChamferInfo> chamferInfo;
+        for (const auto &edge : edges) {
+            int idx = baseShape.findShape(edge.getShape());
+            name = "Edge";
+            name += std::to_string(idx);
+            chamferInfo.push_back(defaultChamfer);
+            ChamferInfo.getValue(name.c_str(),chamferInfo.back());
+        }
 
-    this->positionByBaseFeature();
-    try {
-        TopoShape shape(0,getDocument()->getStringHasher());
-        shape.makEChamfer(baseShape, edges, chamferInfo);
-        if (shape.isNull())
-            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Failed to create chamfer"));
+        this->positionByBaseFeature();
+        try {
+            TopoShape shape(0,getDocument()->getStringHasher());
+            shape.makEChamfer(baseShape, edges, chamferInfo);
+            if (shape.isNull())
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Failed to create chamfer"));
 
-        TopTools_ListOfShape aLarg;
-        aLarg.Append(baseShape.getShape());
-        bool failed = false;
-        if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False)) {
-            ShapeFix_ShapeTolerance aSFT;
-            aSFT.LimitTolerance(shape.getShape(), Precision::Confusion(), Precision::Confusion(), TopAbs_SHAPE);
-            // For backward compatibility
-            if (FixShape.getValue() == 0) {
-                shape.fix();
-                if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False))
-                    failed = true;
+            TopTools_ListOfShape aLarg;
+            aLarg.Append(baseShape.getShape());
+            bool failed = false;
+            if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False)) {
+                ShapeFix_ShapeTolerance aSFT;
+                aSFT.LimitTolerance(shape.getShape(), Precision::Confusion(), Precision::Confusion(), TopAbs_SHAPE);
+                // For backward compatibility
+                if (FixShape.getValue() == 0) {
+                    shape.fix();
+                    if (!BRepAlgo::IsValid(aLarg, shape.getShape(), Standard_False, Standard_False))
+                        failed = true;
+                }
             }
+            if (!failed) {
+                shape = refineShapeIfActive(shape);
+                shape = getSolid(shape);
+            }
+            this->Shape.setValue(shape);
+            if (failed)
+                return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Resulting shape is invalid"));
+            return App::DocumentObject::StdReturn;
         }
-        if (!failed) {
-            shape = refineShapeIfActive(shape);
-            shape = getSolid(shape);
+        catch (Standard_Failure& e) {
+            return new App::DocumentObjectExecReturn(e.GetMessageString());
         }
-        this->Shape.setValue(shape);
-        if (failed)
-            return new App::DocumentObjectExecReturn(QT_TRANSLATE_NOOP("Exception", "Resulting shape is invalid"));
-        return App::DocumentObject::StdReturn;
-    }
-    catch (Standard_Failure& e) {
-        return new App::DocumentObjectExecReturn(e.GetMessageString());
-    }
+    };
+
+    if (!getEnforcePrecision()) return tryChamfer();
+    if (tryChamfer() != App::DocumentObject::StdReturn) return tryChamfer(getMinimumPrecisionIncrement());
+    return App::DocumentObject::StdReturn;
+    
 }
 
 void Chamfer::handleChangedPropertyType(Base::XMLReader &reader, const char * TypeName, App::Property * prop)
