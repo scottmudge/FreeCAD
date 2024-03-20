@@ -348,7 +348,7 @@ ToolBarManager::~ToolBarManager()
 
 int ToolBarManager::toolBarIconSize() const
 {
-    return std::max(hGeneral->GetInt("ToolbarIconSize", 24l), 16l);
+    return std::max(hGeneral->GetInt("ToolbarIconSize", 24l), 5l);
 }
 
 void ToolBarManager::getGlobalToolbarNames()

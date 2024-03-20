@@ -8493,19 +8493,17 @@ void SketchObject::rebuildExternalGeometry(bool defining, bool addIntersection)
                 Handle(Geom_Curve) origCurve = curve.Curve().Curve();
                 gp_Pnt firstPoint, lastPoint;
 
-                bool done = false;
-
                 if (Part::GeomCurve::isLinear(origCurve)) {
-                    done = true;
                     geos.emplace_back(projectLine(curve, gPlane, invPlm));
+                    return;
                 }
-                else {
-                    // TopExp::First/LastVertex() may throw on infinite edge, so
-                    // we don't do it for linear edge, which does not require
-                    // end points for projection
-                    firstPoint = BRep_Tool::Pnt(TopExp::FirstVertex(edge));
-                    lastPoint = BRep_Tool::Pnt(TopExp::LastVertex(edge));
-                }
+
+                bool done = false;
+                // TopExp::First/LastVertex() may throw on infinite edge, so
+                // we don't do it for linear edge, which does not require
+                // end points for projection
+                firstPoint = BRep_Tool::Pnt(TopExp::FirstVertex(edge));
+                lastPoint = BRep_Tool::Pnt(TopExp::LastVertex(edge));
 
                 if (curve.GetType() == GeomAbs_Circle) {
                     done = true;
@@ -10183,8 +10181,13 @@ void SketchObject::onChanged(const App::Property* prop)
                 }
             }
             ExternalGeometry.setValues(objs,subs);
-        } else
+        } else {
+            // Make sure to inform view provider first before emit signal for
+            // editting task
+            inherited::onChanged(prop);
             signalElementsChanged();
+            return;
+        }
     } else if( prop == &ExternalGeometry ) {
 
         if(doc && doc->isPerformingTransaction())
@@ -10194,7 +10197,12 @@ void SketchObject::onChanged(const App::Property* prop)
             // must wait till onDocumentRestored() when shadow references are
             // fully restored
             updateGeometryRefs();
+
+            // Make sure to inform view provider first before emit signal for
+            // editting task
+            inherited::onChanged(prop);
             signalElementsChanged();
+            return;
         }
     } else if (prop == &Placement) {
         if (ExternalGeometry.getSize() > 0)
@@ -10222,7 +10230,7 @@ void SketchObject::onChanged(const App::Property* prop)
         }
     }
 
-    Part::Part2DObject::onChanged(prop);
+    inherited::onChanged(prop);
 }
 
 void SketchObject::onUpdateElementReference(const App::Property *prop) {

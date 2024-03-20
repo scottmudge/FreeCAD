@@ -1,5 +1,24 @@
 Stable release (branch [LinkStable](https://github.com/realthunder/FreeCAD/tree/LinkStable)) is merged with upstream aa3b2f39 2023.05.22
 
+# Stable 2024.03.17
+
+Fix shadow light document setting (#948)
+Fix customized toolbar size handling (#947)
+Fix hidden line rendering
+Fix Python console lost of bracket on auto completion
+Show runtime attributes in Python console auto completion call tips
+Fix SpinBox context menu
+Part: fix meshing of infinite shape for visualization (#955)
+Part: improved exception handling in pre-selection macro
+Part|Surface: fix making BSpline face (#965)
+PartDesign: fixed thickness editing panel input sync problem
+Sketcher: fix crash on deleting external geometry (#967)
+Sketcher: fix linear approximation of BSpline external edge (#958)
+Sketcher: clear selection before trimming edge to avoid error message
+Sketcher: suppress error message on creating arc
+
+-- 20240317stable --
+
 # Stable 2024.01.23
 
 Fix crash on closing document (#936)
@@ -8,8 +27,6 @@ Fix axis origin rendering (#929)
 Fix Spreadsheet foreground color in ProDark (#940)
 PartDesign: expose MaxDegree setting in Loft
 PartDesign: fix `Parallel transform` option in Pattern feature editing panel
-
--- 20240123stable --
 
 # Stable 2024.01.13
 

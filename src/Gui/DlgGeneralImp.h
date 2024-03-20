@@ -62,6 +62,7 @@ public:
                                     PrefComboBox *combo,
                                     const char *def,
                                     QStringList filter = QStringList());
+    void setupToolBarIconSize();
 
 protected:
     void updateLanguage();
@@ -69,7 +70,6 @@ protected:
 
 private:
     void setRecentFileSize();
-    void setupToolBarIconSize(QComboBox *comboBox);
 
 public Q_SLOTS:
     void onUnitSystemIndexChanged(int index);

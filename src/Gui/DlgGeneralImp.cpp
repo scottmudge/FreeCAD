@@ -46,6 +46,7 @@
 #include "MainWindow.h"
 #include "PrefWidgets.h"
 #include "PythonConsole.h"
+#include "ToolBarManager.h"
 #include "TreeParams.h"
 #include "ViewParams.h"
 #include "OverlayWidgets.h"
@@ -58,6 +59,8 @@ using namespace Base;
 
 using namespace Gui;
 using namespace Gui::Dialog;
+
+static DlgGeneralImp *_Instance;
 
 /* TRANSLATOR Gui::Dialog::DlgGeneralImp */
 
@@ -95,6 +98,8 @@ DlgGeneralImp::DlgGeneralImp( QWidget* parent )
         ui->comboBox_FracInch->setVisible(false);
         ui->fractionalInchLabel->setVisible(false);
     }
+
+    _Instance = this;
 }
 
 /**
@@ -102,6 +107,7 @@ DlgGeneralImp::DlgGeneralImp( QWidget* parent )
  */
 DlgGeneralImp::~DlgGeneralImp()
 {
+    _Instance = nullptr;
 }
 
 /** Sets the size of the recent file list from the user parameters.
@@ -263,23 +269,21 @@ void DlgGeneralImp::populateStylesheets(const char *key,
     combo->onRestore();
 }
 
-void DlgGeneralImp::setupToolBarIconSize(QComboBox *comboBox)
+void DlgGeneralImp::setupToolBarIconSize()
 {
+    QComboBox *comboBox = ui->toolbarIconSize;
     int current = getMainWindow()->iconSize().width();
-    int idx = 1;
-    if (comboBox->count() != 0) {
-        idx = comboBox->currentIndex();
-        if (comboBox->count() > 4)
-            current = comboBox->itemData(4).toInt();
-    }
     QSignalBlocker blocker(comboBox);
     comboBox->clear();
     comboBox->addItem(tr("Small (%1px)").arg(16), QVariant((int)16));
     comboBox->addItem(tr("Medium (%1px)").arg(24), QVariant((int)24));
     comboBox->addItem(tr("Large (%1px)").arg(32), QVariant((int)32));
     comboBox->addItem(tr("Extra large (%1px)").arg(48), QVariant((int)48));
-    if (comboBox->findData(QVariant(current)) < 0)
+    int idx = comboBox->findData(QVariant(current));
+    if (idx < 0) {
         comboBox->addItem(tr("Custom (%1px)").arg(current), QVariant((int)current));
+        idx = 4;
+    }
     comboBox->setCurrentIndex(idx);
 }
 
@@ -339,7 +343,7 @@ void DlgGeneralImp::loadSettings()
     if (model)
         model->sort(0);
 
-    setupToolBarIconSize(ui->toolbarIconSize);
+    setupToolBarIconSize();
     ui->toolbarIconSize->onRestore();
 
     ui->treeMode->addItem(tr("Combo View"));
@@ -421,7 +425,7 @@ void DlgGeneralImp::updateLanguage()
     ui->comboBox_UnitSystem->setCurrentIndex(index);
     ui->toolTipIconSize->setToolTip(QApplication::translate("ViewParams",
                 ViewParams::docToolTipIconSize()));
-    setupToolBarIconSize(ui->toolbarIconSize);
+    setupToolBarIconSize();
 }
 
 void DlgGeneralImp::changeEvent(QEvent *e)
@@ -467,12 +471,12 @@ void applyToolTipIconSize(ParameterGrp *)
     Application::Instance->commandManager().refreshIcons();
 }
 
-void applyToolbarIconSize(const ParamKey *paramKey)
+void applyToolbarIconSize(const ParamKey *)
 {
-    int pixel = paramKey->hGrp->GetInt(paramKey->key);
-    if (pixel <= 0)
-        pixel = 24;
+    int pixel = ToolBarManager::getInstance()->toolBarIconSize();
     getMainWindow()->setIconSize(QSize(pixel,pixel));
+    if (_Instance)
+        _Instance->setupToolBarIconSize();
 }
 
 void applyLanguage(const ParamKey *paramKey)

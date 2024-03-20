@@ -127,6 +127,7 @@ public:
                 geom->getTypeId() == Part::GeomEllipse::getClassTypeId() ||
                 geom->getTypeId() == Part::GeomBSplineCurve::getClassTypeId() ) {
                 try {
+                    Gui::Selection().clearSelection();
                     Gui::Command::openCommand(QT_TRANSLATE_NOOP("Command", "Trim edge"));
                     Gui::cmdAppObjectArgs(sketchgui->getObject(), "trim(%d,App.Vector(%f,%f,0))",
                               GeoId, onSketchPos.x, onSketchPos.y);
