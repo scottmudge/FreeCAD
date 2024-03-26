@@ -1,5 +1,9 @@
 Stable release (branch [LinkStable](https://github.com/realthunder/FreeCAD/tree/LinkStable)) is merged with upstream aa3b2f39 2023.05.22
 
+# Stable 2024.03.22
+
+Part: fix freezing when making wire (#973)
+
 # Stable 2024.03.17
 
 Fix shadow light document setting (#948)
@@ -17,7 +21,7 @@ Sketcher: fix linear approximation of BSpline external edge (#958)
 Sketcher: clear selection before trimming edge to avoid error message
 Sketcher: suppress error message on creating arc
 
--- 20240317stable --
+-- 20240322stable --
 
 # Stable 2024.01.23
 

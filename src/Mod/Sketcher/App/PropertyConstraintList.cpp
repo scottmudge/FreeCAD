@@ -158,10 +158,6 @@ void PropertyConstraintList::setValue(const Constraint* lValue)
             start = 1;
         }
 
-        /* Signal rename changes */
-        if (!renamed.empty())
-            signalConstraintsRenamed(renamed);
-
         /* Collect info about removals */
         for (unsigned int i = start; i < _lValueList.size(); i++) {
             valueMap.erase(_lValueList[i]->tag);
@@ -171,6 +167,10 @@ void PropertyConstraintList::setValue(const Constraint* lValue)
         /* Signal removes */
         if (!removed.empty())
             signalConstraintsRemoved(removed);
+
+        /* Signal rename changes */
+        if (!renamed.empty())
+            signalConstraintsRenamed(renamed);
 
         // Cleanup
         for (unsigned int i = 0; i < _lValueList.size(); i++)
