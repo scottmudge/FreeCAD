@@ -190,6 +190,7 @@ def define(module, header=True):
     param_path = module.ParamPath
     class_doc = module.ClassDoc
     signal = getattr(module, "Signal", False)
+    user_on_change = getattr(module, "UserOnChange", "")
 
     if header:
         cog.out(
@@ -287,7 +288,8 @@ public:
     cog.out(
         f"""
     {trace_comment()}
-    void OnChange(Base::Subject<const char*> &, const char* sReason) {{
+    void OnChange(Base::Subject<const char*> &param, const char* sReason) {{
+        (void)param;
         if(!sReason)
             return;
         auto it = funcs.find(sReason);
@@ -295,6 +297,7 @@ public:
             return;
         it->second(this);
         {"signalParamChanged(sReason);" if signal else ""}
+        {user_on_change}
     }}
 
 """
@@ -578,6 +581,7 @@ def preference_dialog_define(param_set, header=True):
     header_file = getattr(param_set, "HeaderFile", f"{file_path}/{class_name}.h")
     source_file = getattr(param_set, "SourceFile", f"{file_path}/{class_name}.cpp")
     user_init = getattr(param_set, "UserInit", "")
+    user_fini = getattr(param_set, "UserFini", "")
     headers = set()
 
     if header:
@@ -633,6 +637,7 @@ using namespace {namespace};
 {trace_comment()}
 {class_name}::~{class_name}()
 {{
+    {user_fini}
 }}
 """
     )
@@ -699,7 +704,8 @@ class Param:
     WidgetPrefix = ""
 
     def __init__(self, name, default, doc="", title="",
-                 on_change=False, proxy=None, subpath='', param_name=''):
+                 on_change=False, proxy=None, subpath='',
+                 param_name='', property_type=None):
         self.name = name
         self.param_name = param_name if param_name else name
         self.title = title if title else name
@@ -708,6 +714,12 @@ class Param:
         self.on_change = on_change
         self.proxy = proxy
         self.subpath = subpath
+        if not property_type:
+            property_type = getattr(proxy, 'PropertyType', None)
+        if property_type:
+            if '::' not in property_type:
+                property_type = 'App::'+property_type
+            self.PropertyType = property_type
 
     def handle(self, prefix):
         if self.subpath:
@@ -884,6 +896,7 @@ class Param:
 class ParamBool(Param):
     Type = "Bool"
     C_Type = "bool"
+    PropertyType = "App::PropertyBool"
     WidgetType = "Gui::PrefCheckBox"
     WidgetSetter = "setChecked"
 
@@ -913,6 +926,7 @@ class ParamBool(Param):
 class ParamFloat(Param):
     Type = "Float"
     C_Type = "double"
+    PropertyType = "App::PropertyFloat"
     WidgetType = "Gui::PrefDoubleSpinBox"
     WidgetSetter = "setValue"
 
@@ -920,6 +934,7 @@ class ParamFloat(Param):
 class ParamString(Param):
     Type = "ASCII"
     C_Type = "std::string"
+    PropertyType = "App::PropertyString"
     WidgetType = "Gui::PrefLineEdit"
     WidgetSetter = "setText"
 
@@ -931,6 +946,7 @@ class ParamString(Param):
 class ParamQString(Param):
     Type = "ASCII"
     C_Type = "QString"
+    PropertyType = "App::PropertyString"
     WidgetType = "Gui::PrefLineEdit"
     WidgetSetter = "setText"
 
@@ -950,6 +966,7 @@ class ParamQString(Param):
 class ParamInt(Param):
     Type = "Int"
     C_Type = "long"
+    PropertyType = "App::PropertyInteger"
     WidgetType = "Gui::PrefSpinBox"
     WidgetSetter = "setValue"
 
@@ -957,11 +974,13 @@ class ParamInt(Param):
 class ParamUInt(Param):
     Type = "Unsigned"
     C_Type = "unsigned long"
+    PropertyType = "App::PropertyInteger"
     WidgetType = "Gui::PrefSpinBox"
     WidgetSetter = "setValue"
 
 
 class ParamHex(ParamUInt):
+    PropertyType = "App::PropertyColor"
     @property
     def default(self):
         return "0x%08X" % self._default
@@ -1127,6 +1146,7 @@ class ParamLinePattern(ParamProxy):
 class ParamColor(ParamProxy):
     WidgetType = "Gui::PrefColorButton"
     WidgetSetter = "setPackedColor"
+    PropertyType = 'App::PropertyColor'
 
     def __init__(self, param_bool=None, transparency=True):
         super().__init__(param_bool)
@@ -1144,6 +1164,7 @@ class ParamColor(ParamProxy):
 class ParamFile(ParamProxy):
     WidgetType = "Gui::PrefFileChooser"
     WidgetSetter = "setFileNameStd"
+    PropertyType = 'App::PropertyFileIncluded'
 
 
 class ParamSpinBox(ParamProxy):

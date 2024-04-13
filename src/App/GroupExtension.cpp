@@ -495,19 +495,7 @@ void GroupExtension::extensionOnChanged(const Property* p) {
     }
 
     if(p == &Group || p == &ExportMode) {
-        _Conns.clear();
-        for(auto obj : Group.getValues()) {
-            if(!obj || !obj->getNameInDocument())
-                continue;
-            queryChildExport(obj, DocumentObject::GS_DEFAULT);
-            _Conns.push_back(obj->Visibility.signalChanged.connect(boost::bind(
-                            &GroupExtension::slotChildChanged,this,bp::_1)));
-            auto groupTouched = Base::freecad_dynamic_cast<PropertyBool>(
-                    obj->getPropertyByName("_GroupTouched"));
-            if(groupTouched && groupTouched->getContainer() == obj)
-                _Conns.push_back(groupTouched->signalChanged.connect(boost::bind(
-                                &GroupExtension::slotChildChanged,this,bp::_1)));
-        }
+        syncChildConnections();
     } else if(p == &owner->Visibility) {
         if(!_togglingVisibility 
                 && !owner->getDocument()->testStatus(Document::Restoring)
@@ -579,6 +567,23 @@ void GroupExtension::extensionOnChanged(const Property* p) {
     }
 
     App::Extension::extensionOnChanged(p);
+}
+
+void GroupExtension::syncChildConnections()
+{
+    _Conns.clear();
+    for(auto obj : Group.getValues()) {
+        if(!obj || !obj->getNameInDocument())
+            continue;
+        queryChildExport(obj, DocumentObject::GS_DEFAULT);
+        _Conns.push_back(obj->Visibility.signalChanged.connect(boost::bind(
+                        &GroupExtension::slotChildChanged,this,bp::_1)));
+        auto groupTouched = Base::freecad_dynamic_cast<PropertyBool>(
+                obj->getPropertyByName("_GroupTouched"));
+        if(groupTouched && groupTouched->getContainer() == obj)
+            _Conns.push_back(groupTouched->signalChanged.connect(boost::bind(
+                            &GroupExtension::slotChildChanged,this,bp::_1)));
+    }
 }
 
 void GroupExtension::slotChildChanged(const Property &prop) {

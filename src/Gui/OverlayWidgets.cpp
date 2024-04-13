@@ -1438,7 +1438,7 @@ bool OverlayTabWidget::onEscape()
     if (getState() == OverlayTabWidget::State_Hint
             || getState() == OverlayTabWidget::State_Hidden) {
         setState(OverlayTabWidget::State_HintHidden);
-        return true;
+        return false;
     }
     if (!isVisible())
         return false;

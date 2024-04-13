@@ -1,5 +1,19 @@
 Stable release (branch [LinkStable](https://github.com/realthunder/FreeCAD/tree/LinkStable)) is merged with upstream aa3b2f39 2023.05.22
 
+# Stable 2024.04.07
+
+Fix expression renaming (#974)
+Add option to sync draw style preference settings to document (Preferences -> Display -> Draw styles -> Hidden Line/Shadow -> Synchronize)
+Support toolbar drag & drop on menu bar
+Fix icon size setting for toolbar not in main window
+Fix crash on pie menu context switch (#978)
+Fix overlay widget eating up Escape key
+Fix crash on variant link copy on change
+Fix `App::GeoFeatureGroupExtension (App::Part)` still touched on recompute after undo
+Part: fix pocket up to face (#985)
+
+-- 20240407stable --
+
 # Stable 2024.03.22
 
 Part: fix freezing when making wire (#973)
@@ -20,8 +34,6 @@ Sketcher: fix crash on deleting external geometry (#967)
 Sketcher: fix linear approximation of BSpline external edge (#958)
 Sketcher: clear selection before trimming edge to avoid error message
 Sketcher: suppress error message on creating arc
-
--- 20240322stable --
 
 # Stable 2024.01.23
 

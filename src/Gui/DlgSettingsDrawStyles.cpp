@@ -22,14 +22,18 @@
 
 #include "PreCompiled.h"
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <App/Material.h>
+#include <Gui/Document.h>
+#include <Gui/View3DInventor.h>
+#include <Gui/Application.h>
 
 /*[[[cog
 import DlgSettingsDrawStyles
-DlgSettingsDrawStyles.define()
+DlgSettingsDrawStyles.define_begin()
 ]]]*/
 
-// Auto generated code (Tools/params_utils.py:467)
+// Auto generated code (Tools/params_utils.py:590)
 #ifndef _PreComp_
 #   include <QApplication>
 #   include <QLabel>
@@ -39,12 +43,12 @@ DlgSettingsDrawStyles.define()
 #   include <QHBoxLayout>
 #endif
 #include <Gui/ViewParams.h>
-// Auto generated code (Tools/params_utils.py:485)
+// Auto generated code (Tools/params_utils.py:612)
 #include "Gui/DlgSettingsDrawStyles.h"
 using namespace Gui::Dialog;
 /* TRANSLATOR Gui::Dialog::DlgSettingsDrawStyles */
 
-// Auto generated code (Tools/params_utils.py:492)
+// Auto generated code (Tools/params_utils.py:621)
 DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     : PreferencePage( parent )
 {
@@ -52,7 +56,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     auto layout = new QVBoxLayout(this);
 
 
-    // Auto generated code (Tools/params_utils.py:342)
+    // Auto generated code (Tools/params_utils.py:442)
     groupGeneral = new QGroupBox(this);
     layout->addWidget(groupGeneral);
     auto layoutHorizGeneral = new QHBoxLayout(groupGeneral);
@@ -60,18 +64,18 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     layoutHorizGeneral->addLayout(layoutGeneral);
     layoutHorizGeneral->addStretch();
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelDefaultDrawStyle = new QLabel(this);
     layoutGeneral->addWidget(labelDefaultDrawStyle, 0, 0);
     DefaultDrawStyle = new Gui::PrefComboBox(this);
     layoutGeneral->addWidget(DefaultDrawStyle, 0, 1);
     DefaultDrawStyle->setEntryName("DefaultDrawStyle");
     DefaultDrawStyle->setParamGrpPath("View");
-    for (int i=0; i<9; ++i) // Auto generated code (Tools/params_utils.py:878)
+    for (int i=0; i<9; ++i) // Auto generated code (Tools/params_utils.py:1088)
         DefaultDrawStyle->addItem(QString());
     DefaultDrawStyle->setCurrentIndex(Gui::ViewParams::defaultDefaultDrawStyle());
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     ForceSolidSingleSideLighting = new Gui::PrefCheckBox(this);
     layoutGeneral->addWidget(ForceSolidSingleSideLighting, 1, 0);
     ForceSolidSingleSideLighting->setChecked(Gui::ViewParams::defaultForceSolidSingleSideLighting());
@@ -79,7 +83,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     ForceSolidSingleSideLighting->setParamGrpPath("View");
 
 
-    // Auto generated code (Tools/params_utils.py:342)
+    // Auto generated code (Tools/params_utils.py:442)
     groupSelection = new QGroupBox(this);
     layout->addWidget(groupSelection);
     auto layoutHorizSelection = new QHBoxLayout(groupSelection);
@@ -87,7 +91,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     layoutHorizSelection->addLayout(layoutSelection);
     layoutHorizSelection->addStretch();
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelTransparencyOnTop = new QLabel(this);
     layoutSelection->addWidget(labelTransparencyOnTop, 0, 0);
     TransparencyOnTop = new Gui::PrefDoubleSpinBox(this);
@@ -96,7 +100,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     TransparencyOnTop->setEntryName("TransparencyOnTop");
     TransparencyOnTop->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelSelectionLineThicken = new QLabel(this);
     layoutSelection->addWidget(labelSelectionLineThicken, 1, 0);
     SelectionLineThicken = new Gui::PrefDoubleSpinBox(this);
@@ -105,7 +109,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     SelectionLineThicken->setEntryName("SelectionLineThicken");
     SelectionLineThicken->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelSelectionLineMaxWidth = new QLabel(this);
     layoutSelection->addWidget(labelSelectionLineMaxWidth, 2, 0);
     SelectionLineMaxWidth = new Gui::PrefDoubleSpinBox(this);
@@ -114,7 +118,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     SelectionLineMaxWidth->setEntryName("SelectionLineMaxWidth");
     SelectionLineMaxWidth->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelSelectionPointScale = new QLabel(this);
     layoutSelection->addWidget(labelSelectionPointScale, 3, 0);
     SelectionPointScale = new Gui::PrefDoubleSpinBox(this);
@@ -123,7 +127,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     SelectionPointScale->setEntryName("SelectionPointScale");
     SelectionPointScale->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelSelectionPointMaxSize = new QLabel(this);
     layoutSelection->addWidget(labelSelectionPointMaxSize, 4, 0);
     SelectionPointMaxSize = new Gui::PrefDoubleSpinBox(this);
@@ -132,20 +136,20 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     SelectionPointMaxSize->setEntryName("SelectionPointMaxSize");
     SelectionPointMaxSize->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelSelectionLinePattern = new QLabel(this);
     layoutSelection->addWidget(labelSelectionLinePattern, 5, 0);
     SelectionLinePattern = new Gui::PrefLinePattern(this);
     layoutSelection->addWidget(SelectionLinePattern, 5, 1);
     SelectionLinePattern->setEntryName("SelectionLinePattern");
     SelectionLinePattern->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:913)
+    // Auto generated code (Tools/params_utils.py:1138)
     for (int i=1; i<SelectionLinePattern->count(); ++i) {
         if (SelectionLinePattern->itemData(i).toInt() == 0)
             SelectionLinePattern->setCurrentIndex(i);
     }
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelSelectionLinePatternScale = new QLabel(this);
     layoutSelection->addWidget(labelSelectionLinePatternScale, 6, 0);
     SelectionLinePatternScale = new Gui::PrefSpinBox(this);
@@ -154,7 +158,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     SelectionLinePatternScale->setEntryName("SelectionLinePatternScale");
     SelectionLinePatternScale->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelSelectionHiddenLineWidth = new QLabel(this);
     layoutSelection->addWidget(labelSelectionHiddenLineWidth, 7, 0);
     SelectionHiddenLineWidth = new Gui::PrefDoubleSpinBox(this);
@@ -163,7 +167,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     SelectionHiddenLineWidth->setEntryName("SelectionHiddenLineWidth");
     SelectionHiddenLineWidth->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelOutlineThicken = new QLabel(this);
     layoutSelection->addWidget(labelOutlineThicken, 8, 0);
     OutlineThicken = new Gui::PrefDoubleSpinBox(this);
@@ -173,7 +177,7 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     OutlineThicken->setParamGrpPath("View");
 
 
-    // Auto generated code (Tools/params_utils.py:342)
+    // Auto generated code (Tools/params_utils.py:442)
     groupHiddenLines = new QGroupBox(this);
     layout->addWidget(groupHiddenLines);
     auto layoutHorizHiddenLines = new QHBoxLayout(groupHiddenLines);
@@ -181,14 +185,25 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     layoutHorizHiddenLines->addLayout(layoutHiddenLines);
     layoutHorizHiddenLines->addStretch();
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
+    labelHiddenLineSync = new QLabel(this);
+    layoutHiddenLines->addWidget(labelHiddenLineSync, 0, 0);
+    HiddenLineSync = new Gui::PrefComboBox(this);
+    layoutHiddenLines->addWidget(HiddenLineSync, 0, 1);
+    HiddenLineSync->setEntryName("HiddenLineSync");
+    HiddenLineSync->setParamGrpPath("View");
+    for (int i=0; i<4; ++i) // Auto generated code (Tools/params_utils.py:1088)
+        HiddenLineSync->addItem(QString());
+    HiddenLineSync->setCurrentIndex(Gui::ViewParams::defaultHiddenLineSync());
+
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineFaceColor = new Gui::PrefColorButton(this);
-    layoutHiddenLines->addWidget(HiddenLineFaceColor, 0, 1);
+    layoutHiddenLines->addWidget(HiddenLineFaceColor, 1, 1);
     HiddenLineFaceColor->setPackedColor(Gui::ViewParams::defaultHiddenLineFaceColor());
     HiddenLineFaceColor->setEntryName("HiddenLineFaceColor");
     HiddenLineFaceColor->setParamGrpPath("View");
     HiddenLineOverrideFaceColor = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineOverrideFaceColor, 0, 0);
+    layoutHiddenLines->addWidget(HiddenLineOverrideFaceColor, 1, 0);
     HiddenLineOverrideFaceColor->setChecked(Gui::ViewParams::defaultHiddenLineOverrideFaceColor());
     HiddenLineOverrideFaceColor->setEntryName("HiddenLineOverrideFaceColor");
     HiddenLineOverrideFaceColor->setParamGrpPath("View");
@@ -196,14 +211,14 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     connect(HiddenLineOverrideFaceColor, SIGNAL(toggled(bool)), HiddenLineFaceColor, SLOT(setEnabled(bool)));
     HiddenLineFaceColor->setAllowTransparency(true);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineColor = new Gui::PrefColorButton(this);
-    layoutHiddenLines->addWidget(HiddenLineColor, 1, 1);
+    layoutHiddenLines->addWidget(HiddenLineColor, 2, 1);
     HiddenLineColor->setPackedColor(Gui::ViewParams::defaultHiddenLineColor());
     HiddenLineColor->setEntryName("HiddenLineColor");
     HiddenLineColor->setParamGrpPath("View");
     HiddenLineOverrideColor = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineOverrideColor, 1, 0);
+    layoutHiddenLines->addWidget(HiddenLineOverrideColor, 2, 0);
     HiddenLineOverrideColor->setChecked(Gui::ViewParams::defaultHiddenLineOverrideColor());
     HiddenLineOverrideColor->setEntryName("HiddenLineOverrideColor");
     HiddenLineOverrideColor->setParamGrpPath("View");
@@ -211,14 +226,14 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     connect(HiddenLineOverrideColor, SIGNAL(toggled(bool)), HiddenLineColor, SLOT(setEnabled(bool)));
     HiddenLineColor->setAllowTransparency(true);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineBackground = new Gui::PrefColorButton(this);
-    layoutHiddenLines->addWidget(HiddenLineBackground, 2, 1);
+    layoutHiddenLines->addWidget(HiddenLineBackground, 3, 1);
     HiddenLineBackground->setPackedColor(Gui::ViewParams::defaultHiddenLineBackground());
     HiddenLineBackground->setEntryName("HiddenLineBackground");
     HiddenLineBackground->setParamGrpPath("View");
     HiddenLineOverrideBackground = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineOverrideBackground, 2, 0);
+    layoutHiddenLines->addWidget(HiddenLineOverrideBackground, 3, 0);
     HiddenLineOverrideBackground->setChecked(Gui::ViewParams::defaultHiddenLineOverrideBackground());
     HiddenLineOverrideBackground->setEntryName("HiddenLineOverrideBackground");
     HiddenLineOverrideBackground->setParamGrpPath("View");
@@ -226,102 +241,102 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     connect(HiddenLineOverrideBackground, SIGNAL(toggled(bool)), HiddenLineBackground, SLOT(setEnabled(bool)));
     HiddenLineBackground->setAllowTransparency(true);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineShaded = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineShaded, 3, 0);
+    layoutHiddenLines->addWidget(HiddenLineShaded, 4, 0);
     HiddenLineShaded->setChecked(Gui::ViewParams::defaultHiddenLineShaded());
     HiddenLineShaded->setEntryName("HiddenLineShaded");
     HiddenLineShaded->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineShowOutline = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineShowOutline, 4, 0);
+    layoutHiddenLines->addWidget(HiddenLineShowOutline, 5, 0);
     HiddenLineShowOutline->setChecked(Gui::ViewParams::defaultHiddenLineShowOutline());
     HiddenLineShowOutline->setEntryName("HiddenLineShowOutline");
     HiddenLineShowOutline->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLinePerFaceOutline = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLinePerFaceOutline, 5, 0);
+    layoutHiddenLines->addWidget(HiddenLinePerFaceOutline, 6, 0);
     HiddenLinePerFaceOutline->setChecked(Gui::ViewParams::defaultHiddenLinePerFaceOutline());
     HiddenLinePerFaceOutline->setEntryName("HiddenLinePerFaceOutline");
     HiddenLinePerFaceOutline->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineSceneOutline = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineSceneOutline, 6, 0);
+    layoutHiddenLines->addWidget(HiddenLineSceneOutline, 7, 0);
     HiddenLineSceneOutline->setChecked(Gui::ViewParams::defaultHiddenLineSceneOutline());
     HiddenLineSceneOutline->setEntryName("HiddenLineSceneOutline");
     HiddenLineSceneOutline->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelHiddenLineOutlineWidth = new QLabel(this);
-    layoutHiddenLines->addWidget(labelHiddenLineOutlineWidth, 7, 0);
+    layoutHiddenLines->addWidget(labelHiddenLineOutlineWidth, 8, 0);
     HiddenLineOutlineWidth = new Gui::PrefDoubleSpinBox(this);
-    layoutHiddenLines->addWidget(HiddenLineOutlineWidth, 7, 1);
+    layoutHiddenLines->addWidget(HiddenLineOutlineWidth, 8, 1);
     HiddenLineOutlineWidth->setValue(Gui::ViewParams::defaultHiddenLineOutlineWidth());
     HiddenLineOutlineWidth->setEntryName("HiddenLineOutlineWidth");
     HiddenLineOutlineWidth->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     HiddenLineOutlineWidth->setMinimum(0.0);
     HiddenLineOutlineWidth->setMaximum(100.0);
     HiddenLineOutlineWidth->setSingleStep(0.5);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineHideFace = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineHideFace, 8, 0);
+    layoutHiddenLines->addWidget(HiddenLineHideFace, 9, 0);
     HiddenLineHideFace->setChecked(Gui::ViewParams::defaultHiddenLineHideFace());
     HiddenLineHideFace->setEntryName("HiddenLineHideFace");
     HiddenLineHideFace->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineHideSeam = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineHideSeam, 9, 0);
+    layoutHiddenLines->addWidget(HiddenLineHideSeam, 10, 0);
     HiddenLineHideSeam->setChecked(Gui::ViewParams::defaultHiddenLineHideSeam());
     HiddenLineHideSeam->setEntryName("HiddenLineHideSeam");
     HiddenLineHideSeam->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineHideVertex = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineHideVertex, 10, 0);
+    layoutHiddenLines->addWidget(HiddenLineHideVertex, 11, 0);
     HiddenLineHideVertex->setChecked(Gui::ViewParams::defaultHiddenLineHideVertex());
     HiddenLineHideVertex->setEntryName("HiddenLineHideVertex");
     HiddenLineHideVertex->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     HiddenLineTransparency = new Gui::PrefDoubleSpinBox(this);
-    layoutHiddenLines->addWidget(HiddenLineTransparency, 11, 1);
+    layoutHiddenLines->addWidget(HiddenLineTransparency, 12, 1);
     HiddenLineTransparency->setValue(Gui::ViewParams::defaultHiddenLineTransparency());
     HiddenLineTransparency->setEntryName("HiddenLineTransparency");
     HiddenLineTransparency->setParamGrpPath("View");
     HiddenLineOverrideTransparency = new Gui::PrefCheckBox(this);
-    layoutHiddenLines->addWidget(HiddenLineOverrideTransparency, 11, 0);
+    layoutHiddenLines->addWidget(HiddenLineOverrideTransparency, 12, 0);
     HiddenLineOverrideTransparency->setChecked(Gui::ViewParams::defaultHiddenLineOverrideTransparency());
     HiddenLineOverrideTransparency->setEntryName("HiddenLineOverrideTransparency");
     HiddenLineOverrideTransparency->setParamGrpPath("View");
     HiddenLineTransparency->setEnabled(HiddenLineOverrideTransparency->isChecked());
     connect(HiddenLineOverrideTransparency, SIGNAL(toggled(bool)), HiddenLineTransparency, SLOT(setEnabled(bool)));
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelHiddenLineWidth = new QLabel(this);
-    layoutHiddenLines->addWidget(labelHiddenLineWidth, 12, 0);
+    layoutHiddenLines->addWidget(labelHiddenLineWidth, 13, 0);
     HiddenLineWidth = new Gui::PrefDoubleSpinBox(this);
-    layoutHiddenLines->addWidget(HiddenLineWidth, 12, 1);
+    layoutHiddenLines->addWidget(HiddenLineWidth, 13, 1);
     HiddenLineWidth->setValue(Gui::ViewParams::defaultHiddenLineWidth());
     HiddenLineWidth->setEntryName("HiddenLineWidth");
     HiddenLineWidth->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelHiddenLinePointSize = new QLabel(this);
-    layoutHiddenLines->addWidget(labelHiddenLinePointSize, 13, 0);
+    layoutHiddenLines->addWidget(labelHiddenLinePointSize, 14, 0);
     HiddenLinePointSize = new Gui::PrefDoubleSpinBox(this);
-    layoutHiddenLines->addWidget(HiddenLinePointSize, 13, 1);
+    layoutHiddenLines->addWidget(HiddenLinePointSize, 14, 1);
     HiddenLinePointSize->setValue(Gui::ViewParams::defaultHiddenLinePointSize());
     HiddenLinePointSize->setEntryName("HiddenLinePointSize");
     HiddenLinePointSize->setParamGrpPath("View");
 
 
-    // Auto generated code (Tools/params_utils.py:342)
+    // Auto generated code (Tools/params_utils.py:442)
     groupShadow = new QGroupBox(this);
     layout->addWidget(groupShadow);
     auto layoutHorizShadow = new QHBoxLayout(groupShadow);
@@ -329,256 +344,268 @@ DlgSettingsDrawStyles::DlgSettingsDrawStyles(QWidget* parent)
     layoutHorizShadow->addLayout(layoutShadow);
     layoutHorizShadow->addStretch();
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
+    labelShadowSync = new QLabel(this);
+    layoutShadow->addWidget(labelShadowSync, 0, 0);
+    ShadowSync = new Gui::PrefComboBox(this);
+    layoutShadow->addWidget(ShadowSync, 0, 1);
+    ShadowSync->setEntryName("ShadowSync");
+    ShadowSync->setParamGrpPath("View");
+    for (int i=0; i<4; ++i) // Auto generated code (Tools/params_utils.py:1088)
+        ShadowSync->addItem(QString());
+    ShadowSync->setCurrentIndex(Gui::ViewParams::defaultShadowSync());
+
+    // Auto generated code (Tools/params_utils.py:455)
     ShadowSpotLight = new Gui::PrefCheckBox(this);
-    layoutShadow->addWidget(ShadowSpotLight, 0, 0);
+    layoutShadow->addWidget(ShadowSpotLight, 1, 0);
     ShadowSpotLight->setChecked(Gui::ViewParams::defaultShadowSpotLight());
     ShadowSpotLight->setEntryName("ShadowSpotLight");
     ShadowSpotLight->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowLightColor = new QLabel(this);
-    layoutShadow->addWidget(labelShadowLightColor, 1, 0);
+    layoutShadow->addWidget(labelShadowLightColor, 2, 0);
     ShadowLightColor = new Gui::PrefColorButton(this);
-    layoutShadow->addWidget(ShadowLightColor, 1, 1);
+    layoutShadow->addWidget(ShadowLightColor, 2, 1);
     ShadowLightColor->setPackedColor(Gui::ViewParams::defaultShadowLightColor());
     ShadowLightColor->setEntryName("ShadowLightColor");
     ShadowLightColor->setParamGrpPath("View");
     ShadowLightColor->setAllowTransparency(true);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowLightIntensity = new QLabel(this);
-    layoutShadow->addWidget(labelShadowLightIntensity, 2, 0);
+    layoutShadow->addWidget(labelShadowLightIntensity, 3, 0);
     ShadowLightIntensity = new Gui::PrefDoubleSpinBox(this);
-    layoutShadow->addWidget(ShadowLightIntensity, 2, 1);
+    layoutShadow->addWidget(ShadowLightIntensity, 3, 1);
     ShadowLightIntensity->setValue(Gui::ViewParams::defaultShadowLightIntensity());
     ShadowLightIntensity->setEntryName("ShadowLightIntensity");
     ShadowLightIntensity->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     ShadowShowGround = new Gui::PrefCheckBox(this);
-    layoutShadow->addWidget(ShadowShowGround, 3, 0);
+    layoutShadow->addWidget(ShadowShowGround, 4, 0);
     ShadowShowGround->setChecked(Gui::ViewParams::defaultShadowShowGround());
     ShadowShowGround->setEntryName("ShadowShowGround");
     ShadowShowGround->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     ShadowGroundBackFaceCull = new Gui::PrefCheckBox(this);
-    layoutShadow->addWidget(ShadowGroundBackFaceCull, 4, 0);
+    layoutShadow->addWidget(ShadowGroundBackFaceCull, 5, 0);
     ShadowGroundBackFaceCull->setChecked(Gui::ViewParams::defaultShadowGroundBackFaceCull());
     ShadowGroundBackFaceCull->setEntryName("ShadowGroundBackFaceCull");
     ShadowGroundBackFaceCull->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowGroundColor = new QLabel(this);
-    layoutShadow->addWidget(labelShadowGroundColor, 5, 0);
+    layoutShadow->addWidget(labelShadowGroundColor, 6, 0);
     ShadowGroundColor = new Gui::PrefColorButton(this);
-    layoutShadow->addWidget(ShadowGroundColor, 5, 1);
+    layoutShadow->addWidget(ShadowGroundColor, 6, 1);
     ShadowGroundColor->setPackedColor(Gui::ViewParams::defaultShadowGroundColor());
     ShadowGroundColor->setEntryName("ShadowGroundColor");
     ShadowGroundColor->setParamGrpPath("View");
     ShadowGroundColor->setAllowTransparency(true);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowGroundScale = new QLabel(this);
-    layoutShadow->addWidget(labelShadowGroundScale, 6, 0);
+    layoutShadow->addWidget(labelShadowGroundScale, 7, 0);
     ShadowGroundScale = new Gui::PrefDoubleSpinBox(this);
-    layoutShadow->addWidget(ShadowGroundScale, 6, 1);
+    layoutShadow->addWidget(ShadowGroundScale, 7, 1);
     ShadowGroundScale->setValue(Gui::ViewParams::defaultShadowGroundScale());
     ShadowGroundScale->setEntryName("ShadowGroundScale");
     ShadowGroundScale->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     ShadowGroundScale->setMinimum(0.0);
     ShadowGroundScale->setMaximum(10000000.0);
     ShadowGroundScale->setSingleStep(0.5);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowGroundTransparency = new QLabel(this);
-    layoutShadow->addWidget(labelShadowGroundTransparency, 7, 0);
+    layoutShadow->addWidget(labelShadowGroundTransparency, 8, 0);
     ShadowGroundTransparency = new Gui::PrefDoubleSpinBox(this);
-    layoutShadow->addWidget(ShadowGroundTransparency, 7, 1);
+    layoutShadow->addWidget(ShadowGroundTransparency, 8, 1);
     ShadowGroundTransparency->setValue(Gui::ViewParams::defaultShadowGroundTransparency());
     ShadowGroundTransparency->setEntryName("ShadowGroundTransparency");
     ShadowGroundTransparency->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     ShadowGroundTransparency->setMinimum(0.0);
     ShadowGroundTransparency->setMaximum(1.0);
     ShadowGroundTransparency->setSingleStep(0.1);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowGroundTexture = new QLabel(this);
-    layoutShadow->addWidget(labelShadowGroundTexture, 8, 0);
+    layoutShadow->addWidget(labelShadowGroundTexture, 9, 0);
     ShadowGroundTexture = new Gui::PrefFileChooser(this);
-    layoutShadow->addWidget(ShadowGroundTexture, 8, 1);
+    layoutShadow->addWidget(ShadowGroundTexture, 9, 1);
     ShadowGroundTexture->setFileNameStd(Gui::ViewParams::defaultShadowGroundTexture());
     ShadowGroundTexture->setEntryName("ShadowGroundTexture");
     ShadowGroundTexture->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowGroundTextureSize = new QLabel(this);
-    layoutShadow->addWidget(labelShadowGroundTextureSize, 9, 0);
+    layoutShadow->addWidget(labelShadowGroundTextureSize, 10, 0);
     ShadowGroundTextureSize = new Gui::PrefDoubleSpinBox(this);
-    layoutShadow->addWidget(ShadowGroundTextureSize, 9, 1);
+    layoutShadow->addWidget(ShadowGroundTextureSize, 10, 1);
     ShadowGroundTextureSize->setValue(Gui::ViewParams::defaultShadowGroundTextureSize());
     ShadowGroundTextureSize->setEntryName("ShadowGroundTextureSize");
     ShadowGroundTextureSize->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     ShadowGroundTextureSize->setMinimum(0.0);
     ShadowGroundTextureSize->setMaximum(10000000.0);
     ShadowGroundTextureSize->setSingleStep(10.0);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowGroundBumpMap = new QLabel(this);
-    layoutShadow->addWidget(labelShadowGroundBumpMap, 10, 0);
+    layoutShadow->addWidget(labelShadowGroundBumpMap, 11, 0);
     ShadowGroundBumpMap = new Gui::PrefFileChooser(this);
-    layoutShadow->addWidget(ShadowGroundBumpMap, 10, 1);
+    layoutShadow->addWidget(ShadowGroundBumpMap, 11, 1);
     ShadowGroundBumpMap->setFileNameStd(Gui::ViewParams::defaultShadowGroundBumpMap());
     ShadowGroundBumpMap->setEntryName("ShadowGroundBumpMap");
     ShadowGroundBumpMap->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     ShadowGroundShading = new Gui::PrefCheckBox(this);
-    layoutShadow->addWidget(ShadowGroundShading, 11, 0);
+    layoutShadow->addWidget(ShadowGroundShading, 12, 0);
     ShadowGroundShading->setChecked(Gui::ViewParams::defaultShadowGroundShading());
     ShadowGroundShading->setEntryName("ShadowGroundShading");
     ShadowGroundShading->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     ShadowUpdateGround = new Gui::PrefCheckBox(this);
-    layoutShadow->addWidget(ShadowUpdateGround, 12, 0);
+    layoutShadow->addWidget(ShadowUpdateGround, 13, 0);
     ShadowUpdateGround->setChecked(Gui::ViewParams::defaultShadowUpdateGround());
     ShadowUpdateGround->setEntryName("ShadowUpdateGround");
     ShadowUpdateGround->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowDisplayMode = new QLabel(this);
-    layoutShadow->addWidget(labelShadowDisplayMode, 13, 0);
+    layoutShadow->addWidget(labelShadowDisplayMode, 14, 0);
     ShadowDisplayMode = new Gui::PrefComboBox(this);
-    layoutShadow->addWidget(ShadowDisplayMode, 13, 1);
+    layoutShadow->addWidget(ShadowDisplayMode, 14, 1);
     ShadowDisplayMode->setEntryName("ShadowDisplayMode");
     ShadowDisplayMode->setParamGrpPath("View");
-    for (int i=0; i<3; ++i) // Auto generated code (Tools/params_utils.py:878)
+    for (int i=0; i<3; ++i) // Auto generated code (Tools/params_utils.py:1088)
         ShadowDisplayMode->addItem(QString());
     ShadowDisplayMode->setCurrentIndex(Gui::ViewParams::defaultShadowDisplayMode());
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowPrecision = new QLabel(this);
-    layoutShadow->addWidget(labelShadowPrecision, 14, 0);
+    layoutShadow->addWidget(labelShadowPrecision, 15, 0);
     ShadowPrecision = new Gui::PrefDoubleSpinBox(this);
-    layoutShadow->addWidget(ShadowPrecision, 14, 1);
+    layoutShadow->addWidget(ShadowPrecision, 15, 1);
     ShadowPrecision->setValue(Gui::ViewParams::defaultShadowPrecision());
     ShadowPrecision->setEntryName("ShadowPrecision");
     ShadowPrecision->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     ShadowPrecision->setMinimum(0.0);
     ShadowPrecision->setMaximum(1.0);
     ShadowPrecision->setSingleStep(0.1);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowSmoothBorder = new QLabel(this);
-    layoutShadow->addWidget(labelShadowSmoothBorder, 15, 0);
+    layoutShadow->addWidget(labelShadowSmoothBorder, 16, 0);
     ShadowSmoothBorder = new Gui::PrefSpinBox(this);
-    layoutShadow->addWidget(ShadowSmoothBorder, 15, 1);
+    layoutShadow->addWidget(ShadowSmoothBorder, 16, 1);
     ShadowSmoothBorder->setValue(Gui::ViewParams::defaultShadowSmoothBorder());
     ShadowSmoothBorder->setEntryName("ShadowSmoothBorder");
     ShadowSmoothBorder->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowSpreadSize = new QLabel(this);
-    layoutShadow->addWidget(labelShadowSpreadSize, 16, 0);
+    layoutShadow->addWidget(labelShadowSpreadSize, 17, 0);
     ShadowSpreadSize = new Gui::PrefSpinBox(this);
-    layoutShadow->addWidget(ShadowSpreadSize, 16, 1);
+    layoutShadow->addWidget(ShadowSpreadSize, 17, 1);
     ShadowSpreadSize->setValue(Gui::ViewParams::defaultShadowSpreadSize());
     ShadowSpreadSize->setEntryName("ShadowSpreadSize");
     ShadowSpreadSize->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     ShadowSpreadSize->setMinimum(0);
     ShadowSpreadSize->setMaximum(10000000.0);
     ShadowSpreadSize->setSingleStep(500);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowSpreadSampleSize = new QLabel(this);
-    layoutShadow->addWidget(labelShadowSpreadSampleSize, 17, 0);
+    layoutShadow->addWidget(labelShadowSpreadSampleSize, 18, 0);
     ShadowSpreadSampleSize = new Gui::PrefSpinBox(this);
-    layoutShadow->addWidget(ShadowSpreadSampleSize, 17, 1);
+    layoutShadow->addWidget(ShadowSpreadSampleSize, 18, 1);
     ShadowSpreadSampleSize->setValue(Gui::ViewParams::defaultShadowSpreadSampleSize());
     ShadowSpreadSampleSize->setEntryName("ShadowSpreadSampleSize");
     ShadowSpreadSampleSize->setParamGrpPath("View");
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowEpsilon = new QLabel(this);
-    layoutShadow->addWidget(labelShadowEpsilon, 18, 0);
+    layoutShadow->addWidget(labelShadowEpsilon, 19, 0);
     ShadowEpsilon = new Gui::PrefDoubleSpinBox(this);
-    layoutShadow->addWidget(ShadowEpsilon, 18, 1);
+    layoutShadow->addWidget(ShadowEpsilon, 19, 1);
     ShadowEpsilon->setValue(Gui::ViewParams::defaultShadowEpsilon());
     ShadowEpsilon->setEntryName("ShadowEpsilon");
     ShadowEpsilon->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     ShadowEpsilon->setMinimum(0.0);
     ShadowEpsilon->setMaximum(1.0);
     ShadowEpsilon->setSingleStep(1e-05);
     ShadowEpsilon->setDecimals(10);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowThreshold = new QLabel(this);
-    layoutShadow->addWidget(labelShadowThreshold, 19, 0);
+    layoutShadow->addWidget(labelShadowThreshold, 20, 0);
     ShadowThreshold = new Gui::PrefDoubleSpinBox(this);
-    layoutShadow->addWidget(ShadowThreshold, 19, 1);
+    layoutShadow->addWidget(ShadowThreshold, 20, 1);
     ShadowThreshold->setValue(Gui::ViewParams::defaultShadowThreshold());
     ShadowThreshold->setEntryName("ShadowThreshold");
     ShadowThreshold->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     ShadowThreshold->setMinimum(0.0);
     ShadowThreshold->setMaximum(1.0);
     ShadowThreshold->setSingleStep(0.1);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowBoundBoxScale = new QLabel(this);
-    layoutShadow->addWidget(labelShadowBoundBoxScale, 20, 0);
+    layoutShadow->addWidget(labelShadowBoundBoxScale, 21, 0);
     ShadowBoundBoxScale = new Gui::PrefDoubleSpinBox(this);
-    layoutShadow->addWidget(ShadowBoundBoxScale, 20, 1);
+    layoutShadow->addWidget(ShadowBoundBoxScale, 21, 1);
     ShadowBoundBoxScale->setValue(Gui::ViewParams::defaultShadowBoundBoxScale());
     ShadowBoundBoxScale->setEntryName("ShadowBoundBoxScale");
     ShadowBoundBoxScale->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     ShadowBoundBoxScale->setMinimum(0.0);
     ShadowBoundBoxScale->setMaximum(10000000.0);
     ShadowBoundBoxScale->setSingleStep(0.5);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     labelShadowMaxDistance = new QLabel(this);
-    layoutShadow->addWidget(labelShadowMaxDistance, 21, 0);
+    layoutShadow->addWidget(labelShadowMaxDistance, 22, 0);
     ShadowMaxDistance = new Gui::PrefDoubleSpinBox(this);
-    layoutShadow->addWidget(ShadowMaxDistance, 21, 1);
+    layoutShadow->addWidget(ShadowMaxDistance, 22, 1);
     ShadowMaxDistance->setValue(Gui::ViewParams::defaultShadowMaxDistance());
     ShadowMaxDistance->setEntryName("ShadowMaxDistance");
     ShadowMaxDistance->setParamGrpPath("View");
-    // Auto generated code (Tools/params_utils.py:948)
+    // Auto generated code (Tools/params_utils.py:1182)
     ShadowMaxDistance->setMinimum(0.0);
     ShadowMaxDistance->setMaximum(10000000.0);
     ShadowMaxDistance->setSingleStep(0.5);
 
-    // Auto generated code (Tools/params_utils.py:353)
+    // Auto generated code (Tools/params_utils.py:455)
     ShadowTransparentShadow = new Gui::PrefCheckBox(this);
-    layoutShadow->addWidget(ShadowTransparentShadow, 22, 0);
+    layoutShadow->addWidget(ShadowTransparentShadow, 23, 0);
     ShadowTransparentShadow->setChecked(Gui::ViewParams::defaultShadowTransparentShadow());
     ShadowTransparentShadow->setEntryName("ShadowTransparentShadow");
     ShadowTransparentShadow->setParamGrpPath("View");
     layout->addItem(new QSpacerItem(40, 20, QSizePolicy::Fixed, QSizePolicy::Expanding));
     retranslateUi();
-    // Auto generated code (Tools/params_utils.py:499)
-    
+    // Auto generated code (Tools/params_utils.py:630)
+    Active = true;
 }
 
-// Auto generated code (Tools/params_utils.py:504)
+// Auto generated code (Tools/params_utils.py:637)
 DlgSettingsDrawStyles::~DlgSettingsDrawStyles()
 {
+    Active = false;
 }
 
-// Auto generated code (Tools/params_utils.py:510)
+// Auto generated code (Tools/params_utils.py:646)
 void DlgSettingsDrawStyles::saveSettings()
 {
-    // Auto generated code (Tools/params_utils.py:373)
+    // Auto generated code (Tools/params_utils.py:483)
     DefaultDrawStyle->onSave();
     ForceSolidSingleSideLighting->onSave();
     TransparencyOnTop->onSave();
@@ -590,6 +617,7 @@ void DlgSettingsDrawStyles::saveSettings()
     SelectionLinePatternScale->onSave();
     SelectionHiddenLineWidth->onSave();
     OutlineThicken->onSave();
+    HiddenLineSync->onSave();
     HiddenLineFaceColor->onSave();
     HiddenLineOverrideFaceColor->onSave();
     HiddenLineColor->onSave();
@@ -608,6 +636,7 @@ void DlgSettingsDrawStyles::saveSettings()
     HiddenLineOverrideTransparency->onSave();
     HiddenLineWidth->onSave();
     HiddenLinePointSize->onSave();
+    ShadowSync->onSave();
     ShadowSpotLight->onSave();
     ShadowLightColor->onSave();
     ShadowLightIntensity->onSave();
@@ -633,10 +662,10 @@ void DlgSettingsDrawStyles::saveSettings()
     ShadowTransparentShadow->onSave();
 }
 
-// Auto generated code (Tools/params_utils.py:517)
+// Auto generated code (Tools/params_utils.py:655)
 void DlgSettingsDrawStyles::loadSettings()
 {
-    // Auto generated code (Tools/params_utils.py:364)
+    // Auto generated code (Tools/params_utils.py:471)
     DefaultDrawStyle->onRestore();
     ForceSolidSingleSideLighting->onRestore();
     TransparencyOnTop->onRestore();
@@ -648,6 +677,7 @@ void DlgSettingsDrawStyles::loadSettings()
     SelectionLinePatternScale->onRestore();
     SelectionHiddenLineWidth->onRestore();
     OutlineThicken->onRestore();
+    HiddenLineSync->onRestore();
     HiddenLineFaceColor->onRestore();
     HiddenLineOverrideFaceColor->onRestore();
     HiddenLineColor->onRestore();
@@ -666,6 +696,7 @@ void DlgSettingsDrawStyles::loadSettings()
     HiddenLineOverrideTransparency->onRestore();
     HiddenLineWidth->onRestore();
     HiddenLinePointSize->onRestore();
+    ShadowSync->onRestore();
     ShadowSpotLight->onRestore();
     ShadowLightColor->onRestore();
     ShadowLightIntensity->onRestore();
@@ -691,7 +722,7 @@ void DlgSettingsDrawStyles::loadSettings()
     ShadowTransparentShadow->onRestore();
 }
 
-// Auto generated code (Tools/params_utils.py:524)
+// Auto generated code (Tools/params_utils.py:664)
 void DlgSettingsDrawStyles::retranslateUi()
 {
     setWindowTitle(QObject::tr("Draw styles"));
@@ -699,7 +730,7 @@ void DlgSettingsDrawStyles::retranslateUi()
     DefaultDrawStyle->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docDefaultDrawStyle()));
     labelDefaultDrawStyle->setText(QObject::tr("Default draw style"));
     labelDefaultDrawStyle->setToolTip(DefaultDrawStyle->toolTip());
-    // Auto generated code (Tools/params_utils.py:895)
+    // Auto generated code (Tools/params_utils.py:1113)
     DefaultDrawStyle->setItemText(0, QObject::tr("As Is"));
     DefaultDrawStyle->setItemData(0, QObject::tr("Draw style, normal display mode"), Qt::ToolTipRole);
     DefaultDrawStyle->setItemText(1, QObject::tr("Points"));
@@ -749,6 +780,18 @@ void DlgSettingsDrawStyles::retranslateUi()
     labelOutlineThicken->setText(QObject::tr("Outline width multiplier"));
     labelOutlineThicken->setToolTip(OutlineThicken->toolTip());
     groupHiddenLines->setTitle(QObject::tr("Hidden Lines"));
+    HiddenLineSync->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docHiddenLineSync()));
+    labelHiddenLineSync->setText(QObject::tr("Synchronize"));
+    labelHiddenLineSync->setToolTip(HiddenLineSync->toolTip());
+    // Auto generated code (Tools/params_utils.py:1113)
+    HiddenLineSync->setItemText(0, QObject::tr("None"));
+    HiddenLineSync->setItemData(0, QObject::tr("No change to opened document"), Qt::ToolTipRole);
+    HiddenLineSync->setItemText(1, QObject::tr("Apply to active view"));
+    HiddenLineSync->setItemData(1, QObject::tr("Auto apply changed setting to the current active view"), Qt::ToolTipRole);
+    HiddenLineSync->setItemText(2, QObject::tr("Apply to active document"));
+    HiddenLineSync->setItemData(2, QObject::tr("Auto apply changed setting to all views of the current active document"), Qt::ToolTipRole);
+    HiddenLineSync->setItemText(3, QObject::tr("Apply to all open documents"));
+    HiddenLineSync->setItemData(3, QObject::tr("Auto apply changed setting to all opened documents"), Qt::ToolTipRole);
     HiddenLineFaceColor->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docHiddenLineFaceColor()));
     HiddenLineOverrideFaceColor->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docHiddenLineOverrideFaceColor()));
     HiddenLineOverrideFaceColor->setText(QObject::tr("Override face color"));
@@ -785,6 +828,18 @@ void DlgSettingsDrawStyles::retranslateUi()
     labelHiddenLinePointSize->setText(QObject::tr("Point size"));
     labelHiddenLinePointSize->setToolTip(HiddenLinePointSize->toolTip());
     groupShadow->setTitle(QObject::tr("Shadow"));
+    ShadowSync->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docShadowSync()));
+    labelShadowSync->setText(QObject::tr("Synchronize"));
+    labelShadowSync->setToolTip(ShadowSync->toolTip());
+    // Auto generated code (Tools/params_utils.py:1113)
+    ShadowSync->setItemText(0, QObject::tr("None"));
+    ShadowSync->setItemData(0, QObject::tr("No change to opened document"), Qt::ToolTipRole);
+    ShadowSync->setItemText(1, QObject::tr("Apply to active view"));
+    ShadowSync->setItemData(1, QObject::tr("Auto apply changed setting to the current active view"), Qt::ToolTipRole);
+    ShadowSync->setItemText(2, QObject::tr("Apply to active document"));
+    ShadowSync->setItemData(2, QObject::tr("Auto apply changed setting to all views of the current active document"), Qt::ToolTipRole);
+    ShadowSync->setItemText(3, QObject::tr("Apply to all open documents"));
+    ShadowSync->setItemData(3, QObject::tr("Auto apply changed setting to all opened documents"), Qt::ToolTipRole);
     ShadowSpotLight->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docShadowSpotLight()));
     ShadowSpotLight->setText(QObject::tr("Use spot light"));
     ShadowLightColor->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docShadowLightColor()));
@@ -822,7 +877,7 @@ void DlgSettingsDrawStyles::retranslateUi()
     ShadowDisplayMode->setToolTip(QApplication::translate("ViewParams", Gui::ViewParams::docShadowDisplayMode()));
     labelShadowDisplayMode->setText(QObject::tr("Override display mode"));
     labelShadowDisplayMode->setToolTip(ShadowDisplayMode->toolTip());
-    // Auto generated code (Tools/params_utils.py:895)
+    // Auto generated code (Tools/params_utils.py:1113)
     ShadowDisplayMode->setItemText(0, QObject::tr("Flat Lines"));
     ShadowDisplayMode->setItemText(1, QObject::tr("Shaded"));
     ShadowDisplayMode->setItemText(2, QObject::tr("As Is"));
@@ -854,7 +909,7 @@ void DlgSettingsDrawStyles::retranslateUi()
     ShadowTransparentShadow->setText(QObject::tr("Transparent shadow"));
 }
 
-// Auto generated code (Tools/params_utils.py:537)
+// Auto generated code (Tools/params_utils.py:681)
 void DlgSettingsDrawStyles::changeEvent(QEvent *e)
 {
     if (e->type() == QEvent::LanguageChange) {
@@ -863,6 +918,339 @@ void DlgSettingsDrawStyles::changeEvent(QEvent *e)
     QWidget::changeEvent(e);
 }
 
-// Auto generated code (Tools/params_utils.py:548)
+// Auto generated code (Tools/params_utils.py:694)
 #include "moc_DlgSettingsDrawStyles.cpp"
+
+// Auto generated code (Gui/DlgSettingsDrawStyles.py:127)
+bool DlgSettingsDrawStyles::Active;
+//[[[end]]]
+
+// -----------------------------------------------------------------------------------
+// user code start
+
+template<class PropertyT, class ValueT>
+static void setViewProperty(int mode, const char *propertyName, const ValueT value)
+{
+    static std::vector<Gui::View3DInventor*> views;
+    views.clear();
+    if (mode == 1) {
+        if (auto view = Base::freecad_dynamic_cast<Gui::View3DInventor>(
+            Gui::Application::Instance->activeView())) {
+            views.push_back(view);
+        }
+    }
+    else if (mode == 2) {
+        if (auto gdoc = Gui::Application::Instance->activeDocument()) {
+            gdoc->foreachView<Gui::View3DInventor>(
+                [&](Gui::View3DInventor *view) {
+                    views.push_back(view);
+                }
+            );
+        }
+    }
+    else if (mode == 3) {
+        for (const auto &it : App::GetApplication().getDocumentMap()) {
+            if (auto gdoc = Gui::Application::Instance->getDocument(it.second)) {
+                gdoc->foreachView<Gui::View3DInventor>(
+                    [&](Gui::View3DInventor *view) {
+                        views.push_back(view);
+                    }
+                );
+            }
+        }
+    }
+    for (auto view : views) {
+        if (auto prop = Base::freecad_dynamic_cast<PropertyT>(view->getPropertyByName(propertyName))) {
+            try {
+                prop->setValue(value);
+            } catch (Base::Exception &e) {
+                e.ReportException();
+            }
+        }
+    }
+}
+
+
+// user code end
+// -----------------------------------------------------------------------------------
+
+/*[[[cog
+import DlgSettingsDrawStyles
+DlgSettingsDrawStyles.define_end()
+]]]*/
+
+// Auto generated code (Gui/DlgSettingsDrawStyles.py:133)
+void DlgSettingsDrawStyles::onParamChanged(const char *sReason)
+{
+    if (!Active)
+        return;
+
+    if (ViewParams::getHiddenLineSync() != 0 && boost::starts_with(sReason, "HiddenLine")) {
+        bool passThrough = boost::equals(sReason+10, "HiddenLineSync");
+
+        if (passThrough || boost::equals(sReason+10, "FaceColor")) {
+            setViewProperty<App::PropertyColor>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_FaceColor",
+                                                  ViewParams::getHiddenLineFaceColor());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "Color")) {
+            setViewProperty<App::PropertyColor>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_Color",
+                                                  ViewParams::getHiddenLineColor());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "Background")) {
+            setViewProperty<App::PropertyColor>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_Background",
+                                                  ViewParams::getHiddenLineBackground());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "Shaded")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_Shaded",
+                                                  ViewParams::getHiddenLineShaded());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "ShowOutline")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_ShowOutline",
+                                                  ViewParams::getHiddenLineShowOutline());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "PerFaceOutline")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_PerFaceOutline",
+                                                  ViewParams::getHiddenLinePerFaceOutline());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "SceneOutline")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_SceneOutline",
+                                                  ViewParams::getHiddenLineSceneOutline());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "OutlineWidth")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_OutlineWidth",
+                                                  ViewParams::getHiddenLineOutlineWidth());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "HideFace")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_HideFace",
+                                                  ViewParams::getHiddenLineHideFace());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "HideSeam")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_HideSeam",
+                                                  ViewParams::getHiddenLineHideSeam());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "HideVertex")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_HideVertex",
+                                                  ViewParams::getHiddenLineHideVertex());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "Transparency")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_Transparency",
+                                                  ViewParams::getHiddenLineTransparency());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "Width")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_Width",
+                                                  ViewParams::getHiddenLineWidth());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+10, "PointSize")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getHiddenLineSync(),
+                                                  "HiddenLine_PointSize",
+                                                  ViewParams::getHiddenLinePointSize());
+            if (!passThrough)
+                return;
+        }
+    }
+    else if (ViewParams::getShadowSync() != 0 && boost::starts_with(sReason, "Shadow")) {
+        bool passThrough = boost::equals(sReason+6, "ShadowSync");
+
+        if (passThrough || boost::equals(sReason+6, "SpotLight")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getShadowSync(),
+                                                  "Shadow_SpotLight",
+                                                  ViewParams::getShadowSpotLight());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "LightColor")) {
+            setViewProperty<App::PropertyColor>(ViewParams::getShadowSync(),
+                                                  "Shadow_LightColor",
+                                                  ViewParams::getShadowLightColor());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "LightIntensity")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getShadowSync(),
+                                                  "Shadow_LightIntensity",
+                                                  ViewParams::getShadowLightIntensity());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "ShowGround")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getShadowSync(),
+                                                  "Shadow_ShowGround",
+                                                  ViewParams::getShadowShowGround());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "GroundBackFaceCull")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getShadowSync(),
+                                                  "Shadow_GroundBackFaceCull",
+                                                  ViewParams::getShadowGroundBackFaceCull());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "GroundColor")) {
+            setViewProperty<App::PropertyColor>(ViewParams::getShadowSync(),
+                                                  "Shadow_GroundColor",
+                                                  ViewParams::getShadowGroundColor());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "GroundScale")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getShadowSync(),
+                                                  "Shadow_GroundScale",
+                                                  ViewParams::getShadowGroundScale());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "GroundTransparency")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getShadowSync(),
+                                                  "Shadow_GroundTransparency",
+                                                  ViewParams::getShadowGroundTransparency());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "GroundTexture")) {
+            setViewProperty<App::PropertyFileIncluded>(ViewParams::getShadowSync(),
+                                                  "Shadow_GroundTexture",
+                                                  ViewParams::getShadowGroundTexture());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "GroundTextureSize")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getShadowSync(),
+                                                  "Shadow_GroundTextureSize",
+                                                  ViewParams::getShadowGroundTextureSize());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "GroundBumpMap")) {
+            setViewProperty<App::PropertyFileIncluded>(ViewParams::getShadowSync(),
+                                                  "Shadow_GroundBumpMap",
+                                                  ViewParams::getShadowGroundBumpMap());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "GroundShading")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getShadowSync(),
+                                                  "Shadow_GroundShading",
+                                                  ViewParams::getShadowGroundShading());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "UpdateGround")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getShadowSync(),
+                                                  "Shadow_UpdateGround",
+                                                  ViewParams::getShadowUpdateGround());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "DisplayMode")) {
+            setViewProperty<App::PropertyEnumeration>(ViewParams::getShadowSync(),
+                                                  "Shadow_DisplayMode",
+                                                  ViewParams::getShadowDisplayMode());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "Precision")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getShadowSync(),
+                                                  "Shadow_Precision",
+                                                  ViewParams::getShadowPrecision());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "SmoothBorder")) {
+            setViewProperty<App::PropertyInteger>(ViewParams::getShadowSync(),
+                                                  "Shadow_SmoothBorder",
+                                                  ViewParams::getShadowSmoothBorder());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "SpreadSize")) {
+            setViewProperty<App::PropertyInteger>(ViewParams::getShadowSync(),
+                                                  "Shadow_SpreadSize",
+                                                  ViewParams::getShadowSpreadSize());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "SpreadSampleSize")) {
+            setViewProperty<App::PropertyInteger>(ViewParams::getShadowSync(),
+                                                  "Shadow_SpreadSampleSize",
+                                                  ViewParams::getShadowSpreadSampleSize());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "Epsilon")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getShadowSync(),
+                                                  "Shadow_Epsilon",
+                                                  ViewParams::getShadowEpsilon());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "Threshold")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getShadowSync(),
+                                                  "Shadow_Threshold",
+                                                  ViewParams::getShadowThreshold());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "BoundBoxScale")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getShadowSync(),
+                                                  "Shadow_BoundBoxScale",
+                                                  ViewParams::getShadowBoundBoxScale());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "MaxDistance")) {
+            setViewProperty<App::PropertyFloat>(ViewParams::getShadowSync(),
+                                                  "Shadow_MaxDistance",
+                                                  ViewParams::getShadowMaxDistance());
+            if (!passThrough)
+                return;
+        }
+        if (passThrough || boost::equals(sReason+6, "TransparentShadow")) {
+            setViewProperty<App::PropertyBool>(ViewParams::getShadowSync(),
+                                                  "Shadow_TransparentShadow",
+                                                  ViewParams::getShadowTransparentShadow());
+            if (!passThrough)
+                return;
+        }
+    }
+}
 //[[[end]]]

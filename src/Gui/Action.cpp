@@ -131,7 +131,7 @@ Action::~Action()
 void Action::addTo(QWidget *widget)
 {
     widget->addAction(_action);
-    ToolBarManager::getInstance()->checkToolbarIconSize(qobject_cast<QToolBar*>(widget));
+    ToolBarManager::getInstance()->checkToolBarIconSize(qobject_cast<QToolBar*>(widget));
 }
 
 /**
@@ -218,7 +218,7 @@ void Action::setIcon (const QIcon & icon)
 {
     _action->setIcon(icon);
     if (!icon.isNull())
-        ToolBarManager::getInstance()->checkToolbarIconSize(_action);
+        ToolBarManager::getInstance()->checkToolBarIconSize(_action);
     setToolTip(_tooltip, _title);
 }
 
@@ -647,7 +647,7 @@ void ActionGroup::addTo(QWidget *widget)
                 }
             }
             tb->setMenu(menu);
-            ToolBarManager::getInstance()->checkToolbarIconSize(static_cast<QToolBar*>(widget));
+            ToolBarManager::getInstance()->checkToolBarIconSize(static_cast<QToolBar*>(widget));
 
             QObject::connect(menu, &QMenu::aboutToShow, [this, menu]() {
                 Q_EMIT aboutToShow(menu);
@@ -1362,15 +1362,6 @@ void WorkbenchGroup::addTo(QWidget *widget)
             actBox->setVisible(false);
         else
             actTab->setVisible(false);
-    }
-    else if (widget->inherits("QMenuBar")) {
-        auto* box = new WorkbenchComboBox(this, widget);
-        setupBox(box);
-        box->setIconSize(QSize(16, 16));
-        box->addActions(groupAction()->actions());
-
-        bool left = WorkbenchSwitcher::isLeftCorner(WorkbenchSwitcher::getValue());
-        qobject_cast<QMenuBar*>(widget)->setCornerWidget(box, left ? Qt::TopLeftCorner : Qt::TopRightCorner);
     }
     else if (widget->inherits("QMenu")) {
         QMenu* menu = qobject_cast<QMenu*>(widget);
@@ -2713,7 +2704,7 @@ private:
 // --------------------------------------------------------------------
 
 ToolbarMenuAction::ToolbarMenuAction ( Command* pcCmd, QObject * parent )
-  : Action(pcCmd, parent), _menu(0)
+  : Action(pcCmd, parent), _menu(nullptr)
   , _pimpl(new Private(this, "User parameter:BaseApp/Workbench/Global/Toolbar"))
 {
     _pimpl->hShortcut = WindowParameter::getDefaultParameter()->GetGroup("Shortcut");
@@ -2842,8 +2833,16 @@ void ToolbarMenuAction::update()
 
 void ToolbarMenuAction::popup(const QPoint &pt)
 {
+    _menu->setActiveAction(nullptr);
     PieMenu::exec(_menu, pt, command()->getName());
-    _menu->setActiveAction(0);
+
+    // WARNING! In some case, this ToolbarMenuAction instance may have been
+    // destroyed after returning from PieMenu::exec(). E.g. when the toolbar
+    // menu is a PartDesign context menu/command, and the action triggers
+    // switching to Sketcher workbench, causing all PartDesign context commands
+    // being destroyed. So, must not access any member here.
+    //
+    // _menu->setActiveAction(nullptr);
 }
 
 ////////////////////////////////////////////////////////////////////
